@@ -129,6 +129,11 @@ def trackstats_sat(datasource, datadescription, pixel_radius, latlon_file, geoli
     temp_finaltrack_corecold_majoraxis = np.ones((numtracks,nmaxclouds), dtype=float)*fillvalue
     temp_finaltrack_corecold_orientation = np.ones((numtracks,nmaxclouds), dtype=float)*fillvalue 
     temp_finaltrack_corecold_eccentricity = np.ones((numtracks,nmaxclouds), dtype=float)*fillvalue
+    temp_finaltrack_corecold_perimeter = np.ones((numtracks,nmaxclouds), dtype=float)*fillvalue
+    temp_finaltrack_corecold_xcenter = np.ones((numtracks,nmaxclouds), dtype=float)*fillvalue
+    temp_finaltrack_corecold_ycenter = np.ones((numtracks,nmaxclouds), dtype=float)*fillvalue
+    temp_finaltrack_corecold_xweightedcenter = np.ones((numtracks,nmaxclouds), dtype=float)*fillvalue
+    temp_finaltrack_corecold_yweightedcenter = np.ones((numtracks,nmaxclouds), dtype=float)*fillvalue
     if landsea == 1:
         temp_finaltrack_corecold_landfrac = np.ones((numtracks,nmaxclouds), dtype=float)*fillvalue
         temp_finaltrack_core_landfrac = np.ones((numtracks,nmaxclouds), dtype=float)*fillvalue
@@ -253,17 +258,26 @@ def trackstats_sat(datasource, datadescription, pixel_radius, latlon_file, geoli
 
                         # Isolate the region around the cloud using the padded region
                         isolatedcloudnumber = np.copy(file_corecold_cloudnumber[0, minyindex:maxyindex, minxindex:maxxindex])
+                        isolatedtb = np.copy(file_tb[0, minyindex:maxyindex, minxindex:maxxindex])
+
+                        # Remove brightness temperatures outside core + cold anvil
+                        isolatedtb[isolatedcloudnumber != cloudnumber] = 0
 
                         # Turn cloud map to binary
                         isolatedcloudnumber[isolatedcloudnumber != cloudnumber] = 0
                         isolatedcloudnumber[isolatedcloudnumber == cloudnumber] = 1
 
                         # Calculate major axis, orientation, eccentricity
-                        cloudproperities = regionprops(isolatedcloudnumber)
+                        cloudproperities = regionprops(isolatedcloudnumber, intensity_image=isolatedtb)
                     
                         temp_finaltrack_corecold_eccentricity[itrack-1,nc] = cloudproperities[0].eccentricity
                         temp_finaltrack_corecold_majoraxis[itrack-1,nc] = cloudproperities[0].major_axis_length
                         temp_finaltrack_corecold_orientation[itrack-1,nc] = (cloudproperities[0].orientation)*(180/float(pi))
+                        temp_finaltrack_corecold_perimeter[itrack-1,nc] = cloudproperities[0].perimeter*2*pixel_radius
+                        [temp_ycenter, temp_xcenter] = cloudproperities[0].centroid
+                        [temp_finaltrack_corecold_ycenter[itrack-1,nc], temp_finaltrack_corecold_xcenter[itrack-1,nc]] = np.add([temp_ycenter,temp_xcenter], [minyindex, minxindex]).astype(int)
+                        [temp_yweightedcenter, temp_xweightedcenter] = cloudproperities[0].weighted_centroid
+                        [temp_finaltrack_corecold_yweightedcenter[itrack-1,nc], temp_finaltrack_corecold_xweightedcenter[itrack-1,nc]] = np.add([temp_yweightedcenter, temp_xweightedcenter], [minyindex, minxindex]).astype(int)
 
                         #minoraxislength = cloudproperities[0].minor_axis_length
                         #[ycenter,xcenter] = cloudproperities[0].centroid
@@ -272,6 +286,17 @@ def trackstats_sat(datasource, datadescription, pixel_radius, latlon_file, geoli
                         #ax[0].pcolor(isolatedcloudnumber)
                         #ax[0].scatter(xcenter,ycenter, s=30, color='y')
                         #ax[0].add_patch(ellipse)
+                        #plt.show()
+                        #tbplot = np.ma.masked_invalid(np.atleast_2d(isolatedtb))
+                        #plt.figure()
+                        #plt.pcolor(tbplot)
+                        #plt.scatter(temp_xcenter, temp_ycenter, marker='o', s=80, color='k')
+                        #plt.scatter(temp_xweightedcenter, temp_yweightedcenter, marker='*', s=80, color='r')
+                        #tbplot = np.ma.masked_invalid(np.atleast_2d(file_tb[0,:,:]))
+                        #plt.figure()
+                        #plt.pcolor(tbplot)
+                        #plt.scatter(temp_finaltrack_corecold_xcenter[itrack-1,nc], temp_finaltrack_corecold_ycenter[itrack-1,nc], marker='o', s=80, color='k')
+                        #plt.scatter(temp_finaltrack_corecold_xweightedcenter[itrack-1,nc], temp_finaltrack_corecold_yweightedcenter[itrack-1,nc], marker='*', s=80, color='r')
                         #plt.show()
 
                         # Determine equivalent radius of core+cold. Assuming circular area = (number pixels)*(pixel radius)^2, equivalent radius = sqrt(Area / pi)
@@ -325,41 +350,46 @@ def trackstats_sat(datasource, datadescription, pixel_radius, latlon_file, geoli
 
     ##############################################################
     # Remove tracks that have no cells. These tracks are short.
-    nocloudindex = np.array(np.where(temp_finaltrack_tracklength != fillvalue))[0,:]
-    numtracks = len(nocloudindex)
+    cloudindexpresent = np.array(np.where(temp_finaltrack_tracklength != fillvalue))[0,:]
+    numtracks = len(cloudindexpresent)
 
-    finaltrack_tracklength = temp_finaltrack_tracklength[nocloudindex]
-    finaltrack_corecold_boundary = temp_finaltrack_corecold_boundary[nocloudindex]
-    finaltrack_basetime = temp_finaltrack_basetime[nocloudindex,:]
-    finaltrack_corecold_mintb = temp_finaltrack_corecold_mintb[nocloudindex,:]
-    finaltrack_corecold_meantb = temp_finaltrack_corecold_meantb[nocloudindex,:]
-    finaltrack_core_meantb = temp_finaltrack_corecold_meantb[nocloudindex,:]
-    finaltrack_corecold_histtb = temp_finaltrack_corecold_histtb[nocloudindex,:,:]
-    finaltrack_corecold_radius = temp_finaltrack_corecold_radius[nocloudindex,:]
-    finaltrack_corecoldwarm_radius = temp_finaltrack_corecoldwarm_radius[nocloudindex,:]
-    finaltrack_corecold_meanlat = temp_finaltrack_corecold_meanlat[nocloudindex,:]
-    finaltrack_corecold_meanlon = temp_finaltrack_corecold_meanlon[nocloudindex,:]
-    finaltrack_corecold_maxlon = temp_finaltrack_corecold_maxlon[nocloudindex,:]
-    finaltrack_corecold_maxlat = temp_finaltrack_corecold_maxlat[nocloudindex,:]
-    finaltrack_corecold_minlon = temp_finaltrack_corecold_minlon[nocloudindex,:]
-    finaltrack_corecold_minlat = temp_finaltrack_corecold_minlat[nocloudindex,:]
-    finaltrack_ncorecoldpix = temp_finaltrack_ncorecoldpix[nocloudindex,:]
-    finaltrack_ncorepix = temp_finaltrack_ncorepix[nocloudindex,:]
-    finaltrack_ncoldpix = temp_finaltrack_ncoldpix[nocloudindex,:]
-    finaltrack_nwarmpix = temp_finaltrack_nwarmpix[nocloudindex,:]
-    finaltrack_corecold_status = temp_finaltrack_corecold_status[nocloudindex,:]
-    finaltrack_corecold_trackinterruptions = temp_finaltrack_corecold_trackinterruptions[nocloudindex]
-    finaltrack_corecold_mergenumber = temp_finaltrack_corecold_mergenumber[nocloudindex,:]
-    finaltrack_corecold_splitnumber = temp_finaltrack_corecold_splitnumber[nocloudindex,:]
-    finaltrack_corecold_cloudnumber = temp_finaltrack_corecold_cloudnumber[nocloudindex,:]
-    finaltrack_datetimestring = temp_finaltrack_datetimestring[nocloudindex,:]
-    finaltrack_cloudidfile = temp_finaltrack_cloudidfile[nocloudindex,:]
-    finaltrack_corecold_majoraxis = temp_finaltrack_corecold_majoraxis[nocloudindex,:]
-    finaltrack_corecold_orientation = temp_finaltrack_corecold_orientation[nocloudindex,:] 
-    finaltrack_corecold_eccentricity = temp_finaltrack_corecold_eccentricity[nocloudindex,:]
+    finaltrack_tracklength = temp_finaltrack_tracklength[cloudindexpresent]
+    finaltrack_corecold_boundary = temp_finaltrack_corecold_boundary[cloudindexpresent]
+    finaltrack_basetime = temp_finaltrack_basetime[cloudindexpresent,:]
+    finaltrack_corecold_mintb = temp_finaltrack_corecold_mintb[cloudindexpresent,:]
+    finaltrack_corecold_meantb = temp_finaltrack_corecold_meantb[cloudindexpresent,:]
+    finaltrack_core_meantb = temp_finaltrack_corecold_meantb[cloudindexpresent,:]
+    finaltrack_corecold_histtb = temp_finaltrack_corecold_histtb[cloudindexpresent,:,:]
+    finaltrack_corecold_radius = temp_finaltrack_corecold_radius[cloudindexpresent,:]
+    finaltrack_corecoldwarm_radius = temp_finaltrack_corecoldwarm_radius[cloudindexpresent,:]
+    finaltrack_corecold_meanlat = temp_finaltrack_corecold_meanlat[cloudindexpresent,:]
+    finaltrack_corecold_meanlon = temp_finaltrack_corecold_meanlon[cloudindexpresent,:]
+    finaltrack_corecold_maxlon = temp_finaltrack_corecold_maxlon[cloudindexpresent,:]
+    finaltrack_corecold_maxlat = temp_finaltrack_corecold_maxlat[cloudindexpresent,:]
+    finaltrack_corecold_minlon = temp_finaltrack_corecold_minlon[cloudindexpresent,:]
+    finaltrack_corecold_minlat = temp_finaltrack_corecold_minlat[cloudindexpresent,:]
+    finaltrack_ncorecoldpix = temp_finaltrack_ncorecoldpix[cloudindexpresent,:]
+    finaltrack_ncorepix = temp_finaltrack_ncorepix[cloudindexpresent,:]
+    finaltrack_ncoldpix = temp_finaltrack_ncoldpix[cloudindexpresent,:]
+    finaltrack_nwarmpix = temp_finaltrack_nwarmpix[cloudindexpresent,:]
+    finaltrack_corecold_status = temp_finaltrack_corecold_status[cloudindexpresent,:]
+    finaltrack_corecold_trackinterruptions = temp_finaltrack_corecold_trackinterruptions[cloudindexpresent]
+    finaltrack_corecold_mergenumber = temp_finaltrack_corecold_mergenumber[cloudindexpresent,:]
+    finaltrack_corecold_splitnumber = temp_finaltrack_corecold_splitnumber[cloudindexpresent,:]
+    finaltrack_corecold_cloudnumber = temp_finaltrack_corecold_cloudnumber[cloudindexpresent,:]
+    finaltrack_datetimestring = temp_finaltrack_datetimestring[cloudindexpresent,:]
+    finaltrack_cloudidfile = temp_finaltrack_cloudidfile[cloudindexpresent,:]
+    finaltrack_corecold_majoraxis = temp_finaltrack_corecold_majoraxis[cloudindexpresent,:]
+    finaltrack_corecold_orientation = temp_finaltrack_corecold_orientation[cloudindexpresent,:] 
+    finaltrack_corecold_eccentricity = temp_finaltrack_corecold_eccentricity[cloudindexpresent,:]
+    finaltrack_corecold_perimeter = temp_finaltrack_corecold_perimeter[cloudindexpresent,:]
+    finaltrack_corecold_xcenter = temp_finaltrack_corecold_xcenter[cloudindexpresent,:]
+    finaltrack_corecold_ycenter = temp_finaltrack_corecold_ycenter[cloudindexpresent,:]
+    finaltrack_corecold_xweightedcenter = temp_finaltrack_corecold_xweightedcenter[cloudindexpresent,:]
+    finaltrack_corecold_yweightedcenter = temp_finaltrack_corecold_yweightedcenter[cloudindexpresent,:]
     if landsea == 1:
-        finaltrack_corecold_landfrac = temp_finaltrack_corecold_landfrac[nocloudindex,:]
-        finaltrack_core_landfrac = temp_finaltrack_core_landfrac[nocloudindex,:]
+        finaltrack_corecold_landfrac = temp_finaltrack_corecold_landfrac[cloudindexpresent,:]
+        finaltrack_core_landfrac = temp_finaltrack_core_landfrac[cloudindexpresent,:]
 
     #########################################################################
     # Record starting and ending status
@@ -372,14 +402,14 @@ def trackstats_sat(datasource, datadescription, pixel_radius, latlon_file, geoli
     for trackstep in range(0,numtracks):
         finaltrack_corecold_endstatus[trackstep] = finaltrack_corecold_status[trackstep,finaltrack_tracklength[trackstep] - 1]
 
-    for itrack in range(0,numtracks):
-        print(finaltrack_corecold_status[itrack,0:15])
-        print(finaltrack_corecold_startstatus[itrack])
-        print(finaltrack_corecold_endstatus[itrack])
-        print(finaltrack_corecold_trackinterruptions[itrack])
-        print(finaltrack_corecold_mergenumber[itrack,0:15])
-        print(finaltrack_corecold_splitnumber[itrack,0:15])
-        raw_input('Waiting for User')
+    #for itrack in range(0,numtracks):
+    #    print(finaltrack_corecold_status[itrack,0:15])
+    #    print(finaltrack_corecold_startstatus[itrack])
+    #    print(finaltrack_corecold_endstatus[itrack])
+    #    print(finaltrack_corecold_trackinterruptions[itrack])
+    #    print(finaltrack_corecold_mergenumber[itrack,0:15])
+    #    print(finaltrack_corecold_splitnumber[itrack,0:15])
+    #    raw_input('Waiting for User')
 
     #######################################################################
     # Write to netcdf
@@ -533,7 +563,7 @@ def trackstats_sat(datasource, datadescription, pixel_radius, latlon_file, geoli
     status = filesave.createVariable('status', 'i4', ('ntracks', 'nmaxlength'), zlib=True, complevel=5, fill_value=fillvalue)
     status.long_name = 'flag indicating the status of cloud'
     status.description = 'Numbers in each row describe how the clouds in that track evolve over time'
-    status.values = '-9999=missing cloud or cloud removed due to short track, 0=track ends after this file, 1=cloud continues as one cloud in next file, 2=Bigger cloud that merges into one cloud in the next file, 21=Smaller cloud that merges into one cloud in the next file, 3=Bigger cloud that split from one cloud in the previous timestep, 31=Smaller cloud that split from one cloud in the previous file, 4=Bigger cloud that split from one cloud in the previous step. This cloud continues as one cloud in the next file. 32=smaller cloud that plot from one cloud in the previous file. This cloud continues as one cloud in the next file, 5=Bigger cloud that split from one cloud in the previous file. In the next file this cloud is the big cloud in a merger, 24=Bigger cloud that split from one cloud in the previous file. This cloud is then the smaller cloud in a merger that occurs in the next file, 33=Smaller cloud that split from one cloud in the previous file. In the next file this cloud is the big cloud in a merger, 52=Smaller cloud that split from one cloud in the previous file. This cloud is then the smaller cloud in a merger that occurs in the next file'
+    status.values = '-9999=missing cloud or cloud removed due to short track, 0=track ends here, 1=cloud continues as one cloud in next file, 2=Biggest cloud in merger, 21=Smaller cloud(s) in merger, 13=Cloud that splits, 3=Biggest cloud from a split that stops after the split, 31=Smaller cloud(s) from a split that stop after the split. The last seven classifications are added together in different combinations to describe situations.'
     status.min_value = 0
     status.max_value = 52
     status.fill_value = fillvalue
@@ -542,7 +572,7 @@ def trackstats_sat(datasource, datadescription, pixel_radius, latlon_file, geoli
     startstatus = filesave.createVariable('startstatus', 'i4', 'ntracks', zlib=True, complevel=5, fill_value=fillvalue)
     startstatus.long_name = 'flag indicating the status of the first cloud in track'
     startstatus.description = 'Numbers in each row describe the status of the first cloud in that track'
-    startstatus.values = '-9999=missing cloud or cloud removed due to short track, 0=track ends after this file, 1=cloud continues as one cloud in next file, 2=Bigger cloud that merges into one cloud in the next file, 21=Smaller cloud that merges into one cloud in the next file, 3=Bigger cloud that split from one cloud in the previous timestep, 31=Smaller cloud that split from one cloud in the previous file, 4=Bigger cloud that split from one cloud in the previous step. This cloud continues as one cloud in the next file. 32=smaller cloud that plot from one cloud in the previous file. This cloud continues as one cloud in the next file, 5=Bigger cloud that split from one cloud in the previous file. In the next file this cloud is the big cloud in a merger, 24=Bigger cloud that split from one cloud in the previous file. This cloud is then the smaller cloud in a merger that occurs in the next file, 33=Smaller cloud that split from one cloud in the previous file. In the next file this cloud is the big cloud in a merger, 52=Smaller cloud that split from one cloud in the previous file. This cloud is then the smaller cloud in a merger that occurs in the next file'
+    startstatus.values = '-9999=missing cloud or cloud removed due to short track, 0=track ends here, 1=cloud continues as one cloud in next file, 2=Biggest cloud in merger, 21=Smaller cloud(s) in merger, 13=Cloud that splits, 3=Biggest cloud from a split that stops after the split, 31=Smaller cloud(s) from a split that stop after the split. The last seven classifications are added together in different combinations to describe situations.'
     startstatus.min_value = 0
     startstatus.max_value = 52
     startstatus.fill_value = fillvalue
@@ -560,7 +590,7 @@ def trackstats_sat(datasource, datadescription, pixel_radius, latlon_file, geoli
     endstatus = filesave.createVariable('endstatus', 'i4', 'ntracks', zlib=True, complevel=5, fill_value=fillvalue)
     endstatus.long_name = 'flag indicating the status of the last cloud in track'
     endstatus.description = 'Numbers in each row describe the status of the last cloud in that track'
-    endstatus.values = '-9999=missing cloud or cloud removed due to short track, 0=track ends after this file, 1=cloud continues as one cloud in next file, 2=Bigger cloud that merges into one cloud in the next file, 21=Smaller cloud that merges into one cloud in the next file, 3=Bigger cloud that split from one cloud in the previous timestep, 31=Smaller cloud that split from one cloud in the previous file, 4=Bigger cloud that split from one cloud in the previous step. This cloud continues as one cloud in the next file. 32=smaller cloud that plot from one cloud in the previous file. This cloud continues as one cloud in the next file, 5=Bigger cloud that split from one cloud in the previous file. In the next file this cloud is the big cloud in a merger, 24=Bigger cloud that split from one cloud in the previous file. This cloud is then the smaller cloud in a merger that occurs in the next file, 33=Smaller cloud that split from one cloud in the previous file. In the next file this cloud is the big cloud in a merger, 52=Smaller cloud that split from one cloud in the previous file. This cloud is then the smaller cloud in a merger that occurs in the next file'
+    endstatus.values = '-9999=missing cloud or cloud removed due to short track, 0=track ends here, 1=cloud continues as one cloud in next file, 2=Biggest cloud in merger, 21=Smaller cloud(s) in merger, 13=Cloud that splits, 3=Biggest cloud from a split that stops after the split, 31=Smaller cloud(s) from a split that stop after the split. The last seven classifications are added together in different combinations to describe situations.'
     endstatus.min_value = 0
     endstatus.max_value = 52
     endstatus.fill_value = fillvalue
@@ -641,9 +671,39 @@ def trackstats_sat(datasource, datadescription, pixel_radius, latlon_file, geoli
 
     majoraxis = filesave.createVariable('majoraxis', 'f4', ('ntracks', 'nmaxlength'), zlib=True, complevel=5, fill_value=fillvalue)
     majoraxis.long_name = 'Major axis length'
-    majoraxis.description = 'Length of the maor axis of the core + cold anvil at the given time'
+    majoraxis.description = 'Length of the major axis of the core + cold anvil at the given time'
     majoraxis.units = 'km'
     majoraxis.fill_value = fillvalue
+
+    perimeter = filesave.createVariable('perimeter', 'f4', ('ntracks', 'nmaxlength'), zlib=True, complevel=5, fill_value=fillvalue)
+    perimeter.description = 'Approximnate circumference of the core + cold anvil at the given time'
+    perimeter.units = 'km'
+    perimeter.fill_value = fillvalue
+
+    xcenter = filesave.createVariable('xcenter', 'f4', ('ntracks', 'nmaxlength'), zlib=True, complevel=5, fill_value=fillvalue)
+    xcenter.long_name = 'X-index of centroid'
+    xcenter.description = 'X index of the geometric center of the cloud feature at the given time'
+    xcenter.units = 'unitless'
+    xcenter.fill_value = fillvalue
+
+    ycenter = filesave.createVariable('ycenter', 'f4', ('ntracks', 'nmaxlength'), zlib=True, complevel=5, fill_value=fillvalue)
+    ycenter.long_name = 'Y-index of centroid'
+    ycenter.description = 'Y index of the geometric center of the cloud feature at the given time'
+    ycenter.units = 'unitless'
+    ycenter.fill_value = fillvalue
+
+    xcenter_weighted = filesave.createVariable('xcenter_weighted', 'f4', ('ntracks', 'nmaxlength'), zlib=True, complevel=5, fill_value=fillvalue)
+    xcenter_weighted.long_name = 'X-index of centroid'
+    xcenter_weighted.description = 'X index of the brightness temperature weighted center of the cloud feature at the given time'
+    xcenter_weighted.units = 'unitless'
+    xcenter_weighted.fill_value = fillvalue
+
+    ycenter_weighted = filesave.createVariable('ycenter_weighted', 'f4', ('ntracks', 'nmaxlength'), zlib=True, complevel=5, fill_value=fillvalue)
+    ycenter_weighted.long_name = 'Y-index of centroid'
+    ycenter_weighted.description = 'Y index of the brightness temperature weighted center of the cloud feature at the given time'
+    ycenter_weighted.units = 'unitless'
+    ycenter_weighted.fill_value = fillvalue
+
 
     if landsea == 1:
         landfrac = filesave.createVariable('landfrac', 'f4', ('ntracks', 'nmaxlength'), zlib=True, complevel=5, fill_value=fillvalue)
@@ -694,6 +754,11 @@ def trackstats_sat(datasource, datadescription, pixel_radius, latlon_file, geoli
     majoraxis[:,:] = finaltrack_corecold_majoraxis
     orientation[:,:] = finaltrack_corecold_orientation
     eccentricity[:,:] = finaltrack_corecold_eccentricity
+    perimeter[:,:] = finaltrack_corecold_perimeter
+    xcenter[:,:] = finaltrack_corecold_xcenter
+    ycenter[:,:] = finaltrack_corecold_ycenter
+    xcenter_weighted[:,:] = finaltrack_corecold_xweightedcenter
+    ycenter_weighted[:,:] = finaltrack_corecold_yweightedcenter
     if landsea == 1:
         landfrac[:,:] = finaltrack_corecold_landfrac
         landfrac_conv[:,:] = finaltrack_core_landfrac
