@@ -22,7 +22,7 @@ from pytz import timezone, utc
 # Set variables describing data, file structure, and tracking thresholds
 
 # Specify which sets of code to run. (1 = run code, 0 = don't run code)
-run_idclouds = 1        # Segment and identify cloud systems
+run_idclouds = 0        # Segment and identify cloud systems
 run_tracksingle = 1     # Track single consecutive cloudid files
 run_gettracks = 1       # Run trackig for all files
 run_finalstats = 1      # Calculate final statistics
@@ -111,6 +111,14 @@ if not os.path.exists(tracking_outpath):
 if not os.path.exists(stats_outpath):
     os.makedirs(stats_outpath)
 
+########################################################################
+# Calculate basetime of start and end date
+TEMP_starttime = datetime.datetime(int(startdate[0:4]), int(startdate[4:6]), int(startdate[6:8]), 0, 0, 0, tzinfo=utc)
+start_basetime = calendar.timegm(TEMP_starttime.timetuple())
+
+TEMP_endtime = datetime.datetime(int(enddate[0:4]), int(enddate[4:6]), int(enddate[6:8]), 23, 0, 0, tzinfo=utc)
+end_basetime = calendar.timegm(TEMP_endtime.timetuple())
+
 ##########################################################################
 # Identify clouds / features in the data, if neccesary
 if run_idclouds == 1:
@@ -120,13 +128,6 @@ if run_idclouds == 1:
 
     # Isolate all possible files
     allrawdatafiles = fnmatch.filter(os.listdir(data_path), databasename+'*')
-
-    # Put start and endtimes in basetime
-    TEMP_starttime = datetime.datetime(int(startdate[0:4]), int(startdate[4:6]), int(startdate[6:8]), 0, 0, 0, tzinfo=utc)
-    start_basetime = calendar.timegm(TEMP_starttime.timetuple())
-
-    TEMP_endtime = datetime.datetime(int(enddate[0:4]), int(enddate[4:6]), int(enddate[6:8]), 23, 0, 0, tzinfo=utc)
-    end_basetime = calendar.timegm(TEMP_endtime.timetuple())
 
     # Loop through files, identifying files within the startdate - enddate interval
     rawdatafiles = [None]*len(allrawdatafiles)
@@ -171,12 +172,50 @@ if run_idclouds == 0:
 
 # Call function
 if run_tracksingle == 1:
+    ################################################################
+    # Identify files to process
+    print('Identifying cloudid files to process')
+
+    # Isolate all possible files
+    allcloudidfiles = fnmatch.filter(os.listdir(tracking_outpath), cloudid_filebase +'*')
+
+    # Put in temporal order
+    allcloudidfiles = sorted(allcloudidfiles)
+
+    # Loop through files, identifying files within the startdate - enddate interval
+    nleadingchar = np.array(len(cloudid_filebase)).astype(int)
+
+    cloudidfiles = [None]*len(allcloudidfiles)
+    cloudidfiles_timestring = [None]*len(allcloudidfiles)
+    cloudidfiles_datestring = [None]*len(allcloudidfiles)
+    cloudidfiles_basetime = [None]*len(allcloudidfiles)
+    cloudidfilestep = 0
+    for icloudidfile in allcloudidfiles:
+        TEMP_cloudidtime = datetime.datetime(int(icloudidfile[nleadingchar:nleadingchar+4]), int(icloudidfile[nleadingchar+4:nleadingchar+6]), int(icloudidfile[nleadingchar+6:nleadingchar+8]), int(icloudidfile[nleadingchar+9:nleadingchar+11]), int(icloudidfile[nleadingchar+11:nleadingchar+13]), 0, tzinfo=utc)
+        TEMP_cloudidbasetime = calendar.timegm(TEMP_cloudidtime.timetuple())
+
+        if TEMP_cloudidbasetime >= start_basetime and TEMP_cloudidbasetime <= end_basetime:
+            cloudidfiles[cloudidfilestep] = tracking_outpath + icloudidfile
+            cloudidfiles_timestring[cloudidfilestep] = icloudidfile[nleadingchar+9:nleadingchar+11] + icloudidfile[nleadingchar+11:nleadingchar+13]
+            cloudidfiles_datestring[cloudidfilestep] = icloudidfile[nleadingchar:nleadingchar+4] + icloudidfile[nleadingchar+4:nleadingchar+6] + icloudidfile[nleadingchar+6:nleadingchar+8] 
+            cloudidfiles_basetime[cloudidfilestep] = np.copy(TEMP_cloudidbasetime)
+            cloudidfilestep = cloudidfilestep + 1
+
+    # Remove extra rows
+    cloudidfiles = cloudidfiles[0:cloudidfilestep]
+    cloudidfiles_timestring = cloudidfiles_timestring[0:cloudidfilestep]
+    cloudidfiles_datestring = cloudidfiles_datestring[0:cloudidfilestep]
+    cloudidfiles_basetime = cloudidfiles_basetime[:cloudidfilestep]
+
+    ################################################################
+    # Process files
     # Load function
     from tracksingle import trackclouds_mergedir
 
     # Call function
     print('Tracking clouds between single files')
-    trackclouds_mergedir(tracking_outpath, datasource, datadescription, track_version, timegap, nmaxlinks, othresh, startdate, enddate, tracking_outpath, cloudid_filebase)
+    for icloudidfile in range(2,cloudidfilestep):
+        trackclouds_mergedir(cloudidfiles[icloudidfile-2:icloudidfile], cloudidfiles_datestring[icloudidfile-2:icloudidfile], cloudidfiles_timestring[icloudidfile-2:icloudidfile], cloudidfiles_basetime[icloudidfile-2:icloudidfile], tracking_outpath, track_version, timegap, nmaxlinks, othresh, startdate, enddate)
     singletrack_filebase = 'track' + track_version + '_' 
 
 ###########################################################
