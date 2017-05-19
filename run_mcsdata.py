@@ -1,5 +1,7 @@
 import numpy as np
-import os
+import os, fnmatch
+import time, datetime, calendar
+from pytz import timezone, utc
 
 # Name: Run_TestData.py
 
@@ -20,8 +22,8 @@ import os
 # Set variables describing data, file structure, and tracking thresholds
 
 # Specify which sets of code to run. (1 = run code, 0 = don't run code)
-run_idclouds = 0        # Segment and identify cloud systems
-run_tracksingle = 0     # Track single consecutive cloudid files
+run_idclouds = 1        # Segment and identify cloud systems
+run_tracksingle = 1     # Track single consecutive cloudid files
 run_gettracks = 1       # Run trackig for all files
 run_finalstats = 1      # Calculate final statistics
 run_labelcloud = 1      # Create maps with all events in a tracking having the same number
@@ -60,7 +62,7 @@ warmanvilexpansion = 1            # If this is set to one, then the cold anvil i
 # Specify filenames and locations
 datasource = 'mergedir'
 datadescription = 'eus'
-databasename = 'mstrack_'
+databasename = 'mcstrack_'
 label_filebase = 'cloudtrack_'
 
 root_path = '/global/homes/h/hcbarnes/Tracking/MCS/'
@@ -112,12 +114,52 @@ if not os.path.exists(stats_outpath):
 ##########################################################################
 # Identify clouds / features in the data, if neccesary
 if run_idclouds == 1:
+    ######################################################################
+    # Identify files to process
+    print('Identifying raw data files to process.')
+
+    # Isolate all possible files
+    allrawdatafiles = fnmatch.filter(os.listdir(data_path), databasename+'*')
+
+    # Put start and endtimes in basetime
+    TEMP_starttime = datetime.datetime(int(startdate[0:4]), int(startdate[4:6]), int(startdate[6:8]), 0, 0, 0, tzinfo=utc)
+    start_basetime = calendar.timegm(TEMP_starttime.timetuple())
+
+    TEMP_endtime = datetime.datetime(int(enddate[0:4]), int(enddate[4:6]), int(enddate[6:8]), 23, 0, 0, tzinfo=utc)
+    end_basetime = calendar.timegm(TEMP_endtime.timetuple())
+
+    # Loop through files, identifying files within the startdate - enddate interval
+    rawdatafiles = [None]*len(allrawdatafiles)
+    files_timestring = [None]*len(allrawdatafiles) 
+    files_datestring = [None]*len(allrawdatafiles)
+    files_basetime = np.ones(len(allrawdatafiles), dtype=int)*-9999
+    filestep = 0
+    for ifile in allrawdatafiles:
+        TEMP_filetime = datetime.datetime(int(ifile[fileyearindices[0]:fileyearindices[1]]), int(ifile[filemonthindices[0]:filemonthindices[1]]), int(ifile[filedayindices[0]:filedayindices[1]]), int(ifile[filehourindices[0]:filehourindices[1]]), int(ifile[fileminuteindices[0]:fileminuteindices[1]]), 0, tzinfo=utc)
+        TEMP_filebasetime = calendar.timegm(TEMP_filetime.timetuple())
+
+        if TEMP_filebasetime >= start_basetime and TEMP_filebasetime <= end_basetime:
+            rawdatafiles[filestep] = data_path + ifile
+            files_timestring[filestep] = ifile[filehourindices[0]:filehourindices[1]] + ifile[fileminuteindices[0]:fileminuteindices[1]]
+            files_datestring[filestep] = ifile[fileyearindices[0]:fileyearindices[1]] + ifile[filemonthindices[0]:filemonthindices[1]] + ifile[filedayindices[0]:filedayindices[1]]
+            files_basetime[filestep] = np.copy(TEMP_filebasetime)
+            filestep = filestep + 1
+
+    # Remove extra rows
+    rawdatafiles = rawdatafiles[0:filestep]
+    files_timestring = files_timestring[0:filestep]
+    files_datestring = files_datestring[0:filestep]
+    files_basetime = files_basetime[:filestep]
+
+    ##########################################################################
+    # Process files
     # Load function
     from idclouds import idclouds_mergedir
 
     # Call function
     print('Identifying Clouds')
-    idclouds_mergedir(datasource, datadescription, data_path, databasename, fileyearindices, filemonthindices, filedayindices, filehourindices, fileminuteindices, cloudid_version, tracking_outpath, latlon_file, geolimits, startdate, enddate, pixel_radius, area_thresh, cloudtb_threshs, absolutetb_threshs, miss_thresh, warmanvilexpansion)
+    for filestep, ifile in enumerate(rawdatafiles):
+        idclouds_mergedir(ifile, files_datestring[filestep], files_timestring[filestep], files_basetime[filestep], datasource, datadescription, cloudid_version, tracking_outpath, latlon_file, geolimits, startdate, enddate, pixel_radius, area_thresh, cloudtb_threshs, absolutetb_threshs, miss_thresh, warmanvilexpansion)
     cloudid_filebase = datasource + '_' + datadescription + '_cloudid' + cloudid_version + '_' 
 
 ###################################################################
