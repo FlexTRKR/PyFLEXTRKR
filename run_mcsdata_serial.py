@@ -9,7 +9,7 @@ import os
 # Features are tracked using 5 sets of code (idclouds, trackclouds_singlefile, get_tracknumbers, calc_sat_trackstats, label_celltrack).
 # This script controls which pieces of code are run.
 # Eventually, idclouds and trackclouds_singlefile will be able to run in parallel.
-# If trackclouds_singlefile is run in of tracksingle between 12/20/2009 - 12/31/2009, make two copies of this script, and set startdate - enddate (ex: 20091220 - 20091225, 20091225 - 20091231).
+# If trackclouds_singlefile is run in of tracksingle between 12/20/2009 - 12/31/2009, make two copies of this script, and set startdate - enddate (ex:c 20091220 - 20091225, 20091225 - 20091231).
 # This is because the first time will not have a tracksingle file produced, overlapping the date makes sure every cloudid file is used.
 # The idclouds and trackClouds_singlefile only need to be run once and can be run on portions of the data a time.
 # However, get_tracknumbers, calc_set_tracks, and label_celltrack must be run for the entire dataset.
@@ -130,7 +130,7 @@ if run_idclouds == 0:
 # Call function
 if run_tracksingle == 1:
     # Load function
-    from tracksingle import trackclouds_mergedir
+    from tracksingle_serial import trackclouds_mergedir
 
     # Call function
     print('Tracking clouds between single files')
