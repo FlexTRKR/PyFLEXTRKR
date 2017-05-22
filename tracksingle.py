@@ -27,7 +27,7 @@ import sys
 # id_filepath - path to input cloudid files
 # id_filebase - basename of cloudid files
 
-def trackclouds_mergedir(cloudidfilenames, datestrings, timestrings, basetimes, dataoutpath, track_version, timegap, nmaxlinks, othresh, startdate, enddate):
+def trackclouds_mergedir(firstcloudidfilename, secondcloudidfilename, firstdatestring, seconddatestring, firsttimestring, secondtimestring, firstbasetime, secondbasetime, dataoutpath, track_version, timegap, nmaxlinks, othresh, startdate, enddate):
     ##############################################################
     # Set constants
     # Version information
@@ -35,16 +35,16 @@ def trackclouds_mergedir(cloudidfilenames, datestrings, timestrings, basetimes, 
 
     ########################################################
     # Isolate new and reference file and base times
-    new_file = cloudidfilenames[1]
-    new_datestring = datestrings[1]
-    new_timestring = timestrings[1]
-    new_basetime = basetimes[1]
+    new_file = secondcloudidfilename
+    new_datestring = seconddatestring
+    new_timestring = secondtimestring
+    new_basetime = secondbasetime
     new_filedatetime = new_datestring + '_' + new_timestring
     
-    reference_file = cloudidfilenames[0]
-    reference_datestring = datestrings[0]
-    reference_timestring = timestrings[0]
-    reference_basetime = basetimes[0]
+    reference_file = firstcloudidfilename
+    reference_datestring = firstdatestring
+    reference_timestring = firsttimestring
+    reference_basetime = firstbasetime
     reference_filedatetime = reference_datestring + '_' + reference_timestring
 
     # Check that new and reference files differ by less than timegap in hours. Use base time (which is the seconds since 01-Jan-1970 00:00:00). Divide base time difference between the files by 3600 to get difference in hours
