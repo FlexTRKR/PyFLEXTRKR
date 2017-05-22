@@ -176,6 +176,7 @@ if run_idclouds == 1:
     # Call function
     print('Identifying Clouds')
     map(idclouds_mergedir, rawdatafiles, files_datestring, files_timestring, files_basetime, list_datasource, list_datadescription, list_cloudidversion, list_trackingoutpath, list_latlonfile, list_geolimits, list_startdate, list_enddate, list_pixelradius, list_areathresh, list_cloudtbthreshs, list_absolutetbthreshs, list_missthresh, list_warmanvilexpansion)
+    cloudid_filebase = datasource + '_' + datadescription + '_cloudid' + cloudid_version + '_'
 
     ## Call function
     #print('Identifying Clouds')
@@ -232,12 +233,27 @@ if run_tracksingle == 1:
     # Load function
     from tracksingle import trackclouds_mergedir
 
+    # Generate input lists
+    list_trackingoutpath = [tracking_outpath]*(cloudidfilestep-1)
+    list_trackversion = [track_version]*(cloudidfilestep-1)
+    list_timegap = np.ones(cloudidfilestep-1)*timegap
+    list_nmaxlinks = np.ones(cloudidfilestep-1)*nmaxlinks
+    list_othresh = np.ones(cloudidfilestep-1)*othresh
+    list_startdate = [startdate]*(cloudidfilestep-1)
+    list_enddate = [enddate]*(cloudidfilestep-1)
+
     # Call function
     print('Tracking clouds between single files')
 
-    for icloudidfile in range(1,cloudidfilestep):
-        trackclouds_mergedir(cloudidfiles[icloudidfile-1], cloudidfiles[icloudidfile], cloudidfiles_datestring[icloudidfile-1], cloudidfiles_datestring[icloudidfile], cloudidfiles_timestring[icloudidfile-1], cloudidfiles_timestring[icloudidfile], cloudidfiles_basetime[icloudidfile-1], cloudidfiles_basetime[icloudidfile], tracking_outpath, track_version, timegap, nmaxlinks, othresh, startdate, enddate)
-    singletrack_filebase = 'track' + track_version + '_' 
+    map(trackclouds_mergedir, cloudidfiles[0:-1], cloudidfiles[1::], cloudidfiles_datestring[0:-1], cloudidfiles_datestring[1::], cloudidfiles_timestring[0:-1], cloudidfiles_timestring[1::], cloudidfiles_basetime[0:-1], cloudidfiles_basetime[1::], list_trackingoutpath, list_trackversion, list_timegap, list_nmaxlinks, list_othresh, list_startdate, list_enddate)
+    singletrack_filebase = 'track' + track_version + '_'
+
+    # Call function
+    #print('Tracking clouds between single files')
+
+    #for icloudidfile in range(1,cloudidfilestep):
+    #    trackclouds_mergedir(cloudidfiles[icloudidfile-1], cloudidfiles[icloudidfile], cloudidfiles_datestring[icloudidfile-1], cloudidfiles_datestring[icloudidfile], cloudidfiles_timestring[icloudidfile-1], cloudidfiles_timestring[icloudidfile], cloudidfiles_basetime[icloudidfile-1], cloudidfiles_basetime[icloudidfile], tracking_outpath, track_version, timegap, nmaxlinks, othresh, startdate, enddate)
+    #singletrack_filebase = 'track' + track_version + '_' 
 
 ###########################################################
 # Track clouds / features through the entire dataset
