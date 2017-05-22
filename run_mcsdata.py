@@ -22,7 +22,7 @@ from pytz import timezone, utc
 # Set variables describing data, file structure, and tracking thresholds
 
 # Specify which sets of code to run. (1 = run code, 0 = don't run code)
-run_idclouds = 0        # Segment and identify cloud systems
+run_idclouds = 1        # Segment and identify cloud systems
 run_tracksingle = 1     # Track single consecutive cloudid files
 run_gettracks = 1       # Run trackig for all files
 run_finalstats = 1      # Calculate final statistics
@@ -157,11 +157,31 @@ if run_idclouds == 1:
     # Load function
     from idclouds import idclouds_mergedir
 
+    # Generate imput lists
+    list_datasource = [datasource]*(filestep-1)
+    list_datadescription = [datadescription]*(filestep-1)
+    list_cloudidversion = [cloudid_version]*(filestep-1)
+    list_trackingoutpath = [tracking_outpath]*(filestep-1)
+    list_latlonfile = [latlon_file]*(filestep-1)
+    list_geolimits = np.ones(((filestep-1), 4))*geolimits
+    list_startdate = [startdate]*(filestep-1)
+    list_enddate = [enddate]*(filestep-1)
+    list_pixelradius = np.ones(filestep-1)*pixel_radius
+    list_areathresh = np.ones(filestep-1)*area_thresh
+    list_cloudtbthreshs = np.ones((filestep-1,4))*cloudtb_threshs
+    list_absolutetbthreshs = np.ones(((filestep-1), 2))*absolutetb_threshs
+    list_missthresh = np.ones(filestep-1)*miss_thresh
+    list_warmanvilexpansion = np.ones(filestep-1)*warmanvilexpansion
+
     # Call function
     print('Identifying Clouds')
-    for filestep, ifile in enumerate(rawdatafiles):
-        idclouds_mergedir(ifile, files_datestring[filestep], files_timestring[filestep], files_basetime[filestep], datasource, datadescription, cloudid_version, tracking_outpath, latlon_file, geolimits, startdate, enddate, pixel_radius, area_thresh, cloudtb_threshs, absolutetb_threshs, miss_thresh, warmanvilexpansion)
-    cloudid_filebase = datasource + '_' + datadescription + '_cloudid' + cloudid_version + '_' 
+    map(idclouds_mergedir, rawdatafiles, files_datestring, files_timestring, files_basetime, list_datasource, list_datadescription, list_cloudidversion, list_trackingoutpath, list_latlonfile, list_geolimits, list_startdate, list_enddate, list_pixelradius, list_areathresh, list_cloudtbthreshs, list_absolutetbthreshs, list_missthresh, list_warmanvilexpansion)
+
+    ## Call function
+    #print('Identifying Clouds')
+    #for filestep, ifile in enumerate(rawdatafiles):
+    #    idclouds_mergedir(ifile, files_datestring[filestep], files_timestring[filestep], files_basetime[filestep], datasource, datadescription, cloudid_version, tracking_outpath, latlon_file, geolimits, startdate, enddate, pixel_radius, area_thresh, cloudtb_threshs, absolutetb_threshs, miss_thresh, warmanvilexpansion)
+    #cloudid_filebase = datasource + '_' + datadescription + '_cloudid' + cloudid_version + '_' 
 
 ###################################################################
 # Link clouds/ features in time adjacent files (single file tracking), if necessary
@@ -214,6 +234,7 @@ if run_tracksingle == 1:
 
     # Call function
     print('Tracking clouds between single files')
+
     for icloudidfile in range(2,cloudidfilestep):
         trackclouds_mergedir(cloudidfiles[icloudidfile-2:icloudidfile], cloudidfiles_datestring[icloudidfile-2:icloudidfile], cloudidfiles_timestring[icloudidfile-2:icloudidfile], cloudidfiles_basetime[icloudidfile-2:icloudidfile], tracking_outpath, track_version, timegap, nmaxlinks, othresh, startdate, enddate)
     singletrack_filebase = 'track' + track_version + '_' 
