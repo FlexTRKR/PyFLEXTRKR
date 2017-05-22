@@ -22,7 +22,7 @@ from pytz import timezone, utc
 # Set variables describing data, file structure, and tracking thresholds
 
 # Specify which sets of code to run. (1 = run code, 0 = don't run code)
-run_idclouds = 0        # Segment and identify cloud systems
+run_idclouds = 1        # Segment and identify cloud systems
 run_tracksingle = 1     # Track single consecutive cloudid files
 run_gettracks = 1       # Run trackig for all files
 run_finalstats = 1      # Calculate final statistics
@@ -60,6 +60,7 @@ absolutetb_threshs = np.array([160,330])        # k A vector [min, max] brightne
 warmanvilexpansion = 1            # If this is set to one, then the cold anvil is spread laterally until it exceeds the warm anvil threshold
 
 # Specify filenames and locations
+datavariablename = 'tb'
 datasource = 'mergedir'
 datadescription = 'eus'
 databasename = 'mcstrack_'
@@ -160,6 +161,7 @@ if run_idclouds == 1:
     # Generate imput lists
     list_datasource = [datasource]*(filestep-1)
     list_datadescription = [datadescription]*(filestep-1)
+    list_datavariablename = [datavariablename]*(filestep-1)
     list_cloudidversion = [cloudid_version]*(filestep-1)
     list_trackingoutpath = [tracking_outpath]*(filestep-1)
     list_latlonfile = [latlon_file]*(filestep-1)
@@ -175,13 +177,13 @@ if run_idclouds == 1:
 
     # Call function
     print('Identifying Clouds')
-    map(idclouds_mergedir, rawdatafiles, files_datestring, files_timestring, files_basetime, list_datasource, list_datadescription, list_cloudidversion, list_trackingoutpath, list_latlonfile, list_geolimits, list_startdate, list_enddate, list_pixelradius, list_areathresh, list_cloudtbthreshs, list_absolutetbthreshs, list_missthresh, list_warmanvilexpansion)
+    map(idclouds_mergedir, rawdatafiles, files_datestring, files_timestring, files_basetime, list_datasource, list_datadescription, list_datavariablename, list_cloudidversion, list_trackingoutpath, list_latlonfile, list_geolimits, list_startdate, list_enddate, list_pixelradius, list_areathresh, list_cloudtbthreshs, list_absolutetbthreshs, list_missthresh, list_warmanvilexpansion)
     cloudid_filebase = datasource + '_' + datadescription + '_cloudid' + cloudid_version + '_'
 
     ## Call function
     #print('Identifying Clouds')
     #for filestep, ifile in enumerate(rawdatafiles):
-    #    idclouds_mergedir(ifile, files_datestring[filestep], files_timestring[filestep], files_basetime[filestep], datasource, datadescription, cloudid_version, tracking_outpath, latlon_file, geolimits, startdate, enddate, pixel_radius, area_thresh, cloudtb_threshs, absolutetb_threshs, miss_thresh, warmanvilexpansion)
+    #    idclouds_mergedir(ifile, files_datestring[filestep], files_timestring[filestep], files_basetime[filestep], datasource, datadescription, datavariablename, cloudid_version, tracking_outpath, latlon_file, geolimits, startdate, enddate, pixel_radius, area_thresh, cloudtb_threshs, absolutetb_threshs, miss_thresh, warmanvilexpansion)
     #cloudid_filebase = datasource + '_' + datadescription + '_cloudid' + cloudid_version + '_' 
 
 ###################################################################

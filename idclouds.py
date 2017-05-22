@@ -13,7 +13,7 @@ import matplotlib.pyplot as plt
 
 ############################################/global/homes/h/hcbarnes/Tracking/testdata/################
 # function used to handle test data
-def idclouds_mergedir(datafilepath, datafiledatestring, datafiletimestring, datafilebasetime, datasource, datadescription, cloudid_version, dataoutpath, latlon_file, geolimits, startdate, enddate, pixel_radius, area_thresh, cloudtb_threshs, absolutetb_threshs, miss_thresh, warmanvilexpansion):
+def idclouds_mergedir(datafilepath, datafiledatestring, datafiletimestring, datafilebasetime, datasource, datadescription, variablename, cloudid_version, dataoutpath, latlon_file, geolimits, startdate, enddate, pixel_radius, area_thresh, cloudtb_threshs, absolutetb_threshs, miss_thresh, warmanvilexpansion):
     # inputs:
     # datasource - source of the data
     # datadescription - description of data source, included in all output file names
@@ -66,7 +66,7 @@ def idclouds_mergedir(datafilepath, datafiledatestring, datafiletimestring, data
 
         # load brighttness temperature data. automatically removes missing values
         rawdata = Dataset(datafilepath, 'r')           # open file
-        in_ir = rawdata.variables['tb'][:]                # load brightness temperature data
+        in_ir = rawdata.variables[variablename][:]                # load brightness temperature data
         rawdata.close()                                   # close file
 
         #####################################################
