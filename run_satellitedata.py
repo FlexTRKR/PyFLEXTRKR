@@ -153,21 +153,21 @@ if run_idclouds == 1:
     from idclouds import idclouds_mergedir
 
     # Generate imput lists
-    list_datasource = [datasource]*(filestep-1)
-    list_datadescription = [datadescription]*(filestep-1)
-    list_datavariablename = [datavariablename]*(filestep-1)
-    list_cloudidversion = [cloudid_version]*(filestep-1)
-    list_trackingoutpath = [tracking_outpath]*(filestep-1)
-    list_latlonfile = [latlon_file]*(filestep-1)
-    list_geolimits = np.ones(((filestep-1), 4))*geolimits
-    list_startdate = [startdate]*(filestep-1)
-    list_enddate = [enddate]*(filestep-1)
-    list_pixelradius = np.ones(filestep-1)*pixel_radius
-    list_areathresh = np.ones(filestep-1)*area_thresh
-    list_cloudtbthreshs = np.ones((filestep-1,4))*cloudtb_threshs
-    list_absolutetbthreshs = np.ones(((filestep-1), 2))*absolutetb_threshs
-    list_missthresh = np.ones(filestep-1)*miss_thresh
-    list_warmanvilexpansion = np.ones(filestep-1)*warmanvilexpansion
+    list_datasource = [datasource]*(filestep)
+    list_datadescription = [datadescription]*(filestep)
+    list_datavariablename = [datavariablename]*(filestep)
+    list_cloudidversion = [cloudid_version]*(filestep)
+    list_trackingoutpath = [tracking_outpath]*(filestep)
+    list_latlonfile = [latlon_file]*(filestep)
+    list_geolimits = np.ones(((filestep), 4))*geolimits
+    list_startdate = [startdate]*(filestep)
+    list_enddate = [enddate]*(filestep)
+    list_pixelradius = np.ones(filestep)*pixel_radius
+    list_areathresh = np.ones(filestep)*area_thresh
+    list_cloudtbthreshs = np.ones((filestep,4))*cloudtb_threshs
+    list_absolutetbthreshs = np.ones(((filestep), 2))*absolutetb_threshs
+    list_missthresh = np.ones(filestep)*miss_thresh
+    list_warmanvilexpansion = np.ones(filestep)*warmanvilexpansion
 
     # Call function
     print('Identifying Clouds')

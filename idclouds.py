@@ -69,11 +69,14 @@ def idclouds_mergedir(datafilepath, datafiledatestring, datafiletimestring, data
         in_ir = rawdata.variables[variablename][:]                # load brightness temperature data
         rawdata.close()                                   # close file
 
+        # Replace nans with fill value
+        in_ir[~np.isfinite(in_ir)] = fillval   
+
         #####################################################
         # mask brightness temperatures outside of normal range
         in_ir[in_ir < mintb_thresh] = fillval
         in_ir[in_ir > maxtb_thresh] = fillval
-        
+
         #####################################################
         # determine geographic region of interest is within the data set. if it is proceed and limit the data to that geographic region. if not exit the code.
 

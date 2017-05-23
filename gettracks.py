@@ -158,7 +158,7 @@ def gettracknumbers_mergedir(datasource, datadescription, datainpath, dataoutpat
     cloudidfiles[0,:] = stringtochar(np.array(os.path.basename(reference_file)))
 
     # Initate track numbers
-    tracknumber[0,0:nclouds_reference] = np.arange(0,nclouds_reference)+1
+    tracknumber[0,0:int(nclouds_reference)] = np.arange(0,int(nclouds_reference))+1
     itrack = nclouds_reference + 1
 
     # Rocord that the tracks are being reset / initialized

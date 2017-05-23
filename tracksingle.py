@@ -33,6 +33,8 @@ def trackclouds_mergedir(firstcloudidfilename, secondcloudidfilename, firstdates
     # Version information
     outfilebase = 'track' + track_version + '_'
 
+    fillvalue = -9999
+
     ########################################################
     # Isolate new and reference file and base times
     new_file = secondcloudidfilename
@@ -60,7 +62,10 @@ def trackclouds_mergedir(firstcloudidfilename, secondcloudidfilename, firstdates
         reference_convcold_cloudnumber = reference_data.variables['convcold_cloudnumber'][:]                    # Load cloud id map
         nreference = reference_data.variables['nclouds'][:]                                                     # Load number of clouds / features
         reference_data.close()                                                                                  # close file
-        
+
+        # Replace nans with -9999
+        reference_convcold_cloudnumber[np.where(~np.isfinite(reference_convcold_cloudnumber))] = fillvalue
+
         ##########################################################
         # Load cloudid file from before, called new file
         print(new_filedatetime)
@@ -70,23 +75,26 @@ def trackclouds_mergedir(firstcloudidfilename, secondcloudidfilename, firstdates
         nnew = new_data.variables['nclouds'][:]                                                 # Load number of clouds / features
         new_data.close()                                                                        # close file
 
+        # Replace nans with -9999
+        new_convcold_cloudnumber[np.where(~np.isfinite(new_convcold_cloudnumber))] = fillvalue
+
         ############################################################
         # Get size of data
         times, ny, nx = np.shape(new_convcold_cloudnumber)
 
         #######################################################
         # Initialize matrices
-        reference_forward_index = np.ones((nreference, nmaxlinks), dtype=int)*-9999
-        reference_forward_size = np.ones((nreference, nmaxlinks), dtype=int)*-9999
-        new_backward_index = np.ones((nnew, nmaxlinks), dtype=int)*-9999
-        new_backward_size =  np.ones((nnew, nmaxlinks), dtype=int)*-9999
+        reference_forward_index = np.ones((int(nreference), int(nmaxlinks)), dtype=int)*fillvalue
+        reference_forward_size = np.ones((int(nreference), int(nmaxlinks)), dtype=int)*fillvalue
+        new_backward_index = np.ones((int(nnew), int(nmaxlinks)), dtype=int)*fillvalue
+        new_backward_size =  np.ones((int(nnew), int(nmaxlinks)), dtype=int)*fillvalue
 
         ######################################################
         # Loop through each cloud / feature in reference time and look for overlaping clouds / features in the new file
         for refindex in np.arange(1,nreference+1):
             # Locate where the cloud in the reference file overlaps with any cloud in the new file
             forward_matchindices = np.where((reference_convcold_cloudnumber == refindex) & (new_convcold_cloudnumber != 0))
-            
+
             # Get the convcold_cloudnumber of the clouds in the new file that overlap the cloud in the reference file
             forward_newindex = new_convcold_cloudnumber[forward_matchindices]
             unique_forwardnewindex = np.unique(forward_newindex)
@@ -188,26 +196,26 @@ def trackclouds_mergedir(firstcloudidfilename, secondcloudidfilename, firstdates
         nlinks.long_name = 'maximum number of clouds that can be linked to a given cloud'
         nlinks.units = 'unitless'
         
-        newcloud_backward_index = filesave.createVariable('newcloud_backward_index', 'i4', ('time', 'nclouds_new', 'nlinks'), zlib=True, fill_value=-9999)
+        newcloud_backward_index = filesave.createVariable('newcloud_backward_index', 'i4', ('time', 'nclouds_new', 'nlinks'), zlib=True, fill_value=fillvalue)
         newcloud_backward_index.long_name = 'reference cloud index'
         newcloud_backward_index.description = 'each row represents a cloud in the new file and the numbers in that row provide all reference cloud indices linked to that new cloud'
         newcloud_backward_index.units = 'unitless'
         newcloud_backward_index.min_value = 1
         newcloud_backward_index.max_value = nreference
         
-        refcloud_forward_index = filesave.createVariable('refcloud_forward_index', 'i4', ('time', 'nclouds_ref', 'nlinks'), zlib=True, fill_value=-9999)
+        refcloud_forward_index = filesave.createVariable('refcloud_forward_index', 'i4', ('time', 'nclouds_ref', 'nlinks'), zlib=True, fill_value=fillvalue)
         refcloud_forward_index.long_name = 'new cloud index'
         refcloud_forward_index.description = 'each row represents a cloud in the reference file and the numbers provide all new cloud indices linked to that reference cloud'
         refcloud_forward_index.units = 'unitless'
         refcloud_forward_index.min_value = 1
         refcloud_forward_index.max_value = nnew
         
-        newcloud_backward_size = filesave.createVariable('newcloud_backward_size', 'f4', ('time', 'nclouds_new', 'nlinks'), zlib=True, fill_value=-9999)
+        newcloud_backward_size = filesave.createVariable('newcloud_backward_size', 'f4', ('time', 'nclouds_new', 'nlinks'), zlib=True, fill_value=fillvalue)
         newcloud_backward_size.long_name = 'reference cloud area'
         newcloud_backward_size.description = 'each row represents a cloud in the new file and the numbers provide the area of all reference clouds linked to that new cloud'
         newcloud_backward_size.units = 'km^2'
         
-        refcloud_forward_size = filesave.createVariable('refcloud_forward_size', 'f4', ('time', 'nclouds_ref', 'nlinks'), zlib=True, fill_value=-9999)
+        refcloud_forward_size = filesave.createVariable('refcloud_forward_size', 'f4', ('time', 'nclouds_ref', 'nlinks'), zlib=True, fill_value=fillvalue)
         refcloud_forward_size.long_name = 'new cloud area'
         refcloud_forward_size.description = 'each row represents a cloud in the reference file and the numbers provide the area of all new clouds linked to that reference cloud'
         refcloud_forward_size.units = 'km^2'

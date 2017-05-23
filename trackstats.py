@@ -100,43 +100,43 @@ def trackstats_sat(datasource, datadescription, pixel_radius, latlon_file, geoli
 
     fillvalue = -9999
 
-    temp_finaltrack_tracklength = np.ones(numtracks, dtype=int)*fillvalue
-    temp_finaltrack_corecold_boundary = np.ones(numtracks, dtype=int)*fillvalue
-    temp_finaltrack_basetime = np.ones((numtracks,nmaxclouds), dtype=int)*fillvalue
-    temp_finaltrack_corecold_mintb = np.ones((numtracks,nmaxclouds), dtype=float)*fillvalue
-    temp_finaltrack_corecold_meantb = np.ones((numtracks,nmaxclouds), dtype=float)*fillvalue
-    temp_finaltrack_core_meantb = np.ones((numtracks,nmaxclouds), dtype=float)*fillvalue
-    temp_finaltrack_corecold_histtb = np.zeros((numtracks,nmaxclouds, nbintb-1))
-    temp_finaltrack_corecold_radius = np.ones((numtracks,nmaxclouds), dtype=float)*fillvalue
-    temp_finaltrack_corecoldwarm_radius = np.ones((numtracks,nmaxclouds), dtype=float)*fillvalue
-    temp_finaltrack_corecold_meanlat = np.ones((numtracks,nmaxclouds), dtype=float)*fillvalue
-    temp_finaltrack_corecold_meanlon = np.ones((numtracks,nmaxclouds), dtype=float)*fillvalue
-    temp_finaltrack_corecold_maxlon = np.ones((numtracks,nmaxclouds), dtype=float)*fillvalue
-    temp_finaltrack_corecold_maxlat = np.ones((numtracks,nmaxclouds), dtype=float)*fillvalue
-    temp_finaltrack_ncorecoldpix = np.ones((numtracks,nmaxclouds), dtype=int)*fillvalue
-    temp_finaltrack_corecold_minlon = np.ones((numtracks,nmaxclouds), dtype=float)*fillvalue
-    temp_finaltrack_corecold_minlat = np.ones((numtracks,nmaxclouds), dtype=float)*fillvalue
-    temp_finaltrack_ncorepix = np.ones((numtracks,nmaxclouds), dtype=int)*fillvalue
-    temp_finaltrack_ncoldpix = np.ones((numtracks,nmaxclouds), dtype=int)*fillvalue
-    temp_finaltrack_nwarmpix = np.ones((numtracks,nmaxclouds), dtype=int)*fillvalue
-    temp_finaltrack_corecold_status = np.ones((numtracks,nmaxclouds), dtype=float)*fillvalue
-    temp_finaltrack_corecold_trackinterruptions = np.ones(numtracks, dtype=int)*fillvalue
-    temp_finaltrack_corecold_mergenumber = np.ones((numtracks,nmaxclouds), dtype=float)*fillvalue
-    temp_finaltrack_corecold_splitnumber = np.ones((numtracks,nmaxclouds), dtype=float)*fillvalue
-    temp_finaltrack_corecold_cloudnumber = np.ones((numtracks,nmaxclouds), dtype=float)*fillvalue
-    temp_finaltrack_datetimestring = np.ones((numtracks,nmaxclouds,13), dtype=str)
-    temp_finaltrack_cloudidfile = np.ones((numtracks,nmaxclouds,numcharfilename), dtype=str)
-    temp_finaltrack_corecold_majoraxis = np.ones((numtracks,nmaxclouds), dtype=float)*fillvalue
-    temp_finaltrack_corecold_orientation = np.ones((numtracks,nmaxclouds), dtype=float)*fillvalue 
-    temp_finaltrack_corecold_eccentricity = np.ones((numtracks,nmaxclouds), dtype=float)*fillvalue
-    temp_finaltrack_corecold_perimeter = np.ones((numtracks,nmaxclouds), dtype=float)*fillvalue
-    temp_finaltrack_corecold_xcenter = np.ones((numtracks,nmaxclouds), dtype=float)*fillvalue
-    temp_finaltrack_corecold_ycenter = np.ones((numtracks,nmaxclouds), dtype=float)*fillvalue
-    temp_finaltrack_corecold_xweightedcenter = np.ones((numtracks,nmaxclouds), dtype=float)*fillvalue
-    temp_finaltrack_corecold_yweightedcenter = np.ones((numtracks,nmaxclouds), dtype=float)*fillvalue
+    temp_finaltrack_tracklength = np.ones(int(numtracks), dtype=int)*fillvalue
+    temp_finaltrack_corecold_boundary = np.ones(int(numtracks), dtype=int)*fillvalue
+    temp_finaltrack_basetime = np.ones((int(numtracks),int(nmaxclouds)), dtype=int)*fillvalue
+    temp_finaltrack_corecold_mintb = np.ones((int(numtracks),int(nmaxclouds)), dtype=float)*fillvalue
+    temp_finaltrack_corecold_meantb = np.ones((int(numtracks),int(nmaxclouds)), dtype=float)*fillvalue
+    temp_finaltrack_core_meantb = np.ones((int(numtracks),int(nmaxclouds)), dtype=float)*fillvalue
+    temp_finaltrack_corecold_histtb = np.zeros((int(numtracks),int(nmaxclouds), nbintb-1))
+    temp_finaltrack_corecold_radius = np.ones((int(numtracks),int(nmaxclouds)), dtype=float)*fillvalue
+    temp_finaltrack_corecoldwarm_radius = np.ones((int(numtracks),int(nmaxclouds)), dtype=float)*fillvalue
+    temp_finaltrack_corecold_meanlat = np.ones((int(numtracks),int(nmaxclouds)), dtype=float)*fillvalue
+    temp_finaltrack_corecold_meanlon = np.ones((int(numtracks),int(nmaxclouds)), dtype=float)*fillvalue
+    temp_finaltrack_corecold_maxlon = np.ones((int(numtracks),int(nmaxclouds)), dtype=float)*fillvalue
+    temp_finaltrack_corecold_maxlat = np.ones((int(numtracks),int(nmaxclouds)), dtype=float)*fillvalue
+    temp_finaltrack_ncorecoldpix = np.ones((int(numtracks),int(nmaxclouds)), dtype=int)*fillvalue
+    temp_finaltrack_corecold_minlon = np.ones((int(numtracks),int(nmaxclouds)), dtype=float)*fillvalue
+    temp_finaltrack_corecold_minlat = np.ones((int(numtracks),int(nmaxclouds)), dtype=float)*fillvalue
+    temp_finaltrack_ncorepix = np.ones((int(numtracks),int(nmaxclouds)), dtype=int)*fillvalue
+    temp_finaltrack_ncoldpix = np.ones((int(numtracks),int(nmaxclouds)), dtype=int)*fillvalue
+    temp_finaltrack_nwarmpix = np.ones((int(numtracks),int(nmaxclouds)), dtype=int)*fillvalue
+    temp_finaltrack_corecold_status = np.ones((int(numtracks),int(nmaxclouds)), dtype=float)*fillvalue
+    temp_finaltrack_corecold_trackinterruptions = np.ones(int(numtracks), dtype=int)*fillvalue
+    temp_finaltrack_corecold_mergenumber = np.ones((int(numtracks),int(nmaxclouds)), dtype=float)*fillvalue
+    temp_finaltrack_corecold_splitnumber = np.ones((int(numtracks),int(nmaxclouds)), dtype=float)*fillvalue
+    temp_finaltrack_corecold_cloudnumber = np.ones((int(numtracks),int(nmaxclouds)), dtype=float)*fillvalue
+    temp_finaltrack_datetimestring = np.ones((int(numtracks),int(nmaxclouds),13), dtype=str)
+    temp_finaltrack_cloudidfile = np.ones((int(numtracks),int(nmaxclouds),numcharfilename), dtype=str)
+    temp_finaltrack_corecold_majoraxis = np.ones((int(numtracks),int(nmaxclouds)), dtype=float)*fillvalue
+    temp_finaltrack_corecold_orientation = np.ones((int(numtracks),int(nmaxclouds)), dtype=float)*fillvalue 
+    temp_finaltrack_corecold_eccentricity = np.ones((int(numtracks),int(nmaxclouds)), dtype=float)*fillvalue
+    temp_finaltrack_corecold_perimeter = np.ones((int(numtracks),int(nmaxclouds)), dtype=float)*fillvalue
+    temp_finaltrack_corecold_xcenter = np.ones((int(numtracks),int(nmaxclouds)), dtype=float)*fillvalue
+    temp_finaltrack_corecold_ycenter = np.ones((int(numtracks),int(nmaxclouds)), dtype=float)*fillvalue
+    temp_finaltrack_corecold_xweightedcenter = np.ones((int(numtracks),int(nmaxclouds)), dtype=float)*fillvalue
+    temp_finaltrack_corecold_yweightedcenter = np.ones((int(numtracks),int(nmaxclouds)), dtype=float)*fillvalue
     if landsea == 1:
-        temp_finaltrack_corecold_landfrac = np.ones((numtracks,nmaxclouds), dtype=float)*fillvalue
-        temp_finaltrack_core_landfrac = np.ones((numtracks,nmaxclouds), dtype=float)*fillvalue
+        temp_finaltrack_corecold_landfrac = np.ones((int(numtracks),int(nmaxclouds)), dtype=float)*fillvalue
+        temp_finaltrack_core_landfrac = np.ones((int(numtracks),int(nmaxclouds)), dtype=float)*fillvalue
 
     #########################################################################################
     # loop over files. Calculate statistics and organize matrices by tracknumber and cloud
