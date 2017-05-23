@@ -72,13 +72,6 @@ scratchpath = './'
 #latlon_file = root_path + 'irdata_20000101_0000.nc'
 latlon_file = data_path + 'mcstrack_20110520_0000.nc'
 
-# Character number of dates and times in filename
-fileyearindices = [9,13]
-filemonthindices = [13,15]
-filedayindices = [15,17]
-filehourindices = [18,20]
-fileminuteindices = [20,22]
-
 # Specify data structure
 dimname = 'nclouds'
 numbername = 'convcold_cloudnumber'
@@ -131,19 +124,21 @@ if run_idclouds == 1:
     allrawdatafiles = fnmatch.filter(os.listdir(data_path), databasename+'*')
 
     # Loop through files, identifying files within the startdate - enddate interval
+    nleadingchar = np.array(len(databasename)).astype(int)
+
     rawdatafiles = [None]*len(allrawdatafiles)
     files_timestring = [None]*len(allrawdatafiles) 
     files_datestring = [None]*len(allrawdatafiles)
     files_basetime = np.ones(len(allrawdatafiles), dtype=int)*-9999
     filestep = 0
     for ifile in allrawdatafiles:
-        TEMP_filetime = datetime.datetime(int(ifile[fileyearindices[0]:fileyearindices[1]]), int(ifile[filemonthindices[0]:filemonthindices[1]]), int(ifile[filedayindices[0]:filedayindices[1]]), int(ifile[filehourindices[0]:filehourindices[1]]), int(ifile[fileminuteindices[0]:fileminuteindices[1]]), 0, tzinfo=utc)
+        TEMP_filetime = datetime.datetime(int(ifile[nleadingchar:nleadingchar+4]), int(ifile[nleadingchar+4:nleadingchar+6]), int(ifile[nleadingchar+6:nleadingchar+8]), int(ifile[nleadingchar+9:nleadingchar+11]), int(ifile[nleadingchar+11:nleadingchar+13]), 0, tzinfo=utc)
         TEMP_filebasetime = calendar.timegm(TEMP_filetime.timetuple())
 
         if TEMP_filebasetime >= start_basetime and TEMP_filebasetime <= end_basetime:
             rawdatafiles[filestep] = data_path + ifile
-            files_timestring[filestep] = ifile[filehourindices[0]:filehourindices[1]] + ifile[fileminuteindices[0]:fileminuteindices[1]]
-            files_datestring[filestep] = ifile[fileyearindices[0]:fileyearindices[1]] + ifile[filemonthindices[0]:filemonthindices[1]] + ifile[filedayindices[0]:filedayindices[1]]
+            files_timestring[filestep] = ifile[nleadingchar+9:nleadingchar+11] + ifile[nleadingchar+11:nleadingchar+13]
+            files_datestring[filestep] = ifile[nleadingchar:nleadingchar+4] + ifile[nleadingchar+4:nleadingchar+6] + ifile[nleadingchar+6:nleadingchar+8]
             files_basetime[filestep] = np.copy(TEMP_filebasetime)
             filestep = filestep + 1
 
