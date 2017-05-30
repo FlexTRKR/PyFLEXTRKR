@@ -27,8 +27,26 @@ import sys
 # id_filepath - path to input cloudid files
 # id_filebase - basename of cloudid files
 
-def trackclouds_mergedir(firstcloudidfilename, secondcloudidfilename, firstdatestring, seconddatestring, firsttimestring, secondtimestring, firstbasetime, secondbasetime, dataoutpath, track_version, timegap, nmaxlinks, othresh, startdate, enddate):
-    ##############################################################
+def trackclouds_mergedir(zipped_inputs): #firstcloudidfilename, secondcloudidfilename, firstdatestring, seconddatestring, firsttimestring, secondtimestring, firstbasetime, secondbasetime, dataoutpath, track_version, timegap, nmaxlinks, othresh, startdate, enddate):
+    ########################################################
+    # Separate inputs
+    firstcloudidfilename = zipped_inputs[0]
+    secondcloudidfilename = zipped_inputs[1]
+    firstdatestring = zipped_inputs[2]
+    seconddatestring = zipped_inputs[3]
+    firsttimestring = zipped_inputs[4]
+    secondtimestring = zipped_inputs[5]
+    firstbasetime = zipped_inputs[6]
+    secondbasetime = zipped_inputs[7]
+    dataoutpath = zipped_inputs[8]
+    track_version = zipped_inputs[9]
+    timegap = zipped_inputs[10]
+    nmaxlinks = zipped_inputs[11]
+    othresh = zipped_inputs[12]
+    startdate = zipped_inputs[13]
+    enddate = zipped_inputs[14]
+
+    ########################################################
     # Set constants
     # Version information
     outfilebase = 'track' + track_version + '_'

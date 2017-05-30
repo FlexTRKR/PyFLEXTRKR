@@ -22,8 +22,8 @@ from pytz import timezone, utc
 # Set variables describing data, file structure, and tracking thresholds
 
 # Specify which sets of code to run. (1 = run code, 0 = don't run code)
-run_idclouds = 1        # Segment and identify cloud systems
-run_tracksingle = 0     # Track single consecutive cloudid files
+run_idclouds = 0        # Segment and identify cloud systems
+run_tracksingle = 1     # Track single consecutive cloudid files
 run_gettracks = 1       # Run trackig for all files
 run_finalstats = 1      # Calculate final statistics
 run_labelcloud = 1      # Create maps with all events in a tracking having the same number
@@ -238,15 +238,11 @@ if run_tracksingle == 1:
     # Call function
     print('Tracking clouds between single files')
 
-    map(trackclouds_mergedir, cloudidfiles[0:-1], cloudidfiles[1::], cloudidfiles_datestring[0:-1], cloudidfiles_datestring[1::], cloudidfiles_timestring[0:-1], cloudidfiles_timestring[1::], cloudidfiles_basetime[0:-1], cloudidfiles_basetime[1::], list_trackingoutpath, list_trackversion, list_timegap, list_nmaxlinks, list_othresh, list_startdate, list_enddate)
+    trackclouds_input = zip(cloudidfiles[0:-1], cloudidfiles[1::], cloudidfiles_datestring[0:-1], cloudidfiles_datestring[1::], cloudidfiles_timestring[0:-1], cloudidfiles_timestring[1::], cloudidfiles_basetime[0:-1], cloudidfiles_basetime[1::], list_trackingoutpath, list_trackversion, list_timegap, list_nmaxlinks, list_othresh, list_startdate, list_enddate)
+
+    map(trackclouds_mergedir, trackclouds_input)
+
     singletrack_filebase = 'track' + track_version + '_'
-
-    # Call function
-    #print('Tracking clouds between single files')
-
-    #for icloudidfile in range(1,cloudidfilestep):
-    #    trackclouds_mergedir(cloudidfiles[icloudidfile-1], cloudidfiles[icloudidfile], cloudidfiles_datestring[icloudidfile-1], cloudidfiles_datestring[icloudidfile], cloudidfiles_timestring[icloudidfile-1], cloudidfiles_timestring[icloudidfile], cloudidfiles_basetime[icloudidfile-1], cloudidfiles_basetime[icloudidfile], tracking_outpath, track_version, timegap, nmaxlinks, othresh, startdate, enddate)
-    #singletrack_filebase = 'track' + track_version + '_' 
 
 ###########################################################
 # Track clouds / features through the entire dataset
