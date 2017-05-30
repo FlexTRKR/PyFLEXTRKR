@@ -2,6 +2,7 @@ import numpy as np
 import os, fnmatch
 import time, datetime, calendar
 from pytz import timezone, utc
+from multiprocessing import pool
 
 # Name: Run_TestData.py
 
@@ -174,7 +175,17 @@ if run_idclouds == 1:
 
     # Call function
     print('Identifying Clouds')
+
+    # Serial version
     map(idclouds_mergedir, idclouds_input)
+
+    # Parallel version
+    #if __name__ == '__main__':
+    #    pool = Pool(processes = 4)
+    #    pool.map(idclouds_mergedir, idclouds_input)
+    #    pool.close()
+    #    pool.join()
+
     cloudid_filebase = datasource + '_' + datadescription + '_cloudid' + cloudid_version + '_'
 
 ###################################################################
@@ -240,7 +251,15 @@ if run_tracksingle == 1:
 
     trackclouds_input = zip(cloudidfiles[0:-1], cloudidfiles[1::], cloudidfiles_datestring[0:-1], cloudidfiles_datestring[1::], cloudidfiles_timestring[0:-1], cloudidfiles_timestring[1::], cloudidfiles_basetime[0:-1], cloudidfiles_basetime[1::], list_trackingoutpath, list_trackversion, list_timegap, list_nmaxlinks, list_othresh, list_startdate, list_enddate)
 
+    # Serial version
     map(trackclouds_mergedir, trackclouds_input)
+
+    # parallelize version
+    #if __name__ == '__main__':
+    #    pool = Pool(processes = 4)
+    #    pool.map(trackclouds_mergedir, idclouds_input)
+    #    pool.close()
+    #    pool.join()
 
     singletrack_filebase = 'track' + track_version + '_'
 
