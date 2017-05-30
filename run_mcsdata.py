@@ -22,7 +22,7 @@ from pytz import timezone, utc
 # Set variables describing data, file structure, and tracking thresholds
 
 # Specify which sets of code to run. (1 = run code, 0 = don't run code)
-run_idclouds = 0        # Segment and identify cloud systems
+run_idclouds = 1        # Segment and identify cloud systems
 run_tracksingle = 0     # Track single consecutive cloudid files
 run_gettracks = 1       # Run trackig for all files
 run_finalstats = 1      # Calculate final statistics
@@ -170,16 +170,12 @@ if run_idclouds == 1:
     list_missthresh = np.ones(filestep)*miss_thresh
     list_warmanvilexpansion = np.ones(filestep)*warmanvilexpansion
 
+    idclouds_input = zip(rawdatafiles, files_datestring, files_timestring, files_basetime, list_datasource, list_datadescription, list_datavariablename, list_cloudidversion, list_trackingoutpath, list_latlonfile, list_geolimits, list_startdate, list_enddate, list_pixelradius, list_areathresh, list_cloudtbthreshs, list_absolutetbthreshs, list_missthresh, list_warmanvilexpansion)
+
     # Call function
     print('Identifying Clouds')
-    map(idclouds_mergedir, rawdatafiles, files_datestring, files_timestring, files_basetime, list_datasource, list_datadescription, list_datavariablename, list_cloudidversion, list_trackingoutpath, list_latlonfile, list_geolimits, list_startdate, list_enddate, list_pixelradius, list_areathresh, list_cloudtbthreshs, list_absolutetbthreshs, list_missthresh, list_warmanvilexpansion)
+    map(idclouds_mergedir, idclouds_input)
     cloudid_filebase = datasource + '_' + datadescription + '_cloudid' + cloudid_version + '_'
-
-    ## Call function
-    #print('Identifying Clouds')
-    #for filestep, ifile in enumerate(rawdatafiles):
-    #    idclouds_mergedir(ifile, files_datestring[filestep], files_timestring[filestep], files_basetime[filestep], datasource, datadescription, datavariablename, cloudid_version, tracking_outpath, latlon_file, geolimits, startdate, enddate, pixel_radius, area_thresh, cloudtb_threshs, absolutetb_threshs, miss_thresh, warmanvilexpansion)
-    #cloudid_filebase = datasource + '_' + datadescription + '_cloudid' + cloudid_version + '_' 
 
 ###################################################################
 # Link clouds/ features in time adjacent files (single file tracking), if necessary

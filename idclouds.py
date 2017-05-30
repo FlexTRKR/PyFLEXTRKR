@@ -13,7 +13,7 @@ import matplotlib.pyplot as plt
 
 ############################################/global/homes/h/hcbarnes/Tracking/testdata/################
 # function used to handle test data
-def idclouds_mergedir(datafilepath, datafiledatestring, datafiletimestring, datafilebasetime, datasource, datadescription, variablename, cloudid_version, dataoutpath, latlon_file, geolimits, startdate, enddate, pixel_radius, area_thresh, cloudtb_threshs, absolutetb_threshs, miss_thresh, warmanvilexpansion):
+def idclouds_mergedir(zipped_inputs):
     # inputs:
     # datasource - source of the data
     # datadescription - description of data source, included in all output file names
@@ -40,6 +40,28 @@ def idclouds_mergedir(datafilepath, datafiledatestring, datafiletimestring, data
     # ncorepix - number of core pixels in each feature
     # ncoldpix - number of cold anvil pixels in each feature
     # nwarmpix - number of warm anvil pixels in each feature
+
+    ##########################################################
+    # Separate inputs
+    datafilepath = zipped_inputs[0]
+    datafiledatestring = zipped_inputs[1]
+    datafiletimestring = zipped_inputs[2]
+    datafilebasetime = zipped_inputs[3]
+    datasource = zipped_inputs[4]
+    datadescription = zipped_inputs[5]
+    variablename = zipped_inputs[6]
+    cloudid_version = zipped_inputs[7]
+    dataoutpath = zipped_inputs[8]
+    latlon_file = zipped_inputs[9]
+    geolimits = zipped_inputs[10]
+    startdate = zipped_inputs[11]
+    enddate = zipped_inputs[12]
+    pixel_radius = zipped_inputs[13]
+    area_thresh = zipped_inputs[14]
+    cloudtb_threshs = zipped_inputs[15]
+    absolutetb_threshs = zipped_inputs[16]
+    miss_thresh = zipped_inputs[17]
+    warmanvilexpansion = zipped_inputs[18]
 
     ##########################################################
     # define constants:
