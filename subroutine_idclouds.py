@@ -1,7 +1,3 @@
-import numpy as np
-import matplotlib.pyplot as plt
-from scipy.ndimage import label, binary_dilation, generate_binary_structure
-
 # Purpose: Identifies features and labels based on brightness temperature thresholds
 
 # Comments:
@@ -29,6 +25,11 @@ from scipy.ndimage import label, binary_dilation, generate_binary_structure
 
 # Define function for futyan method
 def futyan(ir, pixel_radius, tb_threshs, area_thresh, warmanvilexpansion):
+    ######################################################################
+    # Import modules
+    import numpy as np
+    from scipy.ndimage import label, binary_dilation, generate_binary_structure
+
     ######################################################################
     # Define constants:
     # Separate array threshold

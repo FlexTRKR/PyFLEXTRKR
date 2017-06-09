@@ -1,11 +1,3 @@
-import numpy as np
-import os, fnmatch
-import time, datetime, calendar
-from pytz import timezone, utc
-from netCDF4 import Dataset, stringtochar, chartostring
-import sys
-import matplotlib.pyplot as plt
-
 # Define function to track clouds that were identified in merged ir data
 def gettracknumbers_mergedir(datasource, datadescription, datainpath, dataoutpath, startdate, enddate, timegap, nmaxclouds, cloudid_filebase, npxname, tracknumbers_version, singletrack_filebase, keepsingletrack=0, removestartendtracks=0, tdimname='time', xdimname='lon', ydimname='lat'):
     # Purpose: Track clouds successively from teh singel cloud files produced in trackclouds_mergedir.py.
@@ -40,6 +32,15 @@ def gettracknumbers_mergedir(datasource, datadescription, datainpath, dataoutpat
 
 
     ################################################################################
+    # Import modules
+    import numpy as np
+    import os, fnmatch
+    import time, datetime, calendar
+    from pytz import timezone, utc
+    from netCDF4 import Dataset, stringtochar, chartostring
+    import sys
+
+    #############################################################################
     # Set track numbers output file name
     tracknumbers_filebase = 'tracknumbers' + tracknumbers_version
     tracknumbers_outfile = dataoutpath + tracknumbers_filebase + '_' + startdate + '_' + enddate + '.nc'

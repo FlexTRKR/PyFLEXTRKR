@@ -1,12 +1,3 @@
-from netCDF4 import Dataset, stringtochar
-import os
-import numpy as np
-import sys
-import datetime
-import calendar
-import time
-import matplotlib.pyplot as plt
-
 # purpose: identifies features and outputs netcdf files
 
 # author: orginial idl version written by sally a. mcfarlane (sally.mcfarlane@pnnl.gov) and then modified by zhe feng (zhe.feng@pnnl.gov). python version written by hannah barnes (hannah.barnes@pnnl.gov)
@@ -42,7 +33,19 @@ def idclouds_mergedir(zipped_inputs):
     # nwarmpix - number of warm anvil pixels in each feature
 
     ##########################################################
+    # Load modules
+
+    from netCDF4 import Dataset, stringtochar
+    import os
+    import numpy as np
+    import sys
+    import datetime
+    import calendar
+    import time
+
+    ########################################################
     # Separate inputs
+
     datafilepath = zipped_inputs[0]
     datafiledatestring = zipped_inputs[1]
     datafiletimestring = zipped_inputs[2]
@@ -62,6 +65,8 @@ def idclouds_mergedir(zipped_inputs):
     absolutetb_threshs = zipped_inputs[16]
     miss_thresh = zipped_inputs[17]
     warmanvilexpansion = zipped_inputs[18]
+
+    print(datafilepath)
 
     ##########################################################
     # define constants:

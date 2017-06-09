@@ -1,13 +1,3 @@
-import numpy as np
-from netCDF4 import Dataset, chartostring, stringtochar
-import os, fnmatch
-import sys
-import matplotlib.pyplot as plt
-from math import pi
-from skimage.measure import regionprops
-from matplotlib.patches import Ellipse
-import time
-
 # Define function that calculates track statistics for satellite data
 def trackstats_sat(datasource, datadescription, pixel_radius, latlon_file, geolimits, areathresh, cloudtb_threshs, absolutetb_threshs, startdate, enddate, cloudid_filebase, tracking_inpath, stats_path, track_version, tracknumbers_version, tracknumbers_filebase, lengthrange=[2,120], landsea=0):
 
@@ -30,6 +20,17 @@ def trackstats_sat(datasource, datadescription, pixel_radius, latlon_file, geoli
     # lengthrange - Optional. Set this keyword to a vector [minlength,maxlength] to specify the lifetime range for the tracks.
 
     ###################################################################################
+    # Initialize modules
+    import numpy as np
+    from netCDF4 import Dataset, chartostring, stringtochar
+    import os, fnmatch
+    import sys
+    from math import pi
+    from skimage.measure import regionprops
+    from matplotlib.patches import Ellipse
+    import time
+
+    #############################################################################
     # Set constants
 
     # Isolate core and cold anvil brightness temperature thresholds

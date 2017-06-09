@@ -1,13 +1,13 @@
-import numpy as np
-import glob
-import os
-import re
-import fnmatch
-import matplotlib.pyplot as plt
-from netCDF4 import Dataset
-import time, datetime, calendar
-from pytz import timezone, utc
-import sys
+#import numpy as np
+#import glob
+#import os
+#import re
+#import fnmatch
+#import matplotlib.pyplot as plt
+#from netCDF4 import Dataset
+#import time, datetime, calendar
+#from pytz import timezone, utc
+#import sys
 
 # Name: trackclouds_singlefile
 
@@ -29,6 +29,16 @@ import sys
 
 def trackclouds_mergedir(zipped_inputs): #firstcloudidfilename, secondcloudidfilename, firstdatestring, seconddatestring, firsttimestring, secondtimestring, firstbasetime, secondbasetime, dataoutpath, track_version, timegap, nmaxlinks, othresh, startdate, enddate):
     ########################################################
+    import numpy as np
+    import glob
+    import os
+    import re
+    import fnmatch
+    from netCDF4 import Dataset
+    import time, datetime, calendar
+    from pytz import timezone, utc
+    import sys
+
     # Separate inputs
     firstcloudidfilename = zipped_inputs[0]
     secondcloudidfilename = zipped_inputs[1]
@@ -59,16 +69,16 @@ def trackclouds_mergedir(zipped_inputs): #firstcloudidfilename, secondcloudidfil
     new_datestring = seconddatestring
     new_timestring = secondtimestring
     new_basetime = secondbasetime
-    new_filedatetime = new_datestring + '_' + new_timestring
+    new_filedatetime = str(new_datestring) + '_' + str(new_timestring)
     
     reference_file = firstcloudidfilename
     reference_datestring = firstdatestring
     reference_timestring = firsttimestring
     reference_basetime = firstbasetime
-    reference_filedatetime = reference_datestring + '_' + reference_timestring
+    reference_filedatetime = str(reference_datestring) + '_' + str(reference_timestring)
 
     # Check that new and reference files differ by less than timegap in hours. Use base time (which is the seconds since 01-Jan-1970 00:00:00). Divide base time difference between the files by 3600 to get difference in hours
-    hour_diff = (new_basetime - reference_basetime)/float(3600)
+    hour_diff = (np.subtract(new_basetime, reference_basetime))/float(3600)
     if hour_diff < timegap and hour_diff > 0:
         print('Linking:')
 
