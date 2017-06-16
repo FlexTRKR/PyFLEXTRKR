@@ -56,15 +56,17 @@ def idclouds_mergedir(zipped_inputs):
     cloudid_version = zipped_inputs[7]
     dataoutpath = zipped_inputs[8]
     latlon_file = zipped_inputs[9]
-    geolimits = zipped_inputs[10]
-    startdate = zipped_inputs[11]
-    enddate = zipped_inputs[12]
-    pixel_radius = zipped_inputs[13]
-    area_thresh = zipped_inputs[14]
-    cloudtb_threshs = zipped_inputs[15]
-    absolutetb_threshs = zipped_inputs[16]
-    miss_thresh = zipped_inputs[17]
-    warmanvilexpansion = zipped_inputs[18]
+    latname = zipped_inputs[10]
+    longname = zipped_inputs[11]
+    geolimits = zipped_inputs[12]
+    startdate = zipped_inputs[13]
+    enddate = zipped_inputs[14]
+    pixel_radius = zipped_inputs[15]
+    area_thresh = zipped_inputs[16]
+    cloudtb_threshs = zipped_inputs[17]
+    absolutetb_threshs = zipped_inputs[18]
+    miss_thresh = zipped_inputs[19]
+    warmanvilexpansion = zipped_inputs[20]
 
     print(datafilepath)
 
@@ -79,8 +81,8 @@ def idclouds_mergedir(zipped_inputs):
     # geolocation data
     if datasource == 'mergedir':
         geolocation_data = Dataset(latlon_file, 'r')      # open file
-        in_lat = geolocation_data.variables['lat'][:]     # load latitude data
-        in_lon = geolocation_data.variables['lon'][:]     # load longitude data
+        in_lat = geolocation_data.variables[latname][:]     # load latitude data
+        in_lon = geolocation_data.variables[longname][:]     # load longitude data
         geolocation_data.close()                          # close file
 
     # Brightness temperature data. 
@@ -97,7 +99,11 @@ def idclouds_mergedir(zipped_inputs):
         rawdata.close()                                   # close file
 
         # Replace nans with fill value
-        in_ir[~np.isfinite(in_ir)] = fillval   
+        #in_ir[~np.isfinite(in_ir)] = fillval
+
+        in_lat = np.transpose(in_lat)
+        in_lon = np.transpose(in_lon)
+        in_ir = np.transpose(in_ir)
 
         #####################################################
         # mask brightness temperatures outside of normal range
@@ -115,7 +121,8 @@ def idclouds_mergedir(zipped_inputs):
         if len(lat_indices) > 0 and len(lon_indices) > 0:
             out_lat = in_lat[lat_indices[0]:lat_indices[-1], lon_indices[0]:lon_indices[-1]]
             out_lon = in_lon[lat_indices[0]:lat_indices[-1], lon_indices[0]:lon_indices[-1]]
-            out_ir = in_ir[0, lat_indices[0]:lat_indices[-1], lon_indices[0]:lon_indices[-1]]
+            out_ir = in_ir[lat_indices[0]:lat_indices[-1], lon_indices[0]:lon_indices[-1]]
+            #out_ir = in_ir[0, lat_indices[0]:lat_indices[-1], lon_indices[0]:lon_indices[-1]]
 
             ######################################################
             # proceed only if number of missing data does not exceed an accepable threshold

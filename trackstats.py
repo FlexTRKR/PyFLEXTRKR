@@ -200,8 +200,8 @@ def trackstats_sat(datasource, datadescription, pixel_radius, latlon_file, geoli
                         # Save information that links this cloud back to its raw pixel level data
                         temp_finaltrack_basetime[itrack-1,nc] = file_basetime
                         temp_finaltrack_corecold_cloudnumber[itrack-1,nc] = cloudnumber
-                        temp_finaltrack_cloudidfile[itrack-1,nc,:] = stringtochar(np.array(cloudidfiles[nf]))
-                        temp_finaltrack_datetimestring[itrack-1,nc,:] = stringtochar(np.array(file_datetimestring))
+                        temp_finaltrack_cloudidfile[itrack-1,nc,:] = cloudidfiles[nf]
+                        temp_finaltrack_datetimestring[itrack-1,nc,:] = file_datetimestring
 
                         ###############################################################
                         # Calculate statistics about this cloud system
@@ -344,7 +344,7 @@ def trackstats_sat(datasource, datadescription, pixel_radius, latlon_file, geoli
                             temp_finaltrack_core_landfrac[itrack-1,nc] = np.divide(ncoreland, ncore)
                     
                     else:
-                        sys.exit(str(nc) + ' greater than maximum allowed number clouds')
+                        sys.exit(str(nc) + ' greater than maximum allowed number clouds, ' + str(nmaxclouds))
 
                 elif len(cloudnumber) > 1:
                     sys.exit(str(cloudnumbers) + ' clouds linked to one track. Each track should only be linked to one cloud in each file in the track_number array. The track_number variable only tracks the largest cell in mergers and splits. The small clouds in tracks and mergers should only be listed in the track_splitnumbers and track_mergenumbers arrays.')
