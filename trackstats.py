@@ -1,7 +1,7 @@
 # Define function that calculates track statistics for satellite data
 def trackstats_sat(datasource, datadescription, pixel_radius, latlon_file, geolimits, areathresh, cloudtb_threshs, absolutetb_threshs, startdate, enddate, cloudid_filebase, tracking_inpath, stats_path, track_version, tracknumbers_version, tracknumbers_filebase, lengthrange=[2,120], landsea=0):
 
-    # Purpose: Final step is to renumber the track numbers, which must be done since the previous step removed short tracks, and calculate statistics about the tracks. This gets statistics that can only be calculaed from the satellite, pixel-level data. Any statistic that is a function of these pixel-level statistics should be calculated in a separate routine.
+    # Purpose: Final step is to renumber the track numbers, which must be done since the previous step removed short tracks, an, zlib=True, complevel=5, fill_value=fillvalued calculate statisti, zlib=True, complevel=5, fill_value=fillvaluecs about the tracks. This gets statistics that can only be calculaed from the satellite, pixel-level data. Any statistic that is a function of these pixel-level statistics should be calculated in a separate routine.
 
     # Author: Orginial IDL version written by Sally A. McFarline (sally.mcfarlane@pnnl.gov) and modified for Zhe Feng (she.feng@pnnl.gov). Python version written by Hannah C. Barnes (hannah.barnes@pnnl.gov)
 
@@ -125,8 +125,8 @@ def trackstats_sat(datasource, datadescription, pixel_radius, latlon_file, geoli
     temp_finaltrack_corecold_mergenumber = np.ones((int(numtracks),int(nmaxclouds)), dtype=float)*fillvalue
     temp_finaltrack_corecold_splitnumber = np.ones((int(numtracks),int(nmaxclouds)), dtype=float)*fillvalue
     temp_finaltrack_corecold_cloudnumber = np.ones((int(numtracks),int(nmaxclouds)), dtype=float)*fillvalue
-    temp_finaltrack_datetimestring = np.ones((int(numtracks),int(nmaxclouds),13), dtype=str)
-    temp_finaltrack_cloudidfile = np.ones((int(numtracks),int(nmaxclouds),numcharfilename), dtype=str)
+    temp_finaltrack_datetimestring = [[['' for x in range(13)] for y in range(int(nmaxclouds))] for z in range(int(numtracks))]
+    temp_finaltrack_cloudidfile = [[['' for x in range(numcharfilename)] for y in range(int(nmaxclouds))] for z in range(int(numtracks))]
     temp_finaltrack_corecold_majoraxis = np.ones((int(numtracks),int(nmaxclouds)), dtype=float)*fillvalue
     temp_finaltrack_corecold_orientation = np.ones((int(numtracks),int(nmaxclouds)), dtype=float)*fillvalue 
     temp_finaltrack_corecold_eccentricity = np.ones((int(numtracks),int(nmaxclouds)), dtype=float)*fillvalue
@@ -161,7 +161,8 @@ def trackstats_sat(datasource, datadescription, pixel_radius, latlon_file, geoli
             longitude = file_cloudiddata.variables['longitude'][:]
             file_cloudiddata.close()
 
-            file_datetimestring = file_datestring[0] + '_' + file_timestring[0]
+            file_datetimestring = [file_datestring[0], '_', file_timestring[0]]
+            file_datetimestring = ''.join(file_datetimestring)
 
             # Find unique track numbers
             uniquetracknumbers = np.unique(file_tracknumbers)
@@ -200,8 +201,8 @@ def trackstats_sat(datasource, datadescription, pixel_radius, latlon_file, geoli
                         # Save information that links this cloud back to its raw pixel level data
                         temp_finaltrack_basetime[itrack-1,nc] = file_basetime
                         temp_finaltrack_corecold_cloudnumber[itrack-1,nc] = cloudnumber
-                        temp_finaltrack_cloudidfile[itrack-1,nc,:] = cloudidfiles[nf]
-                        temp_finaltrack_datetimestring[itrack-1,nc,:] = file_datetimestring
+                        temp_finaltrack_cloudidfile[itrack-1][nc][:] = cloudidfiles[nf]
+                        temp_finaltrack_datetimestring[int(itrack-1)][int(nc)][:] = file_datetimestring
 
                         ###############################################################
                         # Calculate statistics about this cloud system
@@ -378,8 +379,8 @@ def trackstats_sat(datasource, datadescription, pixel_radius, latlon_file, geoli
     finaltrack_corecold_mergenumber = temp_finaltrack_corecold_mergenumber[cloudindexpresent,:]
     finaltrack_corecold_splitnumber = temp_finaltrack_corecold_splitnumber[cloudindexpresent,:]
     finaltrack_corecold_cloudnumber = temp_finaltrack_corecold_cloudnumber[cloudindexpresent,:]
-    finaltrack_datetimestring = temp_finaltrack_datetimestring[cloudindexpresent,:]
-    finaltrack_cloudidfile = temp_finaltrack_cloudidfile[cloudindexpresent,:]
+    finaltrack_datetimestring = list(temp_finaltrack_datetimestring[i][:][:] for i in cloudindexpresent)
+    finaltrack_cloudidfile = list(temp_finaltrack_cloudidfile[i][:][:] for i in cloudindexpresent)
     finaltrack_corecold_majoraxis = temp_finaltrack_corecold_majoraxis[cloudindexpresent,:]
     finaltrack_corecold_orientation = temp_finaltrack_corecold_orientation[cloudindexpresent,:] 
     finaltrack_corecold_eccentricity = temp_finaltrack_corecold_eccentricity[cloudindexpresent,:]
@@ -448,8 +449,6 @@ def trackstats_sat(datasource, datadescription, pixel_radius, latlon_file, geoli
     lifetime.description = 'Lifetime of each tracked system'
     lifetime.units = 'temporal resolution of original data'
     lifetime.fill_value = fillvalue
-    lifetime.min_value = 2
-    lifetime.max_value = nmaxclouds
 
     basetime = filesave.createVariable('basetime', 'i4', ('ntracks', 'nmaxlength'), zlib=True, fill_value=fillvalue)
     basetime.long_name = 'epoch time'
@@ -727,7 +726,7 @@ def trackstats_sat(datasource, datadescription, pixel_radius, latlon_file, geoli
     lifetime[:] = finaltrack_tracklength
     basetime[:,:] = finaltrack_basetime
     cloudidfiles[:,:,:] = finaltrack_cloudidfile
-    datetimestrings[:,:,:] = finaltrack_datetimestring
+    datetimestrings[:,:,:] = finaltrack_datetimestring[:][:][:]
     meanlat[:,:] = finaltrack_corecold_meanlat
     meanlon[:,:] = finaltrack_corecold_meanlon
     minlat[:,:] = finaltrack_corecold_minlat
