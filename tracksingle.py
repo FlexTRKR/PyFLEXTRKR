@@ -1,14 +1,3 @@
-#import numpy as np
-#import glob
-#import os
-#import re
-#import fnmatch
-#import matplotlib.pyplot as plt
-#from netCDF4 import Dataset
-#import time, datetime, calendar
-#from pytz import timezone, utc
-#import sys
-
 # Name: trackclouds_singlefile
 
 # Purpose: Track clouds in successive pairs of cloudid files. Output netCDF file for each pair of cloudid files.
