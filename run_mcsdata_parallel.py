@@ -13,7 +13,7 @@ from ipyparallel import Client, require
 # Comments:
 # Features are tracked using 5 sets of code (idclouds, trackclouds_singlefile, get_tracknumbers, calc_sat_trackstats, label_celltrack).
 # This script controls which pieces of code are run.
-# Eventually, idclouds and trackclouds_singlefile will be able to run in parallel.
+# Eventually, idcllegendouds and trackclouds_singlefile will be able to run in parallel.
 # If trackclouds_singlefile is run in of tracksingle between 12/20/2009 - 12/31/2009, make two copies of this script, and set startdate - enddate (ex: 20091220 - 20091225, 20091225 - 20091231).
 # This is because the first time will not have a tracksingle file produced, overlapping the date makes sure every cloudid file is used.
 # The idclouds and trackClouds_singlefile only need to be run once and can be run on portions of the data a time.
@@ -25,10 +25,11 @@ from ipyparallel import Client, require
 # Set variables describing data, file structure, and tracking thresholds
 
 # Specify which sets of code to run. (1 = run code, 0 = don't run code)
-run_idclouds = 1        # Segment and identify cloud systems
-run_tracksingle = 1     # Track single consecutive cloudid files
+run_idclouds = 0        # Segment and identify cloud systems
+run_tracksingle = 0     # Track single consecutive cloudid files
 run_gettracks = 1       # Run trackig for all files
 run_finalstats = 1      # Calculate final statistics
+run_identifymcs = 1     # Isolate MCSs 
 run_labelcloud = 1      # Create maps with all events in a tracking having the same number
 
 # Specify version of code using
@@ -62,20 +63,28 @@ nmaxclouds = 3000                 # Maximum number of clouds allowed to be in on
 absolutetb_threshs = np.array([160,330])        # k A vector [min, max] brightness temperature allowed. Brightness temperatures outside this range are ignored.
 warmanvilexpansion = 1            # If this is set to one, then the cold anvil is spread laterally until it exceeds the warm anvil threshold
 
+# Specify MCS parameters
+mcs_areathresh = 6e4              # area threshold [km^2]
+mcs_durationthresh = 6            # Minimum length of a mcs [hr]
+mcs_eccentricitythresh = 0.7      # eccentricity at time of maximum extent
+mcs_splitduration = 6            # Tracks smaller or equal to this length will be included with the MCS is it relinks with the MCS
+mcs_mergeduration = 6            # Tracks smaller or equal to this length will be included with the MCS is it relinks with the MCS
+
 # Specify filenames and locations
-datavariablename = 'tb'
+datatimeresolution = 0.5 # hours
+datavariablename = 'IRBT'
 datasource = 'mergedir'
-datadescription = 'eus'
-databasename = 'mcstrack_'
+datadescription = 'EUS'
+databasename = 'EUS_IR_Subset_'
 label_filebase = 'cloudtrack_'
 
-root_path = '/global/homes/h/hcbarnes/Tracking/MCS/'
-data_path = '/global/project/projectdirs/m1867/zfeng/usa/mergedir/mcstracking/2011/'
+root_path = '/global/homes/h/hcbarnes/Tracking/Satellite/'
+data_path = '/global/project/projectdirs/m1867/zfeng/usa/mergedir/Netcdf/2011/'
 scratchpath = './'
-#latlon_file = root_path + 'irdata_20000101_0000.nc'
-latlon_file = data_path + 'mcstrack_20110520_0000.nc'
+latlon_file = '/global/project/projectdirs/m1867/zfeng/usa/mergedir/Geolocation/EUS_Geolocation_Data.nc'
 
 # Specify data structure
+datatimeresolution = 0.5 # hours
 dimname = 'nclouds'
 numbername = 'convcold_cloudnumber'
 typename = 'cloudtype'
@@ -289,3 +298,19 @@ if run_finalstats == 1:
     # Call satellite version of function
     print('Calculating track statistics')
     trackstats_sat(datasource, datadescription, pixel_radius, latlon_file, geolimits, area_thresh, cloudtb_threshs, absolutetb_threshs, startdate, enddate, cloudid_filebase, tracking_outpath, stats_outpath, track_version, tracknumber_version, tracknumbers_filebase, lengthrange=lengthrange)
+    trackstats_filebase = 'stats_tracknumbers' + tracknumber_version
+
+##############################################################
+# Identify MCS
+
+# Determine if final statistics portion ran. If not, set the version name and filename using those specified in the constants section
+if run_finalstats == 0:
+    trackstats_filebase = 'stats_tracknumbers' + curr_tracknumbers_version
+
+if run_identifymcs == 1:
+    print('Identifying MCSs')
+    # Load function
+    from identifymcs import mergedir
+
+    # Call satellite version of function
+    mergedir(trackstats_filebase, datasource, datadescription, stats_outpath, startdate, enddate, datatimeresolution, mcs_areathresh, mcs_durationthresh, mcs_eccentricitythresh, mcs_splitduration, mcs_mergeduration, nmaxclouds)
