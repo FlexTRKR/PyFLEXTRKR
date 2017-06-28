@@ -365,7 +365,7 @@ def gettracknumbers_mergedir(datasource, datadescription, datainpath, dataoutpat
 
                                 #print(trackstatus[ifill,tempreferencecloud-1])
 
-                                # If this reference cloud is the largestr fragment of the merger, label this reference time (file) as the larger part of merger (2) and merging at the next time (ifile + 1)
+                                # If this reference cloud is the largest fragment of the merger, label this reference time (file) as the larger part of merger (2) and merging at the next time (ifile + 1)
                                 if tempreferencecloud == largest_referencecloud:
                                     if trackstatus[ifill,tempreferencecloud-1] == fillvalue:
                                         trackstatus[ifill,tempreferencecloud-1] = 2
