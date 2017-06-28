@@ -13,7 +13,8 @@ from ipyparallel import Client
 # Comments:
 # Features are tracked using 5 sets of code (idclouds, trackclouds_singlefile, get_tracknumbers, calc_sat_trackstats, label_celltrack).
 # This scrithon/ExtraCode/pt controls which pieces of code are run.
-# Eventually, idcllegendouds and trackclouds_singlefile will be able to run in parallel.
+# Eventually, idcllegendouds and trackclouds_singlefile will be able to run in paralle        subsetir = np.reshape(subsetir, np.shape(subsetir)[0]*np.shape(subsetir)[1] , 1)
+         l.
 # If trackclouds_singlefile is run in of tracksistringtochar(np.array(cloudidfiles[nf]))ngle between 12/20/2009 - 12/31/2009, make two copies of this script, and set startdate - enddate (ex: 20091220 - 20091225, 20091225 - 20091231).
 # This is because the first time will not have a tracksingle file produced, overlapping the date makes sure every cloudid file is used.
 # The idclouds and trackClouds_singlefile only need to be run once and can be run on portions of the data a time.
@@ -105,6 +106,7 @@ cloudtb_threshs = np.hstack((cloudtb_core, cloudtb_cold, cloudtb_warm, cloudtb_c
 #datapath = root_path                            # Location of raw data
 tracking_outpath = root_path + 'tracking/'         # Data on individual features being tracked
 stats_outpath = root_path + 'stats/'      # Data on track statistics
+mcstracking_outpath = root_path + 'mcstracking/' # Pixel level data for MCSs
 
 ####################################################################
 # Create client, for parallelization
@@ -314,4 +316,5 @@ if run_identifymcs == 1:
     from identifymcs import mergedir
 
     # Call satellite version of function
-    mergedir(trackstats_filebase, datasource, datadescription, stats_outpath, startdate, enddate, datatimeresolution, mcs_areathresh, mcs_durationthresh, mcs_eccentricitythresh, mcs_splitduration, mcs_mergeduration, nmaxclouds)
+    mergedir(trackstats_filebase, datasource, datadescription, mcstracking_outpath, tracking_outpath, cloudid_filebase, stats_outpath, startdate, enddate, datatimeresolution, mcs_areathresh, mcs_durationthresh, mcs_eccentricitythresh, mcs_splitduration, mcs_mergeduration, absolutetb_threshs, nmaxclouds)
+

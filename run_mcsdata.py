@@ -23,10 +23,10 @@ from multiprocessing import Pool
 # Set variables describing data, file structure, and tracking thresholds
 
 # Specify which sets of code to run. (1 = run code, 0 = don't run code)
-run_idclouds = 0        # Segment and identify cloud systems
+run_idclouds = 1        # Segment and identify cloud systems
 run_tracksingle = 0     # Track single consecutive cloudid files
 run_gettracks = 0       # Run trackig for all files
-run_finalstats = 1      # Calculate final statistics
+run_finalstats = 0      # Calculate final statistics
 run_identifymcs = 1     # Isolate MCSs
 run_labelcloud = 1      # Create maps with all events in a tracking having the same number
 
@@ -101,8 +101,9 @@ cloudtb_threshs = np.hstack((cloudtb_core, cloudtb_cold, cloudtb_warm, cloudtb_c
 
 # Specify additional file locations
 #datapath = root_path                            # Location of raw data
-tracking_outpath = root_path + 'tracking/'         # Data on individual features being tracked
-stats_outpath = root_path + 'stats/'      # Data on track statistics
+tracking_outpath = root_path + 'tracking/'       # Data on individual features being tracked
+stats_outpath = root_path + 'stats/'             # Data on track statistics
+mcstracking_outpath = root_path + 'mcstracking/' # Pixel level data for MCSs
 
 ####################################################################
 # Execute tracking scripts
@@ -320,7 +321,7 @@ if run_identifymcs == 1:
     from identifymcs import mergedir
 
     # Call satellite version of function
-    mergedir(trackstats_filebase, datasource, datadescription, stats_outpath, startdate, enddate, datatimeresolution, mcs_areathresh, mcs_durationthresh, mcs_eccentricitythresh, mcs_splitduration, mcs_mergeduration, nmaxclouds)
+    mergedir(trackstats_filebase, datasource, datadescription, mcstracking_outpath, tracking_outpath, cloudid_filebase, stats_outpath, startdate, enddate, datatimeresolution, mcs_areathresh, mcs_durationthresh, mcs_eccentricitythresh, mcs_splitduration, mcs_mergeduration, absolutetb_threshs, nmaxclouds)
 
 
 

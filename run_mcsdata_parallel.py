@@ -106,6 +106,7 @@ cloudtb_threshs = np.hstack((cloudtb_core, cloudtb_cold, cloudtb_warm, cloudtb_c
 #datapath = root_path                            # Location of raw data
 tracking_outpath = root_path + 'MCStracking/'         # Data on individual features being tracked
 stats_outpath = root_path + 'MCSstats/'      # Data on track statistics
+mcstracking_outpath = root_path + 'mcstracking/' # Pixel level data for MCSs
 
 ####################################################################
 # Create client, for parallelization
@@ -313,4 +314,5 @@ if run_identifymcs == 1:
     from identifymcs import mergedir
 
     # Call satellite version of function
-    mergedir(trackstats_filebase, datasource, datadescription, stats_outpath, startdate, enddate, datatimeresolution, mcs_areathresh, mcs_durationthresh, mcs_eccentricitythresh, mcs_splitduration, mcs_mergeduration, nmaxclouds)
+    mergedir(trackstats_filebase, datasource, datadescription, mcstracking_outpath, tracking_outpath, cloudid_filebase, stats_outpath, startdate, enddate, datatimeresolution, mcs_areathresh, mcs_durationthresh, mcs_eccentricitythresh, mcs_splitduration, mcs_mergeduration, absolutetb_threshs, nmaxclouds)
+
