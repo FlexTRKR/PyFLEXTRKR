@@ -95,11 +95,41 @@ def idclouds_mergedir(zipped_inputs):
 
         # load brighttness temperature data. automatically removes missing values
         rawdata = Dataset(datafilepath, 'r')           # open file
-        in_ir = rawdata.variables[variablename][:]                # load brightness temperature data
+        original_ir = rawdata.variables[variablename][:]                # load brightness temperature data
         rawdata.close()                                   # close file
 
-        # Replace nans with fill value
-        #in_ir[~np.isfinite(in_ir)] = fillval
+        #in_ir = np.ma.getdata(original_ir)
+        #mask = np.ma.getmaskarray(original_ir)
+        #in_ir[np.array(np.where(mask == True))] = fillval
+
+        # Replace missing ir data with mean
+        datay, datax = np.array(np.ma.nonzero(original_ir))
+        in_ir = np.ones(np.shape(original_ir), dtype=float)*fillval
+        in_ir[datay, datax] = original_ir[datay, datax]
+
+        missingdatay, missingdatax = np.array(np.where(in_ir < -90))
+        if len(missingdatay) > 0:
+            for imiss in np.arange(0,len(missingdatay)):
+                if missingdatay[imiss] == 0:
+                    if missingdatax[imiss] == 0:
+                        subsetir = np.copy(in_ir[0:missingdatay[imiss]+2, 0:missingdatax[imiss]+2])
+                    else:
+                        subsetir = np.copy(in_ir[0:missingdatay[imiss]+2, missingdatax[imiss]-1:missingdatax[imiss]+2])
+                elif missingdatax[imiss] == 0:
+                    subsetir = np.copy(in_ir[missingdatay[imiss]-1:missingdatay[imiss]+2, 0:missingdatax[imiss]+2])
+                elif missingdatay[imiss] == np.shape(original_ir)[0]:
+                    if missingdatax[imiss] == np.shape(original_ir)[1]:
+                        subsetir = np.copy(in_ir[missingdatay[imiss]-1::, missingdatax[imiss]-1::])
+                    else:
+                        subsetir = np.copy(in_ir[missingdatay[imiss]-1::, missingdatax[imiss]-1::missingdatax[imiss]+2])
+                elif missingdatax[imiss] == np.shape(original_ir)[1]:
+                     subsetir = np.copy(in_ir[missingdatay[imiss]-1:missingdatay[imiss]+2, missingdatax[imiss]-1::])
+                else:
+                    subsetir = np.copy(in_ir[missingdatay[imiss]-1:missingdatay[imiss]+2, missingdatax[imiss]-1:missingdatax[imiss]+2])
+                subsetir[subsetir == fillval] = np.nan
+                subsetir = np.reshape(subsetir, np.shape(subsetir)[0]*np.shape(subsetir)[1] , 1)
+                in_ir[missingdatay[imiss], missingdatax[imiss]] = np.nanmean(subsetir)
+
 
         in_lat = np.transpose(in_lat)
         in_lon = np.transpose(in_lon)
@@ -219,7 +249,7 @@ def idclouds_mergedir(zipped_inputs):
                 longitude.units = 'degrees_east'
                 longitude.standard_name = 'longitude'
                 
-                tb = filesave.createVariable('tb', 'f4', ('time', 'lat', 'lon'), zlib=True, complevel=5, fill_value=fillval)
+                tb = filesave.createVariable('tb', 'f4', ('time', 'lat', 'lon'), zlib=True, complevel=5)
                 tb.long_name = 'brightness temperature'
                 tb.units = 'K'
                 tb.valid_min = mintb_thresh
