@@ -2,7 +2,7 @@
 
 # Author: Original IDL code written by Zhe Feng (zhe.feng@pnnl.gov), Python version written by Hannah C. Barnes (hannah.barnes@pnnl.gov)
 
-def mergedir(statistics_filebase, datasource, datadescription, mcstracking_path, tracking_path, cloudid_filebase, stats_path, startdate, enddate, time_resolution, area_thresh, duration_thresh, eccentricity_thresh, split_duration, merge_duration, absolutetb_threshs, nmaxmerge):
+def mergedir(statistics_filebase, datasource, datadescription, mcstracking_path, tracking_pafig.add_axes([0.3, 0.25, 0.25, 0.5])th, cloudid_filebase, stats_path, startdate, enddate, time_resolution, area_thresh, duration_thresh, eccentricity_thresh, split_duration, merge_duration, absolutetb_threshs, nmaxmerge):
     #######################################################################
     # Import modules
     import numpy as np
@@ -91,7 +91,7 @@ def mergedir(statistics_filebase, datasource, datadescription, mcstracking_path,
             if np.multiply(nccs, time_resolution) > duration_thresh:
                 # Find continuous times
                 groups = np.split(iccs, np.where(np.diff(iccs) != 1)[0]+1)
-                [nbreaks,ntimes] = np.shape(groups)
+                nbreaks = len(groups)
 
                 if nbreaks > 0:
                     # System may have multiple periods satisfying area and duration requirements. Loop over each period
@@ -112,7 +112,7 @@ def mergedir(statistics_filebase, datasource, datadescription, mcstracking_path,
                         else:
                             # Label as squall line
                             mcstype[nt] = 2
-                            mscstatus[nt,groups[t][:]] = 2
+                            mcsstatus[nt,groups[t][:]] = 2
                             trackid_sql = np.append(trackid_sql, nt)
                         trackid_mcs = np.append(trackid_mcs, nt)
             else:
@@ -127,6 +127,7 @@ def mergedir(statistics_filebase, datasource, datadescription, mcstracking_path,
     # Subset MCS / Squall track index
     trackid = np.array(np.where(mcstype > 0))[0,:]
     nmcs = len(trackid)
+    print(nmcs)
 
     if nmcs > 0:
         mcsstatus = mcsstatus[trackid,:]
@@ -137,15 +138,15 @@ def mergedir(statistics_filebase, datasource, datadescription, mcstracking_path,
             mcslength[imcs] = len(np.array(np.where(mcsstatus[imcs,:] != fillvalue))[0,:])
 
     # trackid_mcs is the index number, want the track number so add one
-    mcstracknumbers = np.copy(trackid_mcs) + 1
+    mcstracknumbers = np.copy(trackid) + 1
 
     ###############################################################
     # Find small merging and spliting louds and add to MCS
-    trackstat_mergecloudnumber = np.ones((nmcs, nmaxlength, nmaxmerge), dtype=int)*fillvalue
-    trackstat_splitcloudnumber = np.ones((nmcs, nmaxlength, nmaxmerge), dtype=int)*fillvalue
+    mcsmergecloudnumber = np.ones((nmcs, nmaxlength, nmaxmerge), dtype=int)*fillvalue
+    mcssplitcloudnumber = np.ones((nmcs, nmaxlength, nmaxmerge), dtype=int)*fillvalue
 
     # Loop through each MCS and link small clouds merging in
-    for imcs in np.arange(0,len(mcslength)):
+    for imcs in np.arange(0,nmcs):
 
         ###################################################################################
         # Find mergers
@@ -154,8 +155,8 @@ def mergedir(statistics_filebase, datasource, datadescription, mcstracking_path,
         # Loop through all merging tracks, if present
         if len(mergefile) > 0:
             # Isolate merging cases that have short duration
-            mergefile = mergefile[trackstat_duration[mergefile] < merge_duration]
             mergefeature = mergefeature[trackstat_duration[mergefile] < merge_duration]
+            mergefile = mergefile[trackstat_duration[mergefile] < merge_duration]
 
             # Make sure the merger itself is not an MCS
             mergingmcs = np.intersect1d(mergefile, mcstracknumbers)
@@ -186,7 +187,7 @@ def mergedir(statistics_filebase, datasource, datadescription, mcstracking_path,
 
                         # save cloud number of small mergers
                         nmergers = np.shape(timematch)[1]
-                        trackstat_mergecloudnumber[imcs, int(t), 0:nmergers] = mergingcloudnumber[timematch[0,:]]
+                        mcsmergecloudnumber[imcs, int(t), 0:nmergers] = mergingcloudnumber[timematch[0,:]]
 
         ############################################################
         # Find splits
@@ -195,8 +196,8 @@ def mergedir(statistics_filebase, datasource, datadescription, mcstracking_path,
         # Loop through all splitting tracks, if present
         if len(splitfile) > 0:
             # Isolate splitting cases that have short duration
-            splitfile = splitfile[trackstat_duration[splitfile] < split_duration]
             splitfeature = splitfeature[trackstat_duration[splitfile] < split_duration]
+            splitfile = splitfile[trackstat_duration[splitfile] < split_duration]
 
             # Make sure the spliter itself is not an MCS
             splittingmcs = np.intersect1d(splitfile, mcstracknumbers)
@@ -227,23 +228,23 @@ def mergedir(statistics_filebase, datasource, datadescription, mcstracking_path,
 
                         # save cloud number of small splitrs
                         nspliters = np.shape(timematch)[1]
-                        trackstat_splitcloudnumber[imcs, int(t), 0:nspliters] = splittingcloudnumber[timematch[0,:]]
+                        mcssplitcloudnumber[imcs, int(t), 0:nspliters] = splittingcloudnumber[timematch[0,:]]
 
     ########################################################################
     # Subset keeping just MCS tracks
-    trackid_mcs = trackid_mcs.astype(int)
-    trackstat_duration = trackstat_duration[trackid_mcs]
-    trackstat_basetime = trackstat_basetime[trackid_mcs,:]
-    trackstat_datetime = trackstat_datetime[trackid_mcs,:]
-    trackstat_cloudnumber = trackstat_cloudnumber[trackid_mcs,:]
-    trackstat_status = trackstat_status[trackid_mcs,:]
-    trackstat_corearea = trackstat_corearea[trackid_mcs,:]
-    trackstat_meanlat = trackstat_meanlat[trackid_mcs,:]
-    trackstat_meanlon = trackstat_meanlon[trackid_mcs,:] 
-    trackstat_ccsarea = trackstat_ccsarea[trackid_mcs,:]
-    trackstat_eccentricity = trackstat_eccentricity[trackid_mcs,:]
-    trackstat_startstatus = trackstat_startstatus[trackid_mcs]
-    trackstat_endstatus = trackstat_endstatus[trackid_mcs]
+    trackid = trackid.astype(int)
+    trackstat_duration = trackstat_duration[trackid]
+    trackstat_basetime = trackstat_basetime[trackid,:]
+    trackstat_datetime = trackstat_datetime[trackid,:]
+    trackstat_cloudnumber = trackstat_cloudnumber[trackid,:]
+    trackstat_status = trackstat_status[trackid,:]
+    trackstat_corearea = trackstat_corearea[trackid,:]
+    trackstat_meanlat = trackstat_meanlat[trackid,:]
+    trackstat_meanlon = trackstat_meanlon[trackid,:] 
+    trackstat_ccsarea = trackstat_ccsarea[trackid,:]
+    trackstat_eccentricity = trackstat_eccentricity[trackid,:]
+    trackstat_startstatus = trackstat_startstatus[trackid]
+    trackstat_endstatus = trackstat_endstatus[trackid]
 
     ###########################################################################
     # Write statistics to netcdf file
@@ -374,8 +375,8 @@ def mergedir(statistics_filebase, datasource, datadescription, mcstracking_path,
     mcs_corearea[:,:] = trackstat_corearea
     mcs_ccsarea[:,:] = trackstat_ccsarea
     mcs_cloudnumber[:,:] = trackstat_cloudnumber
-    mcs_mergecloudnumber[:,:,:] = trackstat_mergecloudnumber
-    mcs_splitcloudnumber[:,:,:] = trackstat_splitcloudnumber
+    mcs_mergecloudnumber[:,:,:] = mcsmergecloudnumber
+    mcs_splitcloudnumber[:,:,:] = mcssplitcloudnumber
 
     # Close and save file
     filesave.close()
@@ -422,10 +423,10 @@ def mergedir(statistics_filebase, datasource, datadescription, mcstracking_path,
                     [timeindex, nlat, nlon] = np.shape(cloudid_cloudnumber)
                     
                     # Intiailize track maps
-                    #trackmap = np.ones((nlat,nlon), dtype=int)*fillvalue
-                    #trackmap_mergesplit = np.ones((nlat,nlon), dtype=int)*fillvalue
-                    trackmap = np.zeros((nlat,nlon), dtype=int)
-                    trackmap_mergesplit = np.zeros((nlat,nlon), dtype=int)
+                    trackmap = np.ones((nlat,nlon), dtype=int)*fillvalue
+                    trackmap_mergesplit = np.ones((nlat,nlon), dtype=int)*fillvalue
+                    #trackmap = np.zeros((nlat,nlon), dtype=int)
+                    #trackmap_mergesplit = np.zeros((nlat,nlon), dtype=int)
 
                     ##############################################################
                     # Loop over each cloud in this unique file
@@ -445,13 +446,13 @@ def mergedir(statistics_filebase, datasource, datadescription, mcstracking_path,
 
                         ###########################################################
                         # Find merging clouds
-                        jjmerge = np.array(np.where(trackstat_mergecloudnumber[itrack[jj], itime[jj],:] > 0))[0,:]
+                        jjmerge = np.array(np.where(mcsmergecloudnumber[itrack[jj], itime[jj],:] > 0))[0,:]
 
                         # Loop through merging clouds if present
                         if len(jjmerge) > 0:
                             for imerge in jjmerge:
                                 # Find cloud number asosicated with the merging cloud
-                                jjmergeypixels, jjmergexpixels = np.array(np.where(cloudid_cloudnumber[0,:,:] == trackstat_mergecloudnumber[itrack[jj], itime[jj],imerge]))
+                                jjmergeypixels, jjmergexpixels = np.array(np.where(cloudid_cloudnumber[0,:,:] == mcsmergecloudnumber[itrack[jj], itime[jj],imerge]))
                                 
                                 # Label this cloud with the track number. Need to add one to the cloud number since have the index number and we want the track number
                                 if len(jjmergeypixels) > 0:
@@ -461,13 +462,13 @@ def mergedir(statistics_filebase, datasource, datadescription, mcstracking_path,
 
                         ###########################################################
                         # Find splitting clouds
-                        jjsplit = np.array(np.where(trackstat_splitcloudnumber[itrack[jj], itime[jj],:] > 0))[0,:]
+                        jjsplit = np.array(np.where(mcssplitcloudnumber[itrack[jj], itime[jj],:] > 0))[0,:]
 
                         # Loop through splitting clouds if present
                         if len(jjsplit) > 0:
                             for isplit in jjsplit:
                                 # Find cloud number asosicated with the splitting cloud
-                                jjsplitypixels, jjsplitxpixels = np.array(np.where(cloudid_cloudnumber[0,:,:] == trackstat_splitcloudnumber[itrack[jj], itime[jj],isplit]))
+                                jjsplitypixels, jjsplitxpixels = np.array(np.where(cloudid_cloudnumber[0,:,:] == mcssplitcloudnumber[itrack[jj], itime[jj],isplit]))
                                 
                                 # Label this cloud with the track number. Need to add one to the cloud number since have the index number and we want the track number
                                 if len(jjsplitypixels) > 0:

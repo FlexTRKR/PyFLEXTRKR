@@ -13,8 +13,7 @@ from ipyparallel import Client
 # Comments:
 # Features are tracked using 5 sets of code (idclouds, trackclouds_singlefile, get_tracknumbers, calc_sat_trackstats, label_celltrack).
 # This scrithon/ExtraCode/pt controls which pieces of code are run.
-# Eventually, idcllegendouds and trackclouds_singlefile will be able to run in paralle        subsetir = np.reshape(subsetir, np.shape(subsetir)[0]*np.shape(subsetir)[1] , 1)
-         l.
+# Eventually, idclouds and trackclouds_singlefile will be able to run in parallel
 # If trackclouds_singlefile is run in of tracksistringtochar(np.array(cloudidfiles[nf]))ngle between 12/20/2009 - 12/31/2009, make two copies of this script, and set startdate - enddate (ex: 20091220 - 20091225, 20091225 - 20091231).
 # This is because the first time will not have a tracksingle file produced, overlapping the date makes sure every cloudid file is used.
 # The idclouds and trackClouds_singlefile only need to be run once and can be run on portions of the data a time.
@@ -44,8 +43,8 @@ curr_track_version = 'v1.0'
 curr_tracknumbers_version = 'v1.0'
 
 # Specify days to run
-startdate = '20110520'
-enddate = '20110520'
+startdate = '20110517'
+enddate = '20110527'
 
 # Specify tracking parameters
 geolimits = np.array([25,-110,51,-70]) # 4-element array with plotting boundaries [lat_min, lon_min, lat_max, lon_max]
