@@ -99,7 +99,7 @@ def gettracknumbers_mergedir(datasource, datadescription, datainpath, dataoutpat
     fileshour = np.zeros(len(acceptdates), dtype=int)
     filesminute = np.zeros(len(acceptdates), dtype=int)
 
-    for filestep, ifiles in enumerate(range(0,len(acceptdates))):
+    for filestep, ifiles in enumerate(acceptdates):
         files[filestep] = singletrackfiles[ifiles]
         filedate[filestep] = str(year[ifiles]) + str(month[ifiles]).zfill(2) + str(day[ifiles]).zfill(2)
         filetime[filestep] = str(hour[ifiles]).zfill(2) + str(minute[ifiles]).zfill(2)
@@ -526,7 +526,7 @@ def gettracknumbers_mergedir(datasource, datadescription, datainpath, dataoutpat
     tracklengths, trackbins = np.histogram(tracknumber, bins=np.arange(1,itrack+1,1), range=(1,itrack+1))
 
     # Identify single cloud tracks
-    singletracks = np.array(np.where(tracklengths <= 2))[0,:]
+    singletracks = np.array(np.where(tracklengths <= 1))[0,:]
     nsingletracks = len(singletracks)
 
     # Loop over single cloudtracks
@@ -535,21 +535,19 @@ def gettracknumbers_mergedir(datasource, datadescription, datainpath, dataoutpat
         # Indentify clouds in this track
         cloudindex = np.array(np.where(tracknumber == strack+1)) # Need to add one since singletracks lists the index in the matrix, which starts at zero. Track number starts at one.
 
-        if len(cloudindex) == 2:
-            # Only remove single track if it is not small merger or small split. This is only done if keepsingletrack == 1. 
-            if keepsingletrack == 1:
-                for ncloud in range(0,np.shape(cloudindex)[1]):
-                    if trackstatus[cloudindex[0,ncloud],cloudindex[1,ncloud]] != 21 or trackstatus[cloudindex[0,ncloud],cloudindex[1,ncloud]] != 31:
-                        tracknumber[cloudindex[0,ncloud], cloudindex[1,ncloud]] = -2
-                        trackstatus[cloudindex[0,ncloud], cloudindex[1,ncloud]] = fillvalue
-                        nsingleremove = nsingleremove + 1
+        # Only remove single track if it is not small merger or small split. This is only done if keepsingletrack == 1.
+        if keepsingletrack == 1:
+            if trackstatus[cloudindex[0], cloudindex[1]] not in [21, 24, 52, 31, 32, 18, 44, 46]:
+                tracknumber[cloudindex[0], cloudindex[1]] = -2
+                trackstatus[cloudindex[0], cloudindex[1]] = fillvalue
+                nsingleremove = nsingleremove + 1
+                tracklengths[strack] = fillvalue
 
-            # Remove all single tracks. This corresponds to keepsingletrack == 0, which is the default
-            else:
-                for ncloud in range(0,np.shape(cloudindex)[1]):
-                    tracknumber[cloudindex[0,ncloud], cloudindex[1,ncloud]] = -2
-                    trackstatus[cloudindex[0,ncloud], cloudindex[1,ncloud]] = fillvalue
-                    nsingleremove = nsingleremove + 1
+        # Remove all single tracks. This corresponds to keepsingletrack == 0, which is the default
+        else:
+            tracknumber[cloudindex[0], cloudindex[1]] = -2
+            trackstatus[cloudindex[0], cloudindex[1]] = fillvalue
+            nsingleremove = nsingleremove + 1
             tracklengths[strack] = fillvalue
 
     #######################################################################
