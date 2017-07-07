@@ -2,7 +2,7 @@
 
 # Author: Original IDL code written by Zhe Feng (zhe.feng@pnnl.gov), Python version written by Hannah C. Barnes (hannah.barnes@pnnl.gov)
 
-def mergedir(statistics_filebase, datasource, datadescription, mcstracking_path, tracking_pafig.add_axes([0.3, 0.25, 0.25, 0.5])th, cloudid_filebase, stats_path, startdate, enddate, time_resolution, area_thresh, duration_thresh, eccentricity_thresh, split_duration, merge_duration, absolutetb_threshs, nmaxmerge):
+def mergedir(statistics_filebase, datasource, datadescription, mcstracking_path, tracking_path, cloudid_filebase, stats_path, startdate, enddate, time_resolution, area_thresh, duration_thresh, eccentricity_thresh, split_duration, merge_duration, absolutetb_threshs, nmaxmerge):
     #######################################################################
     # Import modules
     import numpy as np
@@ -33,7 +33,7 @@ def mergedir(statistics_filebase, datasource, datadescription, mcstracking_path,
     trackstat_startstatus = allstatdata.variables['startstatus'][:] # Flag indicating the status of the first feature in each track
     trackstat_endstatus = allstatdata.variables['endstatus'][:] # Flag indicating the status of the last feature in each track 
     trackstat_mergenumbers = allstatdata.variables['mergenumbers'][:] # Number of a small feature that merges onto a bigger feature
-    trackstat_splitnumberss = allstatdata.variables['splitnumbers'][:] # Number of a small feature that splits onto a bigger feature
+    trackstat_splitnumbers = allstatdata.variables['splitnumbers'][:] # Number of a small feature that splits onto a bigger feature
     trackstat_eccentricity = allstatdata.variables['eccentricity'][:] # Eccentricity of the core and cold anvil
     trackstat_npix_core = allstatdata.variables['nconv'][:] # Number of pixels in the core
     trackstat_npix_corecold = allstatdata.variables['ncoldanvil'][:] # Number of pixels in the cold anvil
@@ -45,6 +45,11 @@ def mergedir(statistics_filebase, datasource, datadescription, mcstracking_path,
     description = str(Dataset.getncattr(allstatdata, 'description'))
     track_version = str(Dataset.getncattr(allstatdata,'track_version'))
     tracknumbers_version = str(Dataset.getncattr(allstatdata, 'tracknumbers_version'))
+
+    trackstat_latmin = allstatdata.variables['meanlat'].getncattr('min_value')
+    trackstat_latmax = allstatdata.variables['meanlat'].getncattr('max_value')
+    trackstat_lonmin = allstatdata.variables['meanlon'].getncattr('min_value')
+    trackstat_lonmax = allstatdata.variables['meanlon'].getncattr('max_value')
     allstatdata.close()
 
     fillvalue = -9999
@@ -83,19 +88,21 @@ def mergedir(statistics_filebase, datasource, datadescription, mcstracking_path,
 
         # Must have a cold core
         if np.shape(track_corearea)[0] !=0 and np.nanmax(track_corearea > 0):
+
             # Cold cloud shield area requirement
             iccs = np.array(np.where(track_ccsarea > area_thresh))[0,:]
             nccs = len(iccs)
 
-            # Duration requirement
-            if np.multiply(nccs, time_resolution) > duration_thresh:
-                # Find continuous times
-                groups = np.split(iccs, np.where(np.diff(iccs) != 1)[0]+1)
-                nbreaks = len(groups)
+            # Find continuous times
+            groups = np.split(iccs, np.where(np.diff(iccs) != 1)[0]+1)
+            nbreaks = len(groups)
 
-                if nbreaks > 0:
-                    # System may have multiple periods satisfying area and duration requirements. Loop over each period
-                    for t in np.arange(0,nbreaks):
+            # System may have multiple periods satisfying area and duration requirements. Loop over each period
+            if iccs != []:
+                for t in range(0,nbreaks):
+                    # Duration requirement
+                    if np.multiply(len(groups[t][:]), time_resolution) > duration_thresh:
+
                         # Isolate area and eccentricity for the subperiod
                         subtrack_ccsarea = track_ccsarea[groups[t][:]]
                         subtrack_eccentricity = track_eccentricity[groups[t][:]]
@@ -115,13 +122,13 @@ def mergedir(statistics_filebase, datasource, datadescription, mcstracking_path,
                             mcsstatus[nt,groups[t][:]] = 2
                             trackid_sql = np.append(trackid_sql, nt)
                         trackid_mcs = np.append(trackid_mcs, nt)
-            else:
-                # Size requirement met but for too short of a period
-                trackid_nonmcs = np.append(trackid_nonmcs, nt)
+                    else:
+                        # Size requirement met but too short of a period
+                        trackid_nonmcs = np.append(trackid_nonmcs, nt)
                         
-        else:
-            # Size requirement not met
-            trackid_nonmcs = np.append(trackid_nonmcs, nt)
+            else:
+                # Size requirement not met
+                trackid_nonmcs = np.append(trackid_nonmcs, nt)
 
     ################################################################
     # Subset MCS / Squall track index
@@ -143,7 +150,9 @@ def mergedir(statistics_filebase, datasource, datadescription, mcstracking_path,
     ###############################################################
     # Find small merging and spliting louds and add to MCS
     mcsmergecloudnumber = np.ones((nmcs, nmaxlength, nmaxmerge), dtype=int)*fillvalue
+    mcsmergestatus = np.ones((nmcs, nmaxlength, nmaxmerge), dtype=int)*fillvalue
     mcssplitcloudnumber = np.ones((nmcs, nmaxlength, nmaxmerge), dtype=int)*fillvalue
+    mcssplitstatus = np.ones((nmcs, nmaxlength, nmaxmerge), dtype=int)*fillvalue
 
     # Loop through each MCS and link small clouds merging in
     for imcs in np.arange(0,nmcs):
@@ -163,10 +172,10 @@ def mergedir(statistics_filebase, datasource, datadescription, mcstracking_path,
             if len(mergingmcs) > 0:
                 for iremove in np.arange(0,len(mergingmcs)):
                     removemerges = np.array(np.where(mergefile == mergingmcs[iremove]))[0,:]
-                    mergefile[removemerges] = np.nan
-                    mergefeature[removemerges] = np.nan
-                mergefile = mergefile[np.isfinite(mergefile)]
-                mergefeature = mergefeature[np.isfinite(mergefeature)]
+                    mergefile[removemerges] = fillvalue
+                    mergefeature[removemerges] = fillvalue
+                mergefile = mergefile[mergefile != fillvalue]
+                mergefeature = mergefeature[mergefeature != fillvalue]
 
             # Continue if mergers satisfy duration and MCS restriction
             if len(mergefile) > 0:
@@ -174,6 +183,8 @@ def mergedir(statistics_filebase, datasource, datadescription, mcstracking_path,
                 # Get data about merging tracks
                 mergingcloudnumber = np.copy(trackstat_cloudnumber[mergefile,mergefeature])
                 mergingbasetime = np.copy(trackstat_basetime[mergefile,mergefeature])
+                mergingstatus = np.copy(trackstat_status[mergefile,mergefeature])
+                mergingdatetime = np.copy(trackstat_datetime[mergefile,mergefeature])
 
                 # Get data about MCS track
                 mcsbasetime = np.copy(trackstat_basetime[int(mcstracknumbers[imcs])-1,0:int(mcslength[imcs])])
@@ -183,15 +194,23 @@ def mergedir(statistics_filebase, datasource, datadescription, mcstracking_path,
 
                     # Find merging cloud times that match current mcs track time
                     timematch = np.array(np.where(np.absolute(mergingbasetime - mcsbasetime[int(t)])<0.001)).astype(int)
+
                     if np.shape(timematch)[1] > 0:
 
                         # save cloud number of small mergers
                         nmergers = np.shape(timematch)[1]
                         mcsmergecloudnumber[imcs, int(t), 0:nmergers] = mergingcloudnumber[timematch[0,:]]
+                        mcsmergestatus[imcs, int(t), 0:nmergers] = mergingstatus[timematch[0,:]]
+
+                        #print('merge')
+                        #print(mergingdatetime[timematch[0,:]])
+                        #print(mcsmergestatus[imcs, int(t), 0:nmergers])
+                        #print(mcsmergecloudnumber[imcs, int(t), 0:nmergers])
+                        #raw_input('Waiting for user')
 
         ############################################################
         # Find splits
-        [splitfile, splitfeature] = np.array(np.where(trackstat_splitnumberss == mcstracknumbers[imcs]))
+        [splitfile, splitfeature] = np.array(np.where(trackstat_splitnumbers == mcstracknumbers[imcs]))
 
         # Loop through all splitting tracks, if present
         if len(splitfile) > 0:
@@ -204,17 +223,19 @@ def mergedir(statistics_filebase, datasource, datadescription, mcstracking_path,
             if len(splittingmcs) > 0:
                 for iremove in np.arange(0,len(splittingmcs)):
                     removesplits = np.array(np.where(splitfile == splittingmcs[iremove]))[0,:]
-                    splitfile[removesplits] = np.nan
-                    splitfeature[removesplits] = np.nan
-                splitfile = splitfile[np.isfinite(splitfile)]
-                splitfeature = splitfeature[np.isfinite(splitfeature)]
+                    splitfile[removesplits] = fillvalue
+                    splitfeature[removesplits] = fillvalue
+                splitfile = splitfile[splitfile != fillvalue]
+                splitfeature = splitfeature[splitfeature != fillvalue]
 
             # Continue if spliters satisfy duration and MCS restriction
             if len(splitfile) > 0:
 
                 # Get data about splitting tracks
-                splittingcloudnumber = np.copy(trackstat_cloudnumber[splitfile,splitfeature])
-                splittingbasetime = np.copy(trackstat_basetime[splitfile,splitfeature])
+                splittingcloudnumber = np.copy(trackstat_cloudnumber[splitfile, splitfeature])
+                splittingbasetime = np.copy(trackstat_basetime[splitfile, splitfeature])
+                splittingstatus = np.copy(trackstat_status[splitfile, splitfeature])
+                splittingdatetime = np.copy(trackstat_datetime[splitfile, splitfeature])
 
                 # Get data about MCS track
                 mcsbasetime = np.copy(trackstat_basetime[int(mcstracknumbers[imcs])-1,0:int(mcslength[imcs])])
@@ -229,6 +250,13 @@ def mergedir(statistics_filebase, datasource, datadescription, mcstracking_path,
                         # save cloud number of small splitrs
                         nspliters = np.shape(timematch)[1]
                         mcssplitcloudnumber[imcs, int(t), 0:nspliters] = splittingcloudnumber[timematch[0,:]]
+                        mcssplitstatus[imcs, int(t), 0:nspliters] = splittingstatus[timematch[0,:]]
+
+                        print('Split')
+                        print(splittingdatetime[timematch[0,:]])
+                        print(mcssplitstatus[imcs, int(t), 0:nspliters])
+                        print(mcssplitcloudnumber[imcs, int(t), 0:nspliters])
+                        raw_input('Waiting for user')
 
     ########################################################################
     # Subset keeping just MCS tracks
@@ -327,12 +355,16 @@ def mergedir(statistics_filebase, datasource, datadescription, mcstracking_path,
     mcs_meanlat = filesave.createVariable('mcs_meanlat', 'f4', ('ntracks', 'ntimes'), zlib=True, complevel=5, fill_value=fillvalue)
     mcs_meanlat.standard_name = 'latitude'
     mcs_meanlat.description = 'Mean latitude of the core + cold anvil for each feature in the MCS'
+    mcs_meanlat.valid_min = 'trackstat_latmin'
+    mcs_meanlat.valid_max = 'trackstat_latmax'
     mcs_meanlat.fill_value = fillvalue
     mcs_meanlat.units = 'degrees'
 
     mcs_meanlon = filesave.createVariable('mcs_meanlon', 'f4', ('ntracks', 'ntimes'), zlib=True, complevel=5, fill_value=fillvalue)
     mcs_meanlon.standard_name = 'lonitude'
     mcs_meanlon.description = 'Mean longitude of the core + cold anvil for each feature at the given time'
+    mcs_meanlon.valid_min = 'trackstat_lonmin'
+    mcs_meanlon.valid_max = 'trackstat_lonmax'
     mcs_meanlon.fill_value = fillvalue
     mcs_meanlon.units = 'degrees'
 
@@ -398,6 +430,7 @@ def mergedir(statistics_filebase, datasource, datadescription, mcstracking_path,
         for ub in uniquebasetime:
             # Get tracks and times associated with this time
             itrack, itime = np.array(np.where(trackstat_basetime == ub))
+            timestatus = np.copy(trackstat_status[itrack,itime])
             ntimes = len(itime)
             
             if ntimes > 0:
@@ -425,6 +458,7 @@ def mergedir(statistics_filebase, datasource, datadescription, mcstracking_path,
                     # Intiailize track maps
                     trackmap = np.ones((nlat,nlon), dtype=int)*fillvalue
                     trackmap_mergesplit = np.ones((nlat,nlon), dtype=int)*fillvalue
+                    statusmap = np.ones((nlat,nlon), dtype=int)*fillvalue 
                     #trackmap = np.zeros((nlat,nlon), dtype=int)
                     #trackmap_mergesplit = np.zeros((nlat,nlon), dtype=int)
 
@@ -441,6 +475,8 @@ def mergedir(statistics_filebase, datasource, datadescription, mcstracking_path,
                         if len(jjcloudypixels) > 0:
                             trackmap[jjcloudypixels, jjcloudxpixels] = itrack[jj] + 1
                             trackmap_mergesplit[jjcloudypixels, jjcloudxpixels] = itrack[jj] + 1
+
+                            statusmap[jjcloudypixels, jjcloudxpixels] = timestatus[jj] 
                         else:
                             sys.exit('Error: No matching cloud pixel found?!')
 
@@ -452,11 +488,12 @@ def mergedir(statistics_filebase, datasource, datadescription, mcstracking_path,
                         if len(jjmerge) > 0:
                             for imerge in jjmerge:
                                 # Find cloud number asosicated with the merging cloud
-                                jjmergeypixels, jjmergexpixels = np.array(np.where(cloudid_cloudnumber[0,:,:] == mcsmergecloudnumber[itrack[jj], itime[jj],imerge]))
-                                
+                                jjmergeypixels, jjmergexpixels = np.array(np.where(cloudid_cloudnumber[0,:,:] == mcsmergecloudnumber[itrack[jj], itime[jj], imerge]))
+
                                 # Label this cloud with the track number. Need to add one to the cloud number since have the index number and we want the track number
                                 if len(jjmergeypixels) > 0:
                                     trackmap_mergesplit[jjmergeypixels, jjmergexpixels] = itrack[jj] + 1
+                                    statusmap[jjmergeypixels, jjmergexpixels] = mcsmergestatus[itrack[jj], itime[jj], imerge]
                                 else:
                                     sys.exit('Error: No matching merging cloud pixel found?!')
 
@@ -468,11 +505,12 @@ def mergedir(statistics_filebase, datasource, datadescription, mcstracking_path,
                         if len(jjsplit) > 0:
                             for isplit in jjsplit:
                                 # Find cloud number asosicated with the splitting cloud
-                                jjsplitypixels, jjsplitxpixels = np.array(np.where(cloudid_cloudnumber[0,:,:] == mcssplitcloudnumber[itrack[jj], itime[jj],isplit]))
+                                jjsplitypixels, jjsplitxpixels = np.array(np.where(cloudid_cloudnumber[0,:,:] == mcssplitcloudnumber[itrack[jj], itime[jj], isplit]))
                                 
                                 # Label this cloud with the track number. Need to add one to the cloud number since have the index number and we want the track number
                                 if len(jjsplitypixels) > 0:
                                     trackmap_mergesplit[jjsplitypixels, jjsplitxpixels] = itrack[jj] + 1
+                                    statusmap[jjsplitypixels, jjsplitxpixels] = mcssplitstatus[itrack[jj], itime[jj], isplit]  
                                 else:
                                     sys.exit('Error: No matching splitting cloud pixel found?!')
 
@@ -548,11 +586,18 @@ def mergedir(statistics_filebase, datasource, datadescription, mcstracking_path,
                     cloudnumber.comment = 'the extend of the cloud system is defined using the warm anvil threshold'
                     cloudnumber.fillvalue = 0
 
+                    cloudstatus = filesave.createVariable('cloudstatus', 'i4', ('time', 'lat', 'lon'), zlib=True, complevel=5, fill_value=fillvalue)
+                    cloudstatus.long_name = 'flag indicating status of the flag'
+                    cloudstatus.values = "-9999=missing cloud or cloud removed due to short track, 0=track ends here, 1=cloud continues as one cloud in next file, 2=Biggest cloud in merger, 21=Smaller cloud(s) in merger, 13=Cloud that splits, 3=Biggest cloud from a split that stops after the split, 31=Smaller cloud(s) from a split that stop after the split. The last seven classifications are added together in different combinations to describe situations."
+                    cloudstatus.units = 'unitless'
+                    cloudstatus.comment = 'the extend of the cloud system is defined using the warm anvil threshold'
+                    cloudstatus.fillvalue = fillvalue 
+
                     tracknumber = filesave.createVariable('tracknumber', 'f4', ('time', 'lat', 'lon'), zlib=True, complevel=5, fill_value=fillvalue)
                     tracknumber.long_name = 'mcs track number that a given pixel belongs to'
                     tracknumber.units = 'unitless'
                     tracknumber.comment = 'the extend of the cloud system is defined using the warm anvil threshold'
-                    tracknumber.fillvalue = 0
+                    tracknumber.fillvalue = fillvalue
 
                     tracknumber_mergesplit = filesave.createVariable('tracknumber_mergesplit', 'i4', ('time', 'lat', 'lon'), zlib=True, complevel=5, fill_value=fillvalue)
                     tracknumber_mergesplit.long_name = 'mcs track number that a given pixel belongs to, includes clouds that merge into and split from each mcs'
@@ -567,6 +612,7 @@ def mergedir(statistics_filebase, datasource, datadescription, mcstracking_path,
                     nclouds[:] = cloudid_nclouds
                     tb[0,:,:] = cloudid_tb
                     cloudnumber[0,:,:] = cloudid_cloudnumber[:,:]
+                    cloudstatus[0,:,:] = statusmap[:,:]
                     tracknumber[0,:,:] = trackmap[:,:]
                     tracknumber_mergesplit[0,:,:] = trackmap_mergesplit[:,:]
 
