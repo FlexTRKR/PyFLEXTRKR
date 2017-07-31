@@ -5,6 +5,7 @@ import os, fnmatch
 import time, datetime, calendar
 from pytz import timezone, utc
 from ipyparallel import Client
+from netCDF4 import Dataset
 
 # Name: Run_TestData.py
 
@@ -14,7 +15,7 @@ from ipyparallel import Client
 # Features are tracked using 5 sets of code (idclouds, trackclouds_singlefile, get_tracknumbers, calc_sat_trackstats, label_celltrack).
 # This scrithon/ExtraCode/pt controls which pieces of code are run.
 # Eventually, idclouds and trackclouds_singlefile will be able to run in parallel
-# If trackclouds_singlefile is run in of tracksistringtochar(np.array(cloudidfiles[nf]))ngle between 12/20/2009 - 12/31/2009, make two copies of this script, and set startdate - enddate (ex: 20091220 - 20091225, 20091225 - 20091231).
+# Iplt.annotate('Top = ' + str(np.round(SeparatedMeanReflectivityMeanVelocity_Slope[5], 2)) + ' * Bottom + ' + str(np.round(SeparatedMeanReflectivityMeanVelocity_Intercept[5], 2)), xy=(0.6, 0.3), xycoords='axes fraction', fontsize=12, color='green')f trackclouds_singlefile is run in of tracksistringtochar(np.array(cloudidfiles[nf]))ngle between 12/20/2009 - 12/31/2009, make two copies of this script, and set startdate - enddate (ex: 20091220 - 20091225, 20091225 - 20091231).
 # This is because the first time will not have a tracksingle file produced, overlapping the date makes sure every cloudid file is used.
 # The idclouds and trackClouds_singlefile only need to be run once and can be run on portions of the data a time.
 # However, get_tracknumbers, calc_set_tracks, and label_celltrack must be run for the entire dataset.
@@ -25,12 +26,12 @@ from ipyparallel import Client
 # Set variables describing data, file structure, and tracking thresholds
 
 # Specify which sets of code to run. (1 = run code, 0 = don't run code)
-run_idclouds = 1        # Segment and identify cloud systems
-run_tracksingle = 1     # Track single consecutive cloudid files
-run_gettracks = 1       # Run tracking for all files
-run_finalstats = 1      # Calculate final statistics
+run_idclouds = 0        # Segment and identify cloud systems
+run_tracksingle = 0     # Track single consecutive cloudid files
+run_gettracks = 0       # Run tracking for all files
+run_finalstats = 0      # Calculate final statistics
 run_identifymcs = 1     # Isolate MCSs 
-run_labelcloud = 1      # Create maps with all events in a tracking having the same number
+run_labelmcs = 1        # Create maps of MCSs
 
 # Specify version of code using
 cloudid_version = 'v1.0'
@@ -312,8 +313,66 @@ if run_finalstats == 0:
 if run_identifymcs == 1:
     print('Identifying MCSs')
     # Load function
-    from identifymcs import mergedir
+    from identifymcs import identifymcs_mergedir
 
     # Call satellite version of function
-    mergedir(trackstats_filebase, datasource, datadescription, mcstracking_outpath, tracking_outpath, cloudid_filebase, stats_outpath, startdate, enddate, datatimeresolution, mcs_areathresh, mcs_durationthresh, mcs_eccentricitythresh, mcs_splitduration, mcs_mergeduration, absolutetb_threshs, nmaxclouds)
+    identifymcs_mergedir(trackstats_filebase, stats_outpath, startdate, enddate, datatimeresolution, mcs_areathresh, mcs_durationthresh, mcs_eccentricitythresh, mcs_splitduration, mcs_mergeduration, nmaxclouds)
+    mcsstats_filebase =  'mcs_tracks_'
 
+############################################################
+# Create pixel files with MCS tracks
+
+# Determine if the mcs identification and statistic generation step ran. If not, set the filename using those specified in the constants section
+if run_identifymcs == 0:
+    mcsstats_filebase =  'mcs_tracks_'
+
+if run_labelmcs == 1:
+    print('Identifying which pixel level maps to generate for the MCS tracks')
+
+    ###########################################################
+    # Identify files to process
+
+    # Load MCS track stat file
+    mcsstatistics_file = stats_outpath + mcsstats_filebase + startdate + '_' + enddate + '.nc'
+    print(mcsstatistics_file)
+
+    allmcsdata = Dataset(mcsstatistics_file, 'r')
+    nmcs = len(allmcsdata.dimensions['ntracks']) # Total number of tracked mcss
+    mcstrackstat_basetime = allmcsdata.variables['mcs_basetime'][:] # basetime of each cloud in the tracked mcs
+    allmcsdata.close() 
+
+    # Determine times that need to be processed
+    if nmcs > 0:
+        # Set default time range
+        startbasetime = np.nanmin(mcstrackstat_basetime)
+        endbasetime = np.nanmax(mcstrackstat_basetime)
+
+        # Find unique times
+        uniquebasetime = np.unique(mcstrackstat_basetime)
+        uniquebasetime = uniquebasetime[0:-1]
+        nuniquebasetime = len(uniquebasetime)
+
+        #############################################################
+        # Process files
+
+        # Load function 
+        from mapmcs import mapmcs_mergedir
+
+        # Generate input list
+        list_mcstrackstat_filebase = [mcsstats_filebase]*nuniquebasetime
+        list_trackstat_filebase = [trackstats_filebase]*nuniquebasetime
+        list_mcstracking_path = [mcstracking_outpath]*nuniquebasetime
+        list_stats_path = [stats_outpath]*nuniquebasetime
+        list_tracking_path = [tracking_outpath]*nuniquebasetime
+        list_cloudid_filebase = [cloudid_filebase]*nuniquebasetime
+        list_absolutetb_threshs = np.ones(((nuniquebasetime), 2))*absolutetb_threshs
+        list_startdate = [startdate]*(nuniquebasetime)
+        list_enddate = [enddate]*(nuniquebasetime)
+
+        mcsmap_input = zip(uniquebasetime, list_mcstrackstat_filebase, list_trackstat_filebase, list_mcstracking_path, list_stats_path, list_tracking_path, list_cloudid_filebase, list_absolutetb_threshs, list_startdate, list_enddate)
+
+        # Call function
+        dview.map_sync(mapmcs_mergedir, mcsmap_input)
+
+    else:
+        print('No MCSs to process ?!')
