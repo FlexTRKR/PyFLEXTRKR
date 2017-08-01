@@ -362,7 +362,8 @@ if run_labelmcs == 1:
         # Process files
 
         # Load function 
-        from mapmcs import mapmcs_mergedir
+        #from mapmcs import mapmcs_mergedir
+        from mapmcs_serial import mapmcs_mergedir
 
         # Generate input list
         list_mcstrackstat_filebase = [mcsstats_filebase]*nuniquebasetime
@@ -378,12 +379,15 @@ if run_labelmcs == 1:
         mcsmap_input = zip(uniquebasetime, list_mcstrackstat_filebase, list_trackstat_filebase, list_mcstracking_path, list_stats_path, list_tracking_path, list_cloudid_filebase, list_absolutetb_threshs, list_startdate, list_enddate)
 
         # Call function
-        if __name__ == '__main__':
-            print('Creating maps of tracked MCSs')
-            pool = Pool(processes = 8)
-            pool.map(mapmcs_mergedir, mcsmap_input)
-            pool.close()
-            pool.join()
+        for iunique in uniquebasetime:
+            mapmcs_mergedir(iunique, mcsstats_filebase, trackstats_filebase, mcstracking_outpath, stats_outpath, tracking_outpath, cloudid_filebase, absolutetb_threshs, startdate, enddate)
+
+        #if __name__ == '__main__':
+        #    print('Creating maps of tracked MCSs')
+        #    pool = Pool(processes = 1)
+        #    pool.map(mapmcs_mergedir, mcsmap_input)
+        #    pool.close()
+        #    pool.join()
 
     else:
         print('No MCSs to process ?!')

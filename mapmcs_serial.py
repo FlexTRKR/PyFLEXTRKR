@@ -2,7 +2,7 @@
 
 # Author: Original IDL code written by Zhe Feng (zhe.feng@pnnl.gov), Python version written by Hannah C. Barnes (hannah.barnes@pnnl.gov)
 
-def mapmcs_mergedir(zipped_inputs):
+def mapmcs_mergedir(filebasetime, mcsstats_filebase, statistics_filebase, mcstracking_path, stats_path, tracking_path, cloudid_filebase, absolutetb_threshs, startdate, enddate):
     #######################################################################
     # Import modules
     import numpy as np
@@ -10,19 +10,6 @@ def mapmcs_mergedir(zipped_inputs):
     import time
     import os
     import sys
-
-    #####################################################################
-    # Separate inputs
-    filebasetime = zipped_inputs[0]
-    mcsstats_filebase = zipped_inputs[1]
-    statistics_filebase = zipped_inputs[2]
-    mcstracking_path = zipped_inputs[3]
-    stats_path = zipped_inputs[4]
-    tracking_path = zipped_inputs[5]
-    cloudid_filebase = zipped_inputs[6]
-    absolutetb_threshs = zipped_inputs[7]
-    startdate = zipped_inputs[8]
-    enddate = zipped_inputs[9]
 
     ######################################################################
     # define constants:
@@ -62,6 +49,9 @@ def mapmcs_mergedir(zipped_inputs):
     eccentricity_thresh = str(Dataset.getncattr(allstatdata, 'MCS_eccentricity'))
     allmcsdata.close()
 
+    for itime in range(0,30):
+        print(mcstrackstat_mergecloudnumber[itime,:,0:10])
+        raw_input('waiting')
     #########################################################################
     # Get tracks and times associated with this time
     itrack, itime = np.array(np.where(mcstrackstat_basetime == filebasetime))
@@ -69,6 +59,7 @@ def mapmcs_mergedir(zipped_inputs):
     ntimes = len(itime)
 
     print(itrack)
+    print(itime)
 
     if ntimes > 0:
         # Get cloudid file associated with this time
@@ -116,7 +107,7 @@ def mapmcs_mergedir(zipped_inputs):
             ##############################################################
             # Loop over each cloud in this unique file
             for jj in range(0,ntimes):
-                print('JJ: ' + str(jj))
+                print('JJ:' + str(jj))
                 # Get cloud nummber
                 jjcloudnumber = mcstrackstat_cloudnumber[itrack[jj],itime[jj]]
 
@@ -127,9 +118,6 @@ def mapmcs_mergedir(zipped_inputs):
                 if len(jjcloudypixels) > 0:
                     mcstrackmap[jjcloudypixels, jjcloudxpixels] = itrack[jj] + 1
                     mcstrackmap_mergesplit[jjcloudypixels, jjcloudxpixels] = itrack[jj] + 1
-                    print('All')
-                    print(itrack)
-                    print(itrack[jj])
 
                     #statusmap[jjcloudypixels, jjcloudxpixels] = timestatus[jj] 
                 else:
@@ -148,9 +136,6 @@ def mapmcs_mergedir(zipped_inputs):
                         # Label this cloud with the track number. Need to add one to the cloud number since have the index number and we want the track number
                         if len(jjmergeypixels) > 0:
                             mcstrackmap_mergesplit[jjmergeypixels, jjmergexpixels] = itrack[jj] + 1
-                            print('Merge')
-                            print(itrack)
-                            print(itrack[jj])
                             #statusmap[jjmergeypixels, jjmergexpixels] = mcsmergestatus[itrack[jj], itime[jj], imerge]
                         else:
                             sys.exit('Error: No matching merging cloud pixel found?!')
@@ -158,14 +143,20 @@ def mapmcs_mergedir(zipped_inputs):
                 ###########################################################
                 # Find splitting clouds
                 jjsplit = np.array(np.where(mcstrackstat_splitcloudnumber[itrack[jj], itime[jj],:] > 0))[0,:]
+                np.set_printoptions(threshold=np.inf)
+                print(mcstrackstat_splitcloudnumber[itrack[jj], itime[jj],0:50])
                 print(jjsplit)
+                raw_input('Check')
 
                 # Loop through splitting clouds if present
                 if len(jjsplit) > 0:
                     for isplit in jjsplit:
                         print(isplit)
+                        print(mcstrackstat_splitcloudnumber[itrack[jj], itime[jj], 0:50])
                         # Find cloud number asosicated with the splitting cloud
                         jjsplitypixels, jjsplitxpixels = np.array(np.where(cloudid_cloudnumber[0,:,:] == mcstrackstat_splitcloudnumber[itrack[jj], itime[jj], isplit]))
+                        print(mcstrackstat_splitcloudnumber[itrack[jj], itime[jj], isplit])
+                        raw_input('Waiting')
                                 
                         # Label this cloud with the track number. Need to add one to the cloud number since have the index number and we want the track number
                         if len(jjsplitypixels) > 0:
@@ -176,6 +167,7 @@ def mapmcs_mergedir(zipped_inputs):
                             #statusmap[jjsplitypixels, jjsplitxpixels] = mcssplitstatus[itrack[jj], itime[jj], isplit]
                         else:
                             sys.exit('Error: No matching splitting cloud pixel found?!')
+                    raw_input('check 2')
             print('Stop')
 
             #####################################################################
