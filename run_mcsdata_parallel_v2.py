@@ -291,7 +291,7 @@ if run_gettracks == 1:
 
 # Determine if the tracking portion of the code ran. If not, set teh version name and filename using those specified in the constants section
 if run_gettracks == 0:
-    tracknumber_filebase = 'tracknumbers' + curr_tracknumbers_version
+    tracknumbers_filebase = 'tracknumbers' + curr_tracknumbers_version
 
 # Call function
 if run_finalstats == 1:

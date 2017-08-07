@@ -49,17 +49,11 @@ def mapmcs_mergedir(filebasetime, mcsstats_filebase, statistics_filebase, mcstra
     eccentricity_thresh = str(Dataset.getncattr(allstatdata, 'MCS_eccentricity'))
     allmcsdata.close()
 
-    for itime in range(0,30):
-        print(mcstrackstat_mergecloudnumber[itime,:,0:10])
-        raw_input('waiting')
     #########################################################################
     # Get tracks and times associated with this time
     itrack, itime = np.array(np.where(mcstrackstat_basetime == filebasetime))
     timestatus = np.copy(mcstrackstat_status[itrack,itime])
     ntimes = len(itime)
-
-    print(itrack)
-    print(itime)
 
     if ntimes > 0:
         # Get cloudid file associated with this time
@@ -107,7 +101,6 @@ def mapmcs_mergedir(filebasetime, mcsstats_filebase, statistics_filebase, mcstra
             ##############################################################
             # Loop over each cloud in this unique file
             for jj in range(0,ntimes):
-                print('JJ:' + str(jj))
                 # Get cloud nummber
                 jjcloudnumber = mcstrackstat_cloudnumber[itrack[jj],itime[jj]]
 
@@ -143,32 +136,19 @@ def mapmcs_mergedir(filebasetime, mcsstats_filebase, statistics_filebase, mcstra
                 ###########################################################
                 # Find splitting clouds
                 jjsplit = np.array(np.where(mcstrackstat_splitcloudnumber[itrack[jj], itime[jj],:] > 0))[0,:]
-                np.set_printoptions(threshold=np.inf)
-                print(mcstrackstat_splitcloudnumber[itrack[jj], itime[jj],0:50])
-                print(jjsplit)
-                raw_input('Check')
 
                 # Loop through splitting clouds if present
                 if len(jjsplit) > 0:
                     for isplit in jjsplit:
-                        print(isplit)
-                        print(mcstrackstat_splitcloudnumber[itrack[jj], itime[jj], 0:50])
                         # Find cloud number asosicated with the splitting cloud
                         jjsplitypixels, jjsplitxpixels = np.array(np.where(cloudid_cloudnumber[0,:,:] == mcstrackstat_splitcloudnumber[itrack[jj], itime[jj], isplit]))
-                        print(mcstrackstat_splitcloudnumber[itrack[jj], itime[jj], isplit])
-                        raw_input('Waiting')
-                                
+
                         # Label this cloud with the track number. Need to add one to the cloud number since have the index number and we want the track number
                         if len(jjsplitypixels) > 0:
                             mcstrackmap_mergesplit[jjsplitypixels, jjsplitxpixels] = itrack[jj] + 1
-                            print('Split')
-                            print(itrack)
-                            print(itrack[jj])
                             #statusmap[jjsplitypixels, jjsplitxpixels] = mcssplitstatus[itrack[jj], itime[jj], isplit]
                         else:
                             sys.exit('Error: No matching splitting cloud pixel found?!')
-                    raw_input('check 2')
-            print('Stop')
 
             #####################################################################
             # Output maps to netcdf file

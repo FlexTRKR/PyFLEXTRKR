@@ -350,8 +350,8 @@ def trackstats_sat(datasource, datadescription, pixel_radius, latlon_file, geoli
                 elif len(cloudnumber) > 1:
                     sys.exit(str(cloudnumbers) + ' clouds linked to one track. Each track should only be linked to one cloud in each file in the track_number array. The track_number variable only tracks the largest cell in mergers and splits. The small clouds in tracks and mergers should only be listed in the track_splitnumbers and track_mergenumbers arrays.')
 
-    ##############################################################
-    # Remove tracks that have no cells. These tracks are short.
+    ###############################################################
+    ## Remove tracks that have no cells. These tracks are short.
     cloudindexpresent = np.array(np.where(temp_finaltrack_tracklength != fillvalue))[0,:]
     numtracks = len(cloudindexpresent)
 
@@ -393,6 +393,31 @@ def trackstats_sat(datasource, datadescription, pixel_radius, latlon_file, geoli
         finaltrack_corecold_landfrac = temp_finaltrack_corecold_landfrac[cloudindexpresent,:]
         finaltrack_core_landfrac = temp_finaltrack_core_landfrac[cloudindexpresent,:]
 
+    # Correct merger and split cloud numbers
+    adjusted_finaltrack_corecold_mergenumber = np.ones(np.shape(finaltrack_corecold_mergenumber))*fillvalue
+    adjusted_finaltrack_corecold_splitnumber = np.ones(np.shape(finaltrack_corecold_mergenumber))*fillvalue
+    np.set_printoptions(threshold=np.inf)
+    print(cloudindexpresent)
+    for it in range(0, numtracks):
+        mergey, mergex = np.array(np.where(finaltrack_corecold_mergenumber == cloudindexpresent[it]+1))
+        adjusted_finaltrack_corecold_mergenumber[mergey, mergex] = it+1
+
+        splity, splitx = np.array(np.where(finaltrack_corecold_splitnumber == cloudindexpresent[it]+1))
+        adjusted_finaltrack_corecold_splitnumber[splity, splitx] = it+1
+
+    #mergercloudnumbers = np.unique(adjusted_finaltrack_corecold_mergenumber)
+    #print(mergercloudnumbers)
+    #for imerger in mergercloudnumbers:
+    #    if imerger >= 0:
+    #        print(imerger)
+    #        mergey, mergex = np.where(adjusted_finaltrack_corecold_mergenumber == imerger)
+    #        print(adjusted_finaltrack_corecold_mergenumber[mergey, mergex])
+    #        print(finaltrack_basetime[mergey, mergex])
+    #        print(finaltrack_basetime[imerger-1, 0:20])
+    #        for ii in finaltrack_basetime[mergey, mergex]:
+    #            print(np.where(finaltrack_basetime[imerger-1, :] == ii))
+    #        raw_input('waiting')
+            
     #########################################################################
     # Record starting and ending status
 
@@ -402,7 +427,8 @@ def trackstats_sat(datasource, datadescription, pixel_radius, latlon_file, geoli
     # Ending status
     finaltrack_corecold_endstatus = np.ones(len(finaltrack_corecold_startstatus))*fillvalue
     for trackstep in range(0,numtracks):
-        finaltrack_corecold_endstatus[trackstep] = finaltrack_corecold_status[trackstep,finaltrack_tracklength[trackstep] - 1]
+        if finaltrack_tracklength[trackstep] > 0:
+            finaltrack_corecold_endstatus[trackstep] = finaltrack_corecold_status[trackstep,finaltrack_tracklength[trackstep] - 1]
 
     #for itrack in range(0,numtracks):
     #    print(finaltrack_corecold_status[itrack,0:15])
@@ -744,8 +770,8 @@ def trackstats_sat(datasource, datadescription, pixel_radius, latlon_file, geoli
     status[:,:] = finaltrack_corecold_status
     startstatus[:] = finaltrack_corecold_startstatus
     endstatus[:] = finaltrack_corecold_endstatus
-    mergenumbers[:,:] = finaltrack_corecold_mergenumber
-    splitnumbers[:,:] = finaltrack_corecold_splitnumber
+    mergenumbers[:,:] = adjusted_finaltrack_corecold_mergenumber
+    splitnumbers[:,:] = adjusted_finaltrack_corecold_splitnumber
     trackinterruptions[:] = finaltrack_corecold_trackinterruptions
     mintb[:,:] = finaltrack_corecold_mintb
     meantb[:,:] = finaltrack_corecold_meantb

@@ -45,6 +45,15 @@ def identifymcs_mergedir(statistics_filebase, stats_path, startdate, enddate, ti
     allstatdata.close()
 
     fillvalue = -9999
+    
+    #for itest in range(0, ntracks_all):
+    #    print(trackstat_basetime[itest, 0:20])
+    #    testy, testx = np.where(trackstat_mergenumbers == itest + 1)
+    #    print(trackstat_basetime[testy, testx])
+    #    if len(testy) > 0:
+    #        for ii in range(0, len(testy)):
+    #            print(np.where(trackstat_basetime[itest, :] == trackstat_basetime[testy[ii], testx[ii]]))
+    #    raw_input('waiting')
 
     ####################################################################
     # Set up thresholds
@@ -89,25 +98,10 @@ def identifymcs_mergedir(statistics_filebase, stats_path, startdate, enddate, ti
             groups = np.split(iccs, np.where(np.diff(iccs) != 1)[0]+1)
             nbreaks = len(groups)
 
-            #if nt == 37881:
-            #    print(trackstat_npix_core[nt, :])
-            #    print(trackstat_npix_cold[nt, :])
-            #    print(track_corearea)
-            #    print(track_ccsarea)
-            #    print(area_thresh)
-            #    print(iccs)
-            #    print(groups)
-            #    raw_input('Waiting')
-
             # System may have multiple periods satisfying area and duration requirements. Loop over each period
             if iccs != []:
                 for t in range(0,nbreaks):
                     # Duration requirement
-                    #if nt == 37881:
-                        #print(groups[t][:])
-                        #print(np.multiply(len(groups[t][:]), time_resolution))
-                        #print(duration_thresh)
-                        #raw_input('Waiting for user')
                     if np.multiply(len(groups[t][:]), time_resolution) > duration_thresh:
 
                         # Isolate area and eccentricity for the subperiod
@@ -201,6 +195,13 @@ def identifymcs_mergedir(statistics_filebase, stats_path, startdate, enddate, ti
                 # Get data about MCS track
                 mcsbasetime = np.copy(trackstat_basetime[int(mcstracknumbers[imcs])-1,0:int(mcslength[imcs])])
 
+                #print(mcsbasetime)
+                #print(mergingbasetime)
+                #for itest in range(0, len(mergingbasetime)):
+                #    print(np.where(mcsbasetime == mergingbasetime[itest]))
+                #    print(np.where(trackstat_basetime[int(mcstracknumbers[imcs])-1,:] == mergingbasetime[itest]))
+                #raw_input('waiting')
+
                 # Loop through each timestep in the MCS track
                 for t in np.arange(0,mcslength[imcs]):
 
@@ -213,7 +214,6 @@ def identifymcs_mergedir(statistics_filebase, stats_path, startdate, enddate, ti
                         nmergers = np.shape(timematch)[1]
                         mcsmergecloudnumber[imcs, int(t), 0:nmergers] = mergingcloudnumber[timematch[0,:]]
                         mcsmergestatus[imcs, int(t), 0:nmergers] = mergingstatus[timematch[0,:]]
-
                         #print('merge')
                         #print(mergingdatetime[timematch[0,:]])
                         #print(mcsmergestatus[imcs, int(t), 0:nmergers])
@@ -277,6 +277,7 @@ def identifymcs_mergedir(statistics_filebase, stats_path, startdate, enddate, ti
 
     ########################################################################
     # Subset keeping just MCS tracks
+    print('subseting')
     trackid = trackid.astype(int)
     mcstrackstat_duration = trackstat_duration[trackid]
     mcstrackstat_basetime = trackstat_basetime[trackid,:]

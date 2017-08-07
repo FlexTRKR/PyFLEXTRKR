@@ -11,7 +11,7 @@ from netCDF4 import Dataset
 
 # Comments:
 # Features are tracked using 5 sets of code (idclouds, trackclouds_singlefile, get_tracknumbers, calc_sat_trackstats, label_celltrack).
-# This script controls which pieces of code are run.
+# This script control, edgecolors='k', linewidth=1)
 # Eventually, idclouds and trackclouds_singlefile will be able to run in parallel.
 # If trackclouds_singlefile is run in of tracksingle between 12/20/2009 - 12/31/2009, make two copies of this script, and set stairtdate - enddate (ex: 20091220 - 20091225, 20091225 - 20091231).
 # This is because the first time will not have a tracksingle file produced, overlapping the date makes sure every cloudid file is used.
