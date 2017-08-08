@@ -28,6 +28,8 @@ def identifymcs_mergedir(statistics_filebase, stats_path, startdate, enddate, ti
     trackstat_endstatus = allstatdata.variables['endstatus'][:] # Flag indicating the status of the last feature in each track 
     trackstat_mergenumbers = allstatdata.variables['mergenumbers'][:] # Number of a small feature that merges onto a bigger feature
     trackstat_splitnumbers = allstatdata.variables['splitnumbers'][:] # Number of a small feature that splits onto a bigger feature
+    trackstat_boundary = allstatdata.variables['boundary'][:] # Flag indicating whether the core + cold anvil touches one of the domain edges. 0 = away from edge. 1= touches edge.
+    trackstat_trackinterruptions = allstatdata.variables['trackinterruptions'][:] # Numbers in each row indicate if the track started and ended naturally or if the start or end of the track was artifically cut short by data availability
     trackstat_eccentricity = allstatdata.variables['eccentricity'][:] # Eccentricity of the core and cold anvil
     trackstat_npix_core = allstatdata.variables['nconv'][:] # Number of pixels in the core
     trackstat_npix_cold = allstatdata.variables['ncoldanvil'][:] # Number of pixels in the cold anvil
@@ -278,19 +280,21 @@ def identifymcs_mergedir(statistics_filebase, stats_path, startdate, enddate, ti
     ########################################################################
     # Subset keeping just MCS tracks
     print('subseting')
-    trackid = trackid.astype(int)
-    mcstrackstat_duration = trackstat_duration[trackid]
-    mcstrackstat_basetime = trackstat_basetime[trackid,:]
-    mcstrackstat_datetime = trackstat_datetime[trackid,:]
-    mcstrackstat_cloudnumber = trackstat_cloudnumber[trackid,:]
-    mcstrackstat_status = trackstat_status[trackid,:]
-    mcstrackstat_corearea = trackstat_corearea[trackid,:]
-    mcstrackstat_meanlat = trackstat_meanlat[trackid,:]
-    mcstrackstat_meanlon = trackstat_meanlon[trackid,:] 
-    mcstrackstat_ccsarea = trackstat_ccsarea[trackid,:]
-    mcstrackstat_eccentricity = trackstat_eccentricity[trackid,:]
-    mcstrackstat_startstatus = trackstat_startstatus[trackid]
-    mcstrackstat_endstatus = trackstat_endstatus[trackid]
+    trackid = np.copy(trackid.astype(int))
+    mcstrackstat_duration = np.copy(trackstat_duration[trackid])
+    mcstrackstat_basetime = np.copy(trackstat_basetime[trackid,:])
+    mcstrackstat_datetime = np.copy(trackstat_datetime[trackid,:])
+    mcstrackstat_cloudnumber = np.copy(trackstat_cloudnumber[trackid,:])
+    mcstrackstat_status = np.copy(trackstat_status[trackid,:])
+    mcstrackstat_corearea = np.copy(trackstat_corearea[trackid,:])
+    mcstrackstat_meanlat = np.copy(trackstat_meanlat[trackid,:])
+    mcstrackstat_meanlon = np.copy(trackstat_meanlon[trackid,:]) 
+    mcstrackstat_ccsarea = np.copy(trackstat_ccsarea[trackid,:])
+    mcstrackstat_eccentricity = np.copy(trackstat_eccentricity[trackid,:])
+    mcstrackstat_startstatus = np.copy(trackstat_startstatus[trackid])
+    mcstrackstat_endstatus = np.copy(trackstat_endstatus[trackid])
+    mcstrackstat_boundary = np.copy(trackstat_boundary[trackid])
+    mcstrackstat_trackinterruptions = np.copy(trackstat_trackinterruptions[trackid])
 
     ###########################################################################
     # Write statistics to netcdf file
@@ -370,6 +374,22 @@ def identifymcs_mergedir(statistics_filebase, stats_path, startdate, enddate, ti
     mcs_endstatus.fill_value = fillvalue
     mcs_endstatus.units = 'unitless'
 
+    mcs_boundary = filesave.createVariable('mcs_boundary', 'i4', 'ntracks', zlib=True, complevel=5, fill_value=fillvalue)
+    mcs_boundary.description = 'Flag indicating whether the core + cold anvil touches one of the domain edges. 0 = away from edge. 1= touches edge.'
+    mcs_boundary.min_value = 0
+    mcs_boundary.max_value = 1
+    mcs_boundary.fill_value = fillvalue
+    mcs_boundary.units = 'unitless'
+
+    mcs_trackinterruptions = filesave.createVariable('mcs_trackinterruptions', 'i4', 'ntracks', zlib=True, complevel=5, fill_value=fillvalue)
+    mcs_trackinterruptions.long_name = 'flag indication if track interrupted'
+    mcs_trackinterruptions.description = 'Numbers in each row indicate if the track started and ended naturally or if the start or end of the track was artifically cut short by data availability'
+    mcs_trackinterruptions.values = '0 = full track available, good data. 1 = track starts at first file, track cut short by data availability. 2 = track ends at last file, track cut short by data availability'
+    mcs_trackinterruptions.min_value = 0
+    mcs_trackinterruptions.max_value = 2
+    mcs_trackinterruptions.fill_value = fillvalue
+    mcs_trackinterruptions.units = 'unitless'
+
     mcs_meanlat = filesave.createVariable('mcs_meanlat', 'f4', ('ntracks', 'ntimes'), zlib=True, complevel=5, fill_value=fillvalue)
     mcs_meanlat.standard_name = 'latitude'
     mcs_meanlat.description = 'Mean latitude of the core + cold anvil for each feature in the MCS'
@@ -420,6 +440,8 @@ def identifymcs_mergedir(statistics_filebase, stats_path, startdate, enddate, ti
     mcs_status[:,:] = mcstrackstat_status
     mcs_startstatus[:] = mcstrackstat_startstatus
     mcs_endstatus[:] = mcstrackstat_endstatus
+    mcs_boundary[:] = mcstrackstat_boundary
+    mcs_trackinterruptions[:] = mcstrackstat_trackinterruptions
     mcs_meanlat[:,:] = mcstrackstat_meanlat
     mcs_meanlon[:,:] = mcstrackstat_meanlon
     mcs_corearea[:,:] = mcstrackstat_corearea
