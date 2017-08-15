@@ -279,7 +279,6 @@ def identifymcs_mergedir(statistics_filebase, stats_path, startdate, enddate, ti
 
     ########################################################################
     # Subset keeping just MCS tracks
-    print('subseting')
     trackid = np.copy(trackid.astype(int))
     mcstrackstat_duration = np.copy(trackstat_duration[trackid])
     mcstrackstat_basetime = np.copy(trackstat_basetime[trackid,:])
