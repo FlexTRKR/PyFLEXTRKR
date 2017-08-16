@@ -2,9 +2,12 @@
 
 # Author: Original IDL code written by Zhe Feng (zhe.feng@pnnl.gov), Python version written by Hannah C. Barnes (hannah.barnes@pnnl.gov)
 
-def identifypf_mergedir_rainrate(mcsstats_filebase, stats_path, startdate, enddate):
+def identifypf_mergedir_rainrate(mcsstats_filebase, cloudid_filebase, stats_path, cloudidtrack_path, pfdata_path, startdate, enddate, nmaxpf, nmaxcore, nmaxpix):
     import numpy as np
     from netCDF4 import Dataset
+    import os.path
+
+    np.set_printoptions(threshold=np.inf)
 
     #########################################################
     # Set constants
@@ -45,7 +48,7 @@ def identifypf_mergedir_rainrate(mcsstats_filebase, stats_path, startdate, endda
     mcsirstatdata.close()
 
     #########################################################
-    # Reduce time resolution. Only keep data at the top of the hour
+    # Reduce time resolution. Only keep data at the top of the hour. Need to do since NLDAS data is only hourly
 
     # Initialize matrices
     ntimes = mcs_ir_nmaxlength/2
@@ -87,8 +90,124 @@ def identifypf_mergedir_rainrate(mcsstats_filebase, stats_path, startdate, endda
         mcs_ir_basetime_hr[it, 0:nhourlyindices] = np.copy(mcs_ir_basetime[it, hourlyindices])
         mcs_ir_datetimestring_hr[it][0:nhourlyindices] = np.copy(mcs_ir_datetimestring[it, hourlyindices, :])
 
-        raw_input('waiting')
+    ###################################################################
+    # Intialize precipitation statistic matrices
 
+    # Variables for each precipitation feature
+    pf_npf = np.ones((mcs_ir_ntracks, ntimes), dtype=int)*fillvalue
+    pf_lon = np.ones((mcs_ir_ntracks, ntimes, nmaxpf), dtype=float)*fillvalue
+    pf_lat = np.ones((mcs_ir_ntracks, ntimes, nmaxpf), dtype=float)*fillvalue
+    pf_npix = np.ones((mcs_ir_ntracks, ntimes, nmaxpf), dtype=float)*fillvalue
+    pf_rainrate = np.ones((mcs_ir_ntracks, ntimes, nmaxpf), dtype=float)*fillvalue
+    pf_skew = np.ones((mcs_ir_ntracks, ntimes, nmaxpf), dtype=float)*fillvalue
+    pf_majoraxis = np.ones((mcs_ir_ntracks, ntimes, nmaxpf), dtype=float)*fillvalue
+    pf_aspectratio = np.ones((mcs_ir_ntracks, ntimes, nmaxpf), dtype=float)*fillvalue
+    pf_dbz40npix = np.ones((mcs_ir_ntracks, ntimes, nmaxpf), dtype=float)*fillvalue
+    pf_dbz45npix = np.ones((mcs_ir_ntracks, ntimes, nmaxpf), dtype=float)*fillvalue
+    pf_dbz50npix = np.ones((mcs_ir_ntracks, ntimes, nmaxpf), dtype=float)*fillvalue
 
+    # Variables average for the largest few precipitation features
+    pf_ccrate = np.ones((mcs_ir_ntracks, ntimes), dtype=int)*fillvalue
+    pf_ccnpix = np.ones((mcs_ir_ntracks, ntimes), dtype=int)*fillvalue
+    pf_ccdbz10 = np.ones((mcs_ir_ntracks, ntimes), dtype=int)*fillvalue
+    pf_ccdbz20 = np.ones((mcs_ir_ntracks, ntimes), dtype=int)*fillvalue
+    pf_ccdbz30 = np.ones((mcs_ir_ntracks, ntimes), dtype=int)*fillvalue
+    pf_ccdbz40 = np.ones((mcs_ir_ntracks, ntimes), dtype=int)*fillvalue
+    pf_sfnpix = np.ones((mcs_ir_ntracks, ntimes), dtype=int)*fillvalue
+    pf_sfrainrate = np.ones((mcs_ir_ntracks, ntimes), dtype=int)*fillvalue
 
+    # Variables for each convetive core
+    pf_ncores = np.ones((mcs_ir_ntracks, ntimes), dtype=int)*fillvalue
+    pf_corelon = np.ones((mcs_ir_ntracks, ntimes, nmaxcore), dtype=float)*fillvalue
+    pf_corelat = np.ones((mcs_ir_ntracks, ntimes, nmaxcore), dtype=float)*fillvalue
+    pf_corenpix = np.ones((mcs_ir_ntracks, ntimes, nmaxcore), dtype=float)*fillvalue
+    pf_coremajoraxis = np.ones((mcs_ir_ntracks, ntimes, nmaxcore), dtype=float)*fillvalue
+    pf_coreaspectratio = np.ones((mcs_ir_ntracks, ntimes, nmaxcore), dtype=float)*fillvalue
+    pf_coreorientation = np.ones((mcs_ir_ntracks, ntimes, nmaxcore), dtype=float)*fillvalue
+    pf_coreeccentricity = np.ones((mcs_ir_ntracks, ntimes, nmaxcore), dtype=float)*fillvalue
+    pf_coremaxdbz10 = np.ones((mcs_ir_ntracks, ntimes, nmaxcore), dtype=float)*fillvalue
+    pf_coremaxdbz20 = np.ones((mcs_ir_ntracks, ntimes, nmaxcore), dtype=float)*fillvalue
+    pf_coremaxdbz30 = np.ones((mcs_ir_ntracks, ntimes, nmaxcore), dtype=float)*fillvalue
+    pf_coremaxdbz40 = np.ones((mcs_ir_ntracks, ntimes, nmaxcore), dtype=float)*fillvalue
 
+    # Variables for accumulated rainfall
+    pf_nuniqpix = np.ones(mcs_ir_ntracks, dtype=float)*fillvalue
+    pf_locidx = np.ones((mcs_ir_ntracks, nmaxpix), dtype=float)*fillvalue
+    pf_durtime = np.ones((mcs_ir_ntracks, nmaxpix), dtype=float)*fillvalue
+    pf_durrainrate = np.ones((mcs_ir_ntracks, nmaxpix), dtype=float)*fillvalue
+
+    ##############################################################
+    # Find precipitation feature in each mcs
+
+    # Loop over each track
+    for it in range(0, mcs_ir_ntracks):
+        print('Processing track ' + str(int(it)))
+
+        # Isolate ir statistics about this track
+        itlength = np.copy(mcs_ir_length_hr[it])
+        itbasetime = np.copy(mcs_ir_basetime_hr[it, :])
+        itdatetimestring = np.copy(mcs_ir_datetimestring_hr[it][:][:])
+        itstatus = np.copy(mcs_ir_status_hr[it, :])
+        itcloudnumber = np.copy(mcs_ir_cloudnumber_hr[it, :])
+        itmergecloudnumber = np.copy(mcs_ir_mergecloudnumber[it, :, :])
+        itsplitcloudnumber = np.copy(mcs_ir_splitcloudnumber[it, :, :])
+
+        # Loop through each time in the track
+        irindices = np.array(np.where(itbasetime > 0))[0, :]
+        for itt in irindices:
+            # Isolate the data at this time
+            ittbasetime = np.copy(itbasetime[itt])
+            ittstatus = np.copy(itstatus[itt])
+            ittcloudnumber = np.copy(itcloudnumber[itt])
+            ittmergecloudnumber = np.copy(itmergecloudnumber[itt, :])
+            ittsplitcloudnumber = np.copy(itsplitcloudnumber[itt, :])
+            ittdatetimestring = np.copy(itdatetimestring[itt])
+
+            if ittdatetimestring[11:12] == 0:
+                # Generate date file names
+                ittdatetimestring = ''.join(ittdatetimestring)
+                cloudid_filename = cloudidtracking_path + cloudid_filebase + ittdatetimestring + '.nc'
+                pf_filename = pfdata_path + 'csa4km_' + ittdatetimestring + '00.nc'
+
+                pf_outfile = stats_path + 'mcs_tracks_nmq_' + startdate + '_' + enddate + '.nc'
+
+                ########################################################################
+                # Load data
+                if os.path.isfile(cloudid_filename) and os.path.isfile(pf_filename):
+                    # Load cloudid data
+                    print(cloudid_filename)
+                    cloudiddata = Dataset(cloudid_filename, 'r')
+                    irlat = cloudiddata.variables['latitude'][:]
+                    irlon = cloudiddata.variables['longitude'][:]
+                    tbmap = cloudiddata.variables['tb'][:]
+                    cloudnumbermap = cloudid.variables['cloudnumber'][:]
+                    cloudiddata.close()
+
+                    # Read precipitation data
+                    print(pf_filename)
+                    pfdata = Dataset(pf_filename, 'r')
+                    pflat = pfdata.variables['lat2d'][:]
+                    pflon = pfdata.variables['lon2d'][:]
+                    dbzmap = pfdata.variables['dbz_convsf'][:] # map of reflectivity 
+                    dbz10map = pfdata.variables['dbz10_height'][:] # map of 10 dBZ ETHs
+                    dbz20map = pfdata.variables['dbz20_height'][:] # map of 20 dBZ ETHs
+                    dbz30map = pfdata.variables['dbz30_height'][:] # map of 30 dBZ ETHs
+                    dbz40map = pfdata.variables['dbz40_height'][:] # map of 40 dBZ ETHs
+                    dbz45map = pfdata.variables['dbz45_height'][:] # map of 45 dBZ ETH
+                    dbz50map = pfdata.variables['dbz50_height'][:] # map of 50 dBZ ETHs
+                    csamap = pfdata.variables['csa'][:] # map of convective, stratiform, anvil categories
+                    rainratemap = pfdata.variables['rainrate'][:] # map of rain rate
+                    pfnumbermap = pfdata.variables['pf_number'][:] # map of the precipitation feature number attributed to that pixel
+                    dataqualitymap = pfdata.variables['mask'][:] # map if good (0) and bad (1) data
+                    pfxspacing = pfdata.variables['x_spacing'][:] # distance between grid points in x direction
+                    pfyspacing = pfdata.variables['y_spacing'][:] # distance between grid points in y direction
+                    pfdata.close()
+
+                    ############################################################################
+                    # Find matches
+
+                else:
+                    print('One or both files do not exist: ' + cloudidfilename + ', ' + pfdata_filename)
+                                    
+            else:
+                print('Half-hourly data ?!:' + ittdatetimestring)

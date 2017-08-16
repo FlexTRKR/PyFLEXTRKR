@@ -73,6 +73,8 @@ mcs_mergeduration = 6            # Tracks smaller or equal to this length will b
 # Specify rain rate parameters
 rr_min = 1.0                      # Rain rate threshold [mm/hr]
 nmaxpf = 10                       # Maximum number of precipitation features that can be within a cloud feature
+nmaxcore = 20                     #
+nmaxpix = 150000
 
 # Specify filenames and locations
 datavariablename = 'IRBT'
@@ -344,7 +346,7 @@ if run_matchpf == 1:
     from matchpf import identifypf_mergedir_rainrate
 
     # Call function
-    identifypf_mergedir_rainrate(mcsstats_filebase, stats_outpath, startdate, enddate)
+    identifypf_mergedir_rainrate(mcsstats_filebase, cloudid_filebase, stats_outpath, tracking_outpath, pfdata_path, startdate, enddate, nmaxpf, nmaxcore, nmaxpix)
     pfstats_filebase = 'pfmcs_tracks_'
 
 
