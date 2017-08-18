@@ -94,9 +94,9 @@ def idclouds_mergedir(zipped_inputs):
         fillval= -9999
 
         # load brighttness temperature data. automatically removes missing values
-        rawdata = Dataset(datafilepath, 'r')           # open file
+        rawdata = Dataset(datafilepath, 'r')                            # open file
         original_ir = rawdata.variables[variablename][:]                # load brightness temperature data
-        rawdata.close()                                   # close file
+        rawdata.close()                                                 # close file
 
         #in_ir = np.ma.getdata(original_ir)
         #mask = np.ma.getmaskarray(original_ir)
@@ -144,15 +144,13 @@ def idclouds_mergedir(zipped_inputs):
         # determine geographic region of interest is within the data set. if it is proceed and limit the data to that geographic region. if not exit the code.
 
         # isolate data within lat/lon range set by limit
-        lat_indices = np.array(np.where((in_lat[:,0] > geolimits[0]) & (in_lat[:,0] < geolimits[2])))[0,:]
-        lon_indices = np.array(np.where((in_lon[0,:] > geolimits[1]) & (in_lon[0,:] < geolimits[3])))[0,:]
-        
+        indices = np.where((in_lat > geolimits[0]) & (in_lat <= geolimits[2]) & (in_lon > geolimits[1]) & (in_lon <= geolimits[3]))
+
         # proceed if file covers the geographic region in interest
-        if len(lat_indices) > 0 and len(lon_indices) > 0:
-            out_lat = in_lat[lat_indices[0]:lat_indices[-1], lon_indices[0]:lon_indices[-1]]
-            out_lon = in_lon[lat_indices[0]:lat_indices[-1], lon_indices[0]:lon_indices[-1]]
-            out_ir = in_ir[lat_indices[0]:lat_indices[-1], lon_indices[0]:lon_indices[-1]]
-            #out_ir = in_ir[0, lat_indices[0]:lat_indices[-1], lon_indices[0]:lon_indices[-1]]
+        if len(indices[0]) > 0 and len(indices[1]) > 0:
+            out_lat = np.reshape(np.copy(in_lat[indices]), (indices[0][-1]+1, indices[1][-1]+1))
+            out_lon = np.reshape(np.copy(in_lon[indices]), (indices[0][-1]+1, indices[1][-1]+1))
+            out_ir = np.reshape(np.copy(in_ir[indices]), (indices[0][-1]+1, indices[1][-1]+1))
 
             ######################################################
             # proceed only if number of missing data does not exceed an accepable threshold
@@ -306,8 +304,8 @@ def idclouds_mergedir(zipped_inputs):
                 basetime[:] = datafilebasetime
                 filedate[0,:] = stringtochar(np.array(datafiledatestring))
                 filetime[0,:] = stringtochar(np.array(datafiletimestring))
-                lon[:] = np.squeeze(in_lon[0,lon_indices[0]:lon_indices[-1]])
-                lat[:] = in_lat[lat_indices[0]:lat_indices[-1],0]
+                lon[:] = np.squeeze(out_lon[0, :])
+                lat[:] = np.squeeze(out_lat[:, 0])
                 longitude[:] = out_lon[:,:]
                 latitude[:] = out_lat[:,:]
                 tb[0,:,:] = out_ir[:,:]
