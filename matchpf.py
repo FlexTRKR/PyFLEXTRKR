@@ -47,49 +47,6 @@ def identifypf_mergedir_rainrate(mcsstats_filebase, cloudid_filebase, stats_path
     mcs_ir_interruptions = mcsirstatdata.variables['mcs_trackinterruptions'][:] # flag indicating if break exists in the track data
     mcsirstatdata.close()
 
-    #########################################################
-    # Reduce time resolution. Only keep data at the top of the hour. Need to do since NLDAS data is only hourly
-
-    # Initialize matrices
-    ntimes = mcs_ir_nmaxlength/2
-
-    mcs_ir_length_hr = np.ones(mcs_ir_ntracks, dtype=int)*fillvalue
-    mcs_ir_basetime_hr = np.ones((mcs_ir_ntracks, ntimes), dtype=int)*fillvalue
-    mcs_ir_meanlat_hr = np.ones((mcs_ir_ntracks, ntimes), dtype=int)*fillvalue
-    mcs_ir_meanlon_hr = np.ones((mcs_ir_ntracks, ntimes), dtype=int)*fillvalue
-    mcs_ir_corearea_hr = np.ones((mcs_ir_ntracks, ntimes), dtype=int)*fillvalue
-    mcs_ir_ccsarea_hr = np.ones((mcs_ir_ntracks, ntimes), dtype=int)*fillvalue
-    mcs_ir_cloudnumber_hr = np.ones((mcs_ir_ntracks, ntimes), dtype=int)*fillvalue
-    mcs_ir_mergecloudnumber_hr = np.ones((mcs_ir_ntracks, ntimes,  mcs_ir_nmaxmergesplits), dtype=int)*fillvalue
-    mcs_ir_splitcloudnumber_hr = np.ones((mcs_ir_ntracks, ntimes,  mcs_ir_nmaxmergesplits), dtype=int)*fillvalue
-    mcs_ir_type_hr = np.ones((mcs_ir_ntracks, ntimes), dtype=int)*fillvalue
-    mcs_ir_status_hr = np.ones((mcs_ir_ntracks, ntimes), dtype=int)*fillvalue
-    mcs_ir_startstatus_hr = np.ones((mcs_ir_ntracks, ntimes), dtype=int)*fillvalue
-    mcs_ir_endstatus_hr = np.ones((mcs_ir_ntracks, ntimes), dtype=int)*fillvalue
-    mcs_ir_boundary_hr = np.ones((mcs_ir_ntracks, ntimes), dtype=int)*fillvalue
-    mcs_ir_interruptions_hr = np.ones((mcs_ir_ntracks, ntimes), dtype=int)*fillvalue
-    mcs_ir_datetimestring_hr = [[['' for x in range(13)] for y in range(int( mcs_ir_nmaxlength))] for z in range(int(ntimes))]
-
-    # Fill matrices
-    for it in range(0, mcs_ir_ntracks):
-        # Identify the top of the hour using date-time string
-        hourtop = np.copy(mcs_ir_datetimestring[it,:, 11:12])
-        hourlyindices = np.array(np.where(hourtop == '0'))[0, :]
-        nhourlyindices = len(hourlyindices)
-
-        # Subset the data
-        mcs_ir_length_hr[it] = np.copy(nhourlyindices)
-        mcs_ir_meanlat_hr[it, 0:nhourlyindices] = np.copy(mcs_ir_meanlat[it, hourlyindices])
-        mcs_ir_meanlon_hr[it, 0:nhourlyindices] = np.copy(mcs_ir_meanlon[it, hourlyindices])
-        mcs_ir_corearea_hr[it, 0:nhourlyindices] = np.copy(mcs_ir_corearea[it, hourlyindices])
-        mcs_ir_ccsarea_hr[it, 0:nhourlyindices] = np.copy(mcs_ir_ccsarea[it, hourlyindices])
-        mcs_ir_cloudnumber_hr[it, 0:nhourlyindices] = np.copy(mcs_ir_cloudnumber[it, hourlyindices])
-        mcs_ir_mergecloudnumber_hr[it, 0:nhourlyindices, :] = np.copy(mcs_ir_mergecloudnumber[it, hourlyindices, :])
-        mcs_ir_splitcloudnumber_hr[it, 0:nhourlyindices, :] = np.copy(mcs_ir_splitcloudnumber[it, hourlyindices, :])
-        mcs_ir_status_hr[it, 0:nhourlyindices] = np.copy(mcs_ir_status[it, hourlyindices])
-        mcs_ir_basetime_hr[it, 0:nhourlyindices] = np.copy(mcs_ir_basetime[it, hourlyindices])
-        mcs_ir_datetimestring_hr[it][0:nhourlyindices] = np.copy(mcs_ir_datetimestring[it, hourlyindices, :])
-
     ###################################################################
     # Intialize precipitation statistic matrices
 
@@ -144,11 +101,11 @@ def identifypf_mergedir_rainrate(mcsstats_filebase, cloudid_filebase, stats_path
         print('Processing track ' + str(int(it)))
 
         # Isolate ir statistics about this track
-        itlength = np.copy(mcs_ir_length_hr[it])
-        itbasetime = np.copy(mcs_ir_basetime_hr[it, :])
-        itdatetimestring = np.copy(mcs_ir_datetimestring_hr[it][:][:])
-        itstatus = np.copy(mcs_ir_status_hr[it, :])
-        itcloudnumber = np.copy(mcs_ir_cloudnumber_hr[it, :])
+        itlength = np.copy(mcs_ir_length[it])
+        itbasetime = np.copy(mcs_ir_basetime[it, :])
+        itdatetimestring = np.copy(mcs_ir_datetimestring[it][:][:])
+        itstatus = np.copy(mcs_ir_status[it, :])
+        itcloudnumber = np.copy(mcs_ir_cloudnumber[it, :])
         itmergecloudnumber = np.copy(mcs_ir_mergecloudnumber[it, :, :])
         itsplitcloudnumber = np.copy(mcs_ir_splitcloudnumber[it, :, :])
 
@@ -163,10 +120,10 @@ def identifypf_mergedir_rainrate(mcsstats_filebase, cloudid_filebase, stats_path
             ittsplitcloudnumber = np.copy(itsplitcloudnumber[itt, :])
             ittdatetimestring = np.copy(itdatetimestring[itt])
 
-            if ittdatetimestring[11:12] == 0:
+            if ittdatetimestring[11:12] == '0':
                 # Generate date file names
                 ittdatetimestring = ''.join(ittdatetimestring)
-                cloudid_filename = cloudidtracking_path + cloudid_filebase + ittdatetimestring + '.nc'
+                cloudid_filename = cloudidtrack_path + cloudid_filebase + ittdatetimestring + '.nc'
                 pf_filename = pfdata_path + 'csa4km_' + ittdatetimestring + '00.nc'
 
                 pf_outfile = stats_path + 'mcs_tracks_nmq_' + startdate + '_' + enddate + '.nc'
@@ -180,7 +137,7 @@ def identifypf_mergedir_rainrate(mcsstats_filebase, cloudid_filebase, stats_path
                     irlat = cloudiddata.variables['latitude'][:]
                     irlon = cloudiddata.variables['longitude'][:]
                     tbmap = cloudiddata.variables['tb'][:]
-                    cloudnumbermap = cloudid.variables['cloudnumber'][:]
+                    cloudnumbermap = cloudiddata.variables['cloudnumber'][:]
                     cloudiddata.close()
 
                     # Read precipitation data
@@ -203,11 +160,58 @@ def identifypf_mergedir_rainrate(mcsstats_filebase, cloudid_filebase, stats_path
                     pfyspacing = pfdata.variables['y_spacing'][:] # distance between grid points in y direction
                     pfdata.close()
 
+                    ##########################################################################
+                    # Get dimensions of data
+                    ydim, xdim = np.shape(irlat)
+
                     ############################################################################
-                    # Find matches
+                    # Find matching cloud number
+                    icloudlocation = np.array(np.where(cloudnumbermap == ittcloudnumber))
+                    ncloudpix = np.shape(icloudlocation)[1]
+
+                    if ncloudpix > 0:
+                        ######################################################################
+                        # Check if any small clouds merge
+                        idmergecloudnumber = np.array(np.where(ittmergecloudnumber > 0))[0, :]
+                        nmergecloud = len(idmergecloudnumber)
+
+                        if nmergecloud > 0:
+                            # Loop over each merging cloud
+                            for imc in idmergecloudnumber:
+                                # Find location of the merging cloud
+                                imergelocation = np.array((np.where(cloudnumbermap == ittmergecloudnumber[imc])))
+                                nmergepix = np.shape(imergelocation)[1]
+
+                                # Add merge pixes to mcs pixels
+                                if nmergepix > 0:
+                                    icloudlocation = np.hstack((icloudlocation, imergelocation))
+
+                        ######################################################################
+                        # Check if any small clouds split
+                        idsplitcloudnumber = np.array(np.where(ittsplitcloudnumber > 0))[0, :]
+                        nsplitcloud = len(idsplitcloudnumber)
+
+                        if nsplitcloud > 0:
+                            # Loop over each merging cloud
+                            for imc in idsplitcloudnumber:
+                                # Find location of the merging cloud
+                                isplitlocation = np.array((np.where(cloudnumbermap == ittsplitcloudnumber[imc])))
+                                nsplitpix = np.shape(isplitlocation)[1]
+
+                                # Add split pixes to mcs pixels
+                                if nsplitpix > 0:
+                                    icloudlocation = np.hstack((icloudlocation, isplitlocation))
+
+                        #########################################################################
+                        # isolate small region of cloud data around mcs at this time
+
+
+
 
                 else:
                     print('One or both files do not exist: ' + cloudidfilename + ', ' + pfdata_filename)
                                     
             else:
-                print('Half-hourly data ?!:' + ittdatetimestring)
+                print(ittdatetimestring)
+                print('Half-hourly data ?!:' + str(ittdatetimestring))
+                raw_input('waiting')

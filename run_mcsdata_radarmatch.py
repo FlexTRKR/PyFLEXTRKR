@@ -11,7 +11,7 @@ from netCDF4 import Dataset
 
 # Comments:
 # Features are tracked using 5 sets of code (idclouds, trackclouds_singlefile, get_tracknumbers, calc_sat_trackstats, label_celltrack).
-# This script control, edgecolors='k', linewidth=1)
+# This script control, edgecolors='k', linewidpfdata_pathth=1)
 # Eventually, idclouds and trackclouds_singlefile will be able to run in parallel.
 # If trackclouds_singlefile is run in of tracksingle between 12/20/2009 - 12/31/2009, make two copies of this script, and set stairtdate - enddate (ex: 20091220 - 20091225, 20091225 - 20091231).
 # This is because the first time will not have a tracksingle file produced, overlapping the date makes sure every cloudid file is used.
@@ -24,11 +24,11 @@ from netCDF4 import Dataset
 # Set variables describing data, file structure, and tracking thresholds
 
 # Specify which sets of code to run. (1 = run code, 0 = don't run code)
-run_idclouds = 0        # Segment and identify cloud systems
-run_tracksingle = 0     # Track single consecutive cloudid files
-run_gettracks = 0       # Run trackig for all files
-run_finalstats = 0      # Calculate final statistics
-run_identifymcs = 0     # Isolate MCSs
+run_idclouds = 1        # Segment and identify cloud systems
+run_tracksingle = 1     # Track single consecutive cloudid files
+run_gettracks = 1       # Run trackig for all files
+run_finalstats = 1      # Calculate final statistics
+run_identifymcs = 1     # Isolate MCSs
 run_matchpf = 1         # Identify precipitation features with MCSs
 run_labelmcs = 1        # Create maps of MCSs
 
@@ -47,7 +47,7 @@ startdate = '20110517'
 enddate = '20110527'
 
 # Specify cloud tracking parameters
-geolimits = np.array([25,-110,51,-70]) # 4-element array with plotting boundaries [lat_min, lon_min, lat_max, lon_max]
+geolimits = np.array([25, -110, 51, -70]) # 4-element array with plotting boundaries [lat_min, lon_min, lat_max, lon_max]
 pixel_radius = 4.0      # km
 timegap = 1.6           # hour
 area_thresh = 1000 #64.       # km^2
@@ -83,9 +83,10 @@ datadescription = 'EUS'
 databasename = 'EUS_IR_Subset_'
 label_filebase = 'cloudtrack_'
 
-root_path = '/global/homes/h/hcbarnes/Tracking/Satellite/'
+root_path = '/global/homes/h/hcbarnes/Tracking/SatelliteRadar/'
 clouddata_path = '/global/project/projectdirs/m1867/zfeng/usa/mergedir/Netcdf/2011/'
 pfdata_path = '/global/project/projectdirs/m1867/zfeng/usa/nmq/csa4km/2011/'
+rainaccumulation_path = '/global/project/projectdirs/m1867/zfeng/usa/nmq/q2/regrid/2011/'
 scratchpath = './'
 latlon_file = '/global/project/projectdirs/m1867/zfeng/usa/mergedir/Geolocation/EUS_Geolocation_Data.nc'
 
@@ -154,7 +155,7 @@ if run_idclouds == 1:
         TEMP_filetime = datetime.datetime(int(ifile[nleadingchar:nleadingchar+4]), int(ifile[nleadingchar+4:nleadingchar+6]), int(ifile[nleadingchar+6:nleadingchar+8]), int(ifile[nleadingchar+9:nleadingchar+11]), int(ifile[nleadingchar+11:nleadingchar+13]), 0, tzinfo=utc)
         TEMP_filebasetime = calendar.timegm(TEMP_filetime.timetuple())
 
-        if TEMP_filebasetime >= start_basetime and TEMP_filebasetime <= end_basetime:
+        if TEMP_filebasetime >= start_basetime and TEMP_filebasetime <= end_basetime and int(ifile[nleadingchar+11:nleadingchar+13]) == 0:
             rawdatafiles[filestep] = clouddata_path + ifile
             files_timestring[filestep] = ifile[nleadingchar+9:nleadingchar+11] + ifile[nleadingchar+11:nleadingchar+13]
             files_datestring[filestep] = ifile[nleadingchar:nleadingchar+4] + ifile[nleadingchar+4:nleadingchar+6] + ifile[nleadingchar+6:nleadingchar+8]
@@ -346,7 +347,7 @@ if run_matchpf == 1:
     from matchpf import identifypf_mergedir_rainrate
 
     # Call function
-    identifypf_mergedir_rainrate(mcsstats_filebase, cloudid_filebase, stats_outpath, tracking_outpath, pfdata_path, startdate, enddate, nmaxpf, nmaxcore, nmaxpix)
+    identifypf_mergedir_rainrate(mcsstats_filebase, cloudid_filebase, stats_outpath, tracking_outpath, pfdata_path, rainaccumulation_path, startdate, enddate, nmaxpf, nmaxcore, nmaxpix)
     pfstats_filebase = 'pfmcs_tracks_'
 
 
