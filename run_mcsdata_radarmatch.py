@@ -24,11 +24,11 @@ from netCDF4 import Dataset
 # Set variables describing data, file structure, and tracking thresholds
 
 # Specify which sets of code to run. (1 = run code, 0 = don't run code)
-run_idclouds = 1        # Segment and identify cloud systems
-run_tracksingle = 1     # Track single consecutive cloudid files
-run_gettracks = 1       # Run trackig for all files
-run_finalstats = 1      # Calculate final statistics
-run_identifymcs = 1     # Isolate MCSs
+run_idclouds = 0        # Segment and identify cloud systems
+run_tracksingle = 0     # Track single consecutive cloudid files
+run_gettracks = 0       # Run trackig for all files
+run_finalstats = 0      # Calculate final statistics
+run_identifymcs = 0     # Isolate MCSs
 run_matchpf = 1         # Identify precipitation features with MCSs
 run_labelmcs = 1        # Create maps of MCSs
 
@@ -347,7 +347,7 @@ if run_matchpf == 1:
     from matchpf import identifypf_mergedir_rainrate
 
     # Call function
-    identifypf_mergedir_rainrate(mcsstats_filebase, cloudid_filebase, stats_outpath, tracking_outpath, pfdata_path, rainaccumulation_path, startdate, enddate, nmaxpf, nmaxcore, nmaxpix)
+    identifypf_mergedir_rainrate(mcsstats_filebase, cloudid_filebase, stats_outpath, tracking_outpath, pfdata_path, rainaccumulation_path, startdate, enddate, nmaxpf, nmaxcore, nmaxpix, rr_min, pixel_radius)
     pfstats_filebase = 'pfmcs_tracks_'
 
 
