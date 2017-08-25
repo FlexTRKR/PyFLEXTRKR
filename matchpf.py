@@ -2,7 +2,7 @@
 
 # Author: Original IDL code written by Zhe Feng (zhe.feng@pnnl.gov), Python version written by Hannah C. Barnes (hannah.barnes@pnnl.gov)
 
-def identifypf_mergedir_rainrate(mcsstats_filebase, cloudid_filebase, stats_path, cloudidtrack_path, pfdata_path, rainaccumulation_path, startdate, enddate, nmaxpf, nmaxcore, nmaxpix):
+def identifypf_mergedir_rainrate(mcsstats_filebase, cloudid_filebase, stats_path, cloudidtrack_path, pfdata_path, rainaccumulation_path, startdate, enddate, nmaxpf, nmaxcore, nmaxpix, rr_min, pixel_radius):
     import numpy as np
     from netCDF4 import Dataset
     import os.path
@@ -82,9 +82,15 @@ def identifypf_mergedir_rainrate(mcsstats_filebase, cloudid_filebase, stats_path
     pf_corelon = np.ones((mcs_ir_ntracks, mcs_ir_nmaxlength, nmaxcore), dtype=float)*fillvalue
     pf_corelat = np.ones((mcs_ir_ntracks, mcs_ir_nmaxlength, nmaxcore), dtype=float)*fillvalue
     pf_corenpix = np.ones((mcs_ir_ntracks, mcs_ir_nmaxlength, nmaxcore), dtype=float)*fillvalue
+    pf_corexcentroid = np.ones((mcs_ir_ntracks, mcs_ir_nmaxlength, nmaxcore), dtype=float)*fillvalue
+    pf_coreycentroid = np.ones((mcs_ir_ntracks, mcs_ir_nmaxlength, nmaxcore), dtype=float)*fillvalue
+    pf_corexweightedcentroid = np.ones((mcs_ir_ntracks, mcs_ir_nmaxlength, nmaxcore), dtype=float)*fillvalue
+    pf_coreyweightedcentroid = np.ones((mcs_ir_ntracks, mcs_ir_nmaxlength, nmaxcore), dtype=float)*fillvalue
     pf_coremajoraxis = np.ones((mcs_ir_ntracks, mcs_ir_nmaxlength, nmaxcore), dtype=float)*fillvalue
+    pf_coreminoraxis = np.ones((mcs_ir_ntracks, mcs_ir_nmaxlength, nmaxcore), dtype=float)*fillvalue
     pf_coreaspectratio = np.ones((mcs_ir_ntracks, mcs_ir_nmaxlength, nmaxcore), dtype=float)*fillvalue
     pf_coreorientation = np.ones((mcs_ir_ntracks, mcs_ir_nmaxlength, nmaxcore), dtype=float)*fillvalue
+    pf_coreperimeter = np.ones((mcs_ir_ntracks, mcs_ir_nmaxlength, nmaxcore), dtype=float)*fillvalue
     pf_coreeccentricity = np.ones((mcs_ir_ntracks, mcs_ir_nmaxlength, nmaxcore), dtype=float)*fillvalue
     pf_coremaxdbz10 = np.ones((mcs_ir_ntracks, mcs_ir_nmaxlength, nmaxcore), dtype=float)*fillvalue
     pf_coremaxdbz20 = np.ones((mcs_ir_ntracks, mcs_ir_nmaxlength, nmaxcore), dtype=float)*fillvalue
@@ -94,6 +100,8 @@ def identifypf_mergedir_rainrate(mcsstats_filebase, cloudid_filebase, stats_path
     pf_coreavgdbz20 = np.ones((mcs_ir_ntracks, mcs_ir_nmaxlength, nmaxcore), dtype=float)*fillvalue
     pf_coreavgdbz30 = np.ones((mcs_ir_ntracks, mcs_ir_nmaxlength, nmaxcore), dtype=float)*fillvalue
     pf_coreavgdbz40 = np.ones((mcs_ir_ntracks, mcs_ir_nmaxlength, nmaxcore), dtype=float)*fillvalue
+
+    nmq_frac = np.ones((mcs_ir_ntracks, mcs_ir_nmaxlength), dtype=float)*fillvalue
 
     # Variables for accumulated rainfall
     pf_nuniqpix = np.ones(mcs_ir_ntracks, dtype=float)*fillvalue
@@ -145,50 +153,58 @@ def identifypf_mergedir_rainrate(mcsstats_filebase, cloudid_filebase, stats_path
                     # Load cloudid data
                     print(cloudid_filename)
                     cloudiddata = Dataset(cloudid_filename, 'r')
-                    irlat = cloudiddata.variables['latitude'][:]
-                    irlon = cloudiddata.variables['longitude'][:]
-                    tbmap = cloudiddata.variables['tb'][:]
-                    cloudnumbermap = cloudiddata.variables['cloudnumber'][:]
+                    rawirlat = cloudiddata.variables['latitude'][:]
+                    rawirlon = cloudiddata.variables['longitude'][:]
+                    rawtbmap = cloudiddata.variables['tb'][:]
+                    rawcloudnumbermap = cloudiddata.variables['cloudnumber'][:]
                     cloudiddata.close()
 
                     # Read precipitation data
                     print(pf_filename)
                     pfdata = Dataset(pf_filename, 'r')
-                    pflat = pfdata.variables['lat2d'][:]
-                    pflon = pfdata.variables['lon2d'][:]
-                    dbzmap = pfdata.variables['dbz_convsf'][:] # map of reflectivity 
-                    dbz10map = pfdata.variables['dbz10_height'][:] # map of 10 dBZ ETHs
-                    dbz20map = pfdata.variables['dbz20_height'][:] # map of 20 dBZ ETHs
-                    dbz30map = pfdata.variables['dbz30_height'][:] # map of 30 dBZ ETHs
-                    dbz40map = pfdata.variables['dbz40_height'][:] # map of 40 dBZ ETHs
-                    dbz45map = pfdata.variables['dbz45_height'][:] # map of 45 dBZ ETH
-                    dbz50map = pfdata.variables['dbz50_height'][:] # map of 50 dBZ ETHs
-                    csamap = pfdata.variables['csa'][:] # map of convective, stratiform, anvil categories
-                    rainratemap = pfdata.variables['rainrate'][:] # map of rain rate
-                    pfnumbermap = pfdata.variables['pf_number'][:] # map of the precipitation feature number attributed to that pixel
-                    dataqualitymap = pfdata.variables['mask'][:] # map if good (0) and bad (1) data
-                    pfxspacing = pfdata.variables['x_spacing'][:] # distance between grid points in x direction
-                    pfyspacing = pfdata.variables['y_spacing'][:] # distance between grid points in y direction
+                    rawpflat = pfdata.variables['lat2d'][:]
+                    rawpflon = pfdata.variables['lon2d'][:]
+                    rawdbzmap = pfdata.variables['dbz_convsf'][:] # map of reflectivity 
+                    rawdbz10map = pfdata.variables['dbz10_height'][:] # map of 10 dBZ ETHs
+                    rawdbz20map = pfdata.variables['dbz20_height'][:] # map of 20 dBZ ETHs
+                    rawdbz30map = pfdata.variables['dbz30_height'][:] # map of 30 dBZ ETHs
+                    rawdbz40map = pfdata.variables['dbz40_height'][:] # map of 40 dBZ ETHs
+                    rawdbz45map = pfdata.variables['dbz45_height'][:] # map of 45 dBZ ETH
+                    rawdbz50map = pfdata.variables['dbz50_height'][:] # map of 50 dBZ ETHs
+                    rawcsamap = pfdata.variables['csa'][:] # map of convective, stratiform, anvil categories
+                    rawrainratemap = pfdata.variables['rainrate'][:] # map of rain rate
+                    rawpfnumbermap = pfdata.variables['pf_number'][:] # map of the precipitation feature number attributed to that pixel
+                    rawdataqualitymap = pfdata.variables['mask'][:] # map if good (1) and bad (0) data
+                    rawpfxspacing = pfdata.variables['x_spacing'][:] # distance between grid points in x direction
+                    rawpfyspacing = pfdata.variables['y_spacing'][:] # distance between grid points in y direction
                     pfdata.close()
-
-                    # Get dimensions of data. Data should be preprocesses so that their latittude and longitude dimensions are the same
-                    ny, nx = np.shape(irlat)
 
                     # Load accumulation data is available. If not present fill array with fill value
                     if os.path.isfile(rainaccumulation_filename):
                         rainaccumulationdata = Dataset(rainaccumulation_filename, 'r')
-                        rainaccumulationmap = rainaccumulationdata.variables['precipitation'][:]
+                        rawrainaccumulationmap = rainaccumulationdata.variables['precipitation'][:]
                         rainaccumulationdata.close()
                     else:
-                        rainaccumulationmap = np.ones((ny, nx), dtype=float)*fillvalue
+                        rawrainaccumulationmap = np.ones((ny, nx), dtype=float)*fillvalue
 
                     ##########################################################################
                     # Get dimensions of data. Data should be preprocesses so that their latittude and longitude dimensions are the same
-                    ydim, xdim = np.shape(irlat)
+                    ydim, xdim = np.shape(rawirlat)
+
+                    #########################################################################
+                    # Intialize matrices for only MCS data
+                    filteredrainratemap = np.ones((ydim, xdim), dtype=float)*fillvalue
+                    filtereddbzmap = np.ones((ydim, xdim), dtype=float)*fillvalue
+                    filtereddbz10map = np.ones((ydim, xdim), dtype=float)*fillvalue
+                    filtereddbz20map = np.ones((ydim, xdim), dtype=float)*fillvalue
+                    filtereddbz30map = np.ones((ydim, xdim), dtype=float)*fillvalue
+                    filtereddbz40map = np.ones((ydim, xdim), dtype=float)*fillvalue
+                    filtereddbz50map = np.ones((ydim, xdim), dtype=float)*fillvalue
+                    filteredcsamap = np.zeros((ydim, xdim), dtype=int)
 
                     ############################################################################
                     # Find matching cloud number
-                    icloudlocationt, icloudlocationy, icloudlocationx = np.array(np.where(cloudnumbermap == ittcloudnumber))
+                    icloudlocationt, icloudlocationy, icloudlocationx = np.array(np.where(rawcloudnumbermap == ittcloudnumber))
                     ncloudpix = len(icloudlocationy)
 
                     if ncloudpix > 0:
@@ -201,11 +217,12 @@ def identifypf_mergedir_rainrate(mcsstats_filebase, cloudid_filebase, stats_path
                             # Loop over each merging cloud
                             for imc in idmergecloudnumber:
                                 # Find location of the merging cloud
-                                imergelocationt, imergelocationy, imergelocationx = np.array((np.where(cloudnumbermap == ittmergecloudnumber[imc])))
+                                imergelocationt, imergelocationy, imergelocationx = np.array((np.where(rawcloudnumbermap == ittmergecloudnumber[imc])))
                                 nmergepix = len(imergelocationy)
 
                                 # Add merge pixes to mcs pixels
                                 if nmergepix > 0:
+                                    icloudlocationt = np.hstack((icloudlocationt, imergelocationt))
                                     icloudlocationy = np.hstack((icloudlocationy, imergelocationy))
                                     icloudlocationx = np.hstack((icloudlocationx, imergelocationx))
 
@@ -218,13 +235,25 @@ def identifypf_mergedir_rainrate(mcsstats_filebase, cloudid_filebase, stats_path
                             # Loop over each merging cloud
                             for imc in idsplitcloudnumber:
                                 # Find location of the merging cloud
-                                isplitlocationt, isplitlocationy, isplitlocationx = np.array((np.where(cloudnumbermap == ittsplitcloudnumber[imc])))
+                                isplitlocationt, isplitlocationy, isplitlocationx = np.array((np.where(rawcloudnumbermap == ittsplitcloudnumber[imc])))
                                 nsplitpix = len(isplitlocationy)
 
                                 # Add split pixes to mcs pixels
                                 if nsplitpix > 0:
+                                    icloudlocationt = np.hstack((icloudlocationt, isplitlocationt))
                                     icloudlocationy = np.hstack((icloudlocationy, isplitlocationy))
                                     icloudlocationx = np.hstack((icloudlocationx, isplitlocationx))
+
+                        ########################################################################
+                        # Fill matrices with mcs data
+                        filteredrainratemap[icloudlocationy, icloudlocationx] = np.copy(rawrainratemap[icloudlocationt, icloudlocationy, icloudlocationx])
+                        filtereddbzmap[icloudlocationy, icloudlocationx] = np.copy(rawdbzmap[icloudlocationt, icloudlocationy, icloudlocationx])
+                        filtereddbz10map[icloudlocationy, icloudlocationx] = np.copy(rawdbz10map[icloudlocationt, icloudlocationy, icloudlocationx])
+                        filtereddbz20map[icloudlocationy, icloudlocationx] = np.copy(rawdbz20map[icloudlocationt, icloudlocationy, icloudlocationx])
+                        filtereddbz30map[icloudlocationy, icloudlocationx] = np.copy(rawdbz30map[icloudlocationt, icloudlocationy, icloudlocationx])
+                        filtereddbz40map[icloudlocationy, icloudlocationx] = np.copy(rawdbz40map[icloudlocationt, icloudlocationy, icloudlocationx])
+                        filtereddbz50map[icloudlocationy, icloudlocationx] = np.copy(rawdbz50map[icloudlocationt, icloudlocationy, icloudlocationx])
+                        filteredcsamap[icloudlocationy, icloudlocationx] = np.copy(rawcsamap[icloudlocationt, icloudlocationy, icloudlocationx])
 
                         #########################################################################
                         # isolate small region of cloud data around mcs at this time
@@ -237,8 +266,8 @@ def identifypf_mergedir_rainrate(mcsstats_filebase, cloudid_filebase, stats_path
                             miny = miny - 10
 
                         maxy = np.nanmax(icloudlocationy)
-                        if maxy >= ny - 10:
-                            maxy = ny
+                        if maxy >= ydim - 10:
+                            maxy = ydim
                         else:
                             maxy = maxy + 11
 
@@ -249,30 +278,26 @@ def identifypf_mergedir_rainrate(mcsstats_filebase, cloudid_filebase, stats_path
                             minx = minx - 10
 
                         maxx = np.nanmax(icloudlocationx)
-                        if maxx >= nx - 10:
-                            maxx = nx
+                        if maxx >= xdim - 10:
+                            maxx = xdim
                         else:
                             maxx = maxx + 11
 
                         # Isolate smaller region around cloud shield
-                        subtbmap = np.copy(tbmap[0, miny:maxy, minx:maxx])
-                        subcloudnumbermap = np.copy(cloudnumbermap[0, miny:maxy, minx:maxx])
-                        subdbzmap = np.copy(dbzmap[0, miny:maxy, minx:maxx])
-                        subdbz10map = np.copy(dbz10map[0, miny:maxy, minx:maxx])
-                        subdbz20map = np.copy(dbz20map[0, miny:maxy, minx:maxx])
-                        subdbz30map = np.copy(dbz30map[0, miny:maxy, minx:maxx])
-                        subdbz40map = np.copy(dbz40map[0, miny:maxy, minx:maxx])
-                        subdbz45map = np.copy(dbz45map[0, miny:maxy, minx:maxx])
-                        subdbz50map = np.copy(dbz50map[0, miny:maxy, minx:maxx])
-                        subcsamap = np.copy(csamap[0, miny:maxy, minx:maxx])
-                        subrainratemap = np.copy(rainratemap[0, miny:maxy, minx:maxx])
-                        subrainaccumulationmap = np.copy(rainaccumulationmap[0, miny:maxy, minx:maxx])
-                        sublat = np.copy(pflat[miny:maxy, minx:maxx])
-                        sublon = np.copy(pflon[miny:maxy, minx:maxx])
+                        subdbzmap = np.copy(filtereddbzmap[miny:maxy, minx:maxx])
+                        subdbz10map = np.copy(filtereddbz10map[miny:maxy, minx:maxx])
+                        subdbz20map = np.copy(filtereddbz20map[miny:maxy, minx:maxx])
+                        subdbz30map = np.copy(filtereddbz30map[miny:maxy, minx:maxx])
+                        subdbz40map = np.copy(filtereddbz40map[miny:maxy, minx:maxx])
+                        subdbz50map = np.copy(filtereddbz50map[miny:maxy, minx:maxx])
+                        subcsamap = np.copy(filteredcsamap[miny:maxy, minx:maxx])
+                        subrainratemap = np.copy(filteredrainratemap[miny:maxy, minx:maxx])
+                        sublat = np.copy(rawpflat[miny:maxy, minx:maxx])
+                        sublon = np.copy(rawpflon[miny:maxy, minx:maxx])
 
                         #######################################################
                         # Get dimensions of subsetted region
-                        subdimy, subdimx = np.shape(subtbmap)
+                        subdimy, subdimx = np.shape(subdbzmap)
 
                         ######################################################
                         # Initialize convective map
@@ -292,17 +317,19 @@ def identifypf_mergedir_rainrate(mcsstats_filebase, cloudid_filebase, stats_path
 
                             # If convective cores exist calculate statistics
                             if ncc > 0:
-                                plt.figure()
-                                im = plt.pcolormesh(ccnumberlabelmap)
-                                plt.colorbar(im)
-
                                 # Initialize matrices
                                 cclon = np.ones(ncc, dtype=float)*fillvalue
                                 cclat = np.ones(ncc, dtype=float)*fillvalue
                                 ccnpix = np.ones(ncc, dtype=float)*fillvalue
+                                ccxcentroid = np.ones(ncc, dtype=float)*fillvalue
+                                ccycentroid = np.ones(ncc, dtype=float)*fillvalue
+                                ccxweightedcentroid = np.ones(ncc, dtype=float)*fillvalue
+                                ccyweightedcentroid = np.ones(ncc, dtype=float)*fillvalue
                                 ccmajoraxis = np.ones(ncc, dtype=float)*fillvalue
+                                ccminoraxis = np.ones(ncc, dtype=float)*fillvalue
                                 ccaspectratio = np.ones(ncc, dtype=float)*fillvalue
                                 ccorientation = np.ones(ncc, dtype=float)*fillvalue
+                                ccperimeter = np.ones(ncc, dtype=float)*fillvalue
                                 cceccentricity = np.ones(ncc, dtype=float)*fillvalue
                                 ccmaxdbz10 = np.ones(ncc, dtype=float)*fillvalue
                                 ccmaxdbz20 = np.ones(ncc, dtype=float)*fillvalue
@@ -341,19 +368,16 @@ def identifypf_mergedir_rainrate(mcsstats_filebase, cloudid_filebase, stats_path
                                     iiccflagmap[iiccy, iiccx] = 1
 
                                     # Get core geometric statistics
-                                    coreproperties = regionprops(iiccflagmap)
+                                    coreproperties = regionprops(iiccflagmap, intensity_image=subdbzmap)
                                     cceccentricity[cc-1] = coreproperties[0].eccentricity
                                     ccmajoraxis[cc-1] = coreproperties[0].major_axis_length
+                                    ccminoraxis[cc-1] = coreproperties[0].minor_axis_length
+                                    ccaspectratio[cc-1] = np.divide(ccmajoraxis[cc-1], ccminoraxis[cc-1])
                                     ccorientation[cc-1] = (coreproperties[0].orientation)*(180/float(pi))
-                                    ccminoraxis = coreproperties[0].minor_axis_length
-                                    ccaspectratio[cc-1] = np.divide(ccmajoraxis[cc-1], ccminoraxis)
+                                    ccperimeter[cc-1] = coreproperties[0].perimeter*pixel_radius
+                                    [ccycentroid[cc-1], ccxcentroid[cc-1]] = coreproperties[0].centroid + np.array(miny, minx).astype(int)
+                                    [ccyweightedcentroid[cc-1], ccxweightedcentroid[cc-1]] = coreproperties[0].weighted_centroid + np.array(miny, minx).astype(int)
 
-                                print(ccnpix)
-                                print(cclon)
-                                print(cclat)
-                                print(ccmaxdbz10)
-                                print(ccavgdbz10)
-                                print(cceccentricity)
 
                                 ####################################################
                                 # Sort based on size, largest to smallest
@@ -362,10 +386,16 @@ def identifypf_mergedir_rainrate(mcsstats_filebase, cloudid_filebase, stats_path
 
                                 scclon = np.copy(cclon[order])
                                 scclat = np.copy(cclat[order])
+                                sccxcentroid = np.copy(ccxcentroid[order])
+                                sccycentroid = np.copy(ccycentroid[order])
+                                sccxweightedcentroid = np.copy(ccxweightedcentroid[order])
+                                sccyweightedcentroid = np.copy(ccyweightedcentroid[order])
                                 sccnpix = np.copy(ccnpix[order])
                                 sccmajoraxis = np.copy(ccmajoraxis[order])
+                                sccminoraxis = np.copy(ccminoraxis[order])
                                 sccaspectratio = np.copy(ccaspectratio[order])
                                 sccorientation = np.copy(ccorientation[order])
+                                sccperimeter = np.copy(ccperimeter[order])
                                 scceccentricity = np.copy(cceccentricity[order])
                                 sccmaxdbz10 = np.copy(ccmaxdbz10[order])
                                 sccmaxdbz20 = np.copy(ccmaxdbz20[order])
@@ -376,14 +406,6 @@ def identifypf_mergedir_rainrate(mcsstats_filebase, cloudid_filebase, stats_path
                                 sccavgdbz30 = np.copy(ccavgdbz30[order])
                                 sccavgdbz40 = np.copy(ccavgdbz40[order])
 
-                                print(sccnpix)
-                                print(scclon)
-                                print(scclat)
-                                print(sccmaxdbz10)
-                                print(sccavgdbz10)
-                                print(scceccentricity)
-                                plt.show()
-
                                 ###################################################
                                 # Save convective core statisitcs
                                 pf_ncores[it, itt] = np.copy(ncc)
@@ -391,10 +413,16 @@ def identifypf_mergedir_rainrate(mcsstats_filebase, cloudid_filebase, stats_path
                                 ncore_save = np.nanmin([nmaxcore, ncc])
                                 pf_corelon[it, itt, 0:ncore_save-1] = np.copy(scclon[0:ncore_save-1])
                                 pf_corelat[it, itt, 0:ncore_save-1] = np.copy(scclat[0:ncore_save-1])
+                                pf_corexcentroid[it, itt, 0:ncore_save-1] = np.copy(sccxcentroid[0:ncore_save-1])
+                                pf_coreycentroid[it, itt, 0:ncore_save-1] = np.copy(sccycentroid[0:ncore_save-1])
+                                pf_corexweightedcentroid[it, itt, 0:ncore_save-1] = np.copy(sccxweightedcentroid[0:ncore_save-1])
+                                pf_coreyweightedcentroid[it, itt, 0:ncore_save-1] = np.copy(sccyweightedcentroid[0:ncore_save-1])
                                 pf_corenpix[it, itt, 0:ncore_save-1] = np.copy(sccnpix[0:ncore_save-1])
                                 pf_coremajoraxis[it, itt, 0:ncore_save-1] = np.copy(sccmajoraxis[0:ncore_save-1])
+                                pf_coreminoraxis[it, itt, 0:ncore_save-1] = np.copy(sccminoraxis[0:ncore_save-1])
                                 pf_coreaspectratio[it, itt, 0:ncore_save-1] = np.copy(sccmajoraxis[0:ncore_save-1])
                                 pf_coreorientation[it, itt, 0:ncore_save-1] = np.copy(sccorientation[0:ncore_save-1])
+                                pf_coreperimeter[it, itt, 0:ncore_save-1] = np.copy(sccperimeter[0:ncore_save-1])
                                 pf_coreeccentricity[it, itt, 0:ncore_save-1] = np.copy(scceccentricity[0:ncore_save-1])
                                 pf_coremaxdbz10[it, itt, 0:ncore_save-1] = np.copy(sccmaxdbz10[0:ncore_save-1])
                                 pf_coremaxdbz20[it, itt, 0:ncore_save-1] = np.copy(sccmaxdbz20[0:ncore_save-1])
@@ -404,6 +432,22 @@ def identifypf_mergedir_rainrate(mcsstats_filebase, cloudid_filebase, stats_path
                                 pf_coreavgdbz20[it, itt, 0:ncore_save-1] = np.copy(sccavgdbz20[0:ncore_save-1])
                                 pf_coreavgdbz30[it, itt, 0:ncore_save-1] = np.copy(sccavgdbz30[0:ncore_save-1])
                                 pf_coreavgdbz40[it, itt, 0:ncore_save-1] = np.copy(sccavgdbz40[0:ncore_save-1])
+
+                            #######################################################
+                            # Compute fraction of cloud within NMQ area
+                            nmqct = np.shape(np.array(np.where(rawdataqualitymap[0, miny:maxy, minx:maxx] == 1)))[1]
+                            otherct = np.shape(np.array(np.where(rawdataqualitymap[0, miny:maxy, minx:maxx] == 0)))[1]
+
+                            nmq_frac[it, itt] = np.divide(nmqct, nmqct + otherct)
+
+                            ######################################################
+                            # Derive precipitation feature statistics
+                            ipfy, ipfx = np.array(np.where(((filteredcsamap == 5) | (filteredcsamap == 6)) & (filteredrainratemap > rr_min)))
+                            nrainpix = len(ipfy)
+                            print(rr_min)
+                            print(filteredcsamap[ipfy, ipfx])
+                            print(filteredrainratemap[ipfy, ipfx])
+                            raw_input('Waiting')
 
 
 
