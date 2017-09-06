@@ -78,7 +78,8 @@ nmaxpix = 150000
 
 # Specify filenames and locations
 datavariablename = 'IRBT'
-datasource = 'mergedir'
+irdatasource = 'mergedir'
+nmqdatasource = 'nmq'
 datadescription = 'EUS'
 databasename = 'EUS_IR_Subset_'
 label_filebase = 'cloudtrack_'
@@ -91,7 +92,7 @@ scratchpath = './'
 latlon_file = '/global/project/projectdirs/m1867/zfeng/usa/mergedir/Geolocation/EUS_Geolocation_Data.nc'
 
 # Specify data structure
-datatimeresolution = 0.5 # hours
+datatimeresolution = 1 # hours
 dimname = 'nclouds'
 numbername = 'convcold_cloudnumber'
 typename = 'cloudtype'
@@ -174,7 +175,7 @@ if run_idclouds == 1:
     from idclouds import idclouds_mergedir
 
     # Generate input lists
-    list_datasource = [datasource]*(filestep)
+    list_irdatasource = [irdatasource]*(filestep)
     list_datadescription = [datadescription]*(filestep)
     list_datavariablename = [datavariablename]*(filestep)
     list_cloudidversion = [cloudid_version]*(filestep)
@@ -192,7 +193,7 @@ if run_idclouds == 1:
     list_missthresh = np.ones(filestep)*miss_thresh
     list_warmanvilexpansion = np.ones(filestep)*warmanvilexpansion
 
-    idclouds_input = zip(rawdatafiles, files_datestring, files_timestring, files_basetime, list_datasource, list_datadescription, list_datavariablename, list_cloudidversion, list_trackingoutpath, list_latlonfile, list_latname, list_lonname, list_geolimits, list_startdate, list_enddate, list_pixelradius, list_areathresh, list_cloudtbthreshs, list_absolutetbthreshs, list_missthresh, list_warmanvilexpansion)
+    idclouds_input = zip(rawdatafiles, files_datestring, files_timestring, files_basetime, list_irdatasource, list_datadescription, list_datavariablename, list_cloudidversion, list_trackingoutpath, list_latlonfile, list_latname, list_lonname, list_geolimits, list_startdate, list_enddate, list_pixelradius, list_areathresh, list_cloudtbthreshs, list_absolutetbthreshs, list_missthresh, list_warmanvilexpansion)
 
     # Call function
     # Serial version
@@ -206,14 +207,14 @@ if run_idclouds == 1:
         pool.close()
         pool.join()
 
-    cloudid_filebase = datasource + '_' + datadescription + '_cloudid' + cloudid_version + '_'
+    cloudid_filebase = irdatasource + '_' + datadescription + '_cloudid' + cloudid_version + '_'
 
 ###################################################################
 # Link clouds/ features in time adjacent files (single file tracking), if necessary
 
 # Determine if identification portion of the code run. If not, set the version name and filename using names specified in the constants section
 if run_idclouds == 0:
-    cloudid_filebase =  datasource + '_' + datadescription + '_cloudid' + curr_id_version + '_'
+    cloudid_filebase =  irdatasource + '_' + datadescription + '_cloudid' + curr_id_version + '_'
 
 # Call function
 if run_tracksingle == 1:
@@ -298,7 +299,7 @@ if run_gettracks == 1:
 
     # Call function
     print('Getting track numbers')
-    gettracknumbers_mergedir(datasource, datadescription, tracking_outpath, stats_outpath, startdate, enddate, timegap, nmaxclouds, cloudid_filebase, npxname, tracknumber_version, singletrack_filebase, keepsingletrack=1, removestartendtracks=1)
+    gettracknumbers_mergedir(irdatasource, datadescription, tracking_outpath, stats_outpath, startdate, enddate, timegap, nmaxclouds, cloudid_filebase, npxname, tracknumber_version, singletrack_filebase, keepsingletrack=1, removestartendtracks=1)
     tracknumbers_filebase = 'tracknumbers' + tracknumber_version
 
 ############################################################
@@ -315,7 +316,7 @@ if run_finalstats == 1:
 
     # Call satellite version of function
     print('Calculating track statistics')
-    trackstats_sat(datasource, datadescription, pixel_radius, latlon_file, geolimits, area_thresh, cloudtb_threshs, absolutetb_threshs, startdate, enddate, cloudid_filebase, tracking_outpath, stats_outpath, track_version, tracknumber_version, tracknumbers_filebase, lengthrange=lengthrange)
+    trackstats_sat(irdatasource, datadescription, pixel_radius, latlon_file, geolimits, area_thresh, cloudtb_threshs, absolutetb_threshs, startdate, enddate, cloudid_filebase, tracking_outpath, stats_outpath, track_version, tracknumber_version, tracknumbers_filebase, lengthrange=lengthrange)
     trackstats_filebase = 'stats_tracknumbers' + tracknumber_version
 
 ##############################################################
@@ -347,7 +348,7 @@ if run_matchpf == 1:
     from matchpf import identifypf_mergedir_rainrate
 
     # Call function
-    identifypf_mergedir_rainrate(mcsstats_filebase, cloudid_filebase, stats_outpath, tracking_outpath, pfdata_path, rainaccumulation_path, startdate, enddate, nmaxpf, nmaxcore, nmaxpix, rr_min, pixel_radius)
+    identifypf_mergedir_rainrate(mcsstats_filebase, cloudid_filebase, stats_outpath, tracking_outpath, pfdata_path, rainaccumulation_path, startdate, enddate, geolimits, nmaxpf, nmaxcore, nmaxpix, nmaxclouds, rr_min, pixel_radius, irdatasource, nmqdatasource, datadescription, datatimeresolution, mcs_areathresh, mcs_durationthresh, mcs_eccentricitythresh)
     pfstats_filebase = 'pfmcs_tracks_'
 
 
