@@ -336,9 +336,15 @@ def identifymcs_mergedir(statistics_filebase, stats_path, startdate, enddate, ti
     mcs_datetimestring.long_name = 'date-time'
     mcs_datetimestring.description = 'date_time for each cloud in the mcs'
 
+    track_length = filesave.createVariable('track_length', 'i4', 'ntracks', zlib=True, complevel=5, fill_value=fillvalue)
+    track_length.long_name = 'track duration'
+    track_length.description = 'complete length of each track containing an mcs'
+    track_length.units = 'hours'
+    track_length.fill_value = fillvalue
+
     mcs_length = filesave.createVariable('mcs_length', 'i4', 'ntracks', zlib=True, complevel=5, fill_value=fillvalue)
-    mcs_length.long_name = 'track duration'
-    mcs_length.description = 'length of each MCS'
+    mcs_length.long_name = 'mcs duration'
+    mcs_length.description = 'length of each MCS in each track'
     mcs_length.units = 'hours'
     mcs_length.fill_value = fillvalue
 
@@ -434,7 +440,8 @@ def identifymcs_mergedir(statistics_filebase, stats_path, startdate, enddate, ti
     # Fill variables
     mcs_basetime[:,:] = mcstrackstat_basetime
     mcs_datetimestring[:,:,:] = mcstrackstat_datetime
-    mcs_length[:] = mcstrackstat_duration
+    track_length[:] = mcstrackstat_duration
+    mcs_length[:] = mcslength
     mcs_type[:] = mcstype
     mcs_status[:,:] = mcstrackstat_status
     mcs_startstatus[:] = mcstrackstat_startstatus

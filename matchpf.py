@@ -2,10 +2,10 @@
 
 # Author: Original IDL code written by Zhe Feng (zhe.feng@pnnl.gov), Python version written by Hannah C. Barnes (hannah.barnes@pnnl.gov)
 
-def identifypf_mergedir_rainrate(mcsstats_filebase, cloudid_filebase, stats_path, cloudidtrack_path, pfdata_path, rainaccumulation_path, startdate, enddate, geolimits, nmaxpf, nmaxcore, nmaxpix, nmaxclouds, rr_min, pixel_radius, irdatasource, nmqdatasource, datadescription, datatimeresolution, mcs_irareathresh, mcs_irdurationthresh, mcs_ireccentricitythresh):
+def identifypf_mergedir_nmq(mcsstats_filebase, cloudid_filebase, stats_path, cloudidtrack_path, pfdata_path, rainaccumulation_path, startdate, enddate, geolimits, nmaxpf, nmaxcore, nmaxpix, nmaxclouds, rr_min, pixel_radius, irdatasource, nmqdatasource, datadescription, datatimeresolution, mcs_irareathresh, mcs_irdurationthresh, mcs_ireccentricitythresh):
     import numpy as np
-    from netCDF4 import Dataset
     import os.path
+    from netCDF4 import Dataset
     from scipy.ndimage import label, binary_dilation, generate_binary_structure
     from skimage.measure import regionprops
     import matplotlib.pyplot as plt
@@ -38,7 +38,8 @@ def identifypf_mergedir_rainrate(mcsstats_filebase, cloudid_filebase, stats_path
     mcseccentricity_thresh = str(Dataset.getncattr(mcsirstatdata, 'MCS_eccentricity'))
     ir_basetime = mcsirstatdata.variables['mcs_basetime'][:] # time of each cloud in mcs track
     ir_datetimestring = mcsirstatdata.variables['mcs_datetimestring'][:] # time of each cloud in mcs track
-    ir_length = mcsirstatdata.variables['mcs_length'][:] # duration of mcs track
+    ir_mcslength = mcsirstatdata.variables['mcs_length'][:] # duration of mcs track
+    ir_tracklength = mcsirstatdata.variables['track_length'][:] # duration of full track containing an mcs
     ir_meanlat = mcsirstatdata.variables['mcs_meanlat'][:] # mean latitude of the core and cold anvil of each cloud in mcs track
     ir_meanlon = mcsirstatdata.variables['mcs_meanlon'][:] # mean longitude of the core and cold anvil of each cloud in mcs track
     ir_corearea = mcsirstatdata.variables['mcs_corearea'][:] # area of each cold core in mcs track
@@ -123,7 +124,8 @@ def identifypf_mergedir_rainrate(mcsstats_filebase, cloudid_filebase, stats_path
         print('Processing track ' + str(int(it)))
 
         # Isolate ir statistics about this track
-        itlength = np.copy(ir_length[it])
+        ittracklength = np.copy(ir_tracklength[it])
+        itmcslength = np.copy(ir_mcslength[it])
         itbasetime = np.copy(ir_basetime[it, :])
         itdatetimestring = np.copy(ir_datetimestring[it][:][:])
         itstatus = np.copy(ir_status[it, :])
@@ -706,7 +708,8 @@ def identifypf_mergedir_rainrate(mcsstats_filebase, cloudid_filebase, stats_path
     # Save output to netCDF file
 
     # Definte xarray dataset
-    output_data = xr.Dataset({'mcs_length':(['track'], np.squeeze(ir_length)), \
+    output_data = xr.Dataset({'mcs_length':(['track'], np.squeeze(ir_mcslength)), \
+                              'length': (['track'], ir_tracklength), \
                               'mcs_type': (['track'], ir_type), \
                               'status': (['track', 'time'], ir_status), \
                               'startstatus': (['track'], ir_startstatus), \
@@ -720,7 +723,7 @@ def identifypf_mergedir_rainrate(mcsstats_filebase, cloudid_filebase, stats_path
                               'core_area': (['track', 'time'], ir_corearea), \
                               'ccs_area': (['track', 'time'], ir_ccsarea), \
                               'cloudnumber': (['track', 'time'], ir_cloudnumber), \
-                              'mergecloudnumber': (['track', 'time', 'mergesplits'], ir_mergecloudnumber), \
+                              'mergecloudnumber': (['track', 'time', 'mergesplit'], ir_mergecloudnumber), \
                               'splitcloudnumber': (['track', 'time', 'mergesplit'], ir_splitcloudnumber), \
                               'nmq_frac': (['track', 'time'], radar_pffrac), \
                               'npf': (['track', 'time'], radar_npf), \
@@ -800,7 +803,11 @@ def identifypf_mergedir_rainrate(mcsstats_filebase, cloudid_filebase, stats_path
     output_data.mergesplit.attrs['long_name'] = 'Maximum number of mergers / splits at one time'
     output_data.mergesplit.attrs['units'] = 'unitless'
 
-    output_data.mcs_length.attrs['long_name'] = 'Length of each MCS'
+    output_data.length.attrs['long_name'] = 'Length of track containing each track'
+    output_data.length.attrs['units'] = 'Temporal resolution of orginal data'
+    output_data.length.attrs['_FillValue'] = fillvalue
+
+    output_data.mcs_length.attrs['long_name'] = 'Length of each MCS in each track'
     output_data.mcs_length.attrs['units'] = 'Temporal resolution of orginal data'
     output_data.mcs_length.attrs['_FillValue'] = fillvalue
 
