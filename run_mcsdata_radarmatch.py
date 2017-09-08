@@ -29,8 +29,9 @@ run_tracksingle = 0     # Track single consecutive cloudid files
 run_gettracks = 0       # Run trackig for all files
 run_finalstats = 0      # Calculate final statistics
 run_identifymcs = 0     # Isolate MCSs
-run_matchpf = 1         # Identify precipitation features with MCSs
-run_labelmcs = 1        # Create maps of MCSs
+run_matchpf = 0         # Identify precipitation features with MCSs
+run_robustmcs = 1       # Filter potential mcs cases using nmq radar variables
+run_labelmcs = 0        # Create maps of MCSs
 
 # Specify version of code using
 cloudid_version = 'v1.0'
@@ -64,11 +65,18 @@ absolutetb_threshs = np.array([160,330])        # k A vector [min, max] brightne
 warmanvilexpansion = 1            # If this is set to one, then the cold anvil is spread laterally until it exceeds the warm anvil threshold
 
 # Specify MCS parameters
-mcs_areathresh = 6e4              # area threshold [km^2]
-mcs_durationthresh = 6            # Minimum length of a mcs [hr]
-mcs_eccentricitythresh = 0.7      # eccentricity at time of maximum extent
-mcs_splitduration = 6            # Tracks smaller or equal to this length will be included with the MCS is it relinks with the MCS
-mcs_mergeduration = 6            # Tracks smaller or equal to this length will be included with the MCS is it relinks with the MCS
+mcs_mergedir_areathresh = 6e4              # IR area threshold [km^2]
+mcs_mergedir_durationthresh = 6            # IR minimum length of a mcs [hr]
+mcs_mergedir_eccentricitythresh = 0.7      # IR eccentricity at time of maximum extent
+mcs_mergedir_splitduration = 6             # IR tracks smaller or equal to this length will be included with the MCS is it relinks with the MCS
+mcs_mergedir_mergeduration = 6             # IR tracks smaller or equal to this length will be included with the MCS is it relinks with the MCS
+
+mcs_pf_majoraxisthresh = 100               # PF major axis MCS threshold [km]
+mcs_of_durationthresh = 5                  # PF minimum length of mcs [hr]
+mcs_pf_aspectratiothresh = 4               # PF aspect ragio require to define a squall lines 
+mcs_pf_lifecyclethresh = 8                 # Minimum MCS lifetime required to classify life stages
+mcs_pf_lengththresh = 20
+mcs_pf_gap = 1
 
 # Specify rain rate parameters
 rr_min = 1.0                      # Rain rate threshold [mm/hr]
@@ -320,7 +328,7 @@ if run_finalstats == 1:
     trackstats_filebase = 'stats_tracknumbers' + tracknumber_version
 
 ##############################################################
-# Identify MCS
+# Identify MCS candidates
 
 # Determine if final statistics portion ran. If not, set the version name and filename using those specified in the constants section
 if run_finalstats == 0:
@@ -328,11 +336,12 @@ if run_finalstats == 0:
 
 if run_identifymcs == 1:
     print('Identifying MCSs')
+
     # Load function
     from identifymcs import identifymcs_mergedir
 
     # Call satellite version of function
-    identifymcs_mergedir(trackstats_filebase, stats_outpath, startdate, enddate, datatimeresolution, mcs_areathresh, mcs_durationthresh, mcs_eccentricitythresh, mcs_splitduration, mcs_mergeduration, nmaxclouds)
+    identifymcs_mergedir(trackstats_filebase, stats_outpath, startdate, enddate, datatimeresolution, mcs_mergedir_areathresh, mcs_mergedir_durationthresh, mcs_mergedir_eccentricitythresh, mcs_mergedir_splitduration, mcs_mergedir_mergeduration, nmaxclouds)
     mcsstats_filebase =  'mcs_tracks_'
 
 #############################################################
@@ -344,13 +353,31 @@ if run_identifymcs == 0:
 
 if run_matchpf == 1:
     print('Identifying Precipitation Features in MCSs')
+
     # Load function
-    from matchpf import identifypf_mergedir_rainrate
+    from matchpf import identifypf_mergedir_nmq
 
     # Call function
-    identifypf_mergedir_rainrate(mcsstats_filebase, cloudid_filebase, stats_outpath, tracking_outpath, pfdata_path, rainaccumulation_path, startdate, enddate, geolimits, nmaxpf, nmaxcore, nmaxpix, nmaxclouds, rr_min, pixel_radius, irdatasource, nmqdatasource, datadescription, datatimeresolution, mcs_areathresh, mcs_durationthresh, mcs_eccentricitythresh)
-    pfstats_filebase = 'pfmcs_tracks_'
+    identifypf_mergedir_nmq(mcsstats_filebase, cloudid_filebase, stats_outpath, tracking_outpath, pfdata_path, rainaccumulation_path, startdate, enddate, geolimits, nmaxpf, nmaxcore, nmaxpix, nmaxclouds, rr_min, pixel_radius, irdatasource, nmqdatasource, datadescription, datatimeresolution, mcs_mergedir_areathresh, mcs_mergedir_durationthresh, mcs_mergedir_eccentricitythresh)
+    pfstats_filebase = 'mcs_tracks_'  + nmqdatasource + '_' 
 
+##############################################################
+# Identify robust MCS using precipitation feature statistics
+
+# Determine if identify precipitation feature portion of code ran. If not set file name
+if run_matchpf == 0:
+    pfstats_filebase = 'mcs_tracks_'  + nmqdatasource + '_' 
+
+# Run code to identify robust MCS
+if run_robustmcs == 1:
+    print('Identifying robust MCSs using precipitation features')
+
+    # Load function
+    from robustmcs import filtermcs_mergedir_nmq
+
+    # Call function
+    filtermcs_mergedir_nmq(stats_outpath, pfstats_filebase, startdate, enddate, mcs_pf_majoraxisthresh, mcs_of_durationthresh, mcs_pf_aspectratiothresh, mcs_pf_lifecyclethresh, mcs_pf_lengththresh, mcs_pf_gap)
+    robustmcs_filebase = 'robust_mcs_tracks_'
 
 
 
