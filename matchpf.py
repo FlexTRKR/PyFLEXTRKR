@@ -696,13 +696,27 @@ def identifypf_mergedir_nmq(mcsstats_filebase, cloudid_filebase, stats_path, clo
 
     ###################################
     # Convert number of pixels to area
+
     radar_pfdbz40area = np.multiply(radar_pfdbz40npix, np.square(pixel_radius))
+    radar_pfdbz40area[radar_pfdbz40area < 0] = fillvalue
+
     radar_pfdbz45area = np.multiply(radar_pfdbz45npix, np.square(pixel_radius))
+    radar_pfdbz45area[radar_pfdbz45area < 0] = fillvalue
+
     radar_pfdbz50area = np.multiply(radar_pfdbz50npix, np.square(pixel_radius))
+    radar_pfdbz50area[radar_pfdbz50area < 0] = fillvalue
+    
     radar_pfarea = np.multiply(radar_pfnpix, np.square(pixel_radius))
+    radar_pfarea[radar_pfarea < 0] = fillvalue
+
     radar_ccavgarea = np.multiply(radar_ccavgnpix, np.square(pixel_radius))
+    radar_ccavgarea[radar_ccavgarea < 0] = fillvalue
+
     radar_sfavgarea = np.multiply(radar_sfavgnpix, np.square(pixel_radius))
+    radar_sfavgarea[radar_sfavgarea < 0] = fillvalue
+
     radar_ccarea = np.multiply(radar_ccnpix, np.square(pixel_radius))
+    radar_ccarea[radar_ccarea < 0] = fillvalue
 
     ##################################
     # Save output to netCDF file
@@ -805,56 +819,47 @@ def identifypf_mergedir_nmq(mcsstats_filebase, cloudid_filebase, stats_path, clo
 
     output_data.length.attrs['long_name'] = 'Length of track containing each track'
     output_data.length.attrs['units'] = 'Temporal resolution of orginal data'
-    output_data.length.attrs['_FillValue'] = fillvalue
 
     output_data.mcs_length.attrs['long_name'] = 'Length of each MCS in each track'
     output_data.mcs_length.attrs['units'] = 'Temporal resolution of orginal data'
-    output_data.mcs_length.attrs['_FillValue'] = fillvalue
 
     output_data.mcs_type.attrs['long_name'] = 'Type of MCS'
     output_data.mcs_type.attrs['values'] = '1 = MCS, 2 = Squall line'
     output_data.mcs_type.attrs['units'] = 'unitless'
-    output_data.mcs_type.attrs['_FillValue'] = fillvalue
 
     output_data.status.attrs['long_name'] = 'Flag indicating the status of each feature in MCS'
     output_data.status.attrs['values'] = '-9999=missing cloud or cloud removed due to short track, 0=track ends here, 1=cloud continues as one cloud in next file, 2=Biggest cloud in merger, 21=Smaller cloud(s) in merger, 13=Cloud that splits, 3=Biggest cloud from a split that stops after the split, 31=Smaller cloud(s) from a split that stop after the split. The last seven classifications are added together in different combinations to describe situations.'
     output_data.status.attrs['min_value'] = 0
     output_data.status.attrs['max_value'] = 52
     output_data.status.attrs['units'] = 'unitless'
-    output_data.status.attrs['_FillValue'] = fillvalue
 
     output_data.startstatus.attrs['long_name'] = 'Flag indicating the status of first feature in MCS track'
     output_data.startstatus.attrs['values'] = '-9999=missing cloud or cloud removed due to short track, 0=track ends here, 1=cloud continues as one cloud in next file, 2=Biggest cloud in merger, 21=Smaller cloud(s) in merger, 13=Cloud that splits, 3=Biggest cloud from a split that stops after the split, 31=Smaller cloud(s) from a split that stop after the split. The last seven classifications are added together in different combinations to describe situations.'
     output_data.startstatus.attrs['min_value'] = 0
     output_data.startstatus.attrs['max_value'] = 52
     output_data.startstatus.attrs['units'] = 'unitless'
-    output_data.startstatus.attrs['_FillValue'] = fillvalue
 
     output_data.endstatus.attrs['long_name'] = 'Flag indicating the status of last feature in MCS track'
     output_data.endstatus.attrs['values'] = '-9999=missing cloud or cloud removed due to short track, 0=track ends here, 1=cloud continues as one cloud in next file, 2=Biggest cloud in merger, 21=Smaller cloud(s) in merger, 13=Cloud that splits, 3=Biggest cloud from a split that stops after the split, 31=Smaller cloud(s) from a split that stop after the split. The last seven classifications are added together in different combinations to describe situations.'
     output_data.endstatus.attrs['min_value'] = 0
     output_data.endstatus.attrs['max_value'] = 52
     output_data.endstatus.attrs['units'] = 'unitless'
-    output_data.endstatus.attrs['_FillValue'] = fillvalue
 
     output_data.interruptions.attrs['long_name'] = 'flag indicating if track incomplete'
     output_data.interruptions.attrs['values'] = '0 = full track available, good data. 1 = track starts at first file, track cut short by data availability. 2 = track ends at last file, track cut short by data availability'
     output_data.interruptions.attrs['min_value'] = 0
     output_data.interruptions.attrs['max_value'] = 2
     output_data.interruptions.attrs['units'] = 'unitless'
-    output_data.interruptions.attrs['_FillValue'] = fillvalue
 
     output_data.boundary.attrs['long_name'] = 'Flag indicating whether the core + cold anvil touches one of the domain edges.'
     output_data.boundary.attrs['values'] = '0 = away from edge. 1= touches edge.'
     output_data.boundary.attrs['min_value'] = 0
     output_data.boundary.attrs['max_value'] = 1
     output_data.boundary.attrs['units'] = 'unitless'
-    output_data.boundary.attrs['_FillValue'] = fillvalue
 
     output_data.basetime.attrs['standard_name'] = 'time'
     output_data.basetime.attrs['long_name'] = 'basetime of cloud at the given time'
     output_data.basetime.attrs['units'] = 'seconds since 01/01/1970 00:00'
-    output_data.basetime.attrs['_FillValue'] = fillvalue
 
     output_data.datetimestring.attrs['long_name'] = 'date-time'
     output_data.datetimestring.attrs['long_name'] = 'date_time for each cloud in the mcs'
@@ -864,228 +869,232 @@ def identifypf_mergedir_nmq(mcsstats_filebase, cloudid_filebase, stats_path, clo
     output_data.meanlon.attrs['min_value'] = geolimits[1]
     output_data.meanlon.attrs['max_value'] = geolimits[3]
     output_data.meanlon.attrs['units'] = 'degrees'
-    output_data.meanlon.attrs['_FillValue'] = fillvalue
 
     output_data.meanlat.attrs['standard_name'] = 'latitude'
     output_data.meanlat.attrs['long_name'] = 'mean latitude of the core + cold anvil for each feature at the given time'
     output_data.meanlat.attrs['min_value'] = geolimits[0]
     output_data.meanlat.attrs['max_value'] = geolimits[2]
     output_data.meanlat.attrs['units'] = 'degrees'
-    output_data.meanlat.attrs['_FillValue'] = fillvalue
 
     output_data.core_area.attrs['long_name'] = 'area of the cold core at the given time'
     output_data.core_area.attrs['units'] = 'km^2'
-    output_data.core_area.attrs['_FillValue'] = fillvalue
 
     output_data.ccs_area.attrs['long_name'] = 'area of the cold core and cold anvil at the given time'
     output_data.ccs_area.attrs['units'] = 'km^2'
-    output_data.ccs_area.attrs['_FillValue'] = fillvalue
 
     output_data.cloudnumber.attrs['long_name'] = 'cloud number in the corresponding cloudid file of clouds in the mcs'
     output_data.cloudnumber.attrs['usage'] = 'to link this tracking statistics file with pixel-level cloudid files, use the cloudidfile and cloudnumber together to identify which cloud this current track and time is associated with'
     output_data.cloudnumber.attrs['units'] = 'unitless'
-    output_data.cloudnumber.attrs['_FillValue'] = fillvalue
 
     output_data.mergecloudnumber.attrs['long_name'] = 'cloud number of small, short-lived clouds merging into the MCS'
     output_data.mergecloudnumber.attrs['usage'] = 'to link this tracking statistics file with pixel-level cloudid files, use the cloudidfile and cloudnumber together to identify which cloud this current track and time is associated with'
     output_data.mergecloudnumber.attrs['units'] = 'unitless'
-    output_data.mergecloudnumber.attrs['_FillValue'] = fillvalue
 
     output_data.splitcloudnumber.attrs['long_name'] = 'cloud number of small, short-lived clouds splitting from the MCS'
     output_data.splitcloudnumber.attrs['usage'] = 'to link this tracking statistics file with pixel-level cloudid files, use the cloudidfile and cloudnumber together to identify which cloud this current track and time is associated with'
     output_data.splitcloudnumber.attrs['units'] = 'unitless'
-    output_data.splitcloudnumber.attrs['_FillValue'] = fillvalue
 
     output_data.nmq_frac.attrs['long_name'] = 'fraction of cold cloud shielf covered by NMQ mask'
     output_data.nmq_frac.attrs['units'] = 'unitless'
     output_data.nmq_frac.attrs['min_value'] = 0
     output_data.nmq_frac.attrs['max_value'] = 1
     output_data.nmq_frac.attrs['units'] = 'unitless'
-    output_data.nmq_frac.attrs['_FillValue'] = fillvalue
 
     output_data.npf.attrs['long_name'] = 'number of precipitation features at a given time'
     output_data.npf.attrs['units'] = 'unitless'
-    output_data.npf.attrs['_FillValue'] = fillvalue
 
     output_data.pf_area.attrs['long_name'] = 'area of each precipitation feature at a given time'
     output_data.pf_area.attrs['units'] = 'km^2'
-    output_data.pf_area.attrs['_FillValue'] = fillvalue
 
     output_data.pf_lon.attrs['standard_name'] = 'longitude'
     output_data.pf_lon.attrs['long_name'] = 'mean longitude of each precipitaiton feature at a given time'
     output_data.pf_lon.attrs['units'] = 'degrees'
-    output_data.pf_lon.attrs['_FillValue'] = fillvalue
 
     output_data.pf_lat.attrs['standard_name'] = 'latitude'
     output_data.pf_lat.attrs['long_name'] = 'mean latitude of each precipitaiton feature at a given time'
     output_data.pf_lat.attrs['units'] = 'degrees'
-    output_data.pf_lat.attrs['_FillValue'] = fillvalue
 
     output_data.pf_rainrate.attrs['long_name'] = 'mean precipitation rate (from rad_hsr_1h) pf each precipitation feature at a given time'
     output_data.pf_rainrate.attrs['units'] = 'mm/hr'
-    output_data.pf_rainrate.attrs['_FillValue'] = fillvalue
 
     output_data.pf_skewness.attrs['long_name'] = 'skewness of each precipitation feature at a given time'
     output_data.pf_skewness.attrs['units'] = 'unitless'
-    output_data.pf_skewness.attrs['_FillValue'] = fillvalue
 
     output_data.pf_majoraxislength.attrs['long_name'] = 'major axis length of each precipitation feature at a given time'
     output_data.pf_majoraxislength.attrs['units'] = 'km'
-    output_data.pf_majoraxislength.attrs['_FillValue'] = fillvalue
 
     output_data.pf_minoraxislength.attrs['long_name'] = 'minor axis length of each precipitation feature at a given time'
     output_data.pf_minoraxislength.attrs['units'] = 'km'
-    output_data.pf_minoraxislength.attrs['_FillValue'] = fillvalue
 
     output_data.pf_aspectratio.attrs['long_name'] = 'aspect ratio (major axis / minor axis) of each precipitation feature at a given time'
     output_data.pf_aspectratio.attrs['units'] = 'unitless'
-    output_data.pf_aspectratio.attrs['_FillValue'] = fillvalue
 
     output_data.pf_eccentricity.attrs['long_name'] = 'eccentricity of each precipitation feature at a given time'
     output_data.pf_eccentricity.attrs['min_value'] = 0
     output_data.pf_eccentricity.attrs['max_value'] = 1
     output_data.pf_eccentricity.attrs['units'] = 'unitless'
-    output_data.pf_eccentricity.attrs['_FillValue']= fillvalue
 
     output_data.pf_orientation.attrs['long_name'] = 'orientation of the major axis of each precipitation feature at a given time'
     output_data.pf_orientation.attrs['units'] = 'degrees clockwise from vertical'
     output_data.pf_orientation.attrs['min_value'] = 0
     output_data.pf_orientation.attrs['max_value'] = 360
-    output_data.pf_orientation.attrs['_FillValue'] = fillvalue
 
     output_data.pf_dbz40area.attrs['long_name'] = 'area of the precipitation feature with column maximum reflectivity >= 40 dBZ at a given time'
     output_data.pf_dbz40area.attrs['units'] = 'km^2'
-    output_data.pf_dbz40area.attrs['_FillValue'] = fillvalue
 
     output_data.pf_dbz45area.attrs['long_name'] = 'area of the precipitation feature with column maximum reflectivity >= 45 dBZ at a given time'
     output_data.pf_dbz45area.attrs['units'] = 'km^2'
-    output_data.pf_dbz45area.attrs['_FillValue'] = fillvalue
 
     output_data.pf_dbz50area.attrs['long_name'] = 'area of the precipitation feature with column maximum reflectivity >= 50 dBZ at a given time'
     output_data.pf_dbz50area.attrs['units'] = 'km^2'
-    output_data.pf_dbz50area.attrs['_FillValue'] = fillvalue
 
     output_data.pf_ccrainrate.attrs['long_name'] = 'mean rain rate of the largest several the convective cores at a given time'
     output_data.pf_ccrainrate.attrs['units'] = 'mm/hr'
-    output_data.pf_ccrainrate.attrs['_FillValue'] = fillvalue
 
     output_data.pf_sfrainrate.attrs['long_name'] = 'mean rain rate in the largest several statiform regions at a given time'
     output_data.pf_sfrainrate.attrs['units'] = 'mm/hr'
-    output_data.pf_sfrainrate.attrs['_FillValue'] = fillvalue
 
     output_data.pf_ccarea.attrs['long_name'] = 'total area of the largest several convective cores at a given time'
     output_data.pf_ccarea.attrs['units'] = 'km^2'
-    output_data.pf_ccarea.attrs['_FillValue'] = fillvalue
 
     output_data.pf_sfarea.attrs['long_name'] = 'total area of the largest several stratiform regions at a given time'
     output_data.pf_sfarea.attrs['units'] = 'km^2'
-    output_data.pf_sfarea.attrs['_FillValue'] = fillvalue
 
     output_data.pf_ccdbz10.attrs['long_name'] = 'mean 10 dBZ echo top height of the largest several convective cores at a given time'
     output_data.pf_ccdbz10.attrs['units'] = 'km'
-    output_data.pf_ccdbz10.attrs['_FillValue'] = fillvalue
 
     output_data.pf_ccdbz20.attrs['long_name'] = 'mean 20 dBZ echo top height of the largest several convective cores at a given time'
     output_data.pf_ccdbz20.attrs['units'] = 'km'
-    output_data.pf_ccdbz20.attrs['_FillValue'] = fillvalue
 
     output_data.pf_ccdbz30.attrs['long_name'] = 'mean 30 dBZ echo top height the largest several convective cores at a given time'
     output_data.pf_ccdbz30.attrs['units'] = 'km'
-    output_data.pf_ccdbz30.attrs['_FillValue'] = fillvalue
 
     output_data.pf_ccdbz40.attrs['long_name'] = 'mean 40 dBZ echo top height of the largest several convective cores at a given time'
     output_data.pf_ccdbz40.attrs['units'] = 'km'
-    output_data.pf_ccdbz40.attrs['_FillValue'] = fillvalue
 
     output_data.pf_ncores.attrs['long_name'] = 'number of convective cores (radar identified) in a precipitation feature at a given time'
     output_data.pf_ncores.attrs['units'] = 'unitless'
-    output_data.pf_ncores.attrs['_FillValue'] = fillvalue
 
     output_data.pf_corelon.attrs['standard_name'] = 'longitude'
     output_data.pf_corelon.attrs['long_name'] = 'mean longitude of each convective core in a precipitation features at the given time'
     output_data.pf_corelon.attrs['units'] = 'degrees'
-    output_data.pf_corelon.attrs['_FillValue'] = fillvalue
 
     output_data.pf_coreeccentricity.attrs['long_name'] = 'eccentricity of each convective core in the precipitation feature at a given time'
     output_data.pf_coreeccentricity.attrs['min_value'] = 0
     output_data.pf_coreeccentricity.attrs['max_value'] = 1
     output_data.pf_coreeccentricity.attrs['units'] = 'unitless'
-    output_data.pf_coreeccentricity.attrs['_FillValue']= fillvalue
 
     output_data.pf_orientation.attrs['long_name'] = 'orientation of the major axis of each precipitation feature at a given time'
     output_data.pf_orientation.attrs['units'] = 'degrees clockwise from vertical'
     output_data.pf_orientation.attrs['min_value'] = 0
     output_data.pf_orientation.attrs['max_value'] = 360
-    output_data.pf_orientation.attrs['_FillValue'] = fillvalue
 
     output_data.pf_corelat.attrs['standard_name'] = 'latitude'
     output_data.pf_corelat.attrs['long_name'] = 'mean latitude of each convective core in a precipitation features at the given time'
     output_data.pf_corelat.attrs['units'] = 'degrees'
-    output_data.pf_corelat.attrs['_FillValue'] = fillvalue
 
     output_data.pf_corearea.attrs['long_name'] = 'area of each convective core in the precipitatation feature at the given time'
     output_data.pf_corearea.attrs['units'] = 'km^2'
-    output_data.pf_corearea.attrs['_FillValue'] = fillvalue
 
     output_data.pf_coremajoraxislength.attrs['long_name'] = 'major axis length of each convective core in the precipitation feature at a given time'
     output_data.pf_coremajoraxislength.attrs['units'] = 'km'
-    output_data.pf_coremajoraxislength.attrs['_FillValue'] = fillvalue
 
     output_data.pf_coreminoraxislength.attrs['long_name'] = 'minor axis length of each convective core in the precipitation feature at a given time'
     output_data.pf_coreminoraxislength.attrs['units'] = 'km'
-    output_data.pf_coreminoraxislength.attrs['_FillValue'] = fillvalue
 
     output_data.pf_coreaspectratio.attrs['long_name'] = 'aspect ratio (major / minor axis length) of each convective core in the precipitation feature at a given time'
     output_data.pf_coreaspectratio.attrs['units'] = 'unitless'
-    output_data.pf_coreaspectratio.attrs['_FillValue'] = fillvalue
 
     output_data.pf_coreeccentricity.attrs['long_name'] = 'eccentricity of each convective core in the precipitation feature at a given time'
     output_data.pf_coreeccentricity.attrs['min_value'] = 0
     output_data.pf_coreeccentricity.attrs['max_value'] = 1
     output_data.pf_coreeccentricity.attrs['units'] = 'unitless'
-    output_data.pf_coreeccentricity.attrs['_FillValue']= fillvalue
 
     output_data.pf_coreorientation.attrs['long_name'] = 'orientation of the major axis of each convective core in the precipitation feature at a given time'
     output_data.pf_coreorientation.attrs['units'] = 'degrees clockwise from vertical'
     output_data.pf_coreorientation.attrs['min_value'] = 0
     output_data.pf_coreorientation.attrs['max_value'] = 360
-    output_data.pf_coreorientation.attrs['_FillValue'] = fillvalue
 
     output_data.pf_coremaxdbz10.attrs['long_name'] = 'maximum 10-dBZ echo top height in each convective core in the precipitation features at a given time'
     output_data.pf_coremaxdbz10.attrs['units'] = 'km'
-    output_data.pf_coremaxdbz10.attrs['_FillValue'] = fillvalue
 
     output_data.pf_coremaxdbz20.attrs['long_name'] = 'maximum 20-dBZ echo top height in each convective core in the precipitation features at a given time'
     output_data.pf_coremaxdbz20.attrs['units'] = 'km'
-    output_data.pf_coremaxdbz20.attrs['_FillValue'] = fillvalue
 
     output_data.pf_coremaxdbz30.attrs['long_name'] = 'maximum 30-dBZ echo top height in each convective core in the precipitation features at a given time'
     output_data.pf_coremaxdbz30.attrs['units'] = 'km'
-    output_data.pf_coremaxdbz30.attrs['_FillValue'] = fillvalue
 
     output_data.pf_coremaxdbz40.attrs['long_name'] = 'maximum 40-dBZ echo top height in each convective core in the precipitation features at a given time'
     output_data.pf_coremaxdbz40.attrs['units'] = 'km'
-    output_data.pf_coremaxdbz40.attrs['_FillValue'] = fillvalue
 
     output_data.pf_coreavgdbz10.attrs['long_name'] = 'mean 10-dBZ echo top height in each convective core in the precipitation features at a given time'
     output_data.pf_coreavgdbz10.attrs['units'] = 'km'
-    output_data.pf_coreavgdbz10.attrs['_FillValue'] = fillvalue
 
     output_data.pf_coreavgdbz20.attrs['long_name'] = 'mean 20-dBZ echo top height in each convective core in the precipitation features at a given time'
     output_data.pf_coreavgdbz20.attrs['units'] = 'km'
-    output_data.pf_coreavgdbz20.attrs['_FillValue'] = fillvalue
 
     output_data.pf_coreavgdbz30.attrs['long_name'] = 'mean 30-dBZ echo top height in each convective core in the precipitation features at a given time'
     output_data.pf_coreavgdbz30.attrs['units'] = 'km'
-    output_data.pf_coreavgdbz30.attrs['_FillValue'] = fillvalue
 
     output_data.pf_coreavgdbz40.attrs['long_name'] = 'mean 40-dBZ echo top height in each convective core in the precipitation features at a given time'
     output_data.pf_coreavgdbz40.attrs['units'] = 'km'
-    output_data.pf_coreavgdbz40.attrs['_FillValue'] = fillvalue
 
     # Write netcdf file
     print('')
     print(statistics_outfile)
-    output_data.to_netcdf(path=statistics_outfile, mode='w', format='NETCDF4_CLASSIC', unlimited_dims='track', encoding={'mcs_length': {'zlib':True}, 'mcs_type': {'zlib':True}, 'status': {'zlib':True}, 'startstatus': {'zlib':True}, 'endstatus': {'zlib':True}, 'basetime': {'zlib':True}, 'datetimestring': {'zlib':True}, 'meanlat': {'zlib':True}, 'meanlon': {'zlib':True}, 'core_area': {'zlib':True}, 'ccs_area': {'zlib':True}, 'cloudnumber': {'zlib':True}, 'mergecloudnumber': {'zlib':True}, 'splitcloudnumber': {'zlib':True}, 'nmq_frac': {'zlib':True}, 'pf_area': {'zlib':True}, 'pf_lon': {'zlib':True}, 'pf_lat': {'zlib':True}, 'pf_rainrate': {'zlib':True}, 'pf_skewness': {'zlib':True}, 'pf_majoraxislength': {'zlib':True}, 'pf_minoraxislength': {'zlib':True}, 'pf_aspectratio': {'zlib':True}, 'pf_orientation': {'zlib':True}, 'pf_eccentricity': {'zlib':True}, 'pf_dbz40area': {'zlib':True}, 'pf_dbz45area': {'zlib':True}, 'pf_dbz50area': {'zlib':True}, 'pf_ccarea': {'zlib':True}, 'pf_sfarea': {'zlib':True}, 'pf_ccrainrate': {'zlib':True}, 'pf_sfrainrate': {'zlib':True}, 'pf_ccdbz10': {'zlib':True}, 'pf_ccdbz20': {'zlib':True}, 'pf_ccdbz30': {'zlib':True}, 'pf_ccdbz40': {'zlib':True}, 'pf_ncores': {'zlib':True}, 'pf_corelon': {'zlib':True}, 'pf_corelat': {'zlib':True}, 'pf_corearea': {'zlib':True}, 'pf_coremajoraxislength': {'zlib':True},'pf_minoraxislength': {'zlib':True}, 'pf_coreaspectratio': {'zlib':True}, 'pf_coreorientation': {'zlib':True}, 'pf_coreeccentricity': {'zlib':True}, 'pf_coremaxdbz10': {'zlib':True}, 'pf_coremaxdbz20': {'zlib':True}, 'pf_coremaxdbz30': {'zlib':True}, 'pf_coremaxdbz40': {'zlib':True}, 'pf_coreavgdbz10': {'zlib':True}, 'pf_coreavgdbz20': {'zlib':True},  'pf_coreavgdbz30': {'zlib':True}, 'pf_coreavgdbz40': {'zlib':True}})
+    output_data.to_netcdf(path=statistics_outfile, mode='w', format='NETCDF4_CLASSIC', unlimited_dims='track', \
+                          encoding={'mcs_length': {'zlib':True, '_FillValue': fillvalue}, \
+                                    'mcs_type': {'zlib':True, '_FillValue': fillvalue}, \
+                                    'status': {'zlib':True, '_FillValue': fillvalue}, \
+                                    'startstatus': {'zlib':True, '_FillValue': fillvalue}, \
+                                    'endstatus': {'zlib':True, '_FillValue': fillvalue}, \
+                                    'basetime': {'zlib':True, '_FillValue': fillvalue}, \
+                                    'datetimestring': {'zlib':True, '_FillValue': fillvalue}, \
+                                    'meanlat': {'zlib':True, '_FillValue': fillvalue}, \
+                                    'meanlon': {'zlib':True, '_FillValue': fillvalue}, \
+                                    'core_area': {'zlib':True, '_FillValue': fillvalue}, \
+                                    'ccs_area': {'zlib':True, '_FillValue': fillvalue}, \
+                                    'cloudnumber': {'zlib':True, '_FillValue': fillvalue}, \
+                                    'mergecloudnumber': {'zlib':True, '_FillValue': fillvalue}, \
+                                    'splitcloudnumber': {'zlib':True, '_FillValue': fillvalue}, \
+                                    'nmq_frac': {'zlib':True, '_FillValue': fillvalue}, \
+                                    'pf_area': {'zlib':True, '_FillValue': fillvalue}, \
+                                    'pf_lon': {'zlib':True, '_FillValue': fillvalue}, \
+                                    'pf_lat': {'zlib':True, '_FillValue': fillvalue}, \
+                                    'pf_rainrate': {'zlib':True, '_FillValue': fillvalue}, \
+                                    'pf_skewness': {'zlib':True, '_FillValue': fillvalue}, \
+                                    'pf_majoraxislength': {'zlib':True, '_FillValue': fillvalue}, \
+                                    'pf_minoraxislength': {'zlib':True, '_FillValue': fillvalue}, \
+                                    'pf_aspectratio': {'zlib':True, '_FillValue': fillvalue}, \
+                                    'pf_orientation': {'zlib':True, '_FillValue': fillvalue}, \
+                                    'pf_eccentricity': {'zlib':True, '_FillValue': fillvalue}, \
+                                    'pf_dbz40area': {'zlib':True, '_FillValue': fillvalue}, \
+                                    'pf_dbz45area': {'zlib':True, '_FillValue': fillvalue}, \
+                                    'pf_dbz50area': {'zlib':True, '_FillValue': fillvalue}, \
+                                    'pf_ccarea': {'zlib':True, '_FillValue': fillvalue}, \
+                                    'pf_sfarea': {'zlib':True, '_FillValue': fillvalue}, \
+                                    'pf_ccrainrate': {'zlib':True, '_FillValue': fillvalue}, \
+                                    'pf_sfrainrate': {'zlib':True, '_FillValue': fillvalue}, \
+                                    'pf_ccdbz10': {'zlib':True, '_FillValue': fillvalue}, \
+                                    'pf_ccdbz20': {'zlib':True, '_FillValue': fillvalue}, \
+                                    'pf_ccdbz30': {'zlib':True, '_FillValue': fillvalue}, \
+                                    'pf_ccdbz40': {'zlib':True, '_FillValue': fillvalue}, \
+                                    'pf_ncores': {'zlib':True, '_FillValue': fillvalue}, \
+                                    'pf_corelon': {'zlib':True, '_FillValue': fillvalue}, \
+                                    'pf_corelat': {'zlib':True, '_FillValue': fillvalue}, \
+                                    'pf_corearea': {'zlib':True, '_FillValue': fillvalue}, \
+                                    'pf_coremajoraxislength': {'zlib':True, '_FillValue': fillvalue}, \
+                                    'pf_minoraxislength': {'zlib':True, '_FillValue': fillvalue}, \
+                                    'pf_coreaspectratio': {'zlib':True, '_FillValue': fillvalue}, \
+                                    'pf_coreorientation': {'zlib':True, '_FillValue': fillvalue}, \
+                                    'pf_coreeccentricity': {'zlib':True, '_FillValue': fillvalue}, \
+                                    'pf_coremaxdbz10': {'zlib':True, '_FillValue': fillvalue}, \
+                                    'pf_coremaxdbz20': {'zlib':True, '_FillValue': fillvalue}, \
+                                    'pf_coremaxdbz30': {'zlib':True, '_FillValue': fillvalue}, \
+                                    'pf_coremaxdbz40': {'zlib':True, '_FillValue': fillvalue}, \
+                                    'pf_coreavgdbz10': {'zlib':True, '_FillValue': fillvalue}, \
+                                    'pf_coreavgdbz20': {'zlib':True, '_FillValue': fillvalue}, \
+                                    'pf_coreavgdbz30': {'zlib':True, '_FillValue': fillvalue}, \
+                                    'pf_coreavgdbz40': {'zlib':True, '_FillValue': fillvalue}})
     
 
