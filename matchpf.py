@@ -552,10 +552,10 @@ def identifypf_mergedir_nmq(mcsstats_filebase, cloudid_filebase, stats_path, clo
                                             # Geometric statistics
                                             pfproperties = regionprops(iipfflagmap, intensity_image=filteredrainratemap)
                                             pfeccentricity[ipf-1] = pfproperties[0].eccentricity
-                                            pfmajoraxis[ipf-1] = pfproperties[0].major_axis_length
+                                            pfmajoraxis[ipf-1] = pfproperties[0].major_axis_length*pixel_radius
                                             # Need to treat minor axis length with an error except since the python algorthim occsionally throws an error. 
                                             try:
-                                                pfminoraxis[ipf-1] = pfproperties[0].minor_axis_length
+                                                pfminoraxis[ipf-1] = pfproperties[0].minor_axis_length*pixel_radius
                                             except ValueError:
                                                 pass
                                             if pfminoraxis[ipf-1]!=fillvalue or pfmajoraxis[ipf-1]!=fillvalue:
