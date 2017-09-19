@@ -24,6 +24,7 @@ def filtermcs_mergedir_nmq(stats_path, pfstats_filebase, startdate, enddate, maj
     data = xr.open_dataset(mergedirpf_statistics_file, autoclose=True)
     ntracks = np.nanmax(data.coords['track'])
     ntimes = np.nanmax(data.coords['time'])
+    ncores =  np.nanmax(data.coords['cores'])
 
     ir_tracklength = data['length'].data
 
@@ -96,7 +97,6 @@ def filtermcs_mergedir_nmq(stats_path, pfstats_filebase, startdate, enddate, maj
                         # Get radar variables for this group
                         igroup_duration = len(groups[igroup])*time_res
                         igroup_pfmajoraxis = np.copy(ipf_majoraxis[igroup_indices])
-                        igroup_dbz40area = np.copy(ipf_dbz40area[igroup_indices])
                         igroup_ccmajoraxis = np.copy(ipf_ccmajoraxis[igroup_indices])
                         igroup_ccaspectratio = np.copy(ipf_ccaspectratio[igroup_indices])
 
@@ -157,10 +157,10 @@ def filtermcs_mergedir_nmq(stats_path, pfstats_filebase, startdate, enddate, maj
 
     ########################################################
     # Definite life cycle stages. Based on Coniglio et al. (2010) MWR.
-    # Preconvective: first hour after convective core occurs
-    # Genesis: First hour after convective line exceeds 100 km
-    # Mature: Near continuous line with well defined stratiform precipitation. 2 hours after genesis state and 2 hours before decay stage
-    # Dissipiation: First hour hafter convective line is no longer observed
+    # Preconvective (1): first hour after convective core occurs
+    # Genesis (2): First hour after convective line exceeds 100 km
+    # Mature (3): Near continuous line with well defined stratiform precipitation. 2 hours after genesis state and 2 hours before decay stage
+    # Dissipiation (4): First hour after convective line is no longer observed
 
     # Process only MCSs that last at least 8 hours
     lifetime = np.multiply(ir_tracklength, time_res)
@@ -170,13 +170,13 @@ def filtermcs_mergedir_nmq(stats_path, pfstats_filebase, startdate, enddate, maj
     if nlongmcs > 0:
         # Initialize arrays
         lifecycle_complete = np.ones(nmcs, dtype=float)*fillvalue
-        lifecycle_stage = np.ones((ntimes, nmcs), dtype=float)*fillvalue
-        lifecycle_index = np.ones((4, nmcs), dtype=int)*fillvalue
+        lifecycle_stage = np.ones((nmcs, ntimes), dtype=float)*fillvalue
+        lifecycle_index = np.ones((nmcs, 6), dtype=int)*fillvalue
 
         # Loop through each mcs
         for ilm in range(0, nlongmcs):
             # Initialize arrays
-            ilm_index = np.ones(4, dtype=float)*fillvalue
+            ilm_index = np.ones(6, dtype=float)*fillvalue
             ilm_lifecycle = np.ones(ntimes, dtype=float)*fillvalue
 
             # Isolate data from this track
@@ -191,7 +191,7 @@ def filtermcs_mergedir_nmq(stats_path, pfstats_filebase, startdate, enddate, maj
             ilm_maxpfccarea = np.nanmax(ilm_pfccarea, axis=1)
 
             ##################################################################
-            # Classify preconvective time
+            # Classify cloud only stage 
 
             # Find times with convective core area > 0
             iccarea = np.array(np.where(ilm_maxpfccarea > 0))[0, :]
@@ -200,11 +200,17 @@ def filtermcs_mergedir_nmq(stats_path, pfstats_filebase, startdate, enddate, maj
             if nccarea > 0:
                 # If first convective time is after the first cloud time, label all hours before the convective core appearance time as preconvective
                 if iccarea[0] > 0 and iccarea[0] < ilm_irtracklength-1:
-                    ilm_index[0] = iccarea[0]
-                    ilm_lifecycle[0:iccarea[0]] = 1
-                else:
-                    ilm_index[0] = 0
-                    ilm_lifecycle[0] = 1
+                    ilm_index[0] = 0 # Start of cloud only
+                    ilm_lifecycle[0:iccarea[0]] = 1 # Time period of cloud only
+
+                ilm_index[1] = iccarea[0] # Start of unorganized convective cells 
+
+            print(ilm_maxpfccarea)
+            print(iccarea)
+            print(ilm_irtracklength-1)
+            print(ilm_index)
+            print(ilm_lifecycle)
+            raw_input('check 1')
 
             ################################################################
             # Find indices of when convective line present and absent and when stratiform present
@@ -215,71 +221,111 @@ def filtermcs_mergedir_nmq(stats_path, pfstats_filebase, startdate, enddate, maj
 
             # Find times with convective major axis length greater than 100 km and stratiform area greater than the median amount of stratiform
             ilm_meansfarea[ilm_meansfarea == fillvalue] = np.nan
-            isfarea = np.array(np.where((ilm_maxpfccmajoraxis > 100) & (ilm_meansfarea > np.nanmean(ilm_meansfarea))))
+            isfarea = np.array(np.where((ilm_maxpfccmajoraxis > 100) & (ilm_meansfarea > np.nanmean(ilm_meansfarea))))[0, :]
             nsfarea = len(isfarea)
 
             # Find times with convective major axis length less than 100 km
-            inoccline = np.array(np.where(ilm_maxpfccmajoraxis < 100))[0, :]
-            nnoccline = len(inoccline)
+            if nsfarea > 0:
+                inoccline = np.array(np.where(ilm_maxpfccmajoraxis < 100))[0, :]
+                inoccline = inoccline[np.where(inoccline > isfarea[-1])]
+                nnoccline = len(inoccline)
 
             ##################################################################
             # If convective line exists
+            print(ilm_maxpfccmajoraxis)
+            print(iccline)
+            raw_input('check Convective')
+
             if nccline > 1:
                 ####################################################
-                # Label genesis
                 # If the convective line occurs after the first storm time (use second index since convective line must be around for one hour prior to classifying as genesis)
+
+                # Label when convective cores first appear, but are not organized into a line
                 if iccline[1] > iccarea[0]:
-                    ilm_index[1] = iccline[1]
-                    ilm_lifecyle[iccarea[0]+1:iccline[1]] = 2
+                    ilm_index[2] = iccline[1] # Start of organized convection
+                    ilm_lifecycle[iccarea[0]:iccline[1]] = 2 # Time period of unorganzied convective cells
                 else:
                     sys.exit('Check convective line in track ' + str(int(ilongmcs[ilm])))
 
                 if nsfarea > 0:
-                    # Test if stratiform area time is two timesteps after the convective line and two time steps before the last time of the cloud track
+                    # Label MCS genesis. Test if stratiform area time is two timesteps after the convective line and two time steps before the last time of the cloud track
                     if isfarea[0] > iccline[1]:
-                        ilm_index[2] = isfarea[0]
-                        ilm_lifecycle[iccline[1]:isfarea[0]] = 2
+                        ilm_index[3] = isfarea[0] # Start of mature MCS
+                        ilm_lifecycle[iccline[1]:isfarea[0]] = 3 # Time period of organized cells before maturation
+
+                        ilm_lifecycle[isfarea] = 4 # Time period of mature mcs
                     else:
                         if nsfarea > 1:
-                            ilm_index[2] = isfarea[1]
-                            
-                ###################################################
-                # Label mature
-                if nsfarea > 1:
-                    ilm_lifecycle[isfarea[1:-1]] = 3
-                else:
-                    ilm_lifecycle[isfarea] = 3
+                            ilm_index[3] = isfarea[1] # Start of mature MCS
+
+                            ilm_lifecycle[isfarea[1::]] = 4 # Time period of mature MCS
+
+                print(ilm_meansfarea)
+                print(np.nanmean(ilm_meansfarea))
+                print(isfarea)
+                print(ilm_maxpfccmajoraxis)
+                print(iccline)
+                print(ilm_maxpfccarea)
+                print(iccarea)
+                print(ilm_index)
+                print(ilm_lifecycle)
+                raw_input('check 2')
 
                 ################################################
                 # Label dissipating times. Buy default this is all times after the mature stage
 
                 # Include weakening convective line
                 if isfarea[-1] < ilm_irtracklength-1:
-                    ilm_index[3] = isfarea[-1] + 1
-                    ilm_lifecycle[isfarea[-1]+1:ilm_irtracklength]
+                    ilm_index[4] = isfarea[-1] # Start of dissipating, when lose stratiform and convective criteria
 
-                # Include convection that no longer has line characteristics at or after mature stage
-                if nnoccline > 0:
-                    if inoccline[0] >= isfarea[-1]:
-                        ilm_index[4] = inoccline[0]
-                        ilm_lifecycle[inoccline] = 5
+                    # Include convection that no longer has line characteristics at or after mature stage
+                    if nnoccline > 0:
+                        ilm_index[5] = inoccline[0] # Start of dissipating, lost convective line
 
-        ############################################################
-        # Final life cycle processing
-        istage = np.array(np.where(ilm_lifecycle >= 0))[0, :]
-        nstage = len(istage)
+                        ilm_lifecycle[isfarea[-1]:inoccline[0]] = 5 # Time period of dissipation
+                        ilm_lifecycle[inoccline] = 6 # Time period of dissipation
+                    else:
+                        ilm_lifecycle[isfarea[-1]:ir_tracklength] = 5 # Time period of dissipation
 
-        if nstaga > 0:
-            lifecyclepresent = np.copy(ilm_lifecycle[istage])
-            uniquelifecycle = np.unique(lifecyclepresent)[0, :]
+                print(ilm_meansfarea)
+                print(isfarea)
+                print(ilm_maxpfccmajoraxis)
+                print(iccline)
+                print(inoccline)
+                print(ilm_index)
+                print(ilm_lifecycle)
+                raw_input('check 3')            
 
-            # Label as complete lifecycle if 1-4 present
-            if len(uniquelifecycle) >= 4:
-                lifecycle_complete[trackid_mcs(imcs)] = 1
+            ############################################################
+            # Final life cycle processing
+            istage = np.array(np.where(ilm_lifecycle >= 0))[0, :]
+            nstage = len(istage)
 
-            # Save data
-            lifecycle_stage[ilongmcs[ilm], :] = np.copy(ilm_lifecycle)
-            lifecycle_index[ilongmcs[ilm], :] = np.copy(ilm_index)
+            print(ilm_lifecycle)
+            print(istage)
+            print(nstage)
+            raw_input('Final Processing 1')
+
+            if nstage > 0:
+                lifecyclepresent = np.copy(ilm_lifecycle[istage])
+                uniquelifecycle = np.unique(lifecyclepresent)
+                
+                print(lifecyclepresent)
+                print(uniquelifecycle)
+                raw_input('Final Processing 2')
+
+                # Label as complete lifecycle if 1-4 present
+                if len(uniquelifecycle) >= 4:
+                    lifecycle_complete[ilongmcs[ilm]] = 1
+
+                # Save data
+                lifecycle_stage[ilongmcs[ilm], :] = np.copy(ilm_lifecycle)
+                lifecycle_index[ilongmcs[ilm], :] = np.copy(ilm_index)
+
+                print(lifecycle_complete[ilongmcs[ilm]])
+                print(lifecycle_stage[ilongmcs[ilm], :])
+                print(lifecycle_index[ilongmcs[ilm], :])
+                raw_input('Final Processing 3')
 
     #################################################################################
     # Save data to netcdf file
