@@ -396,8 +396,8 @@ def identifypf_mergedir_nmq(mcsstats_filebase, cloudid_filebase, stats_path, clo
                                     # Get core geometric statistics
                                     coreproperties = regionprops(iiccflagmap, intensity_image=subdbzmap)
                                     cceccentricity[cc-1] = coreproperties[0].eccentricity
-                                    ccmajoraxis[cc-1] = coreproperties[0].major_axis_length
-                                    ccminoraxis[cc-1] = coreproperties[0].minor_axis_length
+                                    ccmajoraxis[cc-1] = coreproperties[0].major_axis_length*pixel_radius
+                                    ccminoraxis[cc-1] = coreproperties[0].minor_axis_length*pixel_radius
                                     ccaspectratio[cc-1] = np.divide(ccmajoraxis[cc-1], ccminoraxis[cc-1])
                                     ccorientation[cc-1] = (coreproperties[0].orientation)*(180/float(pi))
                                     ccperimeter[cc-1] = coreproperties[0].perimeter*pixel_radius
@@ -449,7 +449,7 @@ def identifypf_mergedir_nmq(mcsstats_filebase, cloudid_filebase, stats_path, clo
                                 radar_ccnpix[it, itt, 0:ncore_save-1] = np.copy(sccnpix[0:ncore_save-1])
                                 radar_ccmajoraxis[it, itt, 0:ncore_save-1] = np.copy(sccmajoraxis[0:ncore_save-1])
                                 radar_ccminoraxis[it, itt, 0:ncore_save-1] = np.copy(sccminoraxis[0:ncore_save-1])
-                                radar_ccaspectratio[it, itt, 0:ncore_save-1] = np.copy(sccmajoraxis[0:ncore_save-1])
+                                radar_ccaspectratio[it, itt, 0:ncore_save-1] = np.copy(sccaspectratio[0:ncore_save-1])
                                 radar_ccorientation[it, itt, 0:ncore_save-1] = np.copy(sccorientation[0:ncore_save-1])
                                 radar_ccperimeter[it, itt, 0:ncore_save-1] = np.copy(sccperimeter[0:ncore_save-1])
                                 radar_cceccentricity[it, itt, 0:ncore_save-1] = np.copy(scceccentricity[0:ncore_save-1])

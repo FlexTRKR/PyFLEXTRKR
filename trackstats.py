@@ -273,7 +273,7 @@ def trackstats_sat(datasource, datadescription, pixel_radius, latlon_file, geoli
                         cloudproperities = regionprops(isolatedcloudnumber, intensity_image=isolatedtb)
                     
                         temp_finaltrack_corecold_eccentricity[itrack-1,nc] = cloudproperities[0].eccentricity
-                        temp_finaltrack_corecold_majoraxis[itrack-1,nc] = cloudproperities[0].major_axis_length
+                        temp_finaltrack_corecold_majoraxis[itrack-1,nc] = cloudproperities[0].major_axis_length*pixel_radius
                         temp_finaltrack_corecold_orientation[itrack-1,nc] = (cloudproperities[0].orientation)*(180/float(pi))
                         temp_finaltrack_corecold_perimeter[itrack-1,nc] = cloudproperities[0].perimeter*pixel_radius
                         [temp_ycenter, temp_xcenter] = cloudproperities[0].centroid
