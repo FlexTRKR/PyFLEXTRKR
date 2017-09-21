@@ -398,7 +398,8 @@ def identifypf_mergedir_nmq(mcsstats_filebase, cloudid_filebase, stats_path, clo
                                     cceccentricity[cc-1] = coreproperties[0].eccentricity
                                     ccmajoraxis[cc-1] = coreproperties[0].major_axis_length*pixel_radius
                                     ccminoraxis[cc-1] = coreproperties[0].minor_axis_length*pixel_radius
-                                    ccaspectratio[cc-1] = np.divide(ccmajoraxis[cc-1], ccminoraxis[cc-1])
+                                    if ccminoraxis[cc-1] > 0:
+                                        ccaspectratio[cc-1] = np.divide(ccmajoraxis[cc-1], ccminoraxis[cc-1])
                                     ccorientation[cc-1] = (coreproperties[0].orientation)*(180/float(pi))
                                     ccperimeter[cc-1] = coreproperties[0].perimeter*pixel_radius
                                     ccycentroid[cc-1], ccxcentroid[cc-1] = coreproperties[0].centroid
