@@ -4,7 +4,7 @@
 
 # Author: Original IDL code written by Zhe Feng (zhe.feng@pnnl.gov), Python version written by Hannah C. Barnes (hannah.barnes@pnnl.gov)
 
-def filtermcs_mergedir_nmq(stats_path, pfstats_filebase, startdate, enddate, geolimits, majoraxisthresh, durationthresh, aspectratiothresh, lifecyclethresh, lengththresh, gapthresh):
+def filtermcs_mergedir_nmq(stats_path, pfstats_filebase, startdate, enddate, timeresolution, geolimits, majoraxisthresh, durationthresh, aspectratiothresh, lifecyclethresh, lengththresh, gapthresh):
     ######################################################
     # Import modules
     import numpy as np
@@ -50,9 +50,9 @@ def filtermcs_mergedir_nmq(stats_path, pfstats_filebase, startdate, enddate, geo
     trackid_mcs = []
     trackid_nonmcs = []
 
-    rpf_mcstype = np.ones(ntracks, dtype=int)*fillvalue
-    rpf_mcsstatus = np.ones((ntracks, ntimes), dtype=float)*fillvalue
-    rpf_cctype = np.ones((ntracks, ntimes), dtype=float)*fillvalue
+    pf_mcstype = np.ones(ntracks, dtype=int)*fillvalue
+    pf_mcsstatus = np.ones((ntracks, ntimes), dtype=float)*fillvalue
+    pf_cctype = np.ones((ntracks, ntimes), dtype=float)*fillvalue
 
     ###################################################
     # Loop through each track
@@ -103,27 +103,29 @@ def filtermcs_mergedir_nmq(stats_path, pfstats_filebase, startdate, enddate, geo
                         igroup_ccaspectratio = np.copy(ipf_ccaspectratio[igroup_indices])
 
                         # Label this period as an mcs
-                        rpf_mcsstatus[nt, igroup_indices] = 1
+                        pf_mcsstatus[nt, igroup_indices] = 1
 
-                        # Determine type of mcs (squall or non-squall)
-                        isquall = np.array(np.where(igroup_ccaspectratio > aspectratiothresh))[0, :]
-                        nisquall = len(isquall)
+                        ## Determine type of mcs (squall or non-squall)
+                        #isquall = np.array(np.where(igroup_ccaspectratio > aspectratiothresh))[0, :]
+                        #nisquall = len(isquall)
 
-                        if nisquall > 0:
-                            # Label as squall
-                            rpf_mcstype[nt] = 1
-                            rpf_cctype[nt, igroup_indices[isquall]] = 1
-                        else:
-                            # Label as non-squall
-                            rpf_mcstype[nt] = 2
-                            rpf_cctype[nt, igroup_indices[isquall]] = 2
+                        #if nisquall > 0:
+                        #    # Label as squall
+                        #    pf_mcstype[nt] = 1
+                        #    pf_cctype[nt, igroup_indices[isquall]] = 1
+                        #else:
+                        #    # Label as non-squall
+                        #    pf_mcstype[nt] = 2
+                        #    pf_cctype[nt, igroup_indices[isquall]] = 2
 
             # Group does not satistfy duration threshold
             else:
                 trackid_nonmcs = np.append(trackid_nonmcs, nt)
                 
     # Isolate tracks that have robust MCS
-    trackid_mcs = np.array(np.where(rpf_mcstype > 0))[0, :]
+    TEMP_mcsstatus = np.copy(pf_mcsstatus)
+    TEMP_mcsstatus[TEMP_mcsstatus == fillvalue] = np.nan
+    trackid_mcs = np.array(np.where(np.nansum(TEMP_mcsstatus, axis=1)))[0, :]
     nmcs = len(trackid_mcs)
 
     # Stop code if not robust MCS present
@@ -135,19 +137,19 @@ def filtermcs_mergedir_nmq(stats_path, pfstats_filebase, startdate, enddate, geo
     # Isolate data associated with robust MCS
     ir_tracklength = ir_tracklength[trackid_mcs]
 
-    rpf_mcstype = rpf_mcstype[trackid_mcs]
-    rpf_mcsstatus = rpf_mcsstatus[trackid_mcs, :]
+    #pf_mcstype = pf_mcstype[trackid_mcs]
+    pf_mcsstatus = pf_mcsstatus[trackid_mcs, :]
     pf_majoraxis = pf_majoraxis[trackid_mcs, :, :]
     pf_area = pf_area[trackid_mcs, :, :]
 
     pf_ccmajoraxis = pf_ccmajoraxis[trackid_mcs, :, :]
     pf_ccarea = pf_ccarea[trackid_mcs, :, :]
-    rpf_cctype = rpf_cctype[trackid_mcs, :]
+    #pf_cctype = pf_cctype[trackid_mcs, :]
 
     pf_meansfarea = pf_meansfarea[trackid_mcs, :]
 
     # Determine how long MCS track criteria is statisfied
-    TEMP_mcsstatus = np.copy(rpf_mcsstatus)
+    TEMP_mcsstatus = np.copy(pf_mcsstatus)
     TEMP_mcsstatus[TEMP_mcsstatus == fillvalue] = np.nan
     mcs_length = np.nansum(TEMP_mcsstatus, axis=1)
 
@@ -156,7 +158,7 @@ def filtermcs_mergedir_nmq(stats_path, pfstats_filebase, startdate, enddate, geo
     pf_maxmajoraxis = np.nanmax(pf_majoraxis, axis=2) # Creates run time warning
     pf_maxmajoraxis[pf_maxmajoraxis < lengththresh] = 0
     pf_maxmajoraxis[pf_maxmajoraxis > lengththresh] = 1
-    pf_length = np.nansum(pf_maxmajoraxis, axis=1)
+    pf_lifetime = np.multiply(np.nansum(pf_maxmajoraxis, axis=1), timeresolution)
 
     ########################################################
     # Definite life cycle stages. Based on Coniglio et al. (2010) MWR.
@@ -184,7 +186,7 @@ def filtermcs_mergedir_nmq(stats_path, pfstats_filebase, startdate, enddate, geo
 
             # Isolate data from this track
             ilm_irtracklength = np.copy(ir_tracklength[ilongmcs[ilm]])
-            ilm_pfcctype = np.copy(rpf_cctype[ilongmcs[ilm], 0:ilm_irtracklength])
+            ilm_pfcctype = np.copy(pf_cctype[ilongmcs[ilm], 0:ilm_irtracklength])
             ilm_pfccmajoraxis = np.copy(pf_ccmajoraxis[ilongmcs[ilm], 0:ilm_irtracklength, :])
             ilm_pfccarea = np.copy(pf_ccarea[ilongmcs[ilm], 0:ilm_irtracklength, :])
             ilm_meansfarea = np.copy(pf_meansfarea[ilongmcs[ilm], 0:ilm_irtracklength])
@@ -325,26 +327,16 @@ def filtermcs_mergedir_nmq(stats_path, pfstats_filebase, startdate, enddate, geo
 
                     #        ilm_cycle[isfarea[3]:isfarea[-1]+1] = 4 # Time period of mature MCS
 
-                #print(isfarea)
-                #print(iccline)
-                #print(iccarea)
-                #print(ilm_index)
-                #print(ilm_cycle)
-                #raw_input('check 2')
+                    #print(isfarea)
+                    #print(iccline)
+                    #print(iccarea)
+                    #print(ilm_index)
+                    #print(ilm_cycle)
+                    #raw_input('check 2')
 
-                # Label dissipating times. Buy default this is all times after the mature stage
-                # Include weakening convective line
-                if isfarea[-1] < ilm_irtracklength-1:
-                    dissipateindex = isfarea[-1]+1 # Start of dissipating, when lose stratiform and convective criteria
-
-                    # Include convection that no longer has line characteristics at or after mature stage
-                    if nnoccline > 0:
-                        dissipateindex = np.append(dissipateindex, inoccline[0]) # Start of dissipating, lost convective line
-
-                    dissipateindex = np.nanmin(dissipateindex)
-                    ilm_index[4] = np.copy(dissipateindex)
-
-                    ilm_cycle[dissipateindex:ilm_irtracklength+1] = 5 # Time period of dissipation
+                    # Label dissipating times. Buy default this is all times after the mature stage
+                    ilm_index[4] =  isfarea[-1]+1 
+                    ilm_cycle[isfarea[-1]+1:ilm_irtracklength+1] = 5 # Time period of dissipation
 
                 #print(isfarea)
                 #print(iccline)
@@ -389,8 +381,9 @@ def filtermcs_mergedir_nmq(stats_path, pfstats_filebase, startdate, enddate, geo
     statistics_outfile = stats_path + 'robust_mcs_tracks_' + data.attrs['source2'] + '_' + data.attrs['startdate'] + '_' + data.attrs['enddate'] + '.nc'
 
     # Define xarrray dataset
-    output_data = xr.Dataset({'pf_length': (['track'], data['length'][trackid_mcs]), \
+    output_data = xr.Dataset({'mcs_length': (['track'], data['length'][trackid_mcs]), \
                               'mcs_type': (['track'], data['mcs_type'][trackid_mcs]), \
+                              'pf_lifetime': (['track'], pf_lifetime), \
                               'status': (['track', 'time'], data['status'][trackid_mcs, :]), \
                               'startstatus': (['track'], data['startstatus'][trackid_mcs]), \
                               'endstatus': (['track'], data['endstatus'][trackid_mcs]), \
@@ -405,9 +398,9 @@ def filtermcs_mergedir_nmq(stats_path, pfstats_filebase, startdate, enddate, geo
                               'cloudnumber': (['track', 'time'], data['cloudnumber'][trackid_mcs, :]), \
                               'mergecloudnumber': (['track', 'time', 'mergesplit'], data['mergecloudnumber'][trackid_mcs, :, :]), \
                               'splitcloudnumber': (['track', 'time', 'mergesplit'], data['splitcloudnumber'][trackid_mcs, :, :]), \
-                              'pf_mcstype': (['tracks'], rpf_mcstype), \
-                              'pf_mcsstatus': (['track', 'time'], rpf_mcsstatus), \
-                              'pf_cctype': (['track', 'time'], rpf_cctype), \
+                              #'pf_mcstype': (['tracks'], pf_mcstype), \
+                              'pf_mcsstatus': (['track', 'time'], pf_mcsstatus), \
+                              #'pf_cctype': (['track', 'time'], pf_cctype), \
                               'lifecycle_complete_flag': (['track'], cycle_complete), \
                               'lifecycle_index': (['track', 'lifestages'], cycle_index), \
                               'lifecycle_stage': (['track', 'time'], cycle_stage), \
@@ -496,12 +489,15 @@ def filtermcs_mergedir_nmq(stats_path, pfstats_filebase, startdate, enddate, geo
     output_data.lifestages.attrs['description'] = 'Number of MCS life stages'
     output_data.lifestages.attrs['units'] = 'unitless'
 
-    output_data.pf_length.attrs['long_name'] = 'Length of each MCS in each track'
-    output_data.pf_length.attrs['units'] = 'Temporal resolution of orginal data'
+    output_data.mcs_length.attrs['long_name'] = 'Length of each MCS in each track'
+    output_data.mcs_length.attrs['units'] = 'Temporal resolution of orginal data'
 
     output_data.mcs_type.attrs['long_name'] = 'Type of MCS'
     output_data.mcs_type.attrs['values'] = '1 = MCS, 2 = Squall line'
     output_data.mcs_type.attrs['units'] = 'unitless'
+
+    output_data.pf_lifetime.attrs['long_name'] = 'Length of time in which precipitation is observed during each track'
+    output_data.pf_lifetime.attrs['units'] = 'hr'
 
     output_data.status.attrs['long_name'] = 'Flag indicating the status of each feature in MCS'
     output_data.status.attrs['values'] = '-9999=missing cloud or cloud removed due to short track, 0=track ends here, 1=cloud continues as one cloud in next file, 2=Biggest cloud in merger, 21=Smaller cloud(s) in merger, 13=Cloud that splits, 3=Biggest cloud from a split that stops after the split, 31=Smaller cloud(s) from a split that stop after the split. The last seven classifications are added together in different combinations to describe situations.'
@@ -707,11 +703,11 @@ def filtermcs_mergedir_nmq(stats_path, pfstats_filebase, startdate, enddate, geo
     output_data.pf_coreavgdbz40.attrs['long_name'] = 'mean 40-dBZ echo top height in each convective core in the precipitation features at a given time'
     output_data.pf_coreavgdbz40.attrs['units'] = 'km'
 
-    output_data.pf_mcstype.attrs['description'] = 'Flag indicating type of MCS. 1 = Squall, 2 = Non-Squall'
-    output_data.pf_mcstype.attrs['units'] = 'unitless'
+    #output_data.pf_mcstype.attrs['description'] = 'Flag indicating type of MCS. 1 = Squall, 2 = Non-Squall'
+    #output_data.pf_mcstype.attrs['units'] = 'unitless'
 
-    output_data.pf_cctype.attrs['description'] = 'Flag indicating type of MCS. 1 = Squall, 2 = Non-Squall'
-    output_data.pf_cctype.attrs['units'] = 'unitless'
+    #output_data.pf_cctype.attrs['description'] = 'Flag indicating type of MCS. 1 = Squall, 2 = Non-Squall'
+    #output_data.pf_cctype.attrs['units'] = 'unitless'
 
     output_data.pf_mcsstatus.attrs['description'] = 'Flag indicating if this time part of the MCS 1 = Yes, 0 = No'
     output_data.pf_mcsstatus.attrs['units'] = 'unitless'
@@ -730,8 +726,9 @@ def filtermcs_mergedir_nmq(stats_path, pfstats_filebase, startdate, enddate, geo
     print(statistics_outfile)
 
     output_data.to_netcdf(path=statistics_outfile, mode='w', format='NETCDF4_CLASSIC', unlimited_dims='track', \
-                          encoding={'pf_length': {'zlib':True, '_FillValue': fillvalue}, \
+                          encoding={'mcs_length': {'zlib':True, '_FillValue': fillvalue}, \
                                     'mcs_type': {'zlib':True, '_FillValue': fillvalue}, \
+                                    'pf_lifetime': {'zlib':True, '_FillValue': fillvalue}, \
                                     'status': {'zlib':True, '_FillValue': fillvalue}, \
                                     'startstatus': {'zlib':True, '_FillValue': fillvalue}, \
                                     'endstatus': {'zlib':True, '_FillValue': fillvalue}, \
@@ -777,8 +774,8 @@ def filtermcs_mergedir_nmq(stats_path, pfstats_filebase, startdate, enddate, geo
                                     'pf_coreavgdbz20': {'zlib':True, '_FillValue': fillvalue}, \
                                     'pf_coreavgdbz30': {'zlib':True, '_FillValue': fillvalue}, \
                                     'pf_coreavgdbz40': {'zlib':True, '_FillValue': fillvalue}, \
-                                    'pf_mcstype': {'zlib':True, '_FillValue': fillvalue}, \
-                                    'pf_cctype': {'zlib':True, '_FillValue': fillvalue}, \
+                                    #'pf_mcstype': {'zlib':True, '_FillValue': fillvalue}, \
+                                    #'pf_cctype': {'zlib':True, '_FillValue': fillvalue}, \
                                     'pf_mcsstatus': {'zlib':True, '_FillValue': fillvalue}, \
                                     'lifecycle_complete_flag': {'zlib':True, '_FillValue': fillvalue}, \
                                     'lifecycle_index': {'zlib':True, '_FillValue': fillvalue}, \

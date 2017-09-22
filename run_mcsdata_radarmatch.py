@@ -376,7 +376,7 @@ if run_robustmcs == 1:
     from robustmcs import filtermcs_mergedir_nmq
 
     # Call function
-    filtermcs_mergedir_nmq(stats_outpath, pfstats_filebase, startdate, enddate, geolimits, mcs_pf_majoraxisthresh, mcs_of_durationthresh, mcs_pf_aspectratiothresh, mcs_pf_lifecyclethresh, mcs_pf_lengththresh, mcs_pf_gap)
+    filtermcs_mergedir_nmq(stats_outpath, pfstats_filebase, startdate, enddate, datatimeresolution, geolimits, mcs_pf_majoraxisthresh, mcs_of_durationthresh, mcs_pf_aspectratiothresh, mcs_pf_lifecyclethresh, mcs_pf_lengththresh, mcs_pf_gap)
     robustmcs_filebase = 'robust_mcs_tracks_'
 
 
