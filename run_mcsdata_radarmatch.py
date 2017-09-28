@@ -4,6 +4,7 @@ import time, datetime, calendar
 from pytz import timezone, utc
 from multiprocessing import Pool
 from netCDF4 import Dataset
+import xarray as xr
 
 # Name: Run_TestData.py
 
@@ -30,8 +31,8 @@ run_gettracks = 0       # Run trackig for all files
 run_finalstats = 0      # Calculate final statistics
 run_identifymcs = 0     # Isolate MCSs
 run_matchpf = 0         # Identify precipitation features with MCSs
-run_robustmcs = 1       # Filter potential mcs cases using nmq radar variables
-run_labelmcs = 0        # Create maps of MCSs
+run_robustmcs = 0       # Filter potential mcs cases using nmq radar variables
+run_labelmcs = 1        # Create maps of MCSs
 
 # Specify version of code using
 cloudid_version = 'v1.0'
@@ -48,21 +49,21 @@ startdate = '20110517'
 enddate = '20110527'
 
 # Specify cloud tracking parameters
-geolimits = np.array([25, -110, 51, -70]) # 4-element array with plotting boundaries [lat_min, lon_min, lat_max, lon_max]
-pixel_radius = 4.0      # km
-timegap = 1.6           # hour
-area_thresh = 1000 #64.       # km^2
-miss_thresh = 0.2       # Missing data threshold. If missing data in the domain from this file is greater than this value, this file is considered corrupt and is ignored. (0.1 = 10%)
-cloudtb_core = 225.          # K
-cloudtb_cold = 241.          # K
-cloudtb_warm = 261.          # K
-cloudtb_cloud = 261.         # K
-othresh = 0.5                     # overlap percentage threshold
-lengthrange = np.array([2,120])    # A vector [minlength,maxlength] to specify the lifetime range for the tracks
-nmaxlinks = 10                    # Maximum number of clouds that any single cloud can be linked to
-nmaxclouds = 3000                 # Maximum number of clouds allowed to be in one track
-absolutetb_threshs = np.array([160,330])        # k A vector [min, max] brightness temperature allowed. Brightness temperatures outside this range are ignored.
-warmanvilexpansion = 1            # If this is set to one, then the cold anvil is spread laterally until it exceeds the warm anvil threshold
+geolimits = np.array([25, -110, 51, -70])  # 4-element array with plotting boundaries [lat_min, lon_min, lat_max, lon_max]
+pixel_radius = 4.0                         # km
+timegap = 1.6                              # hour
+area_thresh = 1000 #64.                    # km^2
+miss_thresh = 0.2                          # Missing data threshold. If missing data in the domain from this file is greater than this value, this file is considered corrupt and is ignored. (0.1 = 10%)
+cloudtb_core = 225.                        # K
+cloudtb_cold = 241.                        # K
+cloudtb_warm = 261.                        # K
+cloudtb_cloud = 261.                       # K
+othresh = 0.5                              # overlap percentage threshold
+lengthrange = np.array([2,120])            # A vector [minlength,maxlength] to specify the lifetime range for the tracks
+nmaxlinks = 10                             # Maximum number of clouds that any single cloud can be linked to
+nmaxclouds = 3000                          # Maximum number of clouds allowed to be in one track
+absolutetb_threshs = np.array([160,330])   # k A vector [min, max] brightness temperature allowed. Brightness temperatures outside this range are ignored.
+warmanvilexpansion = 1                     # If this is set to one, then the cold anvil is spread laterally until it exceeds the warm anvil threshold
 
 # Specify MCS parameters
 mcs_mergedir_areathresh = 6e4              # IR area threshold [km^2]
@@ -79,10 +80,11 @@ mcs_pf_lengththresh = 20
 mcs_pf_gap = 1
 
 # Specify rain rate parameters
-rr_min = 1.0                      # Rain rate threshold [mm/hr]
-nmaxpf = 10                       # Maximum number of precipitation features that can be within a cloud feature
-nmaxcore = 20                     #
+rr_min = 1.0                               # Rain rate threshold [mm/hr]
+nmaxpf = 10                                # Maximum number of precipitation features that can be within a cloud feature
+nmaxcore = 20                     
 nmaxpix = 150000
+pcp_thresh = 1                             # Pixels with hourly precipitation larger than this will be labeled with track number
 
 # Specify filenames and locations
 datavariablename = 'IRBT'
@@ -91,6 +93,8 @@ nmqdatasource = 'nmq'
 datadescription = 'EUS'
 databasename = 'EUS_IR_Subset_'
 label_filebase = 'cloudtrack_'
+pfdata_filebase = 'csa4km_'
+rainaccumulation_filebase = 'regrid_q2_'
 
 root_path = '/global/homes/h/hcbarnes/Tracking/SatelliteRadar/'
 clouddata_path = '/global/project/projectdirs/m1867/zfeng/usa/mergedir/Netcdf/2011/'
@@ -100,7 +104,7 @@ scratchpath = './'
 latlon_file = '/global/project/projectdirs/m1867/zfeng/usa/mergedir/Geolocation/EUS_Geolocation_Data.nc'
 
 # Specify data structure
-datatimeresolution = 1 # hours
+datatimeresolution = 1                     # hours
 dimname = 'nclouds'
 numbername = 'convcold_cloudnumber'
 typename = 'cloudtype'
@@ -358,7 +362,7 @@ if run_matchpf == 1:
     from matchpf import identifypf_mergedir_nmq
 
     # Call function
-    identifypf_mergedir_nmq(mcsstats_filebase, cloudid_filebase, stats_outpath, tracking_outpath, pfdata_path, rainaccumulation_path, startdate, enddate, geolimits, nmaxpf, nmaxcore, nmaxpix, nmaxclouds, rr_min, pixel_radius, irdatasource, nmqdatasource, datadescription, datatimeresolution, mcs_mergedir_areathresh, mcs_mergedir_durationthresh, mcs_mergedir_eccentricitythresh)
+    identifypf_mergedir_nmq(mcsstats_filebase, cloudid_filebase, pfdata_filebase, rainaccumulation_filebase, stats_outpath, tracking_outpath, pfdata_path, rainaccumulation_path, startdate, enddate, geolimits, nmaxpf, nmaxcore, nmaxpix, nmaxclouds, rr_min, pixel_radius, irdatasource, nmqdatasource, datadescription, datatimeresolution, mcs_mergedir_areathresh, mcs_mergedir_durationthresh, mcs_mergedir_eccentricitythresh)
     pfstats_filebase = 'mcs_tracks_'  + nmqdatasource + '_' 
 
 ##############################################################
@@ -377,19 +381,14 @@ if run_robustmcs == 1:
 
     # Call function
     filtermcs_mergedir_nmq(stats_outpath, pfstats_filebase, startdate, enddate, datatimeresolution, geolimits, mcs_pf_majoraxisthresh, mcs_of_durationthresh, mcs_pf_aspectratiothresh, mcs_pf_lifecyclethresh, mcs_pf_lengththresh, mcs_pf_gap)
-    robustmcs_filebase = 'robust_mcs_tracks_'
-
-
-
-
-
+    robustmcs_filebase = 'robust_mcs_tracks_nmq_'
 
 ############################################################
 # Create pixel files with MCS tracks
 
 # Determine if the mcs identification and statistic generation step ran. If not, set the filename using those specified in the constants section
-if run_identifymcs == 0:
-    mcsstats_filebase =  'mcs_tracks_'
+if run_robustmcs == 0:
+    robustmcs_filebase =  'robust_mcs_tracks_nmq_'
 
 if run_labelmcs == 1:
     print('Identifying which pixel level maps to generate for the MCS tracks')
@@ -398,22 +397,20 @@ if run_labelmcs == 1:
     # Identify files to process
 
     # Load MCS track stat file
-    mcsstatistics_file = stats_outpath + mcsstats_filebase + startdate + '_' + enddate + '.nc'
-    print(mcsstatistics_file)
+    robustmcs_file = stats_outpath + robustmcs_filebase + startdate + '_' + enddate + '.nc'
 
-    allmcsdata = Dataset(mcsstatistics_file, 'r')
-    nmcs = len(allmcsdata.dimensions['ntracks']) # Total number of tracked mcss
-    mcstrackstat_basetime = allmcsdata.variables['mcs_basetime'][:] # basetime of each cloud in the tracked mcs
-    allmcsdata.close() 
+    robustmcsdata = xr.open_dataset(robustmcs_file, autoclose=True, decode_times=False)
+    nrobustmcs = np.nanmax(robustmcsdata.coords['track'])
+    robustmcsstat_basetime = robustmcsdata['base_time'].data
 
     # Determine times that need to be processed
-    if nmcs > 0:
+    if nrobustmcs > 0:
         # Set default time range
-        startbasetime = np.nanmin(mcstrackstat_basetime)
-        endbasetime = np.nanmax(mcstrackstat_basetime)
+        startbasetime = np.nanmin(robustmcsstat_basetime)
+        endbasetime = np.nanmax(robustmcsstat_basetime)
 
         # Find unique times
-        uniquebasetime = np.unique(mcstrackstat_basetime)
+        uniquebasetime = np.unique(robustmcsstat_basetime)
         uniquebasetime = uniquebasetime[0:-1]
         nuniquebasetime = len(uniquebasetime)
 
@@ -421,32 +418,37 @@ if run_labelmcs == 1:
         # Process files
 
         # Load function 
-        #from mapmcs import mapmcs_mergedir
-        from mapmcs_serial import mapmcs_mergedir
+        from mapmcs import mapmcs_pf
 
         # Generate input list
-        list_mcstrackstat_filebase = [mcsstats_filebase]*nuniquebasetime
+        list_robustmcsstat_filebase = [robustmcs_filebase]*nuniquebasetime
         list_trackstat_filebase = [trackstats_filebase]*nuniquebasetime
+        list_pfdata_filebase = [pfdata_filebase]*nuniquebasetime
+        list_rainaccumulation_filebase = [rainaccumulation_filebase]*nuniquebasetime
         list_mcstracking_path = [mcstracking_outpath]*nuniquebasetime
         list_stats_path = [stats_outpath]*nuniquebasetime
         list_tracking_path = [tracking_outpath]*nuniquebasetime
+        list_pfdata_path = [pfdata_path]*nuniquebasetime
+        list_rainaccumulation_path = [rainaccumulation_path]*nuniquebasetime
         list_cloudid_filebase = [cloudid_filebase]*nuniquebasetime
+        list_pcp_thresh = np.ones(nuniquebasetime)*pcp_thresh
+        list_nmaxpf = np.ones(nuniquebasetime)*nmaxpf
         list_absolutetb_threshs = np.ones(((nuniquebasetime), 2))*absolutetb_threshs
         list_startdate = [startdate]*(nuniquebasetime)
         list_enddate = [enddate]*(nuniquebasetime)
 
-        mcsmap_input = zip(uniquebasetime, list_mcstrackstat_filebase, list_trackstat_filebase, list_mcstracking_path, list_stats_path, list_tracking_path, list_cloudid_filebase, list_absolutetb_threshs, list_startdate, list_enddate)
+        robustmcsmap_input = zip(uniquebasetime, list_robustmcsstat_filebase, list_trackstat_filebase, list_cloudid_filebase, list_pfdata_filebase, list_rainaccumulation_filebase, list_mcstracking_path, list_stats_path, list_tracking_path, list_pfdata_path, list_rainaccumulation_path, list_pcp_thresh, list_nmaxpf, list_absolutetb_threshs, list_startdate, list_enddate)
 
-        # Call function
-        for iunique in uniquebasetime:
-            mapmcs_mergedir(iunique, mcsstats_filebase, trackstats_filebase, mcstracking_outpath, stats_outpath, tracking_outpath, cloudid_filebase, absolutetb_threshs, startdate, enddate)
+        ## Call function
+        #for iunique in range(0, nuniquebasetime):
+        #    mapmcs_pf(robustmcsmap_input[iunique])
 
-        #if __name__ == '__main__':
-        #    print('Creating maps of tracked MCSs')
-        #    pool = Pool(processes = 1)
-        #    pool.map(mapmcs_mergedir, mcsmap_input)
-        #    pool.close()
-        #    pool.join()
+        if __name__ == '__main__':
+            print('Creating maps of tracked MCSs')
+            pool = Pool(processes = 1)
+            pool.map(mapmcs_pf, robustmcsmap_input)
+            pool.close()
+            pool.join()
 
     else:
         print('No MCSs to process ?!')

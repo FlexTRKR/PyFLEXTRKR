@@ -2,7 +2,7 @@
 
 # Author: Original IDL code written by Zhe Feng (zhe.feng@pnnl.gov), Python version written by Hannah C. Barnes (hannah.barnes@pnnl.gov)
 
-def identifypf_mergedir_nmq(mcsstats_filebase, cloudid_filebase, stats_path, cloudidtrack_path, pfdata_path, rainaccumulation_path, startdate, enddate, geolimits, nmaxpf, nmaxcore, nmaxpix, nmaxclouds, rr_min, pixel_radius, irdatasource, nmqdatasource, datadescription, datatimeresolution, mcs_irareathresh, mcs_irdurationthresh, mcs_ireccentricitythresh):
+def identifypf_mergedir_nmq(mcsstats_filebase, cloudid_filebase,  pfdata_filebase, rainaccumulation_filebase, stats_path, cloudidtrack_path, pfdata_path, rainaccumulation_path, startdate, enddate, geolimits, nmaxpf, nmaxcore, nmaxpix, nmaxclouds, rr_min, pixel_radius, irdatasource, nmqdatasource, datadescription, datatimeresolution, mcs_irareathresh, mcs_irdurationthresh, mcs_ireccentricitythresh):
     import numpy as np
     import os.path
     from netCDF4 import Dataset
@@ -148,8 +148,8 @@ def identifypf_mergedir_nmq(mcsstats_filebase, cloudid_filebase, stats_path, clo
                 # Generate date file names
                 ittdatetimestring = ''.join(ittdatetimestring)
                 cloudid_filename = cloudidtrack_path + cloudid_filebase + ittdatetimestring + '.nc'
-                radar_filename = pfdata_path + 'csa4km_' + ittdatetimestring + '00.nc'
-                rainaccumulation_filename = rainaccumulation_path + 'regrid_q2_' + ittdatetimestring[0:8] + '.' + ittdatetimestring[9::] + '00.nc'
+                radar_filename = pfdata_path + pfdata_filebase + ittdatetimestring + '00.nc'
+                rainaccumulation_filename = rainaccumulation_path + rainaccumulation_filebase + ittdatetimestring[0:8] + '.' + ittdatetimestring[9::] + '00.nc'
 
                 statistics_outfile = stats_path + 'mcs_tracks_'  + nmqdatasource + '_' + startdate + '_' + enddate + '.nc'
 
