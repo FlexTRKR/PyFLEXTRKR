@@ -89,7 +89,7 @@ def mapmcs_pf(zipped_inputs):
                 # Load NMQ data
                 pfdata = xr.open_dataset(ipffile, autoclose=True, decode_times=False)
                 pf_reflectivity = pfdata['dbz_convsf'].data # radar reflectivity at convective-stratiform level
-                pf_convstrat = pfdata['convsf'].data # Steiner convective-stratiform classification
+                pf_convstrat = pfdata['csa'].data # Steiner convective-stratiform-anvil classifications
                 pf_dbz0height = pfdata['dbz0_height'].data # Maximum height of 0 dBZ echo
                 pf_dbz10height = pfdata['dbz10_height'].data # Maximum height of 10 dBZ echo
                 pf_dbz20height = pfdata['dbz20_height'].data # Maximum height of 20 dBZ echo
@@ -98,7 +98,7 @@ def mapmcs_pf(zipped_inputs):
                 pf_number = pfdata['pf_number'].data # number of associated precipitation feature at each pixel
                 pf_area = pfdata['pf_area'].data # Area of precipitation feature
                 pf_mask = pfdata['mask'].data # Flag showing where valid radar data present
-
+                pfpresent = 'Yes'
             else:
                 pf_reflectivity = np.ones((1, nlat, nlon), dtype=float)*fillvalue
                 pf_convstrat = np.ones((1, nlat, nlon), dtype=float)*fillvalue
@@ -109,13 +109,17 @@ def mapmcs_pf(zipped_inputs):
                 pf_dbz30height = np.ones((1, nlat, nlon), dtype=float)*fillvalue
                 pf_dbz40height = np.ones((1, nlat, nlon), dtype=float)*fillvalue
                 pf_mask = np.ones((1, nlat, nlon), dtype=float)*fillvalue
+                pfpresent = 'No'
+                
 
             if os.path.isfile(irainaccumulationfile):
                 # Load Q2 data
                 rainaccumulationdata = xr.open_dataset(irainaccumulationfile, autoclose=True, decode_times=False)
                 ra_precipitation = rainaccumulationdata['precipitation'].data # hourly accumulated rainfall
+                rapresent = 'Yes'
             else:
                 ra_precipitation = np.ones((nlat, nlon), dtype=float)*fillvalue
+                rapresent = 'No'
 
             # Intiailize track maps
             mcstrackmap = np.ones((1, nlat, nlon), dtype=int)*fillvalue
@@ -268,15 +272,21 @@ def mapmcs_pf(zipped_inputs):
             if not os.path.exists(mcstracking_path):
                 os.makedirs(mcstracking_path)
 
+            # Define output fileame
+            mcstrackmaps_outfile = mcstracking_path + 'mcstracks_' + str(filedate) + '_' + str(filetime) + '.nc'
+
+            # Check if file already exists. If exists, delete
+            if os.path.isfile(mcstrackmaps_outfile):
+                os.remove(mcstrackmaps_outfile)
+
             # Define xarray dataset
-            mcsmcstrackmaps_outfile = mcstracking_path + 'mcstracks_' + str(filedate) + '_' + str(filetime) + '.nc'
             output_data = xr.Dataset({'basetime': (['time'], np.arange(1, len(cloudiddata['basetime'].data)+1)), \
                                       'lon': (['nlat', 'nlon'], cloudiddata['longitude']), \
                                       'lat': (['nlat', 'nlon'], cloudiddata['latitude']), \
                                       'nclouds': (['time'], cloudiddata['nclouds'].data), \
                                       'tb': (['time', 'nlat', 'nlon'], cloudiddata['tb'].data), \
                                       'reflectivity': (['time', 'nlat', 'nlon'], pf_reflectivity), \
-                                      'convsf': (['time', 'nlat', 'nlon'], pf_convstrat), \
+                                      'csa': (['time', 'nlat', 'nlon'], pf_convstrat), \
                                       'dbz0height': (['time', 'nlat', 'nlon'], pf_dbz0height), \
                                       'dbz10height': (['time', 'nlat', 'nlon'], pf_dbz10height), \
                                       'dbz20height': (['time', 'nlat', 'nlon'], pf_dbz20height), \
@@ -285,6 +295,7 @@ def mapmcs_pf(zipped_inputs):
                                       'precipitation': (['time', 'nlat', 'nlon'], ra_precipitation), \
                                       'mask': (['time', 'nlat', 'nlon'], pf_mask), \
                                       'cloudnumber': (['time', 'nlat', 'nlon'], cloudiddata['cloudnumber'].data), \
+                                      'cloudtracknumber_nomergesplit': (['time', 'nlat', 'nlon'], mcstrackmap), \
                                       'cloudtracknumber': (['time', 'nlat', 'nlon'], mcstrackmap_mergesplit), \
                                       'pftracknumber': (['time', 'nlat', 'nlon'], mcspfnumbermap_mergesplit), \
                                       'pcptracknumber': (['time', 'nlat', 'nlon'], mcsramap_mergesplit)}, \
@@ -293,8 +304,10 @@ def mapmcs_pf(zipped_inputs):
                                              'nlon': (['nlon'], np.arange(0, nlon))}, \
                                      attrs={'title':'Pixel level of tracked clouds and MCSs', \
                                             'source1': allmcsdata.attrs['source1'], \
-                                            'source2': allmcsdata.attrs['source2'], 'source3'\
+                                            'source2': allmcsdata.attrs['source2'], \
                                             'description': allmcsdata.attrs['description'], \
+                                            'Radar_Data_Present': pfpresent, \
+                                            'Rain_Acccumulation_Data_Present': rapresent, \
                                             'MCS_IR_area_km2': allmcsdata.attrs['MCS_IR_area_km2'], \
                                             'MCS_IR_duration_hr': allmcsdata.attrs['MCS_IR_duration_hr'], \
                                             'MCS_IR_eccentricity': allmcsdata.attrs['MCS_IR_eccentricity'], \
@@ -334,9 +347,9 @@ def mapmcs_pf(zipped_inputs):
             output_data.reflectivity.attrs['long_name'] = 'Radar reflectivity'
             output_data.reflectivity.attrs['units'] = 'dBZ'
 
-            output_data.convsf.attrs['long_name'] = 'Convective-stratiform classification'
-            output_data.convsf.attrs['values'] = '1=Weak, 2=Stratiform, 3=Convective'
-            output_data.convsf.attrs['units'] ='unitless'
+            output_data.csa.attrs['long_name'] = 'Convective-stratiform classification'
+            output_data.csa.attrs['values'] = '0=NAN, 1=LowCloud, 2=MidCloud, 3=ShallowCumulus, 4=IsolateConvective, 5=Stratiform, 6=Convective, 7=TransitionalAnvil, 8=MixAnvil, 9=IceAnvil'
+            output_data.csa.attrs['units'] ='unitless'
 
             output_data.dbz0height.attrs['long_name'] = 'Maximum height of 0 dBZ contour'
             output_data.dbz0height.attrs['units'] = 'km'
@@ -364,6 +377,9 @@ def mapmcs_pf(zipped_inputs):
             output_data.cloudnumber.attrs['comment'] = 'Extent of cloud system is defined using the warm anvil threshold'
             output_data.cloudnumber.attrs['units'] = 'unitless'
 
+            output_data.cloudtracknumber_nomergesplit.attrs['long_name'] = 'Number of the tracked mcs associated with the cloud at a given pixel'
+            output_data.cloudtracknumber_nomergesplit.attrs['units'] = 'unitless'
+
             output_data.cloudtracknumber.attrs['long_name'] = 'Number of the tracked mcs associated with the cloud at a given pixel'
             output_data.cloudtracknumber.attrs['comments'] = 'mcs includes smaller merges and splits'
             output_data.cloudtracknumber.attrs['units'] = 'unitless'
@@ -378,16 +394,16 @@ def mapmcs_pf(zipped_inputs):
 
             # Write netcdf file
             print('')
-            print(mcsmcstrackmaps_outfile)
+            print(mcstrackmaps_outfile)
 
-            output_data.to_netcdf(path=mcsmcstrackmaps_outfile, mode='w', format='NETCDF4_CLASSIC', unlimited_dims='track', \
+            output_data.to_netcdf(path=mcstrackmaps_outfile, mode='w', format='NETCDF4_CLASSIC', unlimited_dims='time', \
                                   encoding={'basetime': {'zlib':True, '_FillValue': fillvalue}, \
                                             'lon': {'zlib':True, '_FillValue': fillvalue}, \
                                             'lat': {'zlib':True, '_FillValue': fillvalue}, \
                                             'nclouds': {'zlib':True, '_FillValue': fillvalue}, \
                                             'tb': {'zlib':True, '_FillValue': fillvalue}, \
                                             'reflectivity': {'zlib':True, '_FillValue': fillvalue}, \
-                                            'convsf': {'zlib':True, '_FillValue': fillvalue}, \
+                                            'csa': {'dtype':'int16', 'zlib':True, '_FillValue': fillvalue}, \
                                             'dbz0height': {'zlib':True, '_FillValue': fillvalue}, \
                                             'dbz10height': {'zlib':True, '_FillValue': fillvalue}, \
                                             'dbz20height': {'zlib':True, '_FillValue': fillvalue}, \
@@ -395,7 +411,8 @@ def mapmcs_pf(zipped_inputs):
                                             'dbz40height': {'zlib':True, '_FillValue': fillvalue}, \
                                             'mask': {'zlib':True, '_FillValue': fillvalue}, \
                                             'precipitation': {'zlib':True, '_FillValue': fillvalue}, \
-                                            'cloudnumber': {'zlib':True, '_FillValue': fillvalue}, \
+                                            'cloudnumber': {'dtype':'int', 'zlib':True, '_FillValue': fillvalue}, \
+                                            'cloudtracknumber_nomergesplit': {'zlib':True, '_FillValue': fillvalue}, \
                                             'cloudtracknumber': {'zlib':True, '_FillValue': fillvalue}, \
                                             'pftracknumber': {'zlib':True, '_FillValue': fillvalue}, \
                                             'pcptracknumber': {'zlib':True, '_FillValue': fillvalue}})
