@@ -11,7 +11,7 @@ import xarray as xr
 # Purpose: Master script for trackig synthetic IR satellite data
 
 # Comments:
-# Features are tracked using 5 sets of code (idclouds, trackclouds_singlefile, get_tracknumbers, calc_sat_trackstats, label_celltrack).
+# Features are tracked using 5 sets of code (idclouds, trackclouds_singlefile, get_tracknumbers, calc_sat_trackstats, la9bel_celltrack).
 # This script control, edgecolors='k', linewidpfdata_pathth=1)
 # Eventually, idclouds and trackclouds_singlefile will be able to run in parallel.
 # If trackclouds_singlefile is run in of tracksingle between 12/20/2009 - 12/31/2009, make two copies of this script, and set stairtdate - enddate (ex: 20091220 - 20091225, 20091225 - 20091231).
@@ -25,7 +25,7 @@ import xarray as xr
 # Set variables describing data, file structure, and tracking thresholds
 
 # Specify which sets of code to run. (1 = run code, 0 = don't run code)
-run_idclouds = 0        # Segment and identify cloud systems
+run_idclouds = 1        # Segment and identify cloud systems
 run_tracksingle = 0     # Track single consecutive cloudid files
 run_gettracks = 0       # Run trackig for all files
 run_finalstats = 0      # Calculate final statistics
@@ -33,6 +33,9 @@ run_identifymcs = 0     # Isolate MCSs
 run_matchpf = 0         # Identify precipitation features with MCSs
 run_robustmcs = 0       # Filter potential mcs cases using nmq radar variables
 run_labelmcs = 1        # Create maps of MCSs
+
+# Set version of cloudid code
+cloudidmethod = 'futyan4'
 
 # Specify version of code using
 cloudid_version = 'v1.0'
@@ -64,6 +67,8 @@ nmaxlinks = 10                             # Maximum number of clouds that any s
 nmaxclouds = 3000                          # Maximum number of clouds allowed to be in one track
 absolutetb_threshs = np.array([160,330])   # k A vector [min, max] brightness temperature allowed. Brightness temperatures outside this range are ignored.
 warmanvilexpansion = 1                     # If this is set to one, then the cold anvil is spread laterally until it exceeds the warm anvil threshold
+mincoldcorepix = 4                         # Minimut number of pixels for the cold core, needed for futyan version 4 cloud identification code. Not used if use futyan version 3.
+smoothwindowdimensions = 10                # Dimension of the boxcar filter used for futyan version 4. Not used in futyan version 3
 
 # Specify MCS parameters
 mcs_mergedir_areathresh = 6e4              # IR area threshold [km^2]
@@ -203,21 +208,25 @@ if run_idclouds == 1:
     list_cloudtbthreshs = np.ones((filestep,4))*cloudtb_threshs
     list_absolutetbthreshs = np.ones(((filestep), 2))*absolutetb_threshs
     list_missthresh = np.ones(filestep)*miss_thresh
+    list_cloudidmethod = [cloudidmethod]*(filestep)
     list_warmanvilexpansion = np.ones(filestep)*warmanvilexpansion
+    list_coldcorethresh = np.ones(filestep)*mincoldcorepix
+    list_smoothsize = [smoothwindowdimensions]*(filestep)
 
-    idclouds_input = zip(rawdatafiles, files_datestring, files_timestring, files_basetime, list_irdatasource, list_datadescription, list_datavariablename, list_cloudidversion, list_trackingoutpath, list_latlonfile, list_latname, list_lonname, list_geolimits, list_startdate, list_enddate, list_pixelradius, list_areathresh, list_cloudtbthreshs, list_absolutetbthreshs, list_missthresh, list_warmanvilexpansion)
+    idclouds_input = zip(rawdatafiles, files_datestring, files_timestring, files_basetime, list_irdatasource, list_datadescription, list_datavariablename, list_cloudidversion, list_trackingoutpath, list_latlonfile, list_latname, list_lonname, list_geolimits, list_startdate, list_enddate, list_pixelradius, list_areathresh, list_cloudtbthreshs, list_absolutetbthreshs, list_missthresh, list_cloudidmethod, list_coldcorethresh, list_smoothsize, list_warmanvilexpansion)
 
     # Call function
     # Serial version
-    #map(idclouds_mergedir, idclouds_input)
+    for ifile in range(0, filestep):
+        idclouds_mergedir(idclouds_input[ifile])
 
-    # Parallel version
-    if __name__ == '__main__':
-        print('Identifying clouds')
-        pool = Pool(processes = 8)
-        pool.map(idclouds_mergedir, idclouds_input)
-        pool.close()
-        pool.join()
+    ## Parallel version
+    #if __name__ == '__main__':
+    #    print('Identifying clouds')
+    #    pool = Pool(processes = 8)
+    #    pool.map(idclouds_mergedir, idclouds_input)
+    #    pool.close()
+    #    pool.join()
 
     cloudid_filebase = irdatasource + '_' + datadescription + '_cloudid' + cloudid_version + '_'
 

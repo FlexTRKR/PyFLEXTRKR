@@ -66,9 +66,10 @@ def idclouds_mergedir(zipped_inputs):
     cloudtb_threshs = zipped_inputs[17]
     absolutetb_threshs = zipped_inputs[18]
     miss_thresh = zipped_inputs[19]
-    warmanvilexpansion = zipped_inputs[20]
-
-    print(datafilepath)
+    cloudidmethod = zipped_inputs[20]
+    mincoldcorepix = zipped_inputs[21]
+    smoothsize = zipped_inputs[22]
+    warmanvilexpansion = zipped_inputs[23]
 
     ##########################################################
     # define constants:
@@ -161,9 +162,12 @@ def idclouds_mergedir(zipped_inputs):
             if np.divide(missingcount, (ny*nx)) < miss_thresh:
                 ######################################################
                 # call idclouds subroutine
-                from subroutine_idclouds import futyan
-
-                clouddata = futyan(out_ir, pixel_radius, cloudtb_threshs, area_thresh, warmanvilexpansion)
+                if cloudidmethod == 'futyan3':
+                    from subroutine_idclouds import futyan3
+                    clouddata = futyan3(out_ir, pixel_radius, cloudtb_threshs, area_thresh, warmanvilexpansion)
+                elif cloudidmethod == 'futyan4':
+                    from subroutine_idclouds import futyan4
+                    clouddata = futyan4(out_ir, pixel_radius, cloudtb_threshs, area_thresh, mincoldcorepix, smoothsize, warmanvilexpansion)
 
                 ######################################################
                 # separate output from futyan into the separate variables
