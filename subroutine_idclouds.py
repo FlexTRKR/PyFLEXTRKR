@@ -8,7 +8,7 @@
 # pixel_radius - radius of pixel in km
 # tb_threshs - brightness temperature thresholds datasource, datadescription,
 # area_thresh - minimum area threshold of a feature [km^2]
-# warmanvilexpansion - 1 = expand cold clouds out to warm anvils. 0 = Don't expand.
+# warmanvilexpncoldanvilpixansion - 1 = expand cold clouds out to warm anvils. 0 = Don't expand.
 
 
 # Output: (Concatenated into one dictionary)
@@ -52,42 +52,42 @@ def futyan4(ir, pixel_radius, tb_threshs, area_thresh, mincorecoldpix, smoothsiz
 
     ######################################################################
     # Use thresholds identify pixels containing cold core, cold anvil, and warm anvil. Also create arrays with a flag for each type and fill in cloudid array. Cores = 1. Cold anvils = 2. Warm anvils = 3. Other = 4. Clear = 5. Areas do not overlap
-    cloudid = np.zeros((ny, nx), dtype=int)
+    final_cloudid = np.zeros((ny, nx), dtype=int)
 
-    coldcore_flag = np.zeros((ny, nx), dtype=int)
-    coldcore_indices = np.where(ir < thresh_core)
-    ncoldcorepix = np.shape(coldcore_indices)[1]
-    if ncoldcorepix > 0:
-        coldcore_flag[coldcore_indices] = 1
-        cloudid[coldcore_indices] = 1
+    core_flag = np.zeros((ny, nx), dtype=int)
+    core_indices = np.where(ir < thresh_core)
+    ncorepix = np.shape(core_indices)[1]
+    if ncorepix > 0:
+        core_flag[core_indices] = 1
+        final_cloudid[core_indices] = 1
 
     coldanvil_flag = np.zeros((ny, nx), dtype=int)
     coldanvil_indices = np.where((ir >= thresh_core) & (ir < thresh_cold))
     ncoldanvilpix = np.shape(coldanvil_indices)[1]
     if ncoldanvilpix > 0:
         coldanvil_flag[coldanvil_indices] = 2
-        cloudid[coldanvil_indices] = 2
+        final_cloudid[coldanvil_indices] = 2
 
     warmanvil_flag = np.zeros((ny, nx), dtype=int)
     warmanvil_indices = np.where((ir >= thresh_cold) & (ir < thresh_warm))
     nwarmanvilpix = np.shape(warmanvil_indices)[1]
     if nwarmanvilpix > 0:
         warmanvil_flag[coldanvil_indices] = 3
-        cloudid[warmanvil_indices] = 3
+        final_cloudid[warmanvil_indices] = 3
     
     othercloud_flag = np.zeros((ny, nx), dtype=int)
     othercloud_indices = np.where((ir >= thresh_warm) & (ir < thresh_cloud))
     nothercloudpix = np.shape(othercloud_indices)[1]
     if nothercloudpix > 0:
         othercloud_flag[othercloud_indices] = 4
-        cloudid[othercloud_indices] = 4
+        final_cloudid[othercloud_indices] = 4
 
     clear_flag = np.zeros((ny, nx), dtype=int)
     clear_indices = np.where(ir >= thresh_cloud)
     nclearpix = np.shape(clear_indices)[1]
     if nclearpix > 0:
         clear_flag[clear_indices] = 5
-        cloudid[clear_indices] = 5
+        final_cloudid[clear_indices] = 5
 
     #################################################################
     # Smooth IR data prior to identifying cores using a boxcar filter. Along the edges the boundary elements come from the nearest edge pixel
@@ -95,19 +95,18 @@ def futyan4(ir, pixel_radius, tb_threshs, area_thresh, mincorecoldpix, smoothsiz
 
     #################################################################
     # Find cold cores in smoothed data
-    smoothcoldcore_flag = np.zeros((ny, nx), dtype=int)
-    smoothcoldcore_indices = np.where(smoothir < thresh_core)
-    nsmoothcoldcorepix = np.shape(smoothcoldcore_indices)[1]
-    if ncoldcorepix > 0:
-        smoothcoldcore_flag[smoothcoldcore_indices] = 1
+    smoothcore_flag = np.zeros((ny, nx), dtype=int)
+    smoothcore_indices = np.where(smoothir < thresh_core)
+    nsmoothcorepix = np.shape(smoothcore_indices)[1]
+    if ncorepix > 0:
+        smoothcore_flag[smoothcore_indices] = 1
 
     ##############################################################
     # Label cold cores in smoothed data
-    labelcore_number2d = label(smoothcoldcore_flag)
+    labelcore_number2d, nlabelcores = label(smoothcore_flag)
 
     # Check is any cores have been identified
-    nclouds = 0
-    nlabelcores = np.nanmax(labelcore_number2d)
+    ncorecold = 0
     if nlabelcores > 0:
 
         #############################################################
@@ -120,8 +119,8 @@ def futyan4(ir, pixel_radius, tb_threshs, area_thresh, mincorecoldpix, smoothsiz
 
         # Check if any of the cores passed the size threshold test
         ivalidcores = np.array(np.where(labelcore_npix > 0))[0, :]
-        nvalidcores = len(ivalidcores)
-        if nvalidcores > 0:
+        ncores = len(ivalidcores)
+        if ncores > 0:
             # Isolate cores that satisfy size threshold
             labelcore_number1d = np.copy(ivalidcores) + 1 # Add one since label numbers start at 1 and indices, which validcores reports starts at 0
             labelcore_npix = labelcore_npix[ivalidcores]
@@ -130,29 +129,24 @@ def futyan4(ir, pixel_radius, tb_threshs, area_thresh, mincorecoldpix, smoothsiz
             # Sort sizes largest to smallest
             order = np.argsort(labelcore_npix)
             order = order[::-1]
-            sortedlabelcore_npix = np.copy(labelcore_npix[order])
+            sortedcore_npix = np.copy(labelcore_npix[order])
 
             # Re-number cores 
-            sortedlabelcore_number1d = np.copy(labelcore_number1d[order])
+            sortedcore_number1d = np.copy(labelcore_number1d[order])
 
-            sortedlabelcore_number2d = np.zeros((ny, nx), dtype=int)
+            sortedcore_number2d = np.zeros((ny, nx), dtype=int)
             corestep = 0
-            for isortedcore in range(0, nvalidcores):
-                sortedcore_indices = np.where(labelcore_number2d == sortedlabelcore_number1d[isortedcore])
+            for isortedcore in range(0, ncores):
+                sortedcore_indices = np.where(labelcore_number2d == sortedcore_number1d[isortedcore])
                 nsortedcoreindices = np.shape(sortedcore_indices)[1]
-                if nsortedcoreindices == sortedlabelcore_npix[isortedcore]:
+                if nsortedcoreindices == sortedcore_npix[isortedcore]:
                     corestep = corestep + 1
-                    sortedlabelcore_number2d[sortedcore_indices] = np.copy(corestep)
-
-            # Update core arrays
-            labelcore_number2d = np.copy(sortedlabelcore_number2d)
-            nlabelcores = np.copy(nvalidcores)
-            labelcore_npix = np.copy(sortedlabelcore_npix)
+                    sortedcore_number2d[sortedcore_indices] = np.copy(corestep)
 
             #####################################################
             # Spread cold cores outward until reach cold anvil threshold. Generates cold anvil.
-            labelcorecold_number2d = np.copy(labelcore_numbed2d)
-            ncorecoldpix = np.copy(ncorepix)
+            labelcorecold_number2d = np.copy(sortedcore_number2d)
+            ncorecoldpix = np.copy(sortedcore_npix)
 
             keepspreading = 1
             # Keep looping through dilating code as long as at least one feature is growing. At this point limit it to 20 dilations. Remove this once use real data.
@@ -160,7 +154,7 @@ def futyan4(ir, pixel_radius, tb_threshs, area_thresh, mincorecoldpix, smoothsiz
                 keepspreading = 0
                 
                 # Loop through each feature
-                for ifeature in range(1, nlabelcores+1):
+                for ifeature in range(1, ncores+1):
                     # Create map of single feature
                     featuremap = np.copy(labelcorecold_number2d)
                     featuremap[labelcorecold_number2d != ifeature] = 0
@@ -221,14 +215,14 @@ def futyan4(ir, pixel_radius, tb_threshs, area_thresh, mincorecoldpix, smoothsiz
                     labelcorecold_number2d[expansionindices[:,0]+miny, expansionindices[:,1]+minx] = ifeature
 
                     # Add the number of expanded pixels to pixel count
-                    ncorecoldpix[ifeature-1] = len(expanxisionindices[:, 0]) + ncorecoldpix[ifeature-1]
+                    ncorecoldpix[ifeature-1] = len(expansionindices[:, 0]) + ncorecoldpix[ifeature-1]
 
                     # Count the number of dilated pixels. Add to the keepspreading variable. As long as this variables is > 0 the code continues to run the dilating portion. Also at this point have a requirement that can't dilate more than 20 times. This shoudl be removed when have actual data.
                     keepspreading = keepspreading + len(np.extract(expansionzone == 1, expansionzone))
 
         #############################################################
         # Create blank core and cold anvil arrays if no cores present
-        elif nvalidcores == 0:
+        elif ncores == 0:
             labelcorecold_number2d = np.zeros((ny, nx), dtype=int)
             ncorecoldpix = []
 
@@ -237,14 +231,13 @@ def futyan4(ir, pixel_radius, tb_threshs, area_thresh, mincorecoldpix, smoothsiz
 
         # Find indices that satisfy cold anvil threshold or convective core threshold and is not labeled
         isolated_flag = np.zeros((ny, nx), dtype=int)
-        isolated_indices = np.where((labelcorecold_number2d == 0) & ((coldanvil_flag > 0) | (coldcore_flag > 0)))
+        isolated_indices = np.where((labelcorecold_number2d == 0) & ((coldanvil_flag > 0) | (core_flag > 0)))
         nisolated = np.shape(isoalted_indices)[1]
         if nisolated > 0:
             isolated_flag[isolated_indices] = 1
 
         # Label isolated cold cores or cold anvils
-        labelisolated_number2d = label(isolated_flag)
-        nlabelisolated = np.nanmax(labelisolated_number2d)
+        labelisolated_number2d, nlabelisolated = label(isolated_flag)
 
         # Check if any features have been identified
         if nlabelisolated > 0:
@@ -270,43 +263,249 @@ def futyan4(ir, pixel_radius, tb_threshs, area_thresh, mincorecoldpix, smoothsiz
                 # Sort sizes largest to smallest
                 order = np.argsort(labelisolated_npix)
                 order = order[::-1]
-                sortedlabelisolated_npix = np.copy(labelisolated_npix[order])
+                sortedisolated_npix = np.copy(labelisolated_npix[order])
 
                 # Re-number cores 
-                sortedlabelisolated_number1d = np.copy(labelisolated_number1d[order])
-
-                sortedlabelisolated_number2d = np.zeros((ny, nx), dtype=int)
+                sortedisolated_number1d = np.copy(labelisolated_number1d[order])
+                
+                sortedisolated_number2d = np.zeros((ny, nx), dtype=int)
                 isolatedstep = 0
                 for isortedisolated in range(0, nvalidisolated):
-                    sortedisolated_indices = np.where(labelisolated_number2d == sortedlabelisolated_number1d[isortedisolated])
+                    sortedisolated_indices = np.where(labelisolated_number2d == sortedisolated_number1d[isortedisolated])
                     nsortedisolatedindices = np.shape(sortedisolated_indices)[1]
-                    if nsortedisolatedindices == sortedlabelcore_npix[isortedisolated]:
+                    if nsortedisolatedindices == sortedcore_npix[isortedisolated]:
                         isolatedstep = corestep + 1
-                        sortedlabelisolated_number2d[sortedisolated_indices] = np.copy(isolatedstep)
+                        sortedisolated_number2d[sortedisolated_indices] = np.copy(isolatedstep)
+        else:
+            sortedisolated_number2d = np.zeros((ny, nx), dtype=int)
+            sortedisolated_npix = []
 
-                ##############################################################
-                # Combine cases with cores and cold anvils with those that those only have cold anvils
+        ##############################################################
+        # Combine cases with cores and cold anvils with those that those only have cold anvils
 
-                # Add feature to core - cold anvil map giving it a number one greater that tne number of valid cores. These cores are after those that have a cold anvil.
-                labelisolated_indices = np.where(sortedlabelisolated_number2d > 0)
-                nlabelisolatedindices = np.shape(labelisolated_indices)[1]
-                if nlabelisolatedindices > 0:
-                    labelcorecold_number2d[labelisolated_indices] = sortedlabelisolated_number2d[labelisolated_indices] + np.copy(nvalidcores)
+        # Add feature to core - cold anvil map giving it a number one greater that tne number of valid cores. These cores are after those that have a cold anvil.
+        corecoldisolated_number2d = np.copy(sortedcorecold_number2d)
 
-                # Combine the npix data for cases with cores and cold anvils with those that those only have cold anvils
-                ncorecoldisolatedpix = [ncorecoldpix, sortedlabelisolated_npix]
-                nclouds = np.nanmax(ncorecoldisolatedpix)
+        sortedisolated_indices = np.where(sortedisolated_number2d > 0)
+        nsortedisolatedindices = np.shape(sortedisolated_indices)[1]
+        if nsortedisolatedindices > 0:
+            corecoldisolated_number2d[labelisolated_indices] = np.copy(sortedisolated_number2d[labelisolated_indices]) + np.copy(ncores)
+                    
+        # Combine the npix data for cases with cores and cold anvils with those that those only have cold anvils
+        corecoldisolated_npix = np.hstack((sortedcore_npix, sortedisolated_npix))
+        ncorecold = np.nanmax(corecoldisolated_number2d)
+            
+        # Initialize cloud numbers
+        corecoldisolated_number1d = np.arange(1, ncorecold+1)
 
-                # Initialize cloud numbers
-                corecoldisolated_number1d = np.arange(1, nclouds+1)
+        # Sort clouds by size
+        order = np.argsort(corecoldisolated_npix)
+        order = order[::-1]
+        sortedcorecoldisolated_npix = np.copy(corecoldisolated_npix[order])
+        sortedcorecoldisolated_number1d = np.copy(corecoldisolated_number1d[order])
+            
+        # Re-number cores
+        corecoldisolated_number2d = np.zeros((ny, nx), dtype=int)
+        ncorecoldisolatedpix = np.ones(ncorecold, dtype=int)*fillvalue
+        final_corenpix = np.ones(ncorecold, dtype=int)*fillvalue
+        final_coldnpix = np.ones(ncorecold, dtype=int)*fillvalue
+        final_warmnpix = np.ones(ncorecold, dtype=int)*fillvalue
+        featurecount = 0
+        for ifeature in range(0, ncorecold):
+            feature_indices = np.where(corecoldisolated_number2d == sortedcorecoldisolated_number2d[ifeature])
+            nfeatureindices = np.shape(feature_indices)[1]
+            
+            if nfeatureindices == sortedcorecoldisolated_npix[ifeature]:
+                featurecount = featurecount + 1
+                corecoldisolated_number2d[feature_indices] = np.copy(featurecount)
+                ncorecoldisolatedpix[ifeature] = np.copy(nfeatureindices)
+                    
+                temp_core = np.copy(core_flag[corecoldisolated_number2d])
+                final_corenpix[featurecount-1] = np.nansum(temp_core)
 
-                # Sort clouds by size
+                temp_coldanvil = np.copy(coldanvil_flag[corecoldisolated_number2d])
+                final_coldnpix[featurecount-1] = np.sum(temp_coldanvil)
 
+        ##############################################
+        # Save final matrices
+        final_corecoldnumber = np.copy(corecoldisolated_number2d)
+        final_ncorecold = np.copy(ncorecold)
 
+        final_corenpix = final_corenpix[0:featurecount]
+        final_coldnpix = final_coldnpix[0:featurecount]
 
+    ######################################################################
+    # If no core is found, use cold anvil threshold to identify features
+    else:
+        #################################################
+        # Label regions with cold anvils and cores
+        corecold_flag = core_flag + coldanvil_flag
+        corecold_number2d, ncorecold = label(coldanvil_flag)
 
+        ##########################################################
+        # Loop through clouds and only keep those where core + cold anvil exceed threshold
+        if nlabelcorecold > 0 :
+            labelcorecold_number2d = np.zeros((ny, nx), dtype=int)
+            labelcore_npix = np.ones(ncorecold, dtype=int)*fillvalue
+            labelcold_npix = np.ones(ncorecold, dtype=int)*fillvalue
+            labelwarm_npix = np.ones(ncorecold, dtype=int)*fillvalue
+            featurecount = 0
 
+            for ifeature in range (1, ncorecold+1):
+                feature_indices = np.where(corecold_number2d == ifeature)
+                nfeatureindices = np.shape(feature_indices)[1]
 
+                if nfeatureindices > 0:
+                    temp_core = np.copy(core_flag[feature_indices])
+                    temp_corenpix = np.nansum(temp_core)
+
+                    temp_cold = np.copy(coldanvil_flag[feature_indices])
+                    temp_coldnpix = np.nansum(temp_cold)
+
+                    if temp_corenpix + temp_coldnpix >= nthresh:
+                        featurecount = featurecount + 1
+
+                        labelcorecold_number2d[feature_indices] = np.copy(featurecount)
+                        labelcore_npix[featurecount-1] = np.copy(temp_corenpix)
+                        labelcold_npix[featurecount-1] = np.copy(temp_coldnpix)
+
+            ###############################
+            # Update feature count
+            ncorecold = np.copy(featurecount)
+
+            ###########################################################
+            # Reduce size of final arrays so only as long as number of valid features
+            if ncorecold > 0:
+                labelcore_npix = labelcore_npix[0:ncorecold]
+                labelcold_npix = labelcold_npix[0:ncorecold]
+                labelwarm_npix = labelwarm_npix[0:ncorecold]
+
+            ##########################################################
+            # Reorder base on size, largest to smallest
+            if ncorecold > 0:
+                labelcorecold_npix = labelcore_npix + labelcold_npix + labelwarm_npix
+                order = np.argsort(labelcorecold_npix)
+                order = order[::-1]
+                sortedcore_npix = np.copy(labelcore_npix[order])
+                sortedcold_npix = np.copy(labelcold_npix[order])
+                sortedwarm_npix = np.copy(labelwarm_npix[order])
+
+                # Re-number cores 
+                sortedcorecold_number1d = np.copy(labelcorecold_number1d[order])
+                
+                sortedcorecold_number2d = np.zeros((ny, nx), dtype=int)
+                corecoldstep = 0
+                for isortedcorecold in range(0, ncorecold):
+                    sortedcorecold_indices = np.where(labelcorecold_number2d == sortedcorecold_number1d[icorecold])
+                    nsortedcorecoldindices = np.shape(sortlabelcorecold_indices)[1]
+                    if nsortedcorecoldindices == sortedcore_npix[isortedcorecold]:
+                        corecoldstep = corecoldstep + 1
+                        sortedcorecold_number2d[sortedcorecold_indices] = np.copy(corecoldstep)                
+
+            ##############################################
+            # Save final matrices
+            final_corecoldnumber = np.copy(sortedcorecold_number2d)
+            final_ncorecold = np.copy(ncorecold)
+            finalcore_npix = np.copy(sortedcore_npix)
+            finalcold_npix = np.sopy(sortedcold_npix)
+            finalwarm_npix = np.copu(sortedwarm_npix)
+
+            finalcorecold_npix = finalcore_npix + finalcold_npix
+
+    ###################################################
+    # Get warm anvils, if applicable
+    if final_ncorecold > 0:
+        if warmanvilexpansion == 1:
+            labelcorecoldwarm_number2d = np.copy(final_corecoldnumber)
+            ncorecoldwarmpix = np.copy(sortedcorecold_npix)
+
+            keepspreading = 1
+            # Keep looping through dilating code as long as at least one feature is growing. At this point limit it to 20 dilations. Remove this once use real data.
+            while keepspreading > 0:
+                keepspreading = 0
+
+                # Loop through each feature
+                for ifeature in range(1,final_ncorecold+1):
+                    # Create map of single feature
+                    featuremap = np.copy(labelcorecoldwarm_number2d)
+                    featuremap[labelcorecoldwarm_number2d != ifeature] = 0
+                    featuremap[labelcorecoldwarm_number2d == ifeature] = 1
+
+                    # Find maximum extent of the of the feature
+                    extenty = np.nansum(featuremap, axis=1)
+                    extenty = np.array(np.where(extenty > 0))[0,:]
+                    miny = extenty[0]
+                    maxy = extenty[-1]
+
+                    extentx = np.nansum(featuremap, axis=0)
+                    extentx = np.array(np.where(extentx > 0))[0,:]
+                    minx = extentx[0]
+                    maxx = extentx[-1]
+
+                    # Subset ir and map data to smaller region around feature. This reduces computation time. Add a 10 pixel buffer around the edges of the feature.  
+                    if minx <= 10:
+                        minx = 0
+                    else:
+                        minx = minx - 10
+                            
+                    if maxx >= nx - 10:
+                        maxx = nx
+                    else:
+                        maxx = maxx + 11
+
+                    if miny <= 10:
+                        miny = 0
+                    else:
+                        miny = miny - 10
+
+                    if maxy >= ny - 10:
+                        maxy = ny
+                    else:
+                        maxy = maxy + 11
+
+                    irsubset = ir[miny:maxy, minx:maxx]
+                    fullsubset = labelcorecoldwarm_number2d[miny:maxy, minx:maxx]
+                    featuresubset = featuremap[miny:maxy, minx:maxx]
+
+                    # Dilate cloud region
+                    dilationstructure = generate_binary_structure(2,1)  # Defines shape of growth. This grows one pixel as a cross
+
+                    dilatedsubset = binary_dilation(featuresubset, structure=dilationstructure, iterations=1).astype(featuremap.dtype)
+                        
+                    # Isolate region that was dilated.
+                    expansionzone = dilatedsubset - featuresubset
+
+                    # Only keep pixels in dilated regions that are below the warm anvil threshold and are not associated with another feature
+                    expansionzone[np.where((expansionzone == 1) & (fullsubset != 0))] = 0
+                    expansionzone[np.where((expansionzone == 1) & (irsubset >= thresh_warm))] = 0
+                    
+                    # Find indices of accepted dilated regions
+                    expansionindices = np.column_stack(np.where(expansionzone == 1))
+
+                    # Add the accepted dilated region to the map of the cloud numbers
+                    labelcorecoldwarm_number2d[expansionindices[:,0]+miny, expansionindices[:,1]+minx] = ifeature
+
+                    # Add the number of expanded pixels to pixel count
+                    ncorecoldwarmpix[ifeature-1] = len(expansionindices[:, 0]) + ncorecoldwarmpix[ifeature-1]
+
+                    # Count the number of dilated pixels. Add to the keepspreading variable. As long as this variables is > 0 the code continues to run the dilating portion. Also at this point have a requirement that can't dilate more than 20 times. This shoudl be removed when have actual data.
+                    keepspreading = keepspreading + len(np.extract(expansionzone == 1, expansionzone))
+
+            ##############################################################################
+            # Save final matrices
+            final_corecoldwarmnumber = np.copy(labelcorecoldwarm_number2d)
+            final_ncorecoldwarmpix = np.copy(ncorecoldwarmpix)
+            final_nwarmpix = ncorecoldwarmpix - final_ncorecoldpix
+
+        #######################################################################
+        # If not expanding to warm anvil just copy core-cold data
+        else:
+            final_corecoldwarmnumber = np.copy(final_corecoldnumber)
+            final_ncorecoldwarmpix = np.copy(final_ncorecoldpix)
+
+        ##################################################################
+        # Output data. Only done if core-cold exist in this file
+        return {'final_nclouds':final_ncorecold, 'final_ncorepix':final_ncorepix, 'final_ncoldpix':final_ncoldpix, 'final_ncorecoldpix':final_ncorecoldpix, 'final_nwarmpix':final_nwarmpix, 'final_cloudnumber':final_corecoldwarmnumber, 'final_cloudtype':final_cloudid, 'final_convcold_cloudnumber':final_corecoldnumber}
 
 
 
@@ -467,6 +666,9 @@ def futyan3(ir, pixel_radius, tb_threshs, area_thresh, warmanvilexpansion):
 
                         # Add the accepted dilated region to the map of the cloud numbers
                         final_cloudnumber[expansionindices[:,0]+miny, expansionindices[:,1]+minx] = ifeature
+
+                        # Add the number of expanded pixels to pixel count
+                        ncorecoldpix[ifeature-1] = len(expanxisionindices[:, 0]) + ncorecoldpix[ifeature-1]
 
                         # Count the number of dilated pixels. Add to the keepspreading variable. As long as this variables is > 0 the code continues to run the dilating portion. Also at this point have a requirement that can't dilate more than 20 times. This shoudl be removed when have actual data.
                         keepspreading = keepspreading + len(np.extract(expansionzone == 1, expansionzone))
