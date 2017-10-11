@@ -217,16 +217,16 @@ if run_idclouds == 1:
 
     # Call function
     # Serial version
-    for ifile in range(0, filestep):
-        idclouds_mergedir(idclouds_input[ifile])
+    #for ifile in range(0, filestep):
+    #    idclouds_mergedir(idclouds_input[ifile])
 
-    ## Parallel version
-    #if __name__ == '__main__':
-    #    print('Identifying clouds')
-    #    pool = Pool(processes = 8)
-    #    pool.map(idclouds_mergedir, idclouds_input)
-    #    pool.close()
-    #    pool.join()
+    # Parallel version
+    if __name__ == '__main__':
+        print('Identifying clouds')
+        pool = Pool(processes = 8)
+        pool.map(idclouds_mergedir, idclouds_input)
+        pool.close()
+        pool.join()
 
     cloudid_filebase = irdatasource + '_' + datadescription + '_cloudid' + cloudid_version + '_'
 
