@@ -309,34 +309,35 @@ def filtermcs_mergedir_nmq(stats_path, pfstats_filebase, startdate, enddate, tim
 
                         ilm_cycle[isfarea[0]:isfarea[-1]+1] = 4 # Time period of mature mcs
                     else:
-                        matureindex = isfarea[np.array(np.where(isfarea == iccline[1] + 2))[0, 0]]
-                        ilm_index[3] = np.copy(matureindex)
-                        ilm_cycle[iccline[1]:matureindex] = 3 # Time period of organized cells before maturation
+                        matureindex = isfarea[np.array(np.where(isfarea == iccline[1] + 2))[0, :]]
+                        if len(matureindex) > 0:
+                            ilm_index[3] = np.copy(matureindex[0])
+                            ilm_cycle[iccline[1]:matureindex[0]] = 3 # Time period of organized cells before maturation
 
-                        ilm_cycle[matureindex:isfarea[-1]+1] = 4 # Time period of mature mcs
+                            ilm_cycle[matureindex[0]:isfarea[-1]+1] = 4 # Time period of mature mcs
 
-                    #if isfarea[0] > iccline[1] + 2:
-                    #    ilm_index[3] = isfarea[0] # Start of mature MCS
-                    #    ilm_cycle[iccline[1]:isfarea[0]] = 3 # Time period of organized cells before maturation
+                            #if isfarea[0] > iccline[1] + 2
+                            #    ilm_index[3] = isfarea[0] # Start of mature MCS
+                            #    ilm_cycle[iccline[1]:isfarea[0]] = 3 # Time period of organized cells before maturation
+                        
+                            #    ilm_cycle[isfarea[0]:isfarea[-1]+1] = 4 # Time period of mature mcs
+                            #else:
+                            #    if nsfarea > 3:
+                            #        ilm_index[3] = isfarea[3] # Start of mature MCS
+                            #        ilm_cycle[iccline[1]:isfarea[3]] = 3 # Time period of organized cells before maturation
+                    
+                            #        ilm_cycle[isfarea[3]:isfarea[-1]+1] = 4 # Time period of mature MCS
 
-                    #    ilm_cycle[isfarea[0]:isfarea[-1]+1] = 4 # Time period of mature mcs
-                    #else:
-                    #    if nsfarea > 3:
-                    #        ilm_index[3] = isfarea[3] # Start of mature MCS
-                    #        ilm_cycle[iccline[1]:isfarea[3]] = 3 # Time period of organized cells before maturation
+                            #print(isfarea)
+                            #print(iccline)
+                            #print(iccarea)
+                            #print(ilm_index)
+                            #print(ilm_cycle)
+                            #raw_input('check 2')
 
-                    #        ilm_cycle[isfarea[3]:isfarea[-1]+1] = 4 # Time period of mature MCS
-
-                    #print(isfarea)
-                    #print(iccline)
-                    #print(iccarea)
-                    #print(ilm_index)
-                    #print(ilm_cycle)
-                    #raw_input('check 2')
-
-                    # Label dissipating times. Buy default this is all times after the mature stage
-                    ilm_index[4] =  isfarea[-1]+1 
-                    ilm_cycle[isfarea[-1]+1:ilm_irtracklength+1] = 5 # Time period of dissipation
+                            # Label dissipating times. Buy default this is all times after the mature stage
+                            ilm_index[4] =  isfarea[-1]+1 
+                            ilm_cycle[isfarea[-1]+1:ilm_irtracklength+1] = 5 # Time period of dissipation
 
                 #print(isfarea)
                 #print(iccline)

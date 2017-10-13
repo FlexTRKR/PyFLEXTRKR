@@ -148,7 +148,7 @@ def identifypf_mergedir_nmq(mcsstats_filebase, cloudid_filebase,  pfdata_filebas
                 # Generate date file names
                 ittdatetimestring = ''.join(ittdatetimestring)
                 cloudid_filename = cloudidtrack_path + cloudid_filebase + ittdatetimestring + '.nc'
-                radar_filename = pfdata_path + pfdata_filebase + ittdatetimestring + '00.nc'
+                radar_filename = pfdata_path + pfdata_filebase + ittdatetimestring[0:8] + '-' + ittdatetimestring[9::] + '00.nc'
                 rainaccumulation_filename = rainaccumulation_path + rainaccumulation_filebase + ittdatetimestring[0:8] + '.' + ittdatetimestring[9::] + '00.nc'
 
                 statistics_outfile = stats_path + 'mcs_tracks_'  + nmqdatasource + '_' + startdate + '_' + enddate + '.nc'
@@ -689,7 +689,7 @@ def identifypf_mergedir_nmq(mcsstats_filebase, cloudid_filebase,  pfdata_filebas
                                         radar_sfavgrainrate[it, itt] = np.nanmean(spfsfrainrate[np.where(spfrainrate[0:nradar_save] != fillvalue)])
 
                 else:
-                    print('One or both files do not exist: ' + cloudidfilename + ', ' + pfdata_filename)
+                    print('One or both files do not exist: ' + cloudid_filename + ', ' + pfdata_filename)
                                     
             else:
                 print(ittdatetimestring)

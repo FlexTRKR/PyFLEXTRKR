@@ -396,8 +396,6 @@ def trackstats_sat(datasource, datadescription, pixel_radius, latlon_file, geoli
     # Correct merger and split cloud numbers
     adjusted_finaltrack_corecold_mergenumber = np.ones(np.shape(finaltrack_corecold_mergenumber))*fillvalue
     adjusted_finaltrack_corecold_splitnumber = np.ones(np.shape(finaltrack_corecold_mergenumber))*fillvalue
-    np.set_printoptions(threshold=np.inf)
-    print(cloudindexpresent)
     for it in range(0, numtracks):
         mergey, mergex = np.array(np.where(finaltrack_corecold_mergenumber == cloudindexpresent[it]+1))
         adjusted_finaltrack_corecold_mergenumber[mergey, mergex] = it+1

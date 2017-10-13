@@ -26,12 +26,12 @@ import xarray as xr
 
 # Specify which sets of code to run. (1 = run code, 0 = don't run code)
 run_idclouds = 1        # Segment and identify cloud systems
-run_tracksingle = 0     # Track single consecutive cloudid files
-run_gettracks = 0       # Run trackig for all files
-run_finalstats = 0      # Calculate final statistics
-run_identifymcs = 0     # Isolate MCSs
-run_matchpf = 0         # Identify precipitation features with MCSs
-run_robustmcs = 0       # Filter potential mcs cases using nmq radar variables
+run_tracksingle = 1     # Track single consecutive cloudid files
+run_gettracks = 1       # Run trackig for all files
+run_finalstats = 1      # Calculate final statistics
+run_identifymcs = 1     # Isolate MCSs
+run_matchpf = 1         # Identify precipitation features with MCSs
+run_robustmcs = 1       # Filter potential mcs cases using nmq radar variables
 run_labelmcs = 1        # Create maps of MCSs
 
 # Set version of cloudid code
@@ -223,7 +223,7 @@ if run_idclouds == 1:
     # Parallel version
     if __name__ == '__main__':
         print('Identifying clouds')
-        pool = Pool(processes = 8)
+        pool = Pool()
         pool.map(idclouds_mergedir, idclouds_input)
         pool.close()
         pool.join()
@@ -294,15 +294,15 @@ if run_tracksingle == 1:
     trackclouds_input = zip(cloudidfiles[0:-1], cloudidfiles[1::], cloudidfiles_datestring[0:-1], cloudidfiles_datestring[1::], cloudidfiles_timestring[0:-1], cloudidfiles_timestring[1::], cloudidfiles_basetime[0:-1], cloudidfiles_basetime[1::], list_trackingoutpath, list_trackversion, list_timegap, list_nmaxlinks, list_othresh, list_startdate, list_enddate)
 
     # Serial version
-    map(trackclouds_mergedir, trackclouds_input)
+    #map(trackclouds_mergedir, trackclouds_input)
 
     # parallelize version
-    #if __name__ == '__main__':
-    #    print('Tracking clouds between single files')
-    #    pool = Pool(processes = 8)
-    #    pool.map(trackclouds_mergedir, idclouds_input)
-    #    pool.close()
-    #    pool.join()
+    if __name__ == '__main__':
+        print('Tracking clouds between single files')
+        pool = Pool()
+        pool.map(trackclouds_mergedir, idclouds_input)
+        pool.close()
+        pool.join()
 
     singletrack_filebase = 'track' + track_version + '_'
 
@@ -454,7 +454,7 @@ if run_labelmcs == 1:
 
         if __name__ == '__main__':
             print('Creating maps of tracked MCSs')
-            pool = Pool(processes = 1)
+            pool = Pool()
             pool.map(mapmcs_pf, robustmcsmap_input)
             pool.close()
             pool.join()
