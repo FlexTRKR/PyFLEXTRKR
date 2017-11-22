@@ -10,6 +10,7 @@ def identifymcs_mergedir(statistics_filebase, stats_path, startdate, enddate, ti
     import time
     import os
     import sys
+    np.set_printoptions(threshold=np.inf)
 
     ##########################################################################
     # Load statistics file
@@ -35,8 +36,8 @@ def identifymcs_mergedir(statistics_filebase, stats_path, startdate, enddate, ti
     trackstat_npix_cold = allstatdata.variables['ncoldanvil'][:] # Number of pixels in the cold anvil
     trackstat_meanlat = allstatdata.variables['meanlat'][:] # Mean latitude of the core and cold anvil
     trackstat_meanlon = allstatdata.variables['meanlon'][:] # Mean longitude of the core and cold anvil
-    tb_coldanvil = Dataset.getncattr(allstatdata, 'tb_coldavil') # Brightness temperature threshold for cold anvil
-    pixel_radius = Dataset.getncattr(allstatdata, 'pixel_radisu_km') # Radius of one pixel in dataset
+    tb_coldanvil = Dataset.getncattr(allstatdata, 'tb_coldanvil') # Brightness temperature threshold for cold anvil
+    pixel_radius = Dataset.getncattr(allstatdata, 'pixel_radius_km') # Radius of one pixel in dataset
     source = str(Dataset.getncattr(allstatdata, 'source'))
     description = str(Dataset.getncattr(allstatdata, 'description'))
 
@@ -189,10 +190,10 @@ def identifymcs_mergedir(statistics_filebase, stats_path, startdate, enddate, ti
                 mergingstatus = np.copy(trackstat_status[mergefile, :])
                 mergingdatetime = np.copy(trackstat_datetime[mergefile, :, :])
 
-                mergingstatus = mergingstatus[mergingcloudnumber != fillvalue]
-                mergingdatetime = mergingdatetime[mergingcloudnumber != fillvalue]
-                mergingbasetime = mergingbasetime[mergingcloudnumber != fillvalue]
-                mergingcloudnumber = mergingcloudnumber[mergingcloudnumber != fillvalue]
+                #mergingstatus = mergingstatus[mergingcloudnumber != fillvalue]
+                #mergingdatetime = mergingdatetime[mergingcloudnumber != fillvalue]
+                #mergingbasetime = mergingbasetime[mergingcloudnumber != fillvalue]
+                #mergingcloudnumber = mergingcloudnumber[mergingcloudnumber != fillvalue]
 
                 # Get data about MCS track
                 mcsbasetime = np.copy(trackstat_basetime[int(mcstracknumbers[imcs])-1,0:int(mcslength[imcs])])
@@ -208,14 +209,15 @@ def identifymcs_mergedir(statistics_filebase, stats_path, startdate, enddate, ti
                 for t in np.arange(0,mcslength[imcs]):
 
                     # Find merging cloud times that match current mcs track time
-                    timematch = np.array(np.where(np.absolute(mergingbasetime - mcsbasetime[int(t)])<0.001)).astype(int)
+                    timematch = np.where(np.absolute(mergingbasetime - mcsbasetime[int(t)])<0.001)
 
                     if np.shape(timematch)[1] > 0:
 
                         # save cloud number of small mergers
                         nmergers = np.shape(timematch)[1]
-                        mcsmergecloudnumber[imcs, int(t), 0:nmergers] = mergingcloudnumber[timematch[0,:]]
-                        mcsmergestatus[imcs, int(t), 0:nmergers] = mergingstatus[timematch[0,:]]
+                        mcsmergecloudnumber[imcs, int(t), 0:nmergers] = mergingcloudnumber[timematch]
+                        mcsmergestatus[imcs, int(t), 0:nmergers] = mergingstatus[timematch]
+
                         #print('merge')
                         #print(mergingdatetime[timematch[0,:]])
                         #print(mcsmergestatus[imcs, int(t), 0:nmergers])
@@ -241,7 +243,7 @@ def identifymcs_mergedir(statistics_filebase, stats_path, startdate, enddate, ti
                     splitfeature[removesplits] = fillvalue
                 splitfile = splitfile[splitfile != fillvalue]
                 splitfeature = splitfeature[splitfeature != fillvalue]
-
+                
             # Continue if spliters satisfy duration and MCS restriction
             if len(splitfile) > 0:
 
@@ -251,10 +253,10 @@ def identifymcs_mergedir(statistics_filebase, stats_path, startdate, enddate, ti
                 splittingstatus = np.copy(trackstat_status[splitfile, :])
                 splittingdatetime = np.copy(trackstat_datetime[splitfile, :, :])
 
-                splittingstatus = splittingstatus[splittingcloudnumber != fillvalue]
-                splittingdatetime = splittingdatetime[splittingcloudnumber != fillvalue]
-                splittingbasetime = splittingbasetime[splittingcloudnumber != fillvalue]
-                splittingcloudnumber = splittingcloudnumber[splittingcloudnumber != fillvalue]
+                #splittingstatus = splittingstatus[splittingcloudnumber != fillvalue]
+                #splittingdatetime = splittingdatetime[splittingcloudnumber != fillvalue]
+                #splittingbasetime = splittingbasetime[splittingcloudnumber != fillvalue]
+                #splittingcloudnumber = splittingcloudnumber[splittingcloudnumber != fillvalue]
 
                 # Get data about MCS track
                 mcsbasetime = np.copy(trackstat_basetime[int(mcstracknumbers[imcs])-1,0:int(mcslength[imcs])])
@@ -263,13 +265,13 @@ def identifymcs_mergedir(statistics_filebase, stats_path, startdate, enddate, ti
                 for t in np.arange(0,mcslength[imcs]):
 
                     # Find splitting cloud times that match current mcs track time
-                    timematch = np.array(np.where(np.absolute(splittingbasetime - mcsbasetime[int(t)])<0.001)).astype(int)
+                    timematch = np.where(np.absolute(splittingbasetime - mcsbasetime[int(t)])<0.001)
                     if np.shape(timematch)[1] > 0:
 
                         # save cloud number of small splitrs
                         nspliters = np.shape(timematch)[1]
-                        mcssplitcloudnumber[imcs, int(t), 0:nspliters] = splittingcloudnumber[timematch[0,:]]
-                        mcssplitstatus[imcs, int(t), 0:nspliters] = splittingstatus[timematch[0,:]]
+                        mcssplitcloudnumber[imcs, int(t), 0:nspliters] = splittingcloudnumber[timematch]
+                        mcssplitstatus[imcs, int(t), 0:nspliters] = splittingstatus[timematch]
 
                         #print('Split')
                         #print(splittingdatetime[timematch[0,:]])

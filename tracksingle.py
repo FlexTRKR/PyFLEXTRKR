@@ -192,13 +192,13 @@ def trackclouds_mergedir(zipped_inputs): #firstcloudidfilename, secondcloudidfil
         
         # define variables
         basetime_new = filesave.createVariable('basetime_new', 'i4', 'time', zlib=True)
-        basetime_new.long_name = 'base time of new file in epoch'
-        basetime_new.units = 'seconds since 01/01/1970 00:00'
+        basetime_new.long_name = 'epoch time (seconds since 01/01/1970 00:00) of new file in epoch'
+        basetime_new.units = 'seconds'
         basetime_new.standard_name = 'time'
             
         basetime_ref = filesave.createVariable('basetime_ref', 'i4', 'time', zlib=True)
-        basetime_ref.long_name = 'base time of reference in epoch'
-        basetime_ref.units = 'seconds since 01/01/1970 00:00'
+        basetime_ref.long_name = 'epoch time (seconds since 01/01/1970 00:00) of reference in epoch'
+        basetime_ref.units = 'seconds'
         basetime_ref.standard_name = 'time'
         
         nclouds_new = filesave.createVariable('nclouds_new', 'i4', 'time', zlib=True)

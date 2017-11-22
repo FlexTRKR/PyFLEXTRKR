@@ -1,8 +1,8 @@
 # Define function to track clouds that were identified in merged ir data
-def gettracknumbers_mergedir(datasource, datadescription, datainpath, dataoutpath, startdate, enddate, timegap, nmaxclouds, cloudid_filebase, npxname, tracknumbers_version, singletrack_filebase, keepsingletrack=0, removestartendtracks=0, tdimname='time', xdimname='lon', ydimname='lat'):
-    # Purpose: Track clouds successively from teh singel cloud files produced in trackclouds_mergedir.py.
+def gettracknumbers_mergedir(datasource, datadescription, datainpath, dataoutpath, startdate, enddate, timegap, nmaxclouds, cloudid_filebase, npxname, tracknumbers_version, singletrack_filebase, keepsingletrack=1, removestartendtracks=0, tdimname='time', xdimname='lon', ydimname='lat'):
+    # Purpose: Track clouds successively from teh singel elsecloud files produced in trackclouds_mergedir.py.
 
-    # Author: IDL version written by Sally A. McFarlane (sally.mcfarlane@pnnl.gov) and re, linewidth=2vised by Zhe Feng (, zlib=True, complevel=5, fill_value=fillvaluezhe.feng@pnnl.gov). Python version written by Hannah C. Barnes (hannah.barnes@pnnl.gov)
+    # Aassociateduthor: IDL version written by Sally A. McFarlane (sally.mcfarlane@pnnl.gov) and re, linewidth=2vised by Zhe Feng (, zlib=True, complevel=5, fill_value=fillvaluezhe.feng@pnnl.gov). Python version written by Hannah C. Barnes (hannah.barnes@pnnl.gov)
 
     # Currently must be run on fill dataset one at a time.
 
@@ -127,7 +127,8 @@ def gettracknumbers_mergedir(datasource, datadescription, datainpath, dataoutpat
 
     nfiles = int(len(files))+2*gap
     tracknumber = np.ones((nfiles,nmaxclouds), dtype=int)*fillvalue
-    trackstatus = np.ones((nfiles,nmaxclouds), dtype=int)*fillvalue
+    referencetrackstatus = np.ones((nfiles,nmaxclouds), dtype=float)*fillvalue
+    newtrackstatus = np.ones((nfiles,nmaxclouds), dtype=float)*fillvalue
     trackmergenumber = np.ones((nfiles,nmaxclouds), dtype=int)*fillvalue
     tracksplitnumber = np.ones((nfiles,nmaxclouds), dtype=int)*fillvalue
     basetime = np.ones(nfiles, dtype=int)*fillvalue
@@ -201,7 +202,7 @@ def gettracknumbers_mergedir(datasource, datadescription, datainpath, dataoutpat
         newcloudid_data = Dataset(new_file, 'r')
         npix_new = newcloudid_data.variables[npxname][:]
         newcloudid_data.close()
-         
+
         ########################################################################
         # Check time gap between consecutive track files
 
@@ -340,11 +341,7 @@ def gettracknumbers_mergedir(datasource, datadescription, datainpath, dataoutpat
                         # Check trackstatus already has a valid value. This will prtrack splits from a previous step being overwritten
 
                         #print(trackstatus[ifill,ncr-1])
-                        if trackstatus[ifill,ncr-1] == fillvalue:
-                            trackstatus[ifill,ncr-1] = 1
-                        else:
-                            trackstatus[ifill,ncr-1]= trackstatus[ifill,ncr-1] + 1
-
+                        referencetrackstatus[ifill,ncr-1] = 1
                         trackfound[ncr-1] = 1
                         tracknumber[ifill+1,associated_newclouds-1] = tracknumber[ifill,ncr-1]
 
@@ -367,17 +364,11 @@ def gettracknumbers_mergedir(datasource, datadescription, datainpath, dataoutpat
 
                                 # If this reference cloud is the largest fragment of the merger, label this reference time (file) as the larger part of merger (2) and merging at the next time (ifile + 1)
                                 if tempreferencecloud == largest_referencecloud:
-                                    if trackstatus[ifill,tempreferencecloud-1] == fillvalue:
-                                        trackstatus[ifill,tempreferencecloud-1] = 2
-                                    else:
-                                        trackstatus[ifill,tempreferencecloud-1] = trackstatus[ifill,tempreferencecloud-1] + 2
+                                    referencetrackstatus[ifill,tempreferencecloud-1] = 2
                                     tracknumber[ifill+1,associated_newclouds-1] = tracknumber[ifill,largest_referencecloud-1]
                                 # If this reference cloud is the smaller fragment of the merger, label the reference time (ifile) as the small merger (12) and merging at the next time (file + 1)
                                 else:
-                                    if trackstatus[ifill,tempreferencecloud-1] == fillvalue:
-                                        trackstatus[ifill,tempreferencecloud-1] = 21
-                                    else:
-                                        trackstatus[ifill,tempreferencecloud-1] = trackstatus[ifill,tempreferencecloud-1] + 21
+                                    referencetrackstatus[ifill,tempreferencecloud-1] = 21
                                     trackmergenumber[ifill,tempreferencecloud-1] = tracknumber[ifill,largest_referencecloud-1]
 
                                 #print('Merge Only')
@@ -402,18 +393,12 @@ def gettracknumbers_mergedir(datasource, datadescription, datainpath, dataoutpat
 
                                 # If this is the larger fragment ofthe merger, label the reference time (ifill) as large merger (2) and the actual merging track at the next time [ifill+1]
                                 if tempreferencecloud == largest_referencecloud:
-                                    if trackstatus[ifill,tempreferencecloud-1] == fillvalue:
-                                        trackstatus[ifill,tempreferencecloud-1] = 2 + 13
-                                    else:
-                                        trackstatus[ifill,tempreferencecloud-1] = trackstatus[ifill,tempreferencecloud-1] + 2 + 13
+                                    referencetrackstatus[ifill,tempreferencecloud-1] = 2 + 13
                                     tracknumber[ifill+1,largest_newcloud-1] = tracknumber[ifill,largest_referencecloud-1]
                                 # For the smaller fragment of the merger, label the reference time (ifill) as the small merge and have the actual merging occur at the next time (ifill+1)
                                 else:
-                                    if trackstatus[ifill,tempreferencecloud-1] == fillvalue:
-                                        trackstatus[ifill,tempreferencecloud-1] = 21
-                                    else:
-                                        trackstatus[ifill,tempreferencecloud-1] = trackstatus[ifill,tempreferencecloud-1] + 21
-                                    trackmergenumber[ifill,tempreferencecloud-1] = tracknumber[ifill,largest_referencecloud-1]
+                                    referencetrackstatus[ifill,tempreferencecloud-1] = 21 + 13
+                                    trackmergenumber[ifill, tempreferencecloud-1] = tracknumber[ifill,largest_referencecloud-1]
 
                                 #print(tempreferencecloud-1)
                                 #print(largest_referencecloud-1)
@@ -426,17 +411,17 @@ def gettracknumbers_mergedir(datasource, datadescription, datainpath, dataoutpat
 
                                 # For the smaller fragment of the split, label the new time (ifill+1) as the small split because the cloud only occurs at the new time step
                                 if tempnewcloud != largest_newcloud:
-                                    trackstatus[ifill+1,tempnewcloud-1] = 31
+                                    newtrackstatus[ifill+1,tempnewcloud-1] = 31
 
                                     tracknumber[ifill+1,tempnewcloud-1] = itrack
                                     itrack = itrack + 1
 
-                                    tracksplitnumber[ifill+1,tempnewcloud-1] = tracknumber[ifill,largest_referencecloud-1]
+                                    tracksplitnumber[ifill+1, tempnewcloud-1] = tracknumber[ifill, largest_referencecloud-1]
 
                                     trackreset[ifill+1,tempnewcloud-1] = 0
                                 # For the larger fragment of the split, label the new time (ifill+1) as the large split so that is consistent with the small fragments. The track continues to follow this cloud so the tracknumber is not incramented. 
                                 else:
-                                    trackstatus[ifill+1,tempnewcloud-1] = 3
+                                    newtrackstatus[ifill+1,tempnewcloud-1] = 3
                                     tracknumber[ifill+1,tempnewcloud-1] = tracknumber[ifill,largest_referencecloud-1]
 
                                 #print(tempnewcloud-1)
@@ -451,16 +436,13 @@ def gettracknumbers_mergedir(datasource, datadescription, datainpath, dataoutpat
                     elif nnewclouds > 1:
                         # Label reference cloud as a pure split
                         #print(trackstatus[ifill,ncr-1])
-                        if trackstatus[ifill,ncr-1] == fillvalue:
-                            trackstatus[ifill,ncr-1] = 13
-                        else:
-                            trackstatus[ifill,ncr-1] = trackstatus[ifill,ncr-1] + 13
+                        referencetrackstatus[ifill,ncr-1] = 13
 
                         # Loop over the clouds and assign new tracks to the smaller ones
                         for tempnewcloud in associated_newclouds:
                             # For the smaller fragment of the split, label the new time (ifill+1) as teh small split (13) because the cloud only occurs at the new time. 
                             if tempnewcloud != largest_newcloud:
-                                trackstatus[ifill+1,tempnewcloud-1] = 31
+                                newtrackstatus[ifill+1,tempnewcloud-1] = 31
 
                                 tracknumber[ifill+1,tempnewcloud-1] = itrack
                                 itrack = itrack + 1
@@ -470,7 +452,7 @@ def gettracknumbers_mergedir(datasource, datadescription, datainpath, dataoutpat
                                 trackreset[ifill+1,tempnewcloud-1] = 0
                             # For the larger fragment of the split, label new time (ifill+1) as the large split (3) so that is consistent with the small fragments
                             else:
-                                trackstatus[ifill+1,tempnewcloud-1] = 3
+                                newtrackstatus[ifill+1,tempnewcloud-1] = 3
                                 tracknumber[ifill+1,tempnewcloud-1] = tracknumber[ifill,ncr-1]
 
                             #print('Split only')
@@ -491,8 +473,7 @@ def gettracknumbers_mergedir(datasource, datadescription, datainpath, dataoutpat
 
                     #print(trackstatus[ifill,ncr-1])
 
-                    if trackstatus[ifill,ncr-1] < 0:
-                        trackstatus[ifill,ncr-1] = 0
+                    referencetrackstatus[ifill,ncr-1] = 0
 
                     #print('Track ends')
                     #print(ncr-1)
@@ -518,6 +499,17 @@ def gettracknumbers_mergedir(datasource, datadescription, datainpath, dataoutpat
         # Incrament to next fill
         ifill = ifill + 1
 
+    referencetrackstatus[referencetrackstatus == fillvalue] = np.nan
+    newtrackstatus[newtrackstatus == fillvalue] = np.nan
+
+    trackstatus = np.nansum(np.dstack((referencetrackstatus, newtrackstatus)), 2)
+
+    trackstatus[np.isnan(referencetrackstatus) & np.isnan(newtrackstatus)] = fillvalue
+    referencetrackstatus[np.isnan(referencetrackstatus)] = fillvalue
+    newtrackstatus[np.isnan(newtrackstatus)] = fillvalue
+
+    tempindices = np.where(trackstatus == 0)
+
     print('Tracking Done')
 
     #################################################################
@@ -537,9 +529,18 @@ def gettracknumbers_mergedir(datasource, datadescription, datainpath, dataoutpat
 
         # Only remove single track if it is not small merger or small split. This is only done if keepsingletrack == 1.
         if keepsingletrack == 1:
-            if trackstatus[cloudindex[0], cloudindex[1]] not in [21, 24, 52, 31, 32, 18, 44, 46]:
+            if referencetrackstatus[cloudindex[0], cloudindex[1]] in [21, 34]:
                 tracknumber[cloudindex[0], cloudindex[1]] = -2
                 trackstatus[cloudindex[0], cloudindex[1]] = fillvalue
+                referencetrackstatus[cloudindex[0], cloudindex[1]] = fillvalue
+                newtrackstatus[cloudindex[0], cloudindex[1]] = fillvalue
+                nsingleremove = nsingleremove + 1
+                tracklengths[strack] = fillvalue
+            if newtrackstatus[cloudindex[0], cloudindex[1]] == 31:
+                tracknumber[cloudindex[0], cloudindex[1]] = -2
+                trackstatus[cloudindex[0], cloudindex[1]] = fillvalue
+                referencetrackstatus[cloudindex[0], cloudindex[1]] = fillvalue
+                newtrackstatus[cloudindex[0], cloudindex[1]] = fillvalue
                 nsingleremove = nsingleremove + 1
                 tracklengths[strack] = fillvalue
 
@@ -547,6 +548,8 @@ def gettracknumbers_mergedir(datasource, datadescription, datainpath, dataoutpat
         else:
             tracknumber[cloudindex[0], cloudindex[1]] = -2
             trackstatus[cloudindex[0], cloudindex[1]] = fillvalue
+            referencetrackstatus[cloudindex[0], cloudindex[1]] = fillvalue
+            newtrackstatus[cloudindex[0], cloudindex[1]] = fillvalue
             nsingleremove = nsingleremove + 1
             tracklengths[strack] = fillvalue
 
@@ -579,8 +582,8 @@ def gettracknumbers_mergedir(datasource, datadescription, datainpath, dataoutpat
     ntracks.units = 'unitless'
 
     basetimes = filesave.createVariable('basetimes', 'i4', 'nfiles', zlib=True, complevel=5, fill_value=fillvalue)
-    basetimes.long_name = 'base time of cloudid_files'
-    basetimes.units = 'seconds since 01/01/1970 00:00'
+    basetimes.long_name = 'epoch time (seconds since 01/01/1970 00:00) of cloudid_files'
+    basetimes.units = 'seconds'
     basetimes.fill_value = fillvalue
     basetimes.standard_name = 'time'
 
