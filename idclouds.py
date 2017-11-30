@@ -6,7 +6,7 @@
 # function used to handle test data
 def idclouds_mergedir(zipped_inputs):
     # inputs:
-    # datasnp.array([ource - source of the data
+    # datasource - source of the data
     # datadescription - description of data source, included in all output file names
     # datapath - path of the data directory
     # databasename - base name of data files
@@ -377,7 +377,7 @@ def idclouds_LES(zipped_inputs):
     import time
     import xarray as xr
     import datetime
-    import matplotlib.pyplot as plt
+    import pandas as pd
 
     ########################################################
     # Separate inputs
@@ -406,6 +406,8 @@ def idclouds_LES(zipped_inputs):
     smoothsize = zipped_inputs[21]
     warmanvilexpansion = zipped_inputs[22]
 
+    print('here')
+
     ##########################################################
     # define constants:
     # minimum and maximum brightness temperature thresholds. data outside of this range is filtered
@@ -424,8 +426,8 @@ def idclouds_LES(zipped_inputs):
         in_lon = geolocation_data[:, 2]
 
         # Transform into matrix
-        in_lat = np.reshape(in_lat, (ny, nx))
-        in_lon = np.reshape(in_lon, (ny, nx))
+        in_lat = np.reshape(in_lat, (int(ny), int(nx)))
+        in_lon = np.reshape(in_lon, (int(ny), int(nx)))
 
     # LWP data. 
     if datasource == 'LES':
@@ -436,7 +438,7 @@ def idclouds_LES(zipped_inputs):
 
         # load brighttness temperature data. automatically removes missing values
         in_lwp = np.loadtxt(datafilepath, dtype=float) 
-        in_lwp = np.reshape(in_lwp, (ny, nx))
+        in_lwp = np.reshape(in_lwp, (int(ny), int(nx)))
 
         #####################################################
         # mask brightness temperatures outside of normal range
@@ -446,7 +448,7 @@ def idclouds_LES(zipped_inputs):
         #####################################################
         # determine geographic region of interest is within the data set. if it is proceed and limit the data to that geographic region. if not exit the code.
 
-        # isolate data within lat/lon range set by limit
+        #isolate data within lat/lon range set by limit
         indicesy, indicesx = np.array(np.where((in_lat > geolimits[0]) & (in_lat <= geolimits[2]) & (in_lon > geolimits[1]) & (in_lon <= geolimits[3])))
 
         # proceed if file covers the geographic region in interest
@@ -463,6 +465,11 @@ def idclouds_LES(zipped_inputs):
 
             if np.divide(missingcount, (ny*nx)) < miss_thresh:
                 ######################################################
+
+                TEMP_basetime = calendar.timegm(datetime.datetime(int(datafiledatestring[0:4]), int(datafiledatestring[4:6]), int(datafiledatestring[6:8]), int(datafiletimestring[0:2]), int(datafiletimestring[2:4]), 0, 0).timetuple())
+                file_basetime = pd.to_datetime(TEMP_basetime, unit='s')
+                print(np.array([file_basetime], dtype='datetime64[ns]'))
+
                 # call idclouds subroutine
                 if cloudidmethod == 'futyan3':
                     from subroutine_idclouds import futyan3
@@ -492,10 +499,11 @@ def idclouds_LES(zipped_inputs):
                     if os.path.isfile(cloudid_outfile):
                         os.remove(cloudid_outfile)
 
-                    file_basetime = calendar.timegm(datetime.datetime(int(datafiledatestring[0:4]), int(datafiledatestring[4:6]), int(datafiledatestring[6:8]), int(datafiletimestring[0:2]), int(datafiletimestring[2:4])).timetuple())
+                    TEMP_basetime = calendar.timegm(datetime.datetime(int(datafiledatestring[0:4]), int(datafiledatestring[4:6]), int(datafiledatestring[6:8]), int(datafiletimestring[0:2]), int(datafiletimestring[2:4]), 0, 0).timetuple())
+                    file_basetime = np.array([pd.to_datetime(TEMP_basetime, unit='s')], dtype='datetime64[ns]')
 
                     # Define xarray dataset
-                    output_data = xr.Dataset({'basetime': (['time'], np.array([file_basetime], dtype='datetime64[ns]')), \
+                    output_data = xr.Dataset({'basetime': (['time'], file_basetime), \
                                               'filedate': (['time', 'ndatechar'],  np.array([stringtochar(np.array(datafiledatestring))])), \
                                               'filetime': (['time', 'ntimechar'], np.array([stringtochar(np.array(datafiletimestring))])), \
                                               'latitude': (['lat', 'lon'], out_lat), \
@@ -509,7 +517,7 @@ def idclouds_LES(zipped_inputs):
                                               'ncoldpix': (['time', 'clouds'], final_ncoldpix), \
                                               'ncorecoldpix': (['time', 'clouds'], final_ncorecoldpix), \
                                               'nwarmpix': (['time', 'clouds'], final_nwarmpix)}, \
-                                             coords={'time': (['time'], np.array([file_basetime], dtype='datetime64[ns]')), \
+                                             coords={'time': (['time'], file_basetime), \
                                                      'lat': (['lat'], np.squeeze(out_lat[:, 0])), \
                                                      'lon': (['lon'], np.squeeze(out_lon[0, :])), \
                                                      'clouds': (['clouds'],  np.arange(1, final_nclouds+1)), \
@@ -617,7 +625,7 @@ def idclouds_LES(zipped_inputs):
                                                     'lon': {'zlib':True, '_FillValue': fillvalue}, \
                                                     'lon': {'zlib':True, '_FillValue': fillvalue}, \
                                                     'clouds': {'zlib':True, '_FillValue': fillvalue}, \
-                                                    'basetime': {'zlib':True, '_FillValue': fillvalue}, \
+                                                    'basetime': {'dtype': 'int64', 'zlib':True, '_FillValue': fillvalue}, \
                                                     'filedate': {'dtype': 'str', 'zlib':True, '_FillValue': fillvalue}, \
                                                     'filetime': {'dtype': 'str', 'zlib':True, '_FillValue': fillvalue}, \
                                                     'longitude': {'zlib':True, '_FillValue': fillvalue}, \

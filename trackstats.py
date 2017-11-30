@@ -96,10 +96,10 @@ def trackstats_sat(datasource, datadescription, pixel_radius, latlon_file, geoli
 
     fillvalue = -9999
 
-    finaltrack_tracklength = np.ones(int(numtracks), dtype=int)*fillvalue
-    finaltrack_corecold_boundary = np.ones(int(numtracks), dtype=int)*fillvalue
+    finaltrack_tracklength = np.ones(int(numtracks), dtype=np.int32)*fillvalue
+    finaltrack_corecold_boundary = np.ones(int(numtracks), dtype=np.int32)*fillvalue
     #finaltrack_basetime = np.empty((int(numtracks),int(nmaxclouds)), dtype='datetime64[ns]')
-    finaltrack_basetime = np.ones((int(numtracks),int(nmaxclouds)), dtype=int)*fillvalue
+    finaltrack_basetime = np.ones((int(numtracks),int(nmaxclouds)), dtype=np.int32)*fillvalue
     finaltrack_corecold_mintb = np.ones((int(numtracks),int(nmaxclouds)), dtype=float)*fillvalue
     finaltrack_corecold_meantb = np.ones((int(numtracks),int(nmaxclouds)), dtype=float)*fillvalue
     finaltrack_core_meantb = np.ones((int(numtracks),int(nmaxclouds)), dtype=float)*fillvalue
@@ -110,27 +110,27 @@ def trackstats_sat(datasource, datadescription, pixel_radius, latlon_file, geoli
     finaltrack_corecold_meanlon = np.ones((int(numtracks),int(nmaxclouds)), dtype=float)*fillvalue
     finaltrack_corecold_maxlon = np.ones((int(numtracks),int(nmaxclouds)), dtype=float)*fillvalue
     finaltrack_corecold_maxlat = np.ones((int(numtracks),int(nmaxclouds)), dtype=float)*fillvalue
-    finaltrack_ncorecoldpix = np.ones((int(numtracks),int(nmaxclouds)), dtype=int)*fillvalue
+    finaltrack_ncorecoldpix = np.ones((int(numtracks),int(nmaxclouds)), dtype=np.int32)*fillvalue
     finaltrack_corecold_minlon = np.ones((int(numtracks),int(nmaxclouds)), dtype=float)*fillvalue
     finaltrack_corecold_minlat = np.ones((int(numtracks),int(nmaxclouds)), dtype=float)*fillvalue
-    finaltrack_ncorepix = np.ones((int(numtracks),int(nmaxclouds)), dtype=int)*fillvalue
-    finaltrack_ncoldpix = np.ones((int(numtracks),int(nmaxclouds)), dtype=int)*fillvalue
-    finaltrack_nwarmpix = np.ones((int(numtracks),int(nmaxclouds)), dtype=int)*fillvalue
-    finaltrack_corecold_status = np.ones((int(numtracks),int(nmaxclouds)), dtype=float)*fillvalue
-    finaltrack_corecold_trackinterruptions = np.ones(int(numtracks), dtype=int)*fillvalue
-    finaltrack_corecold_mergenumber = np.ones((int(numtracks),int(nmaxclouds)), dtype=float)*fillvalue
-    finaltrack_corecold_splitnumber = np.ones((int(numtracks),int(nmaxclouds)), dtype=float)*fillvalue
-    finaltrack_corecold_cloudnumber = np.ones((int(numtracks),int(nmaxclouds)), dtype=float)*fillvalue
+    finaltrack_ncorepix = np.ones((int(numtracks),int(nmaxclouds)), dtype=np.int32)*fillvalue
+    finaltrack_ncoldpix = np.ones((int(numtracks),int(nmaxclouds)), dtype=np.int32)*fillvalue
+    finaltrack_nwarmpix = np.ones((int(numtracks),int(nmaxclouds)), dtype=np.int32)*fillvalue
+    finaltrack_corecold_status = np.ones((int(numtracks),int(nmaxclouds)), dtype=np.int32)*fillvalue
+    finaltrack_corecold_trackinterruptions = np.ones(int(numtracks), dtype=np.int32)*fillvalue
+    finaltrack_corecold_mergenumber = np.ones((int(numtracks),int(nmaxclouds)), dtype=np.int32)*fillvalue
+    finaltrack_corecold_splitnumber = np.ones((int(numtracks),int(nmaxclouds)), dtype=np.int32)*fillvalue
+    finaltrack_corecold_cloudnumber = np.ones((int(numtracks),int(nmaxclouds)), dtype=np.int32)*fillvalue
     finaltrack_datetimestring = [[['' for x in range(13)] for y in range(int(nmaxclouds))] for z in range(int(numtracks))]
     finaltrack_cloudidfile = np.chararray((int(numtracks), int(nmaxclouds), int(numcharfilename)))
     finaltrack_corecold_majoraxis = np.ones((int(numtracks),int(nmaxclouds)), dtype=float)*fillvalue
     finaltrack_corecold_orientation = np.ones((int(numtracks),int(nmaxclouds)), dtype=float)*fillvalue 
     finaltrack_corecold_eccentricity = np.ones((int(numtracks),int(nmaxclouds)), dtype=float)*fillvalue
     finaltrack_corecold_perimeter = np.ones((int(numtracks),int(nmaxclouds)), dtype=float)*fillvalue
-    finaltrack_corecold_xcenter = np.ones((int(numtracks),int(nmaxclouds)), dtype=float)*fillvalue
-    finaltrack_corecold_ycenter = np.ones((int(numtracks),int(nmaxclouds)), dtype=float)*fillvalue
-    finaltrack_corecold_xweightedcenter = np.ones((int(numtracks),int(nmaxclouds)), dtype=float)*fillvalue
-    finaltrack_corecold_yweightedcenter = np.ones((int(numtracks),int(nmaxclouds)), dtype=float)*fillvalue
+    finaltrack_corecold_xcenter = np.ones((int(numtracks),int(nmaxclouds)), dtype=np.int32)*fillvalue
+    finaltrack_corecold_ycenter = np.ones((int(numtracks),int(nmaxclouds)), dtype=np.int32)*fillvalue
+    finaltrack_corecold_xweightedcenter = np.ones((int(numtracks),int(nmaxclouds)), dtype=np.int32)*fillvalue
+    finaltrack_corecold_yweightedcenter = np.ones((int(numtracks),int(nmaxclouds)), dtype=np.int32)*fillvalue
     if landsea == 1:
         finaltrack_corecold_landfrac = np.ones((int(numtracks),int(nmaxclouds)), dtype=float)*fillvalue
         finaltrack_core_landfrac = np.ones((int(numtracks),int(nmaxclouds)), dtype=float)*fillvalue
@@ -156,6 +156,8 @@ def trackstats_sat(datasource, datadescription, pixel_radius, latlon_file, geoli
             latitude = file_cloudiddata['latitude'].data
             longitude = file_cloudiddata['longitude'].data
             file_cloudiddata.close()
+
+            print(file_tb[0, 0, 0:100])
 
             file_datetimestring = cloudid_file[len(tracking_inpath) + len(cloudid_filebase):-3]
 
@@ -485,6 +487,36 @@ def trackstats_sat(datasource, datadescription, pixel_radius, latlon_file, geoli
     # Check if file already exists. If exists, delete
     if os.path.isfile(trackstats_outfile):
         os.remove(trackstats_outfile)
+
+    print(finaltrack_tracklength.dtype)
+    print(finaltrack_basetime.dtype)
+    print(finaltrack_corecold_meanlat.dtype)
+    print(finaltrack_corecold_meanlon.dtype)
+    print(finaltrack_corecold_minlat.dtype)
+    print(finaltrack_corecold_minlon.dtype)
+    print(finaltrack_corecoldwarm_radius.dtype)
+    print(finaltrack_ncorecoldpix.dtype)
+    print(finaltrack_ncorepix.dtype)
+    print(finaltrack_ncoldpix.dtype)
+    print(finaltrack_nwarmpix.dtype)
+    print(finaltrack_corecold_cloudnumber.dtype)
+    print(finaltrack_corecold_status.dtype)
+    print(adjusted_finaltrack_corecold_mergenumber.dtype)
+    print(adjusted_finaltrack_corecold_splitnumber.dtype)
+    print(finaltrack_corecold_boundary.dtype)
+    print(finaltrack_corecold_mintb.dtype)
+    print(finaltrack_corecold_meantb.dtype)
+    print(finaltrack_core_meantb.dtype)
+    print(finaltrack_corecold_histtb.dtype)
+    print(finaltrack_corecold_majoraxis.dtype)
+    print(finaltrack_corecold_orientation.dtype)
+    print(finaltrack_corecold_eccentricity.dtype)
+    print(finaltrack_corecold_perimeter.dtype)
+    print(finaltrack_corecold_xcenter.dtype)
+    print(finaltrack_corecold_ycenter.dtype)
+    print(finaltrack_corecold_xweightedcenter.dtype)
+    print(finaltrack_corecold_yweightedcenter.dtype)
+        
 
     # Define xarray dataset
     output_data = xr.Dataset({'lifetime': (['ntracks'], finaltrack_tracklength), \
@@ -837,7 +869,7 @@ def trackstats_LES(datasource, datadescription, pixel_radius, latlon_file, geoli
     # Load track data
     cloudtrack_file = stats_path + tracknumbers_filebase + '_' + startdate + '_' + enddate + '.nc'
     
-    cloudtrackdata = xr.open_dataset(cloudtrack_file, autoclose=True)
+    cloudtrackdata = xr.open_dataset(cloudtrack_file, autoclose=True, decode_times=False)
     numtracks = np.copy(cloudtrackdata['ntracks'].data)
     cloudidfiles = cloudtrackdata['cloudid_files'].data
 
@@ -863,7 +895,7 @@ def trackstats_LES(datasource, datadescription, pixel_radius, latlon_file, geoli
 
     finaltrack_tracklength = np.ones(int(numtracks), dtype=int)*fillvalue
     finaltrack_corecold_boundary = np.ones(int(numtracks))*fillvalue
-    finaltrack_basetime = np.empty((int(numtracks),int(nmaxclouds)), dtype='datetime64[ns]')
+    finaltrack_basetime = np.zeros((int(numtracks),int(nmaxclouds)), dtype='datetime64[s]')
     finaltrack_corecold_minlwp = np.ones((int(numtracks),int(nmaxclouds)), dtype=float)*fillvalue
     finaltrack_corecold_meanlwp = np.ones((int(numtracks),int(nmaxclouds)), dtype=float)*fillvalue
     finaltrack_core_meanlwp = np.ones((int(numtracks),int(nmaxclouds)), dtype=float)*fillvalue
@@ -906,10 +938,10 @@ def trackstats_LES(datasource, datadescription, pixel_radius, latlon_file, geoli
 
         # Only process file if that file contains a track
         if np.nanmax(file_tracknumbers) > 0:
-            print(cloudidfiles[nf])
+            print(''.join(cloudidfiles[nf]))
 
             # Load cloudid file
-            cloudid_file = tracking_inpath + cloudidfiles[nf]
+            cloudid_file = tracking_inpath + ''.join(cloudidfiles[nf])
 
             file_cloudiddata = xr.open_dataset(cloudid_file, autoclose=True)
 
@@ -958,6 +990,7 @@ def trackstats_LES(datasource, datadescription, pixel_radius, latlon_file, geoli
 
                     if nc < nmaxclouds:
                         # Save information that links this cloud back to its raw pixel level data
+                        fillvalue_basetime = finaltrack_basetime[itrack-1, nc]
                         finaltrack_basetime[itrack-1, nc] = np.copy(file_cloudiddata['basetime'].data[0])
                         finaltrack_corecold_cloudnumber[itrack-1,nc] = cloudnumber
                         finaltrack_cloudidfile[itrack-1][nc][:] = list(cloudidfiles[nf])
@@ -1121,6 +1154,7 @@ def trackstats_LES(datasource, datadescription, pixel_radius, latlon_file, geoli
 
     ###############################################################
     ## Remove tracks that have no cells. These tracks are short.
+
     print('Removing tracks with no cells')
     gc.collect()
 
@@ -1128,8 +1162,6 @@ def trackstats_LES(datasource, datadescription, pixel_radius, latlon_file, geoli
     numtracks = len(cloudindexpresent)
 
     maxtracklength = np.nanmax(finaltrack_tracklength)
-
-    print(finaltrack_basetime[10:5])
 
     finaltrack_tracklength = finaltrack_tracklength[cloudindexpresent]
     finaltrack_corecold_boundary = finaltrack_corecold_boundary[cloudindexpresent]
@@ -1171,8 +1203,6 @@ def trackstats_LES(datasource, datadescription, pixel_radius, latlon_file, geoli
         finaltrack_core_landfrac = finaltrack_core_landfrac[cloudindexpresent, 0:maxtracklength]
 
     gc.collect()
-
-    print(finaltrack_basetime[10:5])
 
     ########################################################
     # Correct merger and split cloud numbers
@@ -1488,7 +1518,7 @@ def trackstats_LES(datasource, datadescription, pixel_radius, latlon_file, geoli
     # Write netcdf file
     output_data.to_netcdf(path=trackstats_outfile, mode='w', format='NETCDF4_CLASSIC', unlimited_dims='ntracks', \
                           encoding={'lifetime': {'dtype': 'int', 'zlib':True, '_FillValue': fillvalue}, \
-                                    'basetime': {'zlib':True, '_FillValue': fillvalue}, \
+                                    'basetime': {'dtype': 'int64', 'zlib':True, '_FillValue': 0}, \
                                     'ntracks': {'dtype': 'int', 'zlib':True, '_FillValue': fillvalue}, \
                                     'nmaxlength': {'dtype': 'int', 'zlib':True, '_FillValue': fillvalue}, \
                                     'cloudidfiles': {'zlib':True, '_FillValue': fillvalue}, \

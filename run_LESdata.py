@@ -12,16 +12,16 @@ import xarray as xr
 
 # Author: Orginial IDL version written by Zhe Feng (zhe.feng@pnnl.gov). Adapted to Python by Hannah Barnes (hannah.barnes@pnnl.gov)
 
-##################################################################################################
+################################################################################################
 # Set variables describing data, file structure, and tracking thresholds
 
 # Specify which sets of code to run. (1 = run code, 0 = don't run code)
-run_idclouds = 0        # Segment and identify cloud systems
-run_tracksingle = 0     # Track single consecutive cloudid files
+run_idclouds = 1        # Segment and identify cloud systems
+run_tracksingle = 1     # Track single consecutive cloudid files
 run_gettracks = 0       # Run trackig for all files
-run_finalstats = 1      # Calculate final statistics
-run_identifycell = 1    # Isolate cells
-run_labelcell = 1        # Create maps of MCSs
+run_finalstats = 0      # Calculate final statistics
+run_identifycell = 0    # Isolate cells
+run_labelcell = 0        # Create maps of MCSs
 
 # Set version of cloudid code
 cloudidmethod = 'futyan4'
@@ -41,8 +41,8 @@ startdate = '20160830'
 enddate = '20160830'
 
 # Specify domain size
-ny = 1200
-nx= 1200
+ny = int(1200)
+nx = int(1200)
 
 # Specify cloud tracking parameters
 geolimits = np.array([36.05, -98.12, 37.15, -96.79])  # 4-element array with plotting boundaries [lat_min, lon_min, lat_max, lon_max]
@@ -145,7 +145,7 @@ if run_idclouds == 1:
         TEMP_filetime = datetime.datetime(int(ifile[nleadingchar:nleadingchar+4]), int(ifile[nleadingchar+5:nleadingchar+7]), int(ifile[nleadingchar+8:nleadingchar+10]), int(ifile[nleadingchar+11:nleadingchar+13]), int(ifile[nleadingchar+14:nleadingchar+16]), 0, tzinfo=utc)
         TEMP_filebasetime = calendar.timegm(TEMP_filetime.timetuple())
 
-        if TEMP_filebasetime >= start_basetime and TEMP_filebasetime <= end_basetime and int(ifile[nleadingchar+14:nleadingchar+16]) == 0:
+        if TEMP_filebasetime >= start_basetime and TEMP_filebasetime <= end_basetime: # and int(ifile[nleadingchar+14:nleadingchar+16]) == 0:
             rawdatafiles[filestep] = clouddata_path + ifile
             files_timestring[filestep] = ifile[nleadingchar+11:nleadingchar+13] + ifile[nleadingchar+14:nleadingchar+16]
             files_datestring[filestep] = ifile[nleadingchar:nleadingchar+4] + ifile[nleadingchar+5:nleadingchar+7] + ifile[nleadingchar+8:nleadingchar+10]
@@ -188,16 +188,16 @@ if run_idclouds == 1:
 
     # Call function
     # Serial version
-    for ifile in range(0, filestep):
-        idclouds_LES(idclouds_input[ifile])
+    #for ifile in range(0, filestep):
+    #    idclouds_LES(idclouds_input[ifile])
 
     # Parallel version
-    #if __name__ == '__main__':
-    #    print('Identifying clouds')
-    #    pool = Pool(4)
-    #    pool.map(idclouds_LES, idclouds_input)
-    #    pool.close()
-    #    pool.join()
+    if __name__ == '__main__':
+        print('Identifying clouds')
+        pool = Pool(24)
+        pool.map(idclouds_LES, idclouds_input)
+        pool.close()
+        pool.join()
 
     cloudid_filebase = datasource + '_' + datadescription + '_cloudid' + cloudid_version + '_'
 
@@ -265,15 +265,15 @@ if run_tracksingle == 1:
     trackclouds_input = zip(cloudidfiles[0:-1], cloudidfiles[1::], cloudidfiles_datestring[0:-1], cloudidfiles_datestring[1::], cloudidfiles_timestring[0:-1], cloudidfiles_timestring[1::], cloudidfiles_basetime[0:-1], cloudidfiles_basetime[1::], list_trackingoutpath, list_trackversion, list_timegap, list_nmaxlinks, list_othresh, list_startdate, list_enddate)
 
     # Serial version
-    for ifile in range(0, cloudidfilestep-1):
-        trackclouds_mergedir(trackclouds_input[ifile])
+    #for ifile in range(0, cloudidfilestep-1):
+    #    trackclouds_mergedir(trackclouds_input[ifile])
 
     # parallelize version
-    #if __name__ == '__main__':
-    #    pool = Pool(4)
-    #    pool.map(trackclouds_mergedir, trackclouds_input)
-    #    pool.close()
-    #    pool.join()
+    if __name__ == '__main__':
+        pool = Pool(24)
+        pool.map(trackclouds_mergedir, trackclouds_input)
+        pool.close()
+        pool.join()
 
     singletrack_filebase = 'track' + track_version + '_'
 
@@ -307,7 +307,7 @@ if run_finalstats == 1:
     from trackstats import trackstats_LES
 
     # Call satellite version of function
-    print('Calculating track statistics')
+    print('Calculating cell statistics')
     trackstats_LES(datasource, datadescription, pixel_radius, latlon_file, geolimits, area_thresh, cloudlwp_threshs, absolutelwp_threshs, startdate, enddate, timegap, cloudid_filebase, tracking_outpath, stats_outpath, track_version, tracknumber_version, tracknumbers_filebase, lengthrange=lengthrange)
     trackstats_filebase = 'stats_tracknumbers' + tracknumber_version
 

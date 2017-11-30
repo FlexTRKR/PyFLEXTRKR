@@ -35,28 +35,24 @@ def mapcell_LES(zipped_inputs):
     # Load all track stat file
     statistics_file = stats_path + statistics_filebase + '_' + startdate + '_' + enddate + '.nc'
 
-    allstatdata = xr.open_dataset(statistics_file, autoclose=True, decode_times=False)
+    allstatdata = xr.open_dataset(statistics_file, autoclose=True)
     trackstat_basetime = allstatdata['basetime'].data # Time of cloud in seconds since 01/01/1970 00:00
     trackstat_cloudnumber = allstatdata['cloudnumber'].data # Number of the corresponding cloudid file
     trackstat_status = allstatdata['status'].data # Flag indicating the status of the cloud
     trackstat_mergenumbers = allstatdata['mergenumbers'].data # Track number that it merges into
     trackstat_splitnumbers = allstatdata['splitnumbers'].data
 
-    #trackstat_basetime = np.divide(trackstat_basetime, 10**9)
-
     #######################################################################
     # Load cell track stat file
     cellstatistics_file = stats_path + cellstats_filebase + startdate + '_' + enddate + '.nc'
     print(cellstatistics_file)
 
-    allcelldata = xr.open_dataset(cellstatistics_file, autoclose=True, decode_times=False)
+    allcelldata = xr.open_dataset(cellstatistics_file, autoclose=True)
     celltrackstat_basetime = allcelldata['cell_basetime'].data # basetime of each cloud in the tracked cell
     celltrackstat_status = allcelldata['cell_status'].data # flag indicating the status of each cloud in the tracked cell
     celltrackstat_cloudnumber = allcelldata['cell_cloudnumber'].data # number of cloud in the corresponding cloudid file for each cloud in the tracked cell
     celltrackstat_mergecloudnumber = allcelldata['cell_mergecloudnumber'].data # number of cloud in the corresponding cloud file that merges into the tracked cell
     celltrackstat_splitcloudnumber = allcelldata['cell_splitcloudnumber'].data # number of cloud in the corresponding cloud file that splits into the tracked cell
-
-    #celltrackstat_basetime = np.divide(celltrackstat_basetime, 10**9)
 
     #########################################################################
     # Get cloudid file associated with this time
@@ -66,9 +62,10 @@ def mapcell_LES(zipped_inputs):
     print('cloudid file: ' + cloudid_filename)
 
     # Load cloudid data
-    cloudiddata = xr.open_dataset(cloudid_filename, autoclose=True, decode_times=False)
+    cloudiddata = xr.open_dataset(cloudid_filename, autoclose=True)
     cloudid_cloudnumber = cloudiddata['convcold_cloudnumber'].data
     cloudid_cloudtype = cloudiddata['cloudtype'].data
+    cloudid_basetime = cloudiddata['basetime'].data
 
     cloudid_cloudnumber = cloudid_cloudnumber.astype(np.int32)
     cloudid_cloudtype = cloudid_cloudtype.astype(np.int32)
@@ -91,16 +88,7 @@ def mapcell_LES(zipped_inputs):
 
     ###############################################################
     # Create map of status and track number for every feature in this file
-    print(trackstat_basetime)
-    print(filebasetime)
-    raw_input('check')
-    fulltrack, fulltime = np.array(np.where(trackstat_basetime == float(filebasetime)))
-    print(trackstat_basetime)
-    print(filebasetime)
-    print(fulltrack)
-    print(fulltime)
-    print(trackstat_basetime[fulltrack, fulltime])
-    raw_input('check')
+    fulltrack, fulltime = np.array(np.where(trackstat_basetime == cloudid_basetime))
     for ifull in range(0, len(fulltime)):
         ffcloudnumber = trackstat_cloudnumber[fulltrack[ifull], fulltime[ifull]]
         ffstatus = trackstat_status[fulltrack[ifull], fulltime[ifull]]
@@ -150,7 +138,7 @@ def mapcell_LES(zipped_inputs):
 
     ###############################################################
     # Get tracks
-    itrack, itime = np.array(np.where(celltrackstat_basetime == float(filebasetime)))
+    itrack, itime = np.array(np.where(celltrackstat_basetime == cloudid_basetime))
     ntimes = len(itime)
     if ntimes > 0:
         #timestatus = np.copy(celltrackstat_status[itrack,itime])
@@ -269,7 +257,6 @@ def mapcell_LES(zipped_inputs):
     #output_data.nlon.attrs['units'] = 'unitless'
     
     output_data.basetime.attrs['long_name'] = 'Epoch time (seconds since 01/01/1970 00:00) of this file'
-    output_data.basetime.attrs['units'] = 'seconds'
     
     output_data.lon.attrs['long_name'] = 'Grid of longitude'
     output_data.lon.attrs['units'] = 'degrees'
@@ -342,7 +329,7 @@ def mapcell_LES(zipped_inputs):
     print('')
 
     output_data.to_netcdf(path=celltrackmaps_outfile, mode='w', format='NETCDF4_CLASSIC', unlimited_dims='time', \
-                          encoding={'basetime': {'dtype': 'int', 'zlib':True, '_FillValue': fillvalue}, \
+                          encoding={'basetime': {'dtype': 'int64', 'zlib':True, '_FillValue': fillvalue}, \
                                     'lon': {'zlib':True, '_FillValue': fillvalue}, \
                                     'lat': {'zlib':True, '_FillValue': fillvalue}, \
                                     'nclouds': {'zlib':True, '_FillValue': fillvalue}, \

@@ -27,6 +27,7 @@ def trackclouds_mergedir(zipped_inputs): #firstcloudidfilename, secondcloudidfil
     import time, datetime, calendar
     from pytz import timezone, utc
     import sys
+    import xarray as xr
 
     # Separate inputs
     firstcloudidfilename = zipped_inputs[0]
@@ -75,10 +76,9 @@ def trackclouds_mergedir(zipped_inputs): #firstcloudidfilename, secondcloudidfil
         # Load cloudid file from before, called reference file
         print(reference_filedatetime)
 
-        reference_data = Dataset(reference_file, 'r')                                        # Open file
-        reference_convcold_cloudnumber = reference_data.variables['convcold_cloudnumber'][:]                    # Load cloud id map
-        nreference = reference_data.variables['nclouds'][:]                                                     # Load number of clouds / features
-        reference_data.close()                                                                                  # close file
+        reference_data = xr.open_dataset(reference_file, autoclose=True)                                # Open file
+        reference_convcold_cloudnumber = reference_data['convcold_cloudnumber'].data                    # Load cloud id map
+        nreference = reference_data['nclouds'].data                                                     # Load number of clouds / features
 
         # Replace nans with -9999
         reference_convcold_cloudnumber[np.where(~np.isfinite(reference_convcold_cloudnumber))] = fillvalue
@@ -87,10 +87,9 @@ def trackclouds_mergedir(zipped_inputs): #firstcloudidfilename, secondcloudidfil
         # Load cloudid file from before, called new file
         print(new_filedatetime)
 
-        new_data = Dataset(new_file, 'r')                                # Open file
-        new_convcold_cloudnumber = new_data.variables['convcold_cloudnumber'][:]                # Load cloud id map
-        nnew = new_data.variables['nclouds'][:]                                                 # Load number of clouds / features
-        new_data.close()                                                                        # close file
+        new_data = xr.open_dataset(new_file, autoclose=True)                            # Open file
+        new_convcold_cloudnumber = new_data['convcold_cloudnumber'].data                # Load cloud id map
+        nnew = new_data['nclouds'].data                                                 # Load number of clouds / features
 
         # Replace nans with -9999
         new_convcold_cloudnumber[np.where(~np.isfinite(new_convcold_cloudnumber))] = fillvalue
@@ -101,10 +100,10 @@ def trackclouds_mergedir(zipped_inputs): #firstcloudidfilename, secondcloudidfil
 
         #######################################################
         # Initialize matrices
-        reference_forward_index = np.ones((int(nreference), int(nmaxlinks)), dtype=int)*fillvalue
-        reference_forward_size = np.ones((int(nreference), int(nmaxlinks)), dtype=int)*fillvalue
-        new_backward_index = np.ones((int(nnew), int(nmaxlinks)), dtype=int)*fillvalue
-        new_backward_size =  np.ones((int(nnew), int(nmaxlinks)), dtype=int)*fillvalue
+        reference_forward_index = np.ones((1, int(nreference), int(nmaxlinks)), dtype=int)*fillvalue
+        reference_forward_size = np.ones((1, int(nreference), int(nmaxlinks)), dtype=int)*fillvalue
+        new_backward_index = np.ones((1, int(nnew), int(nmaxlinks)), dtype=int)*fillvalue
+        new_backward_size =  np.ones((1, int(nnew), int(nmaxlinks)), dtype=int)*fillvalue
 
         ######################################################
         # Loop through each cloud / feature in reference time and look for overlaping clouds / features in the new file
@@ -130,8 +129,8 @@ def trackclouds_mergedir(zipped_inputs): #firstcloudidfilename, secondcloudidfil
                         print('new: ' + number_filepath + files[ifile])
                         sys.exit('More than ' + str(int(nmaxlinks)) + ' clouds in new file match with reference cloud?!')
                     else:
-                        reference_forward_index[refindex-1, forward_nmatch] = matchindex
-                        reference_forward_size[refindex-1, forward_nmatch] = len(np.extract(new_convcold_cloudnumber == matchindex, new_convcold_cloudnumber))
+                        reference_forward_index[0, int(refindex)-1, forward_nmatch] = matchindex
+                        reference_forward_size[0, int(refindex)-1, forward_nmatch] = len(np.extract(new_convcold_cloudnumber == matchindex, new_convcold_cloudnumber))
                         
                         forward_nmatch = forward_nmatch + 1
 
@@ -159,100 +158,94 @@ def trackclouds_mergedir(zipped_inputs): #firstcloudidfilename, secondcloudidfil
                         print('new: ' + number_filepath + files[ifile])
                         sys.exit('More than ' + str(int(nmaxlinks)) + ' clouds in reference file match with new cloud?!')
                     else:
-                        new_backward_index[newindex-1, backward_nmatch] = matchindex
-                        new_backward_size[newindex-1, backward_nmatch] = len(np.extract(reference_convcold_cloudnumber == matchindex, reference_convcold_cloudnumber))
+                        new_backward_index[0, int(newindex)-1, backward_nmatch] = matchindex
+                        new_backward_size[0, int(newindex)-1, backward_nmatch] = len(np.extract(reference_convcold_cloudnumber == matchindex, reference_convcold_cloudnumber))
                         
                         backward_nmatch = backward_nmatch + 1
 
         #########################################################
         # Save forward and backward indices and linked sizes in netcdf file
 
-        # create file
-        filesave = Dataset(dataoutpath + outfilebase + new_filedatetime + '.nc', 'w', format='NETCDF4_CLASSIC')
-        
-        # set global attributes
-        filesave.Convenctions = 'CF-1.6'
-        filesave.title = 'Indices linking clouds in two consecutive files forward and backward in time and the size of the linked cloud'
-        filesave.institution = 'Pacific Northwest National Laboratory'
-        filesave.setncattr('Contact', 'Hannah C Barnes: hannah.barnes@pnnl.gov')
-        filesave.history = 'Created ' + time.ctime(time.time())
-        filesave.setncattr('new_date', new_filedatetime)
-        filesave.setncattr('ref_date', reference_filedatetime)
-        filesave.setncattr('new_file', new_file)
-        filesave.setncattr('ref_file', reference_file)
-        filesave.setncattr('tracking_version_number', track_version)
-        filesave.setncattr('overlap_threshold', str(othresh) +'%')
-        filesave.setncattr('maximum_gap_allowed', str(timegap)+ ' hr')
-        
-        # create netcdf dimensions
-        filesave.createDimension('time', None)
-        filesave.createDimension('nclouds_new', nnew)
-        filesave.createDimension('nclouds_ref', nreference)
-        filesave.createDimension('nlinks', nmaxlinks)
-        
-        # define variables
-        basetime_new = filesave.createVariable('basetime_new', 'i4', 'time', zlib=True)
-        basetime_new.long_name = 'epoch time (seconds since 01/01/1970 00:00) of new file in epoch'
-        basetime_new.units = 'seconds'
-        basetime_new.standard_name = 'time'
-            
-        basetime_ref = filesave.createVariable('basetime_ref', 'i4', 'time', zlib=True)
-        basetime_ref.long_name = 'epoch time (seconds since 01/01/1970 00:00) of reference in epoch'
-        basetime_ref.units = 'seconds'
-        basetime_ref.standard_name = 'time'
-        
-        nclouds_new = filesave.createVariable('nclouds_new', 'i4', 'time', zlib=True)
-        nclouds_new.long_name = 'number of cloud systems in new file'
-        nclouds_new.units = 'unitless'
-        
-        nclouds_ref = filesave.createVariable('nclouds_ref', 'i4', 'time', zlib=True)
-        nclouds_ref.long_name = 'number of cloud systems in reference file'
-        nclouds_ref.units = 'unitless'
-        
-        nlinks = filesave.createVariable('nlinks', 'i4', 'time', zlib=True)
-        nlinks.long_name = 'maximum number of clouds that can be linked to a given cloud'
-        nlinks.units = 'unitless'
-        
-        newcloud_backward_index = filesave.createVariable('newcloud_backward_index', 'i4', ('time', 'nclouds_new', 'nlinks'), zlib=True, fill_value=fillvalue)
-        newcloud_backward_index.long_name = 'reference cloud index'
-        newcloud_backward_index.description = 'each row represents a cloud in the new file and the numbers in that row provide all reference cloud indices linked to that new cloud'
-        newcloud_backward_index.units = 'unitless'
-        newcloud_backward_index.min_value = 1
-        newcloud_backward_index.max_value = nreference
-        
-        refcloud_forward_index = filesave.createVariable('refcloud_forward_index', 'i4', ('time', 'nclouds_ref', 'nlinks'), zlib=True, fill_value=fillvalue)
-        refcloud_forward_index.long_name = 'new cloud index'
-        refcloud_forward_index.description = 'each row represents a cloud in the reference file and the numbers provide all new cloud indices linked to that reference cloud'
-        refcloud_forward_index.units = 'unitless'
-        refcloud_forward_index.min_value = 1
-        refcloud_forward_index.max_value = nnew
-        
-        newcloud_backward_size = filesave.createVariable('newcloud_backward_size', 'f4', ('time', 'nclouds_new', 'nlinks'), zlib=True, fill_value=fillvalue)
-        newcloud_backward_size.long_name = 'reference cloud area'
-        newcloud_backward_size.description = 'each row represents a cloud in the new file and the numbers provide the area of all reference clouds linked to that new cloud'
-        newcloud_backward_size.units = 'km^2'
-        
-        refcloud_forward_size = filesave.createVariable('refcloud_forward_size', 'f4', ('time', 'nclouds_ref', 'nlinks'), zlib=True, fill_value=fillvalue)
-        refcloud_forward_size.long_name = 'new cloud area'
-        refcloud_forward_size.description = 'each row represents a cloud in the reference file and the numbers provide the area of all new clouds linked to that reference cloud'
-        refcloud_forward_size.units = 'km^2'
-        
-        # fill variables
-        basetime_new[:] = reference_basetime
-        basetime_ref[:] = new_basetime
-        nclouds_new[:] = nnew
-        nclouds_ref[:] = nreference
-        nlinks[:] = nmaxlinks
-        newcloud_backward_index[0,:,:] = new_backward_index[:,:]
-        refcloud_forward_index[0,:,:] = reference_forward_index[:,:]
-        newcloud_backward_size[0,:,:] = new_backward_size[:,:]
-        refcloud_forward_size[0,:,:] = reference_forward_size[:,:]
+        # create filename
+        track_outfile = dataoutpath + outfilebase + new_filedatetime + '.nc'
 
-        # write and close file
-        filesave.close()
+        # Check if file already exists. If exists, delete
+        if os.path.isfile(track_outfile):
+            os.remove(track_outfile)
 
+        print('Writing all tracks')
+        print(track_outfile)
+        print('')
 
-            
+        # Define xarracy dataset
+        output_data = xr.Dataset({'basetime_new': (['time'], new_data['basetime'].data), \
+                                  'basetime_ref': (['time'], reference_data['basetime'].data), \
+                                  'newcloud_backward_index': (['time', 'nclouds_new', 'nlinks'], new_backward_index), \
+                                  'newcloud_backward_size': (['time', 'nclouds_new', 'nlinks'], new_backward_size), \
+                                  'refcloud_forward_index': (['time', 'nclouds_ref', 'nlinks'], reference_forward_index), \
+                                  'refcloud_forward_size': (['time', 'nclouds_ref', 'nlinks'], reference_forward_size)}, \
+                                 coords={'time': (['time'], np.arange(0, 1)), \
+                                         'nclouds_new': (['nclouds_new'], np.arange(0, nnew)), \
+                                         'nclouds_ref': (['nclouds_ref'], np.arange(0, nreference)), \
+                                         'nlinks': (['nlinks'], np.arange(0, nmaxlinks))}, \
+                                 attrs={'title': 'Indices linking clouds in two consecutive files forward and backward in time and the size of the linked cloud', \
+                                        'Conventions':'CF-1.6', \
+                                        'Institution': 'Pacific Northwest National Laboratoy', \
+                                        'Contact': 'Hannah C Barnes: hannah.barnes@pnnl.gov', \
+                                        'Created_on':  time.ctime(time.time()), \
+                                        'new_date': new_filedatetime, \
+                                        'ref_date': reference_filedatetime, \
+                                        'new_file': new_file, \
+                                        'ref_file': reference_file, \
+                                        'tracking_version_number': track_version, \
+                                        'overlap_threshold': str(othresh) +'%', \
+                                        'maximum_gap_allowed': str(timegap)+ ' hr'})
+
+        # Specify variable attributes
+        output_data.nclouds_new.attrs['long_name'] = 'number of cloud in new file'
+        output_data.nclouds_new.attrs['units'] = 'unitless'
+
+        output_data.nclouds_ref.attrs['long_name'] = 'number of cloud in reference file'
+        output_data.nclouds_ref.attrs['units'] = 'unitless'
+
+        output_data.nlinks.attrs['long_name'] = 'maximum number of clouds that can be linked to a given cloud'
+        output_data.nlinks.attrs['units'] = 'unitless'
+
+        output_data.basetime_new.attrs['long_name'] = 'epoch time (seconds since 01/01/1970 00:00) of new file'
+        output_data.basetime_new.attrs['standard_name'] = 'time'
+
+        output_data.basetime_ref.attrs['long_name'] = 'epoch time (seconds since 01/01/1970 00:00) of reference file'
+        output_data.basetime_ref.attrs['standard_name'] = 'time'
+
+        output_data.newcloud_backward_index.attrs['long_name'] = 'reference cloud index'
+        output_data.newcloud_backward_index.attrs['usage'] = 'each row represents a cloud in the new file and the numbers in that row provide all reference cloud indices linked to that new cloud'
+        output_data.newcloud_backward_index.attrs['units'] = 'unitless'
+        output_data.newcloud_backward_index.attrs['valid_min'] = 1
+        output_data.newcloud_backward_index.attrs['valid_max'] = nreference
+
+        output_data.refcloud_forward_index.attrs['long_name'] = 'new cloud index'
+        output_data.refcloud_forward_index.attrs['usage'] =  'each row represents a cloud in the reference file and the numbers provide all new cloud indices linked to that reference cloud'
+        output_data.refcloud_forward_index.attrs['units'] = 'unitless'
+        output_data.refcloud_forward_index.attrs['valid_min'] = 1
+        output_data.refcloud_forward_index.attrs['valid_max'] = nnew
+
+        output_data.newcloud_backward_size.attrs['long_name'] = 'reference cloud area'
+        output_data.newcloud_backward_size.attrs['usage'] = 'each row represents a cloud in the new file and the numbers provide the area of all reference clouds linked to that new cloud'
+        output_data.newcloud_backward_size.attrs['units'] = 'km^2'
+
+        output_data.refcloud_forward_size.attrs['long_name'] = 'new cloud area'
+        output_data.refcloud_forward_size.attrs['usage'] = 'each row represents a cloud in the reference file and the numbers provide the area of all new clouds linked to that reference cloud'
+        output_data.refcloud_forward_size.attrs['units'] = 'km^2'
+
+        # Write netcdf files
+        output_data.to_netcdf(path=track_outfile, mode='w', format='NETCDF4_CLASSIC', unlimited_dims='times', \
+                              encoding={'basetime_new': {'dtype':'int64', 'zlib':True}, \
+                                        'basetime_ref': {'dtype':'int64', 'zlib':True}, \
+                                        'newcloud_backward_index': {'dtype': 'int', 'zlib':True, '_FillValue': fillvalue}, \
+                                        'newcloud_backward_size': {'dtype': 'int', 'zlib':True, '_FillValue': fillvalue}, \
+                                        'refcloud_forward_index': {'dtype': 'int', 'zlib':True, '_FillValue': fillvalue}, \
+                                        'refcloud_forward_size': {'dtype': 'int', 'zlib':True, '_FillValue': fillvalue}})
+
 
 
 

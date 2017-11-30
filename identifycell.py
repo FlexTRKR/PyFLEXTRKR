@@ -102,9 +102,6 @@ def identifycell_LES(statistics_filebase, stats_path, startdate, enddate, time_r
                 mergefile = mergefile[mergefile != fillvalue]
                 mergefeature = mergefeature[mergefeature != fillvalue]
 
-            print(mergefile, mergefeature)
-            print(maincelltracknumbers[icell]-1)
-
             # Continue if mergers satisfy duration and MCS restriction
             if len(mergefile) > 0:
 
@@ -121,10 +118,6 @@ def identifycell_LES(statistics_filebase, stats_path, startdate, enddate, time_r
 
                 # Get data about MCS track
                 maincellbasetime = np.copy(allstatdata['basetime'][int(maincelltracknumbers[icell])-1, 0:int(maincelllength[icell])])
-                print(allstatdata['basetime'][int(maincelltracknumbers[icell])-1, :])
-                print(maincellbasetime)
-                raw_input('check')
-
 
                 #print(mcsbasetime)
                 #print(mergingbasetime)
@@ -137,11 +130,7 @@ def identifycell_LES(statistics_filebase, stats_path, startdate, enddate, time_r
                 for t in np.arange(0, maincelllength[icell]):
 
                     # Find merging cloud times that match current mcs track time
-                    print(mergingbasetime)
-                    print(maincellbasetime[int(t)])
                     timematch = np.where(mergingbasetime == maincellbasetime[int(t)])
-                    print(timematch)
-                    raw_input('check merge')
 
                     if np.shape(timematch)[1] > 0:
 
@@ -180,8 +169,6 @@ def identifycell_LES(statistics_filebase, stats_path, startdate, enddate, time_r
             if len(splitfile) > 0:
 
                 # Get data about splitting tracks
-                print(allstatdata['basetime'][splitfile, :])
-                raw_input('check')
                 splittingcloudnumber = np.copy(allstatdata['cloudnumber'][splitfile, :])
                 splittingbasetime = np.copy(allstatdata['basetime'][splitfile, :])
                 splittingstatus = np.copy(allstatdata['status'][splitfile, :])
@@ -199,11 +186,7 @@ def identifycell_LES(statistics_filebase, stats_path, startdate, enddate, time_r
                 for t in np.arange(0, maincelllength[icell]):
 
                     # Find splitting cloud times that match current mcs track time
-                    print(splittingbasetime)
-                    print(maincellbasetime)
                     timematch = np.where(splittingbasetime == maincellbasetime)
-                    print(timematch)
-                    raw_input('check split')
                     if np.shape(timematch)[1] > 0:
 
                         # save cloud number of small splitrs
@@ -230,8 +213,6 @@ def identifycell_LES(statistics_filebase, stats_path, startdate, enddate, time_r
     # Check if file already exists. If exists, delete
     if os.path.isfile(celltrackstatistics_outfile):
         os.remove(celltrackstatistics_outfile)
-
-    raw_input('check')
 
     # Defie xarray dataset
     output_data = xr.Dataset({'cell_basetime': (['ntracks', 'ntimes'], allstatdata['basetime'][maincelltrackid, :]), \
@@ -280,7 +261,6 @@ def identifycell_LES(statistics_filebase, stats_path, startdate, enddate, time_r
 
     output_data.cell_basetime.attrs['long_name'] = 'epoch time (seconds since 01/01/1970 00:00) of each cloud in a cell track'
     output_data.cell_basetime.attrs['standard_name'] = 'time'
-    output_data.cell_basetime.attrs['units'] = 'seconds'
 
     output_data.cell_datetimestring.attrs['long_name'] = 'date_time for each cloud in a cell track'
     output_data.cell_datetimestring.attrs['units'] = 'unitless'
@@ -348,7 +328,7 @@ def identifycell_LES(statistics_filebase, stats_path, startdate, enddate, time_r
     print('')
 
     output_data.to_netcdf(path=celltrackstatistics_outfile, mode='w', format='NETCDF4_CLASSIC', unlimited_dims='ntracks', \
-                          encoding={'cell_basetime': {'zlib':True, '_FillValue': fillvalue}, \
+                          encoding={'cell_basetime': {'dtype': 'int64', 'zlib':True, '_FillValue': fillvalue}, \
                                     'cell_datetimestring': {'zlib':True, '_FillValue': fillvalue}, \
                                     'cell_length': {'dtype':'int', 'zlib':True, '_FillValue': fillvalue}, \
                                     'cell_status': {'dtype':'int', 'zlib':True, '_FillValue': fillvalue}, \
