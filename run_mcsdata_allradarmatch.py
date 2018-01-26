@@ -30,11 +30,11 @@ print('Code Started')
 run_idclouds = 0        # Segment and identify cloud systems
 run_tracksingle = 0     # Track single consecutive cloudid files
 run_gettracks = 0       # Run trackig for all files
-run_finalstats = 1      # Calculate final statistics
-run_identifymcs = 1     # Isolate MCSs
+run_finalstats = 0      # Calculate final statistics
+run_identifymcs = 0     # Isolate MCSs
 run_matchpf = 1         # Identify precipitation features with MCSs
 run_robustmcs = 1       # Filter potential mcs cases using nmq radar variables
-run_labelmcs =  1       # Create maps of MCSs
+run_labelmcs =  0       # Create maps of MCSs
 
 # Set version of cloudid code
 cloudidmethod = 'futyan4'
@@ -50,8 +50,8 @@ curr_track_version = 'v1.0'
 curr_tracknumbers_version = 'v1.0'
 
 # Specify days to run
-startdate = '20110401'
-enddate = '20110831'
+startdate = '20110401.0000'
+enddate = '20110831.2300'
 
 # Specify cloud tracking parameters
 geolimits = np.array([25, -110, 51, -70])  # 4-element array with plotting boundaries [lat_min, lon_min, lat_max, lon_max]
@@ -66,7 +66,7 @@ cloudtb_cloud = 261.                       # K
 othresh = 0.5                              # overlap percentage threshold
 lengthrange = np.array([2,120])            # A vector [minlength,maxlength] to specify the lifetime range for the tracks
 nmaxlinks = 10                             # Maximum number of clouds that any single cloud can be linked to
-nmaxclouds = 1000                          # Maximum number of clouds allowed to be in one track
+nmaxclouds = 100                           # Maximum number of clouds allowed to be in one track
 absolutetb_threshs = np.array([160,330])   # k A vector [min, max] brightness temperature allowed. Brightness temperatures outside this range are ignored.
 warmanvilexpansion = 0                     # If this is set to one, then the cold anvil is spread laterally until it exceeds the warm anvil threshold
 mincoldcorepix = 4                         # Minimum number of pixels for the cold core, needed for futyan version 4 cloud identification code. Not used if use futyan version 3.
@@ -360,7 +360,7 @@ if run_identifymcs == 1:
     from identifymcs import identifymcs_mergedir
 
     # Call satellite version of function
-    identifymcs_mergedir(trackstats_filebase, stats_outpath, startdate, enddate, datatimeresolution, mcs_mergedir_areathresh, mcs_mergedir_durationthresh, mcs_mergedir_eccentricitythresh, mcs_mergedir_splitduration, mcs_mergedir_mergeduration, nmaxclouds)
+    identifymcs_mergedir(trackstats_filebase, stats_outpath, startdate, enddate, geolimits, datatimeresolution, mcs_mergedir_areathresh, mcs_mergedir_durationthresh, mcs_mergedir_eccentricitythresh, mcs_mergedir_splitduration, mcs_mergedir_mergeduration, nmaxclouds)
     mcsstats_filebase =  'mcs_tracks_'
 
 #############################################################

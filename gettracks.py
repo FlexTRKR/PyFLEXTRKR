@@ -1,5 +1,5 @@
 # Define function to track clouds that were identified in merged ir data
-def gettracknumbers_mergedir(datasource, datadescription, datainpath, dataoutpath, startdate, enddate, timegap, nmaxclouds, cloudid_filebase, npxname, tracknumbers_version, singletrack_filebase, keepsingletrack=1, removestartendtracks=0, tdimname='time', xdimname='lon', ydimname='lat'):
+def gettracknumbers_mergedir(datasource, datadescription, datainpath, dataoutpath, startdate, enddate, timegap, maxnclouds, cloudid_filebase, npxname, tracknumbers_version, singletrack_filebase, keepsingletrack=1, removestartendtracks=0, tdimname='time', xdimname='lon', ydimname='lat'):
     # Purpose: Track clouds successively from teh singel elsecloud files produced in trackclouds_mergedir.py.
 
     # Aassociateduthor: IDL version written by Sally A. McFarlane (sally.mcfarlane@pnnl.gov) and re, linewidth=2vised by Zhe Feng (, zlib=True, complevel=5, fill_value=fillvaluezhe.feng@pnnl.gov). Python version written by Hannah C. Barnes (hannah.barnes@pnnl.gov)
@@ -40,6 +40,7 @@ def gettracknumbers_mergedir(datasource, datadescription, datainpath, dataoutpat
     from netCDF4 import Dataset, stringtochar, chartostring
     import sys
     import xarray as xr
+    import pandas as pd
     np.set_printoptions(threshold=np.inf)
 
     #############################################################################
@@ -62,7 +63,7 @@ def gettracknumbers_mergedir(datasource, datadescription, datainpath, dataoutpat
     day = np.empty(nfiles, dtype=int)
     hour = np.empty(nfiles, dtype=int)
     minute = np.empty(nfiles, dtype=int)
-    basetime = np.empty(nfiles, dtype=int)
+    basetime = np.empty(nfiles, dtype='datetime64[s]')
     filedate = np.empty(nfiles)
     filetime = np.empty(nfiles)
 
@@ -74,17 +75,20 @@ def gettracknumbers_mergedir(datasource, datadescription, datainpath, dataoutpat
         hour[filestep] = int(ifiles[header+9:header+11])
         minute[filestep] = int(ifiles[header+11:header+13])
 
-        TEMP_fulltime = datetime.datetime(year[filestep], month[filestep], day[filestep], hour[filestep], minute[filestep], 0, 0, tzinfo=utc)
-        basetime[filestep] = calendar.timegm(TEMP_fulltime.timetuple())
+        TEMP_fulltime = calendar.timegm(datetime.datetime(year[filestep], month[filestep], day[filestep], hour[filestep], minute[filestep], 0, 0).timetuple())
+        basetime[filestep] = np.datetime64(np.array([pd.to_datetime(TEMP_fulltime, unit='s')][0], dtype='datetime64[s]'))
+
+        #TEMP_fulltime = datetime.datetime(year[filestep], month[filestep], day[filestep], hour[filestep], minute[filestep], 0, 0, tzinfo=utc)
+        #basetime[filestep] = calendar.timegm(TEMP_fulltime.timetuple())
 
     #############################################################################
     # Keep only files and date/times within start - end time interval
     # Put start and end dates in base time
-    TEMP_starttime = datetime.datetime(int(startdate[0:4]), int(startdate[4:6]), int(startdate[6:8]), 0, 0, 0, 0, tzinfo=utc)
-    start_basetime = calendar.timegm(TEMP_starttime.timetuple())
+    TEMP_starttime = calendar.timegm(datetime.datetime(int(startdate[0:4]), int(startdate[4:6]), int(startdate[6:8]), int(startdate[9:11]), 0, 0, 0).timetuple())
+    start_basetime = np.datetime64(np.array([pd.to_datetime(TEMP_starttime, unit='s')][0], dtype='datetime64[s]'))
 
-    TEMP_endtime = datetime.datetime(int(enddate[0:4]), int(enddate[4:6]), int(enddate[6:8]), 23, 0, 0, 0, tzinfo=utc)
-    end_basetime = calendar.timegm(TEMP_endtime.timetuple())
+    TEMP_endtime = calendar.timegm(datetime.datetime(int(enddate[0:4]), int(enddate[4:6]), int(enddate[6:8]), int(enddate[9:11]), 0, 0, 0).timetuple())
+    end_basetime = np.datetime64(np.array([pd.to_datetime(TEMP_endtime, unit='s')][0], dtype='datetime64[s]'))
 
     # Identify files within the start-end date interval
     acceptdates = np.array(np.where((basetime >= start_basetime) & (basetime <= end_basetime)))[0,:]
@@ -128,15 +132,15 @@ def gettracknumbers_mergedir(datasource, datadescription, datainpath, dataoutpat
     fillvalue = -9999
 
     nfiles = int(len(files))+2*gap
-    tracknumber = np.ones((1, nfiles, nmaxclouds), dtype=int)*fillvalue
-    referencetrackstatus = np.ones((nfiles, nmaxclouds), dtype=float)*fillvalue
-    newtrackstatus = np.ones((nfiles, nmaxclouds), dtype=float)*fillvalue
-    trackstatus = np.ones((1, nfiles, nmaxclouds), dtype=int)*fillvalue
-    trackmergenumber = np.ones((1, nfiles, nmaxclouds), dtype=int)*fillvalue
-    tracksplitnumber = np.ones((1, nfiles, nmaxclouds), dtype=int)*fillvalue
-    basetime = np.zeros(nfiles, dtype='datetime64[s]')
+    tracknumber = np.ones((1, nfiles, maxnclouds), dtype=int)*fillvalue
+    referencetrackstatus = np.ones((nfiles, maxnclouds), dtype=float)*fillvalue
+    newtrackstatus = np.ones((nfiles, maxnclouds), dtype=float)*fillvalue
+    trackstatus = np.ones((1, nfiles, maxnclouds), dtype=int)*fillvalue
+    trackmergenumber = np.ones((1, nfiles, maxnclouds), dtype=int)*fillvalue
+    tracksplitnumber = np.ones((1, nfiles, maxnclouds), dtype=int)*fillvalue
+    basetime = np.empty(nfiles, dtype='datetime64[s]')
     #basetime = np.ones(nfiles, dtype=int)*fillvalue
-    trackreset = np.ones((1, nfiles, nmaxclouds), dtype=int)*fillvalue
+    trackreset = np.ones((1, nfiles, maxnclouds), dtype=int)*fillvalue
 
     ############################################################################
     # Load first file
@@ -144,11 +148,11 @@ def gettracknumbers_mergedir(datasource, datadescription, datainpath, dataoutpat
     nclouds_reference = len(singletracking_data['nclouds_ref'].data)                               # Number of clouds in reference file
 
     # Make sure number of clouds does not exceed maximum. If does indicates over-segmenting data
-    if nclouds_reference > nmaxclouds:
+    if nclouds_reference > maxnclouds:
         sys.exit('# of clouds in reference file exceed allowed maximum number of clouds')
 
     # Isolate file name and add it to the filelist
-    basetime[0] = np.copy(singletracking_data['basetime_ref'].data[0])
+    basetime[0] = np.datetime64(pd.to_datetime(singletracking_data['basetime_ref'].data)[0])
 
     temp_referencefile = os.path.basename(singletracking_data.attrs['ref_file'])
     strlength = len(temp_referencefile)
@@ -171,13 +175,13 @@ def gettracknumbers_mergedir(datasource, datadescription, datainpath, dataoutpat
         ######################################################################
         # Load single track file
         singletracking_data = xr.open_dataset(datainpath + files[ifile], autoclose=True)                  # Open file
-        nclouds_reference = len(singletracking_data['nclouds_ref'].data)                               # Number of clouds in reference file
-        nclouds_new = len(singletracking_data['nclouds_new'].data)                                     # Number of clouds in new file
+        nclouds_reference = int(np.nanmax(singletracking_data['nclouds_ref'].data) + 1)                               # Number of clouds in reference file
+        nclouds_new = int(np.nanmax(singletracking_data['nclouds_new'].data) + 1)                                     # Number of clouds in new file
         refcloud_forward_index = singletracking_data['refcloud_forward_index'].data.astype(int)               # Each row represents a cloud in the reference file and the numbers in that row are indices of clouds in new file linked that cloud in the reference file
         newcloud_backward_index = singletracking_data['newcloud_backward_index'].data.astype(int)             # Each row represents a cloud in the new file and the numbers in that row are indices of clouds in the reference file linked that cloud in the new file
 
         # Make sure number of clouds does not exceed maximum. If does indicates over-segmenting data
-        if nclouds_reference > nmaxclouds:
+        if nclouds_reference > maxnclouds:
             sys.exit('# of clouds in reference file exceed allowed maximum number of clouds')
 
         ########################################################################
@@ -195,9 +199,9 @@ def gettracknumbers_mergedir(datasource, datadescription, datainpath, dataoutpat
 
         # Set previous and new times
         if ifile < 1:
-            time_prev = np.copy(singletracking_data['basetime_new'].data[0])
+            time_prev = singletracking_data['basetime_new'].data[0]
 
-        time_new = np.copy(singletracking_data['basetime_new'].data[0])
+        time_new = singletracking_data['basetime_new'].data[0]
 
         # Check if files immediately follow each other. Missing files can exist. If missing files exist need to incrament index and track numbers
         if ifile > 0:
@@ -215,7 +219,7 @@ def gettracknumbers_mergedir(datasource, datadescription, datainpath, dataoutpat
 
                 # Fill tracking matrices with reference data and record that the track ended
                 cloudidfiles[ifill, :] = list(os.path.basename(singletracking_data.attrs['ref_file']))
-                basetime[ifill] = np.copy(singletracking_data['basetime_ref'].data[0])
+                basetime[ifill] = np.datetime64(pd.to_datetime(singletracking_data['basetime_ref'].data)[0])
 
                 # Record that break in data occurs
                 trackreset[0, ifill, :] = 1
@@ -227,7 +231,7 @@ def gettracknumbers_mergedir(datasource, datadescription, datainpath, dataoutpat
 
         time_prev = time_new
         cloudidfiles[ifill + 1,:] = list(os.path.basename(singletracking_data.attrs['new_file']))
-        basetime[ifill + 1] = np.copy(singletracking_data['basetime_new'].data[0])
+        basetime[ifill + 1] = np.datetime64(pd.to_datetime(singletracking_data['basetime_new'].data)[0])
 
         ########################################################################################
         # Compare forward and backward single track matirces to link new and reference clouds
@@ -245,7 +249,7 @@ def gettracknumbers_mergedir(datasource, datadescription, datainpath, dataoutpat
 
                 trackpresent = 0
                 while ntemp_referenceclouds > nreferenceclouds:
-                    associated_referenceclouds = np.copy(temp_referenceclouds)
+                    associated_referenceclouds = np.copy(temp_referenceclouds).astype(int)
                     nreferenceclouds = ntemp_referenceclouds
 
                     for nr in range(0, nreferenceclouds):
@@ -266,17 +270,17 @@ def gettracknumbers_mergedir(datasource, datadescription, datainpath, dataoutpat
                         # Put all the indices associated with new clouds linked to the reference cloud in one vector
                         if nnewforward > 0:
                             if trackpresent == 0:
-                                associated_newclouds = core_newforward[:]
+                                associated_newclouds = core_newforward[:].astype(int)
                                 trackpresent = trackpresent + 1
                             else:
-                                associated_newclouds = np.append(associated_newclouds, core_newforward)
+                                associated_newclouds = np.append(associated_newclouds, core_newforward.astype(int))
 
                         if nnewbackward > 0:
                             if trackpresent == 0:
                                 associated_newclouds = core_newbackward[:]
                                 trackpresent = trackpresent + 1
                             else:
-                                associated_newclouds = np.append(associated_newclouds, core_newbackward)
+                                associated_newclouds = np.append(associated_newclouds, core_newbackward.astype(int))
                             
                         if nnewbackward == 0 and nnewforward == 0:
                             associated_newclouds = []
@@ -470,7 +474,7 @@ def gettracknumbers_mergedir(datasource, datadescription, datainpath, dataoutpat
 
         ##############################################################################
         # Find any clouds in the new track that don't have a track number. These are new clouds this file
-        for ncn in range(1,nclouds_new+1):
+        for ncn in range(1, int(nclouds_new)+1):
             if tracknumber[0, ifill+1, ncn-1] < 0:
                 tracknumber[0, ifill+1, ncn-1] = itrack
                 itrack = itrack + 1
@@ -480,7 +484,7 @@ def gettracknumbers_mergedir(datasource, datadescription, datainpath, dataoutpat
         #############################################################################
         # Flag the last file in the dataset
         if ifile == nfiles-2:
-            for ncn in range(1, nclouds_new+1):
+            for ncn in range(1, int(nclouds_new)+1):
                 trackreset[0, ifill+1, :] = 2
 
         ##############################################################################
@@ -562,7 +566,7 @@ def gettracknumbers_mergedir(datasource, datadescription, datainpath, dataoutpat
                               'track_reset': (['time', 'nfiles', 'nclouds'], trackreset)}, \
                              coords={'time': (['time'], np.arange(0, 1)), \
                                      'nfiles': (['nfiles'], np.arange(nfiles)), \
-                                     'nclouds': (['nclouds'], np.arange(0, nmaxclouds)), \
+                                     'nclouds': (['nclouds'], np.arange(0, maxnclouds)), \
                                      'ncharacters': (['ncharacters'], np.arange(0, strlength))}, \
                              attrs={'Title':  'Indicates the track each cloud is linked to. Flags indicate how the clouds transition(evolve) between files.', \
                                     'Conventions': 'CF-1.6', \
@@ -619,7 +623,7 @@ def gettracknumbers_mergedir(datasource, datadescription, datainpath, dataoutpat
     # Write netcdf file
     output_data.to_netcdf(path=tracknumbers_outfile, mode='w', format='NETCDF4_CLASSIC', unlimited_dims='ntracks', \
                           encoding={'ntracks': {'dtype': 'int', 'zlib':True}, \
-                                    'basetimes': {'dtype': 'int64', 'zlib':True, '_FillValue': 0}, \
+                                    'basetimes': {'dtype': 'int64', 'zlib':True, '_FillValue': fillvalue, 'units': 'seconds since 1970-01-01'}, \
                                     'cloudid_files': {'zlib':True,}, \
                                     'track_numbers': {'dtype': 'int', 'zlib':True, '_FillValue': fillvalue}, \
                                     'track_status':{'dtype': 'int', 'zlib':True, '_FillValue': fillvalue}, \

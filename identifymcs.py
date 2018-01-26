@@ -2,7 +2,7 @@
 
 # Author: Original IDL code written by Zhe Feng (zhe.feng@pnnl.gov), Python version written by Hannah C. Barnes (hannah.barnes@pnnl.gov)
 
-def identifymcs_mergedir(statistics_filebase, stats_path, startdate, enddate, time_resolution, area_thresh, duration_thresh, eccentricity_thresh, split_duration, merge_duration, nmaxmerge):
+def identifymcs_mergedir(statistics_filebase, stats_path, startdate, enddate, geolimits, time_resolution, area_thresh, duration_thresh, eccentricity_thresh, split_duration, merge_duration, nmaxmerge):
     #######################################################################
     # Import modules
     import numpy as np
@@ -10,6 +10,9 @@ def identifymcs_mergedir(statistics_filebase, stats_path, startdate, enddate, ti
     import time
     import os
     import sys
+    import xarray as xr
+    import pandas as pd
+    import time, datetime, calendar
     np.set_printoptions(threshold=np.inf)
 
     ##########################################################################
@@ -17,35 +20,9 @@ def identifymcs_mergedir(statistics_filebase, stats_path, startdate, enddate, ti
     statistics_file = stats_path + statistics_filebase + '_' + startdate + '_' + enddate + '.nc'
     print(statistics_file)
 
-    allstatdata = Dataset(statistics_file, 'r')
-    ntracks_all = len(allstatdata.dimensions['ntracks']) # Total number of tracked features
-    nmaxlength = len(allstatdata.dimensions['nmaxlength']) # Maximum number of features in a given track
-    trackstat_length = allstatdata.variables['lifetime'][:] # Duration of each track
-    trackstat_basetime = allstatdata.variables['basetime'][:] # Time of cloud in seconds since 01/01/1970 00:00
-    trackstat_datetime = allstatdata.variables['datetimestrings'][:]
-    trackstat_cloudnumber = allstatdata.variables['cloudnumber'][:] # Number of the corresponding cloudid file
-    trackstat_status = allstatdata.variables['status'][:] # Flag indicating the status of the cloud
-    trackstat_startstatus = allstatdata.variables['startstatus'][:] # Flag indicating the status of the first feature in each track
-    trackstat_endstatus = allstatdata.variables['endstatus'][:] # Flag indicating the status of the last feature in each track 
-    trackstat_mergenumbers = allstatdata.variables['mergenumbers'][:] # Number of a small feature that merges onto a bigger feature
-    trackstat_splitnumbers = allstatdata.variables['splitnumbers'][:] # Number of a small feature that splits onto a bigger feature
-    trackstat_boundary = allstatdata.variables['boundary'][:] # Flag indicating whether the core + cold anvil touches one of the domain edges. 0 = away from edge. 1= touches edge.
-    trackstat_trackinterruptions = allstatdata.variables['trackinterruptions'][:] # Numbers in each row indicate if the track started and ended naturally or if the start or end of the track was artifically cut short by data availability
-    trackstat_eccentricity = allstatdata.variables['eccentricity'][:] # Eccentricity of the core and cold anvil
-    trackstat_npix_core = allstatdata.variables['nconv'][:] # Number of pixels in the core
-    trackstat_npix_cold = allstatdata.variables['ncoldanvil'][:] # Number of pixels in the cold anvil
-    trackstat_meanlat = allstatdata.variables['meanlat'][:] # Mean latitude of the core and cold anvil
-    trackstat_meanlon = allstatdata.variables['meanlon'][:] # Mean longitude of the core and cold anvil
-    tb_coldanvil = Dataset.getncattr(allstatdata, 'tb_coldanvil') # Brightness temperature threshold for cold anvil
-    pixel_radius = Dataset.getncattr(allstatdata, 'pixel_radius_km') # Radius of one pixel in dataset
-    source = str(Dataset.getncattr(allstatdata, 'source'))
-    description = str(Dataset.getncattr(allstatdata, 'description'))
-
-    trackstat_latmin = allstatdata.variables['meanlat'].getncattr('min_value')
-    trackstat_latmax = allstatdata.variables['meanlat'].getncattr('max_value')
-    trackstat_lonmin = allstatdata.variables['meanlon'].getncattr('min_value')
-    trackstat_lonmax = allstatdata.variables['meanlon'].getncattr('max_value')
-    allstatdata.close()
+    allstatdata = xr.open_dataset(statistics_file, autoclose=True)
+    ntracks_all = (np.nanmax(allstatdata['ntracks'].data) + 1).astype(int) # Total number of tracked features
+    nmaxlength = (np.nanmax(allstatdata['nmaxlength'].data) + 1).astype(int) # Maximum number of features in a given track
 
     fillvalue = -9999
     
@@ -62,11 +39,12 @@ def identifymcs_mergedir(statistics_filebase, stats_path, startdate, enddate, ti
     # Set up thresholds
 
     # Cold Cloud Shield (CCS) area
-    trackstat_corearea = trackstat_npix_core * pixel_radius**2
-    trackstat_ccsarea = (trackstat_npix_core + trackstat_npix_cold) * pixel_radius**2
+    trackstat_corearea = np.copy(allstatdata['nconv'].data) * np.copy(allstatdata.attrs['pixel_radius_km'])**2
+    trackstat_ccsarea = (np.copy(allstatdata['nconv'].data) + np.copy(allstatdata['ncoldanvil'].data)) * np.copy(allstatdata.attrs['pixel_radius_km'])**2
 
     # Convert path duration to time
-    trackstat_duration = trackstat_length * time_resolution
+    trackstat_duration = np.copy(allstatdata['lifetime'].data) * time_resolution
+    trackstat_duration = trackstat_duration.astype(np.int32)
 
     ##################################################################
     # Initialize matrices
@@ -74,16 +52,17 @@ def identifymcs_mergedir(statistics_filebase, stats_path, startdate, enddate, ti
     trackid_sql= []
     trackid_nonmcs = []
 
-    mcstype = np.zeros(ntracks_all, dtype=int)
-    mcsstatus = np.ones((ntracks_all, nmaxlength), dtype=float)*fillvalue
+    mcstype = np.zeros(ntracks_all, dtype=np.int32)
+    mcsstatus = np.ones((ntracks_all, nmaxlength), dtype=np.int32)*fillvalue
 
     ###################################################################
     # Identify MCSs
-    for nt in range(0,ntracks_all):
+    print(ntracks_all)
+    for nt in range(0, ntracks_all):
         # Get data for a given track
         track_corearea = np.copy(trackstat_corearea[nt,:])
         track_ccsarea = np.copy(trackstat_ccsarea[nt,:])
-        track_eccentricity = np.copy(trackstat_eccentricity[nt,:])
+        track_eccentricity = np.copy(allstatdata['eccentricity'].data)
 
         # Remove fill values
         track_corearea = track_corearea[(track_corearea != fillvalue) & (track_corearea != 0)]
@@ -144,7 +123,7 @@ def identifymcs_mergedir(statistics_filebase, stats_path, startdate, enddate, ti
         mcsstatus = mcsstatus[trackid,:]
         mcstype = mcstype[trackid]
 
-        mcslength = np.ones(len(mcstype), dtype=float)*fillvalue
+        mcslength = np.ones(len(mcstype), dtype=np.int32)*fillvalue
         for imcs in range(0,nmcs):
             mcslength[imcs] = len(np.array(np.where(mcsstatus[imcs,:] != fillvalue))[0,:])
 
@@ -153,17 +132,26 @@ def identifymcs_mergedir(statistics_filebase, stats_path, startdate, enddate, ti
 
     ###############################################################
     # Find small merging and spliting louds and add to MCS
-    mcsmergecloudnumber = np.ones((nmcs, nmaxlength, nmaxmerge), dtype=int)*fillvalue
-    mcsmergestatus = np.ones((nmcs, nmaxlength, nmaxmerge), dtype=int)*fillvalue
-    mcssplitcloudnumber = np.ones((nmcs, nmaxlength, nmaxmerge), dtype=int)*fillvalue
-    mcssplitstatus = np.ones((nmcs, nmaxlength, nmaxmerge), dtype=int)*fillvalue
+    mcsmergecloudnumber = np.ones((nmcs, nmaxlength, nmaxmerge), dtype=np.int32)*fillvalue
+    mcsmergestatus = np.ones((nmcs, nmaxlength, nmaxmerge), dtype=np.int32)*fillvalue
+    mcssplitcloudnumber = np.ones((nmcs, nmaxlength, nmaxmerge), dtype=np.int32)*fillvalue
+    mcssplitstatus = np.ones((nmcs, nmaxlength, nmaxmerge), dtype=np.int32)*fillvalue
 
     # Loop through each MCS and link small clouds merging in
     for imcs in np.arange(0,nmcs):
 
         ###################################################################################
+        # Isolate basetime data
+        print('')
+
+        if imcs == 0:
+            mcsbasetime = np.array([pd.to_datetime(allstatdata['basetime'][trackid[imcs], :].data, unit='s')])
+        else:
+            mcsbasetime = np.concatenate((mcsbasetime, np.array([pd.to_datetime(allstatdata['basetime'][trackid[imcs], :].data, unit='s')])), axis=0)
+
+        ###################################################################################
         # Find mergers
-        [mergefile, mergefeature] = np.array(np.where(trackstat_mergenumbers == mcstracknumbers[imcs]))
+        [mergefile, mergefeature] = np.array(np.where(allstatdata['mergenumbers'].data == mcstracknumbers[imcs]))
 
         # Loop through all merging tracks, if present
         if len(mergefile) > 0:
@@ -185,10 +173,10 @@ def identifymcs_mergedir(statistics_filebase, stats_path, startdate, enddate, ti
             if len(mergefile) > 0:
 
                 # Get data about merging tracks
-                mergingcloudnumber = np.copy(trackstat_cloudnumber[mergefile, :])
-                mergingbasetime = np.copy(trackstat_basetime[mergefile, :])
-                mergingstatus = np.copy(trackstat_status[mergefile, :])
-                mergingdatetime = np.copy(trackstat_datetime[mergefile, :, :])
+                mergingcloudnumber = np.copy(allstatdata['cloudnumber'][mergefile, :])
+                mergingbasetime = np.copy(allstatdata['basetime'][mergefile, :])
+                mergingstatus = np.copy(allstatdata['status'][mergefile, :])
+                mergingdatetime = np.copy(allstatdata['datetimestrings'][mergefile, :, :])
 
                 #mergingstatus = mergingstatus[mergingcloudnumber != fillvalue]
                 #mergingdatetime = mergingdatetime[mergingcloudnumber != fillvalue]
@@ -196,7 +184,7 @@ def identifymcs_mergedir(statistics_filebase, stats_path, startdate, enddate, ti
                 #mergingcloudnumber = mergingcloudnumber[mergingcloudnumber != fillvalue]
 
                 # Get data about MCS track
-                mcsbasetime = np.copy(trackstat_basetime[int(mcstracknumbers[imcs])-1,0:int(mcslength[imcs])])
+                imcsbasetime = np.copy(allstatdata['basetime'][int(mcstracknumbers[imcs])-1,0:int(mcslength[imcs])])
 
                 #print(mcsbasetime)
                 #print(mergingbasetime)
@@ -209,7 +197,7 @@ def identifymcs_mergedir(statistics_filebase, stats_path, startdate, enddate, ti
                 for t in np.arange(0,mcslength[imcs]):
 
                     # Find merging cloud times that match current mcs track time
-                    timematch = np.where(np.absolute(mergingbasetime - mcsbasetime[int(t)])<0.001)
+                    timematch = np.where(mergingbasetime == imcsbasetime[int(t)])
 
                     if np.shape(timematch)[1] > 0:
 
@@ -226,7 +214,7 @@ def identifymcs_mergedir(statistics_filebase, stats_path, startdate, enddate, ti
 
         ############################################################
         # Find splits
-        [splitfile, splitfeature] = np.array(np.where(trackstat_splitnumbers == mcstracknumbers[imcs]))
+        [splitfile, splitfeature] = np.array(np.where(allstatdata['splitnumbers'].data == mcstracknumbers[imcs]))
 
         # Loop through all splitting tracks, if present
         if len(splitfile) > 0:
@@ -248,10 +236,10 @@ def identifymcs_mergedir(statistics_filebase, stats_path, startdate, enddate, ti
             if len(splitfile) > 0:
 
                 # Get data about splitting tracks
-                splittingcloudnumber = np.copy(trackstat_cloudnumber[splitfile, :])
-                splittingbasetime = np.copy(trackstat_basetime[splitfile, :])
-                splittingstatus = np.copy(trackstat_status[splitfile, :])
-                splittingdatetime = np.copy(trackstat_datetime[splitfile, :, :])
+                splittingcloudnumber = np.copy(allstatdata['cloudnumber'][splitfile, :])
+                splittingbasetime = np.copy(allstatdata['basetime'][splitfile, :])
+                splittingstatus = np.copy(allstatdata['status'][splitfile, :])
+                splittingdatetime = np.copy(allstatdata['datetimestrings'][splitfile, :, :])
 
                 #splittingstatus = splittingstatus[splittingcloudnumber != fillvalue]
                 #splittingdatetime = splittingdatetime[splittingcloudnumber != fillvalue]
@@ -259,13 +247,13 @@ def identifymcs_mergedir(statistics_filebase, stats_path, startdate, enddate, ti
                 #splittingcloudnumber = splittingcloudnumber[splittingcloudnumber != fillvalue]
 
                 # Get data about MCS track
-                mcsbasetime = np.copy(trackstat_basetime[int(mcstracknumbers[imcs])-1,0:int(mcslength[imcs])])
+                imcsbasetime = np.copy(allstatdata['basetime'][int(mcstracknumbers[imcs])-1,0:int(mcslength[imcs])])
 
                 # Loop through each timestep in the MCS track
                 for t in np.arange(0,mcslength[imcs]):
 
                     # Find splitting cloud times that match current mcs track time
-                    timematch = np.where(np.absolute(splittingbasetime - mcsbasetime[int(t)])<0.001)
+                    timematch = np.where(splittingbasetime == imcsbasetime[int(t)])
                     if np.shape(timematch)[1] > 0:
 
                         # save cloud number of small splitrs
@@ -279,184 +267,157 @@ def identifymcs_mergedir(statistics_filebase, stats_path, startdate, enddate, ti
                         #print(mcssplitcloudnumber[imcs, int(t), 0:nspliters])
                         #raw_input('Waiting for user')
 
-    ########################################################################
-    # Subset keeping just MCS tracks
-    trackid = np.copy(trackid.astype(int))
-    mcstrackstat_duration = np.copy(trackstat_duration[trackid])
-    mcstrackstat_basetime = np.copy(trackstat_basetime[trackid,:])
-    mcstrackstat_datetime = np.copy(trackstat_datetime[trackid,:])
-    mcstrackstat_cloudnumber = np.copy(trackstat_cloudnumber[trackid,:])
-    mcstrackstat_status = np.copy(trackstat_status[trackid,:])
-    mcstrackstat_corearea = np.copy(trackstat_corearea[trackid,:])
-    mcstrackstat_meanlat = np.copy(trackstat_meanlat[trackid,:])
-    mcstrackstat_meanlon = np.copy(trackstat_meanlon[trackid,:]) 
-    mcstrackstat_ccsarea = np.copy(trackstat_ccsarea[trackid,:])
-    mcstrackstat_eccentricity = np.copy(trackstat_eccentricity[trackid,:])
-    mcstrackstat_startstatus = np.copy(trackstat_startstatus[trackid])
-    mcstrackstat_endstatus = np.copy(trackstat_endstatus[trackid])
-    mcstrackstat_boundary = np.copy(trackstat_boundary[trackid])
-    mcstrackstat_trackinterruptions = np.copy(trackstat_trackinterruptions[trackid])
+    mcsmergecloudnumber = mcsmergecloudnumber.astype(np.int32)
+    mcssplitcloudnumber = mcssplitcloudnumber.astype(np.int32)
 
     ###########################################################################
     # Write statistics to netcdf file
 
     # Create file
     mcstrackstatistics_outfile = stats_path + 'mcs_tracks_' + startdate + '_' + enddate + '.nc'
-    filesave = Dataset(mcstrackstatistics_outfile, 'w', format='NETCDF4_CLASSIC')
 
-    # Set global attributes
-    filesave.Convenctions = 'CF-1.6'
-    filesave.title = 'File containing statistics for each track'
-    filesave.institution = 'Pacific Northwest National Laboratory'
-    filesave.setncattr('Contact', 'Hannah C Barnes: hannah.barnes@pnnl.gov')
-    filesave.history = 'Created ' + time.ctime(time.time())
-    filesave.setncattr('source', source)
-    filesave.setncattr('description', description)
-    filesave.setncattr('startdate', startdate)
-    filesave.setncattr('enddate', enddate)
-    filesave.setncattr('time_resolution_hour', time_resolution)
-    filesave.setncattr('pixel_radius_km', pixel_radius)
-    filesave.setncattr('MCS_area_km**2', area_thresh)
-    filesave.setncattr('MCS_duration_hour', duration_thresh)
-    filesave.setncattr('MCS_eccentricity', eccentricity_thresh)
+        # Check if file already exists. If exists, delete
+    if os.path.isfile(mcstrackstatistics_outfile):
+        os.remove(mcstrackstatistics_outfile)
 
-    # Create dimensions
-    filesave.createDimension('ntracks', None)
-    filesave.createDimension('ntimes', nmaxlength)
-    filesave.createDimension('nmergers', nmaxmerge)
-    filesave.createDimension('ndatetimechars', 13)
+    # Defie xarray dataset
+    output_data = xr.Dataset({'mcs_basetime': (['ntracks', 'ntimes'], mcsbasetime), \
+                              'mcs_datetimestring': (['ntracks', 'ntimes', 'ndatetimechars'], allstatdata['datetimestrings'][trackid, :, :]), \
+                              'track_length': (['ntracks'], trackstat_duration[trackid]), \
+                              'mcs_length': (['ntracks'],  mcslength), \
+                              'mcs_type': (['ntracks'], mcstype), \
+                              'mcs_status': (['ntracks', 'ntimes'], allstatdata['status'][trackid, :]), \
+                              'mcs_startstatus': (['ntracks'], allstatdata['startstatus'][trackid]), \
+                              'mcs_endstatus': (['ntracks'], allstatdata['endstatus'][trackid]), \
+                              'mcs_boundary': (['ntracks'], allstatdata['boundary'][trackid]), \
+                              'mcs_trackinterruptions': (['ntracks'], allstatdata['trackinterruptions'][trackid]), \
+                              'mcs_meanlat': (['ntracks', 'ntimes'], allstatdata['meanlat'][trackid, :]), \
+                              'mcs_meanlon': (['ntracks', 'ntimes'], allstatdata['meanlon'][trackid, :]), \
+                              'mcs_corearea': (['ntracks', 'ntimes'], trackstat_corearea[trackid,:]), \
+                              'mcs_ccsarea': (['ntracks', 'ntimes'], trackstat_ccsarea[trackid, :]), \
+                              'mcs_cloudnumber': (['ntracks', 'ntimes'], allstatdata['cloudnumber'][trackid, :]), \
+                              'mcs_mergecloudnumber': (['ntracks', 'ntimes', 'nmergers'], mcsmergecloudnumber), \
+                              'mcs_splitcloudnumber': (['ntracks', 'ntimes', 'nmergers'], mcssplitcloudnumber)}, \
+                             coords={'ntracks': (['ntracks'], np.arange(0, nmcs)), \
+                                     'ntimes': (['ntimes'], np.arange(0, nmaxlength)), \
+                                     'nmergers': (['nmergers'], np.arange(0, nmaxmerge)), \
+                                     'ndatetimechars': (['ndatetimechars'], np.arange(0, 13))}, \
+                             attrs={'title': 'File containing statistics for each mcs track', \
+                                    'Conventions': 'CF-1.6', \
+                                    'Institution': 'Pacific Northwest National Laboratory', \
+                                    'Contact': 'Hannah C Barnes: hannah.barnes@pnnl.gov', \
+                                    'Created_on': time.ctime(time.time()), \
+                                    'source': allstatdata.attrs['source'], \
+                                    'description': allstatdata.attrs['description'], \
+                                    'startdate': startdate, \
+                                    'enddate': enddate, \
+                                    'time_resolution_hour': time_resolution, \
+                                    'pixel_radius_km': allstatdata.attrs['pixel_radius_km'], \
+                                    'MCS_duration_hr': duration_thresh, \
+                                    'MCS_area_km^2': area_thresh, \
+                                    'MCS_eccentricity': eccentricity_thresh})
 
-    # Define variables
-    mcs_basetime = filesave.createVariable('mcs_basetime', 'i4', ('ntracks', 'ntimes'), zlib=True, complevel=5, fill_value=fillvalue)
-    mcs_basetime.standard_name = 'time'
-    mcs_basetime.long_name = 'epoch time'
-    mcs_basetime.description = 'basetime of cloud at the given time'
-    mcs_basetime.units = 'seconds since 01/01/1970 00:00'
-    mcs_basetime.fill_value = fillvalue
+    # Specify variable attributes
+    output_data.ntracks.attrs['long_name'] = 'Number of mcss tracked'
+    output_data.ntracks.attrs['units'] = 'unitless'
 
-    mcs_datetimestring = filesave.createVariable('mcs_datetimestring', 'S1', ('ntracks', 'ntimes', 'ndatetimechars'), zlib=True, complevel=5, fill_value=fillvalue)
-    mcs_datetimestring.long_name = 'date-time'
-    mcs_datetimestring.description = 'date_time for each cloud in the mcs'
+    output_data.ntimes.attrs['long_name'] = 'Maximum number of clouds in a mcs track'
+    output_data.ntimes.attrs['units'] = 'unitless'
 
-    track_length = filesave.createVariable('track_length', 'i4', 'ntracks', zlib=True, complevel=5, fill_value=fillvalue)
-    track_length.long_name = 'track duration'
-    track_length.description = 'complete length of each track containing an mcs'
-    track_length.units = 'hours'
-    track_length.fill_value = fillvalue
+    output_data.nmergers.attrs['long_name'] = 'Maximum number of allowed mergers/splits into one cloud'
+    output_data.nmergers.attrs['units'] = 'unitless'
 
-    mcs_length = filesave.createVariable('mcs_length', 'i4', 'ntracks', zlib=True, complevel=5, fill_value=fillvalue)
-    mcs_length.long_name = 'mcs duration'
-    mcs_length.description = 'length of each MCS in each track'
-    mcs_length.units = 'hours'
-    mcs_length.fill_value = fillvalue
+    output_data.mcs_basetime.attrs['long_name'] = 'epoch time (seconds since 01/01/1970 00:00) of each cloud in a mcs track'
+    output_data.mcs_basetime.attrs['standard_name'] = 'time'
 
-    mcs_type = filesave.createVariable('mcs_type', 'i4', 'ntracks', zlib=True, complevel=5, fill_value=fillvalue)
-    mcs_type.description = 'Type of MCS'
-    mcs_type.values = '1=MCS, 2=Squall Line'
-    mcs_type.fill_value = fillvalue
-    mcs_type.units = 'unitless'
+    output_data.mcs_datetimestring.attrs['long_name'] = 'date_time for each cloud in a mcs track'
+    output_data.mcs_datetimestring.attrs['units'] = 'unitless'
 
-    mcs_status = filesave.createVariable('mcs_status', 'i4', ('ntracks', 'ntimes'), zlib=True, complevel=5, fill_value=fillvalue)
-    mcs_status.long_name ='flag indicating the status of each feature in MCS'
-    mcs_status.description = 'Numbers in each row describe how the clouds in that track evolve over time'
-    mcs_status.values = '-9999=missing cloud or cloud removed due to short track, 0=track ends here, 1=cloud continues as one cloud in next file, 2=Biggest cloud in merger, 21=Smaller cloud(s) in merger, 13=Cloud that splits, 3=Biggest cloud from a split that stops after the split, 31=Smaller cloud(s) from a split that stop after the split. The last seven classifications are added together in different combinations to describe situations.'
-    mcs_status.min_value = 0
-    mcs_status.max_value = 52
-    mcs_status.fill_value = fillvalue
-    mcs_status.units = 'unitless'
+    output_data.track_length.attrs['long_name'] = 'Complete length/duration of each track containing an mcs each mcs track'
+    output_data.track_length.attrs['units'] = 'hr'
 
-    mcs_startstatus = filesave.createVariable('mcs_startstatus', 'i4', 'ntracks', zlib=True, complevel=5, fill_value=fillvalue)
-    mcs_startstatus.description = 'flag indicating the status of the first cloud in MCSs'
-    mcs_startstatus.values = '-9999=missing cloud or cloud removed due to short track, 0=track ends here, 1=cloud continues as one cloud in next file, 2=Biggest cloud in merger, 21=Smaller cloud(s) in merger, 13=Cloud that splits, 3=Biggest cloud from a split that stops after the split, 31=Smaller cloud(s) from a split that stop after the split. The last seven classifications are added together in different combinations to describe situations.'
-    mcs_startstatus.min_value = 0
-    mcs_startstatus.max_value = 52
-    mcs_startstatus.fill_value = fillvalue
-    mcs_startstatus.units = 'unitless'
+    output_data.mcs_length.attrs['long_name'] = 'Length/duration of each mcs track'
+    output_data.mcs_length.attrs['units'] = 'hr'
+
+    output_data.mcs_type.attrs['long_name'] = 'Type of MCS'
+    output_data.mcs_type.attrs['usage'] = '1=MCS, 2=Squall Line'
+    output_data.mcs_type.attrs['units'] = 'unitless'
+
+    output_data.mcs_status.attrs['long_name'] = 'flag indicating the status of each cloud in mcs track'
+    output_data.mcs_status.attrs['units'] = 'unitless'
+    output_data.mcs_status.attrs['valid_min'] = 0
+    output_data.mcs_status.attrs['valid_max'] = 65
+
+    output_data.mcs_startstatus.attrs['long_name'] = 'flag indicating the status of the first cloud in each mcs track'
+    output_data.mcs_startstatus.attrs['units'] = 'unitless'
+    output_data.mcs_startstatus.attrs['valid_min'] = 0
+    output_data.mcs_startstatus.attrs['valid_max'] = 65
     
-    mcs_endstatus = filesave.createVariable('mcs_endstatus', 'i4', 'ntracks', zlib=True, complevel=5, fill_value=fillvalue)
-    mcs_endstatus.description = 'flag indicating the status of the last cloud in MCSs'
-    mcs_endstatus.values = '-9999=missing cloud or cloud removed due to short track, 0=track ends here, 1=cloud continues as one cloud in next file, 2=Biggest cloud in merger, 21=Smaller cloud(s) in merger, 13=Cloud that splits, 3=Biggest cloud from a split that stops after the split, 31=Smaller cloud(s) from a split that stop after the split. The last seven classifications are added together in different combinations to describe situations.'
-    mcs_endstatus.min_value = 0
-    mcs_endstatus.max_value = 52
-    mcs_endstatus.fill_value = fillvalue
-    mcs_endstatus.units = 'unitless'
+    output_data.mcs_endstatus.attrs['long_name'] =  'flag indicating the status of the last cloud in each mcs track'
+    output_data.mcs_endstatus.attrs['units'] = 'unitless'
+    output_data.mcs_endstatus.attrs['valid_min'] = 0
+    output_data.mcs_endstatus.attrs['valid_max'] = 65
+    
+    output_data.mcs_boundary.attrs['long_name'] = 'Flag indicating whether the core + cold anvil touches one of the domain edges.'
+    output_data.mcs_boundary.attrs['values'] = '0 = away from edge. 1= touches edge.'
+    output_data.mcs_boundary.attrs['units'] = 'unitless'
+    output_data.mcs_boundary.attrs['valid_min'] = 0
+    output_data.mcs_boundary.attrs['valid_min'] = 1
 
-    mcs_boundary = filesave.createVariable('mcs_boundary', 'i4', 'ntracks', zlib=True, complevel=5, fill_value=fillvalue)
-    mcs_boundary.description = 'Flag indicating whether the core + cold anvil touches one of the domain edges. 0 = away from edge. 1= touches edge.'
-    mcs_boundary.min_value = 0
-    mcs_boundary.max_value = 1
-    mcs_boundary.fill_value = fillvalue
-    mcs_boundary.units = 'unitless'
+    output_data.mcs_trackinterruptions.attrs['long_name'] = 'Flag indiciate if the track started and ended naturally or if the start or end of the track was artifically cut short by data availability'
+    output_data.mcs_trackinterruptions.attrs['values'] = '0 = full track available, good data. 1 = track starts at first file, track cut short by data availability. 2 = track ends at last file, track cut short by data availability'
+    output_data.mcs_trackinterruptions.attrs['units'] = 'unitless'
+    output_data.mcs_trackinterruptions.attrs['valid_min'] = 0
+    output_data.mcs_trackinterruptions.attrs['valid_min'] = 2
 
-    mcs_trackinterruptions = filesave.createVariable('mcs_trackinterruptions', 'i4', 'ntracks', zlib=True, complevel=5, fill_value=fillvalue)
-    mcs_trackinterruptions.long_name = 'flag indication if track interrupted'
-    mcs_trackinterruptions.description = 'Numbers in each row indicate if the track started and ended naturally or if the start or end of the track was artifically cut short by data availability'
-    mcs_trackinterruptions.values = '0 = full track available, good data. 1 = track starts at first file, track cut short by data availability. 2 = track ends at last file, track cut short by data availability'
-    mcs_trackinterruptions.min_value = 0
-    mcs_trackinterruptions.max_value = 2
-    mcs_trackinterruptions.fill_value = fillvalue
-    mcs_trackinterruptions.units = 'unitless'
+    output_data.mcs_meanlat.attrs['long_name'] = 'Mean latitude of the core + cold anvil for each feature in a mcs track'
+    output_data.mcs_meanlat.attrs['standard_name'] = 'latitude'
+    output_data.mcs_meanlat.attrs['units'] = 'degrees_north'
+    output_data.mcs_meanlat.attrs['valid_min'] = geolimits[0]
+    output_data.mcs_meanlat.attrs['valid_max'] = geolimits[2]
 
-    mcs_meanlat = filesave.createVariable('mcs_meanlat', 'f4', ('ntracks', 'ntimes'), zlib=True, complevel=5, fill_value=fillvalue)
-    mcs_meanlat.standard_name = 'latitude'
-    mcs_meanlat.description = 'Mean latitude of the core + cold anvil for each feature in the MCS'
-    mcs_meanlat.valid_min = trackstat_latmin
-    mcs_meanlat.valid_max = trackstat_latmax
-    mcs_meanlat.fill_value = fillvalue
-    mcs_meanlat.units = 'degrees'
+    output_data.mcs_meanlon.attrs['long_name'] = 'Mean longitude of the core + cold anvil for each feature in a mcs track'
+    output_data.mcs_meanlon.attrs['standard_name'] = 'latitude'
+    output_data.mcs_meanlon.attrs['units'] = 'degrees_north'
+    output_data.mcs_meanlon.attrs['valid_min'] = geolimits[1]
+    output_data.mcs_meanlon.attrs['valid_max'] = geolimits[3]
 
-    mcs_meanlon = filesave.createVariable('mcs_meanlon', 'f4', ('ntracks', 'ntimes'), zlib=True, complevel=5, fill_value=fillvalue)
-    mcs_meanlon.standard_name = 'lonitude'
-    mcs_meanlon.description = 'Mean longitude of the core + cold anvil for each feature at the given time'
-    mcs_meanlon.valid_min = trackstat_lonmin
-    mcs_meanlon.valid_max = trackstat_lonmax
-    mcs_meanlon.fill_value = fillvalue
-    mcs_meanlon.units = 'degrees'
+    output_data.mcs_corearea.attrs['long_name'] = 'Area of the cold core for each feature in a mcs track'
+    output_data.mcs_corearea.attrs['units'] = 'km^2'
 
-    mcs_corearea = filesave.createVariable('mcs_corearea', 'f4', ('ntracks', 'ntimes'), zlib=True, complevel=5, fill_value=fillvalue)
-    mcs_corearea.description = 'area of the cold core at the given time'
-    mcs_corearea.fill_value = fillvalue
-    mcs_corearea.units = 'km^2'
+    output_data.mcs_corearea.attrs['long_name'] = 'Area of the cold core and cold anvil for each feature in a mcs track'
+    output_data.mcs_corearea.attrs['units'] = 'km^2'
 
-    mcs_ccsarea = filesave.createVariable('mcs_ccsarea', 'f4', ('ntracks', 'ntimes'), zlib=True, complevel=5, fill_value=fillvalue)
-    mcs_ccsarea.description = 'are of cold core and cold anvil at the given time'
-    mcs_ccsarea.fill_value = fillvalue
-    mcs_ccsarea.units = 'km^2'
+    output_data.mcs_cloudnumber.attrs['long_name'] = 'Number of each cloud in a track that cooresponds to the cloudid map'
+    output_data.mcs_cloudnumber.attrs['units'] = 'unitless'
+    output_data.mcs_cloudnumber.attrs['usuage'] = 'To link this tracking statistics file with pixel-level cloudid files, use the cloudidfile and cloudnumber together to identify which cloud this current track and time is associated with'
 
-    mcs_cloudnumber = filesave.createVariable('mcs_cloudnumber', 'i4', ('ntracks', 'ntimes'), zlib=True, complevel=5, fill_value=fillvalue)
-    mcs_cloudnumber.description = 'cloud number in the corresponding cloudid file of clouds in the mcs'
-    mcs_cloudnumber.usage = 'To link this tracking statistics file with pixel-level cloudid files, use the cloudidfile and cloudnumber together to identify which cloud this current track and time is associated with'
-    mcs_cloudnumber.fill_value = fillvalue
-    mcs_cloudnumber.units = 'unitless'
+    output_data.mcs_mergecloudnumber.attrs['long_name'] = 'cloud number of small, short-lived feature merging into a mcs track'
+    output_data.mcs_mergecloudnumber.attrs['units'] = 'unitless'
 
-    mcs_mergecloudnumber = filesave.createVariable('mcs_mergecloudnumber', 'i4', ('ntracks', 'ntimes', 'nmergers'), zlib=True, complevel=5, fill_value=fillvalue)
-    mcs_mergecloudnumber.long_name = 'cloud number of small, short-lived clouds merging into the MCS'
-    mcs_mergecloudnumber.fill_value = fillvalue
-    mcs_mergecloudnumber.units = 'unitless'
+    output_data.mcs_splitcloudnumber.attrs['long_name'] = 'cloud number of small, short-lived feature splitting into a mcs track'
+    output_data.mcs_splitcloudnumber.attrs['units'] = 'unitless'
 
-    mcs_splitcloudnumber = filesave.createVariable('mcs_splitcloudnumber', 'i4', ('ntracks', 'ntimes', 'nmergers'), zlib=True, complevel=5, fill_value=fillvalue)
-    mcs_splitcloudnumber.long_name = 'cloud number of small, short-lived clouds splitting from the MCS'
-    mcs_splitcloudnumber.fill_value = fillvalue
-    mcs_splitcloudnumber.units = 'unitless'
+    # Write netcdf file
+    print(mcstrackstatistics_outfile)
+    print('')
 
-    # Fill variables
-    mcs_basetime[:,:] = mcstrackstat_basetime
-    mcs_datetimestring[:,:,:] = mcstrackstat_datetime
-    track_length[:] = mcstrackstat_duration
-    mcs_length[:] = mcslength
-    mcs_type[:] = mcstype
-    mcs_status[:,:] = mcstrackstat_status
-    mcs_startstatus[:] = mcstrackstat_startstatus
-    mcs_endstatus[:] = mcstrackstat_endstatus
-    mcs_boundary[:] = mcstrackstat_boundary
-    mcs_trackinterruptions[:] = mcstrackstat_trackinterruptions
-    mcs_meanlat[:,:] = mcstrackstat_meanlat
-    mcs_meanlon[:,:] = mcstrackstat_meanlon
-    mcs_corearea[:,:] = mcstrackstat_corearea
-    mcs_ccsarea[:,:] = mcstrackstat_ccsarea
-    mcs_cloudnumber[:,:] = mcstrackstat_cloudnumber
-    mcs_mergecloudnumber[:,:,:] = mcsmergecloudnumber
-    mcs_splitcloudnumber[:,:,:] = mcssplitcloudnumber
+    output_data.to_netcdf(path=mcstrackstatistics_outfile, mode='w', format='NETCDF4_CLASSIC', unlimited_dims='ntracks', \
+                          encoding={'mcs_basetime': {'zlib':True, '_FillValue': fillvalue, 'units': 'seconds since 1970-01-01'}, \
+                                    'mcs_datetimestring': {'zlib':True, '_FillValue': fillvalue}, \
+                                    'track_length': {'zlib':True, '_FillValue': fillvalue}, \
+                                    'mcs_length': {'dtype':'int', 'zlib':True, '_FillValue': fillvalue}, \
+                                    'mcs_type': {'dtype':'int', 'zlib':True, '_FillValue': fillvalue}, \
+                                    'mcs_status': {'zlib':True, '_FillValue': fillvalue}, \
+                                    'mcs_startstatus': {'zlib':True, '_FillValue': fillvalue}, \
+                                    'mcs_endstatus': {'zlib':True, '_FillValue': fillvalue}, \
+                                    'mcs_boundary': {'zlib':True, '_FillValue': fillvalue}, \
+                                    'mcs_trackinterruptions': {'zlib':True, '_FillValue': fillvalue}, \
+                                    'mcs_meanlat': {'zlib':True, '_FillValue': fillvalue}, \
+                                    'mcs_meanlon': {'zlib':True, '_FillValue': fillvalue}, \
+                                    'mcs_corearea': {'zlib':True, '_FillValue': fillvalue}, \
+                                    'mcs_ccsarea': {'zlib':True, '_FillValue': fillvalue}, \
+                                    'mcs_cloudnumber': {'zlib':True, '_FillValue': fillvalue}, \
+                                    'mcs_mergecloudnumber': {'dtype':'int', 'zlib':True, '_FillValue': fillvalue}, \
+                                    'mcs_splitcloudnumber': {'dtype':'int', 'zlib':True, '_FillValue': fillvalue}})
 
-    # Close and save file
-    filesave.close()

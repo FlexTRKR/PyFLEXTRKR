@@ -10,6 +10,8 @@ def mapcell_LES(zipped_inputs):
     import os
     import sys
     import xarray as xr
+    import pandas as pd
+    import time, datetime, calendar
     np.set_printoptions(threshold=np.inf)
 
     # Separate inputs
@@ -218,7 +220,7 @@ def mapcell_LES(zipped_inputs):
         os.remove(celltrackmaps_outfile)
 
     # Define xarray dataset
-    output_data = xr.Dataset({'basetime': (['time'], cloudiddata['basetime'].data), \
+    output_data = xr.Dataset({'basetime': (['time'], np.array([pd.to_datetime(cloudiddata['basetime'].data, unit='s')], dtype='datetime64[s]')[0]),  \
                               'lon': (['nlat', 'nlon'], cloudiddata['longitude']), \
                               'lat': (['nlat', 'nlon'], cloudiddata['latitude']), \
                               'nclouds': (['time'], cloudiddata['nclouds'].data), \
@@ -329,7 +331,8 @@ def mapcell_LES(zipped_inputs):
     print('')
 
     output_data.to_netcdf(path=celltrackmaps_outfile, mode='w', format='NETCDF4_CLASSIC', unlimited_dims='time', \
-                          encoding={'basetime': {'dtype': 'int64', 'zlib':True, '_FillValue': fillvalue}, \
+                          encoding={'basetime': {'dtype': 'int64', 'zlib':True, '_FillValue': fillvalue, 'units': 'seconds since 1970-01-01'}, \
+                                    'time': {'units': 'seconds since 1970-01-01'}, \
                                     'lon': {'zlib':True, '_FillValue': fillvalue}, \
                                     'lat': {'zlib':True, '_FillValue': fillvalue}, \
                                     'nclouds': {'zlib':True, '_FillValue': fillvalue}, \

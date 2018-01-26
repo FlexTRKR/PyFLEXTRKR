@@ -16,12 +16,12 @@ import xarray as xr
 # Set variables describing data, file structure, and tracking thresholds
 
 # Specify which sets of code to run. (1 = run code, 0 = don't run code)
-run_idclouds = 1        # Segment and identify cloud systems
-run_tracksingle = 1     # Track single consecutive cloudid files
+run_idclouds = 0        # Segment and identify cloud systems
+run_tracksingle = 0     # Track single consecutive cloudid files
 run_gettracks = 0       # Run trackig for all files
 run_finalstats = 0      # Calculate final statistics
 run_identifycell = 0    # Isolate cells
-run_labelcell = 0        # Create maps of MCSs
+run_labelcell = 1        # Create maps of MCSs
 
 # Set version of cloudid code
 cloudidmethod = 'futyan4'
@@ -37,8 +37,8 @@ curr_track_version = 'v1.0'
 curr_tracknumbers_version = 'v1.0'
 
 # Specify days to run
-startdate = '20160830'
-enddate = '20160830'
+startdate = '20160830.2000'
+enddate = '20160830.2300'
 
 # Specify domain size
 ny = int(1200)
@@ -47,26 +47,26 @@ nx = int(1200)
 # Specify cloud tracking parameters
 geolimits = np.array([36.05, -98.12, 37.15, -96.79])  # 4-element array with plotting boundaries [lat_min, lon_min, lat_max, lon_max]
 pixel_radius = 0.1                         # km
-timegap = 1.1                              # hour
+timegap = 1.1/float(60)                    # hour
 area_thresh = 0.09                         # km^2
 miss_thresh = 0.2                          # Missing data threshold. If missing data in the domain from this file is greater than this value, this file is considered corrupt and is ignored. (0.1 = 10%)
 cloudlwp_core = 0.75                       # K
-cloudlwp_cold = 0.05                       # K
-cloudlwp_warm = 0.03                       # K
-cloudlwp_cloud = 0.03                      # K
+cloudlwp_cold = 0.2                       # K
+cloudlwp_warm = 0.1                       # K
+cloudlwp_cloud = 0.1                      # K
 othresh = 0.5                              # overlap percentage threshold
-lengthrange = np.array([2, 1500])          # A vector [minlength,maxlength] to specify the lifetime range for the tracks
+lengthrange = np.array([5, 100])            # A vector [minlength,maxlength] to specify the lifetime range for the tracks
+maxnclouds = 6000                          # Maximum clouds in one file
 nmaxlinks = 10                             # Maximum number of clouds that any single cloud can be linked to
-nmaxclouds = 6000                          # Maximum number of clouds allowed to be in one track
 absolutelwp_threshs = np.array([0, 20])    # k A vector [min, max] brightness temperature allowed. Brightness temperatures outside this range are ignored.
 warmanvilexpansion = 0                     # If this is set to one, then the cold anvil is spread laterally until it exceeds the warm anvil threshold
 mincoldcorepix = 4                         # Minimum number of pixels for the cold core, needed for futyan version 4 cloud identification code. Not used if use futyan version 3.
 smoothwindowdimensions = 10                # Dimension of the boxcar filter used for futyan version 4. Not used in futyan version 3
 
 ## Specify cell track parameters
-maincloud_duration = 4                      # Natural time resolution of data
-merge_duration = 4                          # Track shorter than this will be labeled as merger
-split_duration = 4                         # Track shorter than this will be labeled as merger
+maincloud_duration = 4/float(60)                      # Natural time resolution of data
+merge_duration = 4/float(60)                          # Track shorter than this will be labeled as merger
+split_duration = 4/float(60)                         # Track shorter than this will be labeled as merger
 
 # Specify filenames and locations
 #datavariablename = 'IRBT'
@@ -75,7 +75,7 @@ datadescription = 'SGP'
 databasename = 'outmet_d02_'
 label_filebase = 'cloudtrack_'
 
-root_path = '/global/homes/h/hcbarnes/Tracking/LES/'
+root_path = '/scratch2/scratchdirs/hcbarnes/LES/'
 clouddata_path = '/scratch2/scratchdirs/hcbarnes/LES/data/'
 scratchpath = './'
 latlon_file = clouddata_path + 'coordinates_d02_big.dat'
@@ -117,10 +117,10 @@ if not os.path.exists(stats_outpath):
 
 ########################################################################
 # Calculate basetime of start and end date
-TEMP_starttime = datetime.datetime(int(startdate[0:4]), int(startdate[4:6]), int(startdate[6:8]), 0, 0, 0, tzinfo=utc)
+TEMP_starttime = datetime.datetime(int(startdate[0:4]), int(startdate[4:6]), int(startdate[6:8]), int(startdate[9:11]), 0, 0, tzinfo=utc)
 start_basetime = calendar.timegm(TEMP_starttime.timetuple())
 
-TEMP_endtime = datetime.datetime(int(enddate[0:4]), int(enddate[4:6]), int(enddate[6:8]), 23, 0, 0, tzinfo=utc)
+TEMP_endtime = datetime.datetime(int(enddate[0:4]), int(enddate[4:6]), int(enddate[6:8]), int(enddate[9:11]), 0, 0, tzinfo=utc)
 end_basetime = calendar.timegm(TEMP_endtime.timetuple())
 
 ##########################################################################
@@ -291,7 +291,7 @@ if run_gettracks == 1:
 
     # Call function
     print('Getting track numbers')
-    gettracknumbers_mergedir(datasource, datadescription, tracking_outpath, stats_outpath, startdate, enddate, timegap, nmaxclouds, cloudid_filebase, npxname, tracknumber_version, singletrack_filebase, keepsingletrack=1, removestartendtracks=1)
+    gettracknumbers_mergedir(datasource, datadescription, tracking_outpath, stats_outpath, startdate, enddate, timegap, maxnclouds, cloudid_filebase, npxname, tracknumber_version, singletrack_filebase, keepsingletrack=1, removestartendtracks=1)
     tracknumbers_filebase = 'tracknumbers' + tracknumber_version
 
 ############################################################
@@ -325,7 +325,7 @@ if run_identifycell == 1:
     from identifycell import identifycell_LES
 
     # Call satellite version of function
-    identifycell_LES(trackstats_filebase, stats_outpath, startdate, enddate, datatimeresolution, geolimits, maincloud_duration, merge_duration, split_duration, nmaxclouds)
+    identifycell_LES(trackstats_filebase, stats_outpath, startdate, enddate, datatimeresolution, geolimits, maincloud_duration, merge_duration, split_duration, lengthrange[1])
     cellstats_filebase =  'cell_tracks_'
 
 ############################################################
@@ -386,13 +386,13 @@ if run_labelcell == 1:
     cellmap_input = zip(cloudidfiles, cloudidfiles_basetime, list_cellstat_filebase, list_trackstat_filebase, list_celltracking_path, list_stats_path, list_absolutelwp_threshs, list_startdate, list_enddate)
 
     ## Call function
-    for iunique in range(0, cloudidfilestep-1):
-        mapcell_LES(cellmap_input[iunique])
+    #for iunique in range(0, cloudidfilestep-1):
+    #   mapcell_LES(cellmap_input[iunique])
 
-    #if __name__ == '__main__':
-    #    print('Creating maps of tracked MCSs')
-    #    pool = Pool(4)
-    #    pool.map(mapmcs_pf, robustmcsmap_input)
-    #    pool.close()
-    #    pool.join()
+    if __name__ == '__main__':
+        print('Creating maps of tracked MCSs')
+        pool = Pool(4)
+        pool.map(mapcell_LES, cellmap_input)
+        pool.close()
+        pool.join()
 

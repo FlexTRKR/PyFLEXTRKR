@@ -12,7 +12,8 @@ def filtermcs_mergedir_nmq(stats_path, pfstats_filebase, startdate, enddate, tim
     import sys
     import time
     import warnings
-
+    import pandas as pd
+    import time, datetime, calendar
     np.set_printoptions(threshold=np.inf)
 
     ######################################################
@@ -23,7 +24,7 @@ def filtermcs_mergedir_nmq(stats_path, pfstats_filebase, startdate, enddate, tim
     # Load mergedir mcs and pf data
     mergedirpf_statistics_file = stats_path + pfstats_filebase + startdate + '_' + enddate + '.nc'
 
-    data = xr.open_dataset(mergedirpf_statistics_file, autoclose=True, decode_times=False)
+    data = xr.open_dataset(mergedirpf_statistics_file, autoclose=True)
     ntracks = np.nanmax(data.coords['track'])
     ntimes = len(data.coords['time'])
     ncores =  len(data.coords['cores'])
@@ -60,7 +61,7 @@ def filtermcs_mergedir_nmq(stats_path, pfstats_filebase, startdate, enddate, tim
 
         ############################################
         # Isolate data from this track 
-        ilength = np.copy(ir_tracklength[nt])
+        ilength = np.copy(ir_tracklength[nt]).astype(int)
 
         # Get the largest precipitation (1st entry in 3rd dimension)
         ipf_majoraxis = np.copy(pf_majoraxis[nt, 0:ilength, 0])
@@ -178,6 +179,8 @@ def filtermcs_mergedir_nmq(stats_path, pfstats_filebase, startdate, enddate, tim
         cycle_stage = np.ones((nmcs, ntimes), dtype=float)*fillvalue
         cycle_index = np.ones((nmcs, 5), dtype=int)*fillvalue
 
+        mcs_basetime = np.empty((nmcs, ntimes), dtype='datetime64[s]')
+
         # Loop through each mcs
         for ilm in range(0, nlongmcs):
             # Initialize arrays
@@ -185,7 +188,7 @@ def filtermcs_mergedir_nmq(stats_path, pfstats_filebase, startdate, enddate, tim
             ilm_cycle = np.ones(ntimes, dtype=float)*fillvalue
 
             # Isolate data from this track
-            ilm_irtracklength = np.copy(ir_tracklength[ilongmcs[ilm]])
+            ilm_irtracklength = np.copy(ir_tracklength[ilongmcs[ilm]]).astype(int)
             ilm_pfcctype = np.copy(pf_cctype[ilongmcs[ilm], 0:ilm_irtracklength])
             ilm_pfccmajoraxis = np.copy(pf_ccmajoraxis[ilongmcs[ilm], 0:ilm_irtracklength, :])
             ilm_pfccarea = np.copy(pf_ccarea[ilongmcs[ilm], 0:ilm_irtracklength, :])
@@ -194,6 +197,10 @@ def filtermcs_mergedir_nmq(stats_path, pfstats_filebase, startdate, enddate, tim
 
             ilm_maxpfccmajoraxis = np.nanmax(ilm_pfccmajoraxis, axis=1)
             ilm_maxpfccarea = np.nanmax(ilm_pfccarea, axis=1)
+
+            # Get basetime
+            TEMP_basetime = np.array([pd.to_datetime(data['basetime'][trackid_mcs[ilongmcs[ilm]], 0:ilm_irtracklength].data, unit='s')])
+            mcs_basetime[ilm, 0:ilm_irtracklength] = TEMP_basetime
 
             ##################################################################
             # Find indices of when convective line present and absent and when stratiform present
@@ -390,7 +397,7 @@ def filtermcs_mergedir_nmq(stats_path, pfstats_filebase, startdate, enddate, tim
                               'endstatus': (['track'], data['endstatus'][trackid_mcs]), \
                               'interruptions': (['track'], data['interruptions'][trackid_mcs]), \
                               'boundary': (['track'], data['boundary'][trackid_mcs]), \
-                              'base_time': (['track', 'time'], data['basetime'][trackid_mcs, :]), \
+                              'base_time': (['track', 'time'], mcs_basetime), \
                               'datetimestring': (['track', 'time', 'characters'], data['datetimestring'][trackid_mcs, :, :]), \
                               'meanlat': (['track', 'time'], data['meanlat'][trackid_mcs, :]), \
                               'meanlon': (['track', 'time'], data['meanlon'][trackid_mcs, :]), \
@@ -733,7 +740,7 @@ def filtermcs_mergedir_nmq(stats_path, pfstats_filebase, startdate, enddate, tim
                                     'status': {'zlib':True, '_FillValue': fillvalue}, \
                                     'startstatus': {'zlib':True, '_FillValue': fillvalue}, \
                                     'endstatus': {'zlib':True, '_FillValue': fillvalue}, \
-                                    'base_time': {'zlib':True, '_FillValue': fillvalue}, \
+                                    'base_time': {'zlib':True, '_FillValue': fillvalue, 'units': 'seconds since 1970-01-01'}, \
                                     'datetimestring': {'zlib':True, '_FillValue': fillvalue}, \
                                     'meanlat': {'zlib':True, '_FillValue': fillvalue}, \
                                     'meanlon': {'zlib':True, '_FillValue': fillvalue}, \
