@@ -86,6 +86,11 @@ def filtermcs_mergedir_nmq(stats_path, pfstats_filebase, startdate, enddate, tim
                 # Find continuous duration indices
                 groups = np.split(ipfmcs, np.where(np.diff(ipfmcs) != gapthresh)[0]+1)
                 nbreaks = len(groups)
+                print(gapthresh)
+                print(ipfmcs)
+                print(groups)
+                print(nbreaks)
+                raw_input('check')
 
                 for igroup in range(0, nbreaks):
 
@@ -93,6 +98,11 @@ def filtermcs_mergedir_nmq(stats_path, pfstats_filebase, startdate, enddate, tim
                     # Determine if each group statisfies duration threshold
                     igroup_indices = np.array(np.copy(groups[igroup][:]))
                     nigroup = len(igroup_indices)
+                    print(igroup_indices)
+                    print(nigroup)
+                    print(np.multiply(len(groups[igroup][:]), time_res))
+                    print(durationthresh)
+                    raw_input('check')
 
                     # Group satisfies duration threshold
                     if np.multiply(len(groups[igroup][:]), time_res) > durationthresh:
@@ -105,6 +115,8 @@ def filtermcs_mergedir_nmq(stats_path, pfstats_filebase, startdate, enddate, tim
 
                         # Label this period as an mcs
                         pf_mcsstatus[nt, igroup_indices] = 1
+                        print(pf_mcsstatus[nt, :])
+                        raw_input('check')
 
                         ## Determine type of mcs (squall or non-squall)
                         #isquall = np.array(np.where(igroup_ccaspectratio > aspectratiothresh))[0, :]

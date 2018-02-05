@@ -55,34 +55,33 @@ def trackstats_sat(datasource, datadescription, pixel_radius, latlon_file, geoli
 
     # Load latitude and longitude grid
     latlondata = Dataset(tracking_inpath + temp_cloudidfiles, 'r')
-    lon = latlondata.variables['longitude'][:]
-    lat = latlondata.variables['latitude'][:]
+    longitude = latlondata.variables['longitude'][:]
+    latitude = latlondata.variables['latitude'][:]
     latlondata.close()
-
-    # Load landmask. Optional setting. Often used with model data.
-    if landsea == 1:
-        landmassfile = Dataset(latlon_file, 'r')
-        landmask = landmassfile.variables['landmask_sat'][:]
-
-        landlocation = np.array(np.where(landmask > 0))
-        if np.shape(landlocation)[1] > 0:
-            landmask[landlocation[0,:], landlocation[1,:]] = 1
-        landmask.astype(int)
 
     #############################################################################
     # Load track data
     cloudtrack_file = stats_path + tracknumbers_filebase + '_' + startdate + '_' + enddate + '.nc'
-    
-    cloudtrackdata = xr.open_dataset(cloudtrack_file, autoclose=True)
-    numtracks = np.copy(cloudtrackdata['ntracks'].data)
-    cloudidfiles = cloudtrackdata['cloudid_files'].data
+
+    cloudtrackdata = Dataset(cloudtrack_file, 'r')
+    numtracks = cloudtrackdata['ntracks'][:]
+    cloudidfiles = cloudtrackdata['cloudid_files'][:]
+    tracknumbers = cloudtrackdata['track_numbers'][:]
+    trackreset = cloudtrackdata['track_reset'][:]
+    tracksplit = cloudtrackdata['track_splitnumbers'][:]
+    trackmerge = cloudtrackdata['track_mergenumbers'][:]
+    trackstatus = cloudtrackdata['track_status'][:]
+    cloudtrackdata.close()
+    #cloudtrackdata = xr.open_dataset(cloudtrack_file, autoclose=True)
+    #numtracks = np.copy(cloudtrackdata['ntracks'].data)
+    #cloudidfiles = cloudtrackdata['cloudid_files'].data
 
     # Convert filenames and timegap to string
     numcharfilename = len(list(cloudidfiles[0]))
 
     # Determine dimensions of data
     nfiles = len(cloudidfiles)
-    ny, nx = np.shape(lat)
+    ny, nx = np.shape(latitude)
 
     ############################################################################
     # Initialize grids
@@ -131,14 +130,12 @@ def trackstats_sat(datasource, datadescription, pixel_radius, latlon_file, geoli
     finaltrack_corecold_ycenter = np.ones((int(numtracks),int(nmaxclouds)), dtype=np.int32)*fillvalue
     finaltrack_corecold_xweightedcenter = np.ones((int(numtracks),int(nmaxclouds)), dtype=np.int32)*fillvalue
     finaltrack_corecold_yweightedcenter = np.ones((int(numtracks),int(nmaxclouds)), dtype=np.int32)*fillvalue
-    if landsea == 1:
-        finaltrack_corecold_landfrac = np.ones((int(numtracks),int(nmaxclouds)), dtype=float)*fillvalue
-        finaltrack_core_landfrac = np.ones((int(numtracks),int(nmaxclouds)), dtype=float)*fillvalue
 
     #########################################################################################
     # loop over files. Calculate statistics and organize matrices by tracknumber and cloud
     for nf in range(0,nfiles):
-        file_tracknumbers = cloudtrackdata['track_numbers'][0, nf, :]
+        file_tracknumbers = tracknumbers[0, nf, :]
+        #file_tracknumbers = cloudtrackdata['track_numbers'][0, nf, :]
 
         # Only process file if that file contains a track
         if np.nanmax(file_tracknumbers) > 0:
@@ -147,17 +144,18 @@ def trackstats_sat(datasource, datadescription, pixel_radius, latlon_file, geoli
             # Load cloudid file
             cloudid_file = tracking_inpath + ''.join(cloudidfiles[nf])
 
-            file_cloudiddata = xr.open_dataset(cloudid_file, autoclose=True)
-
-            file_tb = file_cloudiddata['tb'].data
-            file_cloudtype = file_cloudiddata['cloudtype'].data
-            file_all_cloudnumber = file_cloudiddata['cloudnumber'].data
-            file_corecold_cloudnumber = file_cloudiddata['convcold_cloudnumber'].data
-            latitude = file_cloudiddata['latitude'].data
-            longitude = file_cloudiddata['longitude'].data
+            file_cloudiddata = Dataset(cloudid_file, 'r')
+            file_tb = file_cloudiddata['tb'][:]
+            file_cloudtype = file_cloudiddata['cloudtype'][:]
+            file_all_cloudnumber = file_cloudiddata['cloudnumber'][:]
+            file_corecold_cloudnumber = file_cloudiddata['convcold_cloudnumber'][:]
+            file_basetime = file_cloudiddata['basetime'][:]
             file_cloudiddata.close()
-
-            #print(file_tb[0, 0, 0:100])
+            #file_cloudiddata = xr.open_dataset(cloudid_file, autoclose=True)
+            #file_tb = file_cloudiddata['tb'].data
+            #file_cloudtype = file_cloudiddata['cloudtype'].data
+            #file_all_cloudnumber = file_cloudiddata['cloudnumber'].data
+            #file_corecold_cloudnumber = file_cloudiddata['convcold_cloudnumber'].data
 
             file_datetimestring = cloudid_file[len(tracking_inpath) + len(cloudid_filebase):-3]
 
@@ -197,7 +195,7 @@ def trackstats_sat(datasource, datadescription, pixel_radius, latlon_file, geoli
 
                     if nc < nmaxclouds:
                         # Save information that links this cloud back to its raw pixel level data
-                        finaltrack_basetime[itrack-1, nc] = np.datetime64(pd.to_datetime(file_cloudiddata['basetime'].data)[0])
+                        finaltrack_basetime[itrack-1, nc] = np.datetime64(pd.to_datetime(file_basetime)[0])
                         finaltrack_corecold_cloudnumber[itrack-1,nc] = cloudnumber
                         finaltrack_cloudidfile[itrack-1][nc][:] = list(cloudidfiles[nf])
                         finaltrack_datetimestring[int(itrack-1)][int(nc)][:] = file_datetimestring
@@ -317,23 +315,27 @@ def trackstats_sat(datasource, datadescription, pixel_radius, latlon_file, geoli
                         finaltrack_corecold_histtb[itrack-1,nc,:], usedtbbins = np.histogram(corecoldtb, range=(mintb_thresh, maxtb_thresh), bins=tbbins)
 
                         # Save track information. Need to subtract one since cloudnumber gives the number of the cloud (which starts at one), but we are looking for its index (which starts at zero)
-                        if np.isnan(cloudtrackdata['track_status'][0, nf, cloudindex]):
-                            finaltrack_corecold_status[itrack-1, nc] = fillvalue
-                        else:
-                            finaltrack_corecold_status[itrack-1,nc] = cloudtrackdata['track_status'][0, nf, cloudindex]
+                        finaltrack_corecold_status[itrack-1, nc] = np.copy(trackstatus[0, nf, cloudindex])
+                        finaltrack_corecold_mergenumber[itrack-1, nc] = np.copy(trackmerge[0, nf, cloudindex])
+                        finaltrack_corecold_splitnumber[itrack-1, nc] = np.copy(tracksplit[0, nf, cloudindex])
+                        finaltrack_corecold_trackinterruptions[itrack-1] = np.copy(trackreset[0, nf, cloudindex])
+                        #if np.isnan(cloudtrackdata['track_status'][0, nf, cloudindex]):
+                        #    finaltrack_corecold_status[itrack-1, nc] = fillvalue
+                        #else:
+                        #    finaltrack_corecold_status[itrack-1,nc] = cloudtrackdata['track_status'][0, nf, cloudindex]
 
-                        if np.isnan(cloudtrackdata['track_mergenumbers'][0, nf, cloudindex]):
-                            finaltrack_corecold_mergenumber[itrack-1, nc] = fillvalue
-                        else:
-                            finaltrack_corecold_mergenumber[itrack-1, nc] = np.copy(cloudtrackdata['track_mergenumbers'][0, nf, cloudindex])
+                        #if np.isnan(cloudtrackdata['track_mergenumbers'][0, nf, cloudindex]):
+                        #    finaltrack_corecold_mergenumber[itrack-1, nc] = fillvalue
+                        #else:
+                        #    finaltrack_corecold_mergenumber[itrack-1, nc] = np.copy(cloudtrackdata['track_mergenumbers'][0, nf, cloudindex])
 
-                        if np.isnan(cloudtrackdata['track_splitnumbers'][0, nf, cloudindex]):
-                            finaltrack_corecold_splitnumber[itrack-1, nc] = fillvalue
-                        else:
-                            finaltrack_corecold_splitnumber[itrack-1, nc] = np.copy(cloudtrackdata['track_splitnumbers'][0, nf, cloudindex])
+                        #if np.isnan(cloudtrackdata['track_splitnumbers'][0, nf, cloudindex]):
+                        #    finaltrack_corecold_splitnumber[itrack-1, nc] = fillvalue
+                        #else:
+                        #    finaltrack_corecold_splitnumber[itrack-1, nc] = np.copy(cloudtrackdata['track_splitnumbers'][0, nf, cloudindex])
 
-                        if cloudtrackdata['track_reset'][0, nf, cloudindex] > finaltrack_corecold_trackinterruptions[itrack-1]:
-                            finaltrack_corecold_trackinterruptions[itrack-1] = np.copy(cloudtrackdata['track_reset'][0, nf, cloudindex])
+                        #if cloudtrackdata['track_reset'][0, nf, cloudindex] > finaltrack_corecold_trackinterruptions[itrack-1]:
+                        #    finaltrack_corecold_trackinterruptions[itrack-1] = np.copy(cloudtrackdata['track_reset'][0, nf, cloudindex])
 
                         ####################################################################
                         # Calculate mean brightness temperature for core
@@ -403,9 +405,6 @@ def trackstats_sat(datasource, datadescription, pixel_radius, latlon_file, geoli
     finaltrack_corecold_ycenter = finaltrack_corecold_ycenter[cloudindexpresent, 0:maxtracklength]
     finaltrack_corecold_xweightedcenter = finaltrack_corecold_xweightedcenter[cloudindexpresent, 0:maxtracklength]
     finaltrack_corecold_yweightedcenter = finaltrack_corecold_yweightedcenter[cloudindexpresent, 0:maxtracklength]
-    if landsea == 1:
-        finaltrack_corecold_landfrac = finaltrack_corecold_landfrac[cloudindexpresent, 0:maxtracklength]
-        finaltrack_core_landfrac = finaltrack_core_landfrac[cloudindexpresent, 0:maxtracklength]
 
     gc.collect()
 
@@ -822,8 +821,8 @@ def trackstats_LES(datasource, datadescription, pixel_radius, latlon_file, geoli
 
     # Load latitude and longitude grid
     latlondata = Dataset(tracking_inpath + temp_cloudidfiles, 'r')
-    lon = latlondata.variables['longitude'][:]
-    lat = latlondata.variables['latitude'][:]
+    longitude = latlondata.variables['longitude'][:]
+    latitude = latlondata.variables['latitude'][:]
     latlondata.close()
 
     # Load landmask. Optional setting. Often used with model data.
@@ -839,17 +838,26 @@ def trackstats_LES(datasource, datadescription, pixel_radius, latlon_file, geoli
     #############################################################################
     # Load track data
     cloudtrack_file = stats_path + tracknumbers_filebase + '_' + startdate + '_' + enddate + '.nc'
-    
-    cloudtrackdata = xr.open_dataset(cloudtrack_file, autoclose=True, decode_times=False)
-    numtracks = np.copy(cloudtrackdata['ntracks'].data)
-    cloudidfiles = cloudtrackdata['cloudid_files'].data
+
+    cloudtrackdata = Dataset(cloudtrack_file, 'r')
+    numtracks = cloudtrackdata['ntracks'][:]
+    cloudidfiles = cloudtrackdata['cloudid_files'][:]
+    tracknumbers = cloudtrackdata['track_numbers'][:]
+    trackreset = cloudtrackdata['track_reset'][:]
+    tracksplit = cloudtrackdata['track_splitnumbers'][:]
+    trackmerge = cloudtrackdata['track_mergenumbers'][:]
+    trackstatus = cloudtrackdata['track_status'][:]
+    cloudtrackdata.close()
+    #cloudtrackdata = xr.open_dataset(cloudtrack_file, autoclose=True, decode_times=False)
+    #numtracks = np.copy(cloudtrackdata['ntracks'].data)
+    #cloudidfiles = cloudtrackdata['cloudid_files'].data
 
     # Convert filenames and timegap to string
     numcharfilename = len(list(cloudidfiles[0]))
 
     # Determine dimensions of data
     nfiles = len(cloudidfiles)
-    ny, nx = np.shape(lat)
+    ny, nx = np.shape(latitude)
     print(nfiles)
 
     ############################################################################
@@ -905,7 +913,8 @@ def trackstats_LES(datasource, datadescription, pixel_radius, latlon_file, geoli
     #########################################################################################
     # loop over files. Calculate statistics and organize matrices by tracknumber and cloud
     for nf in range(0,nfiles):
-        file_tracknumbers = cloudtrackdata['track_numbers'][0, nf, :]
+        file_tracknumbers = tracknumbers[0, nf, :]
+        #file_tracknumbers = cloudtrackdata['track_numbers'][0, nf, :]
 
         # Only process file if that file contains a track
         if np.nanmax(file_tracknumbers) > 0:
@@ -914,14 +923,18 @@ def trackstats_LES(datasource, datadescription, pixel_radius, latlon_file, geoli
             # Load cloudid file
             cloudid_file = tracking_inpath + ''.join(cloudidfiles[nf])
 
-            file_cloudiddata = xr.open_dataset(cloudid_file, autoclose=True)
-
-            file_lwp = file_cloudiddata['lwp'].data
-            file_cloudtype = file_cloudiddata['cloudtype'].data
-            file_all_cloudnumber = file_cloudiddata['cloudnumber'].data
-            file_corecold_cloudnumber = file_cloudiddata['convcold_cloudnumber'].data
-            latitude = file_cloudiddata['latitude'].data
-            longitude = file_cloudiddata['longitude'].data
+            file_cloudididata = Dataset(cloudid_file, 'r')
+            file_lwp = file_cloudiddata['lwp'][:]
+            file_cloudtype = file_cloudiddata['cloudtype'][:]
+            file_all_cloudnumber = file_cloudiddata['cloudnumber'][:]
+            file_corecold_cloudnumber = file_cloudiddata['convcold_cloudnumber'][:]
+            file_basetime = file_cloudiddata['basetime'][:]
+            file_cloudiddata.close()
+            #file_cloudiddata = xr.open_dataset(cloudid_file, autoclose=True)
+            #file_lwp = file_cloudiddata['lwp'].data
+            #file_cloudtype = file_cloudiddata['cloudtype'].data
+            #file_all_cloudnumber = file_cloudiddata['cloudnumber'].data
+            #file_corecold_cloudnumber = file_cloudiddata['convcold_cloudnumber'].data
 
             file_datetimestring = cloudid_file[len(tracking_inpath) + len(cloudid_filebase):-3]
 
@@ -960,7 +973,8 @@ def trackstats_LES(datasource, datadescription, pixel_radius, latlon_file, geoli
 
                     if nc < nmaxclouds:
                         # Save information that links this cloud back to its raw pixel level data
-                        finaltrack_basetime[itrack-1, nc] = np.datetime64(pd.to_datetime(file_cloudiddata['basetime'].data)[0])
+                        finaltrack_basetime[itrack-1, nc] = np.datetime64(pd.to_datetime(file_basetime)[0])
+                        #finaltrack_basetime[itrack-1, nc] = np.datetime64(pd.to_datetime(file_cloudiddata['basetime'].data)[0])
                         finaltrack_corecold_cloudnumber[itrack-1,nc] = cloudnumber
                         finaltrack_cloudidfile[itrack-1][nc][:] = list(cloudidfiles[nf])
                         finaltrack_datetimestring[int(itrack-1)][int(nc)][:] = file_datetimestring
@@ -1080,23 +1094,28 @@ def trackstats_LES(datasource, datadescription, pixel_radius, latlon_file, geoli
                         finaltrack_corecold_histlwp[itrack-1,nc,:], usedlwpbins = np.histogram(corecoldlwp, range=(minlwp_thresh, maxlwp_thresh), bins=lwpbins)
 
                         # Save track information. Need to subtract one since cloudnumber gives the number of the cloud (which starts at one), but we are looking for its index (which starts at zero)
-                        if np.isnan(cloudtrackdata['track_status'][0, nf, cloudindex]):
-                            finaltrack_corecold_status[itrack-1, nc] = fillvalue
-                        else:
-                            finaltrack_corecold_status[itrack-1,nc] = cloudtrackdata['track_status'][0, nf, cloudindex]
+                        finaltrack_corecold_status[itrack-1,nc] = np.copy(trackstatus[0, nf, cloudindex])
+                        finaltrack_corecold_mergenumber[itrack-1, nc] = np.copy(trackmerge[0, nf, cloudindex])
+                        finaltrack_corecold_splitnumber[itrack-1, nc] = np.copy(tracksplit[0, nf, cloudindex])
+                        finaltrack_corecold_trackinterruptions[itrack-1] = np.copy(trackreset[0, nf, cloudindex])
 
-                        if np.isnan(cloudtrackdata['track_mergenumbers'][0, nf, cloudindex]):
-                            finaltrack_corecold_mergenumber[itrack-1, nc] = fillvalue
-                        else:
-                            finaltrack_corecold_mergenumber[itrack-1, nc] = np.copy(cloudtrackdata['track_mergenumbers'][0, nf, cloudindex])
+                        #if np.isnan(cloudtrackdata['track_status'][0, nf, cloudindex]):
+                        #    finaltrack_corecold_status[itrack-1, nc] = fillvalue
+                        #else:
+                        #    finaltrack_corecold_status[itrack-1,nc] = cloudtrackdata['track_status'][0, nf, cloudindex]
 
-                        if np.isnan(cloudtrackdata['track_splitnumbers'][0, nf, cloudindex]):
-                            finaltrack_corecold_splitnumber[itrack-1, nc] = fillvalue
-                        else:
-                            finaltrack_corecold_splitnumber[itrack-1, nc] = np.copy(cloudtrackdata['track_splitnumbers'][0, nf, cloudindex])
+                        #if np.isnan(cloudtrackdata['track_mergenumbers'][0, nf, cloudindex]):
+                        #    finaltrack_corecold_mergenumber[itrack-1, nc] = fillvalue
+                        #else:
+                        #    finaltrack_corecold_mergenumber[itrack-1, nc] = np.copy(cloudtrackdata['track_mergenumbers'][0, nf, cloudindex])
 
-                        if cloudtrackdata['track_reset'][0, nf, cloudindex] > finaltrack_corecold_trackinterruptions[itrack-1]:
-                            finaltrack_corecold_trackinterruptions[itrack-1] = np.copy(cloudtrackdata['track_reset'][0, nf, cloudindex])
+                        #if np.isnan(cloudtrackdata['track_splitnumbers'][0, nf, cloudindex]):
+                        #    finaltrack_corecold_splitnumber[itrack-1, nc] = fillvalue
+                        #else:
+                        #    finaltrack_corecold_splitnumber[itrack-1, nc] = np.copy(cloudtrackdata['track_splitnumbers'][0, nf, cloudindex])
+
+                        #if cloudtrackdata['track_reset'][0, nf, cloudindex] > finaltrack_corecold_trackinterruptions[itrack-1]:
+                        #    finaltrack_corecold_trackinterruptions[itrack-1] = np.copy(cloudtrackdata['track_reset'][0, nf, cloudindex])
 
                         ####################################################################
                         # Calculate mean brightness temperature for core

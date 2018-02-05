@@ -50,8 +50,11 @@ curr_track_version = 'v1.0'
 curr_tracknumbers_version = 'v1.0'
 
 # Specify days to run
-startdate = '20110401.0000'
-enddate = '20110831.2300'
+#startdate = '20110401.0000'
+startdate = '20110401'
+#enddate = '20110831.2300'
+enddate = '20110831'
+
 
 # Specify cloud tracking parameters
 geolimits = np.array([25, -110, 51, -70])  # 4-element array with plotting boundaries [lat_min, lon_min, lat_max, lon_max]
@@ -357,10 +360,10 @@ if run_identifymcs == 1:
     print('Identifying MCSs')
 
     # Load function
-    from identifymcs import identifymcs_mergedir
+    from identifymcs import identifymcs_mergedir_netcdf4
 
     # Call satellite version of function
-    identifymcs_mergedir(trackstats_filebase, stats_outpath, startdate, enddate, geolimits, datatimeresolution, mcs_mergedir_areathresh, mcs_mergedir_durationthresh, mcs_mergedir_eccentricitythresh, mcs_mergedir_splitduration, mcs_mergedir_mergeduration, nmaxclouds)
+    identifymcs_mergedir_netcdf4(trackstats_filebase, stats_outpath, startdate, enddate, geolimits, datatimeresolution, mcs_mergedir_areathresh, mcs_mergedir_durationthresh, mcs_mergedir_eccentricitythresh, mcs_mergedir_splitduration, mcs_mergedir_mergeduration, nmaxclouds)
     mcsstats_filebase =  'mcs_tracks_'
 
 #############################################################
@@ -369,7 +372,7 @@ if run_identifymcs == 1:
 # Determine if identify mcs portion of code ran. If not set file name
 if run_identifymcs == 0:
     print('MCSs already identified')
-    mcsstats_filebase =  'mcs_tracks_'
+    mcsstats_filebase = 'mcs_tracks_'
 
 if run_matchpf == 1:
     print('Identifying Precipitation Features in MCSs')

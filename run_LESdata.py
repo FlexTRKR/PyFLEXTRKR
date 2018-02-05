@@ -322,7 +322,7 @@ if run_identifycell == 1:
     print('Identifying Cells')
 
     # Load function
-    from identifycell import identifycell_LES
+    from identifycell import identifycell_LES_netcdf4
 
     # Call satellite version of function
     identifycell_LES(trackstats_filebase, stats_outpath, startdate, enddate, datatimeresolution, geolimits, maincloud_duration, merge_duration, split_duration, lengthrange[1])

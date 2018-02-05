@@ -25,9 +25,18 @@ def identifypf_mergedir_nmq(mcsstats_filebase, cloudid_filebase,  pfdata_filebas
     mcsirstatistics_file = stats_path + mcsstats_filebase + startdate + '_' + enddate + '.nc'
     print(mcsirstatistics_file)
 
-    mcsirstatdata = xr.open_dataset(mcsirstatistics_file, autoclose=True)
-    ir_ntracks = (np.nanmax(mcsirstatdata['ntracks'].data) + 1).astype(int) # Total number of tracked features
-    ir_nmaxlength = (np.nanmax(mcsirstatdata['ntimes'].data) + 1).astype(int) # Maximum number of features in a given track
+    mcsirstatdata = Dataset(mcsirstatistics_file, 'r')
+    ir_ntracks = np.nanmax(mcsirstatdata['ntracks']) + 1
+    ir_nmaxlength = np.nanmax(mcsirstatdata['ntimes']) + 1
+    ir_basetime = mcsirstatdata['mcs_basetime'][:]
+    ir_datetimestring = mcsirstatdata['mcs_datetimestring'][:]
+    ir_cloudnumber = mcsirstatdata['mcs_cloudnumber'][:]
+    ir_mergecloudnumber = mcsirstatdata['mcs_mergecloudnumber'][:]
+    ir_splitcloudnumber = mcsirstatdata['mcs_splitcloudnumber'][:]
+    mcsirstatdata.close()
+    #mcsirstatdata = xr.open_dataset(mcsirstatistics_file, autoclose=True)
+    #ir_ntracks = (np.nanmax(mcsirstatdata['ntracks'].data) + 1).astype(int) # Total number of tracked features
+    #ir_nmaxlength = (np.nanmax(mcsirstatdata['ntimes'].data) + 1).astype(int) # Maximum number of features in a given track
 
     ###################################################################
     # Intialize precipitation statistic matrices
@@ -100,11 +109,16 @@ def identifypf_mergedir_nmq(mcsstats_filebase, cloudid_filebase,  pfdata_filebas
         print('Processing track ' + str(int(it)))
 
         # Isolate ir statistics about this track
-        itbasetime = np.copy(mcsirstatdata['mcs_basetime'][it, :])
-        itdatetimestring = np.copy(mcsirstatdata['mcs_datetimestring'][it][:][:])
-        itcloudnumber = np.copy(mcsirstatdata['mcs_cloudnumber'][it, :])
-        itmergecloudnumber = np.copy(mcsirstatdata['mcs_mergecloudnumber'][it, :, :])
-        itsplitcloudnumber = np.copy(mcsirstatdata['mcs_splitcloudnumber'][it, :, :])
+        itbasetime = np.copy(ir_basetime[it, :])
+        itdatetimestring = np.copy(ir_datetimestring[it][:][:])
+        itcloudnumber = np.copy(ir_cloudnumber[it, :])
+        itmergecloudnumber = np.copy(ir_mergecloudnumber[it, :, :])
+        itsplitcloudnumber = np.copy(ir_splitcloudnumber[it, :, :])
+        #itbasetime = np.copy(mcsirstatdata['mcs_basetime'][it, :])
+        #itdatetimestring = np.copy(mcsirstatdata['mcs_datetimestring'][it][:][:])
+        #itcloudnumber = np.copy(mcsirstatdata['mcs_cloudnumber'][it, :])
+        #itmergecloudnumber = np.copy(mcsirstatdata['mcs_mergecloudnumber'][it, :, :])
+        #itsplitcloudnumber = np.copy(mcsirstatdata['mcs_splitcloudnumber'][it, :, :])
 
         # Loop through each time in the track
         irindices = np.array(np.where(itcloudnumber > 0))[0, :]
@@ -132,27 +146,43 @@ def identifypf_mergedir_nmq(mcsstats_filebase, cloudid_filebase,  pfdata_filebas
                 if os.path.isfile(cloudid_filename) and os.path.isfile(radar_filename):
                     # Load cloudid data
                     print(cloudid_filename)
-                    cloudiddata = xr.open_dataset(cloudid_filename, autoclose=True)
+                    cloudiddata = Dataset(cloudid_filename, 'r')
+                    cloudnumbermap = cloudiddata['cloudnumber'][:]
+                    cloudiddata.close()
+                    #cloudiddata = xr.open_dataset(cloudid_filename, autoclose=True)
 
                     # Read precipitation data
                     print(radar_filename)
-                    pfdata = xr.open_dataset(radar_filename, autoclose=True)
-                    rawdbzmap = pfdata['dbz_convsf'].data # map of reflectivity 
-                    rawdbz10map = pfdata['dbz10_height'].data # map of 10 dBZ ETHs
-                    rawdbz20map = pfdata['dbz20_height'].data # map of 20 dBZ ETHs
-                    rawdbz30map = pfdata['dbz30_height'].data # map of 30 dBZ ETHs
-                    rawdbz40map = pfdata['dbz40_height'].data # map of 40 dBZ ETHs
-                    rawdbz45map = pfdata['dbz45_height'].data # map of 45 dBZ ETH
-                    rawdbz50map = pfdata['dbz50_height'].data # map of 50 dBZ ETHs
-                    rawcsamap = pfdata['csa'].data # map of convective, stratiform, anvil categories
-                    rawrainratemap = pfdata['rainrate'].data # map of rain rate
-                    rawpfnumbermap = pfdata['pf_number'].data # map of the precipitation feature number attributed to that pixel
-                    rawdataqualitymap = pfdata['mask'].data # map if good (1) and bad (0) data
-                    lon = pfdata['lon2d'].data
-                    lat = pfdata['lat2d'].data
-
-                    # Get size of maps
-                    ny, nx = np.shape(lon)
+                    pfdata = Dataset(radar_filename, 'r')
+                    rawdbzmap = pfdata['dbz_convsf'][:] # map of reflectivity 
+                    rawdbz10map = pfdata['dbz10_height'][:] # map of 10 dBZ ETHs
+                    rawdbz20map = pfdata['dbz20_height'][:] # map of 20 dBZ ETHs
+                    rawdbz30map = pfdata['dbz30_height'][:] # map of 30 dBZ ETHs
+                    rawdbz40map = pfdata['dbz40_height'][:] # map of 40 dBZ ETHs
+                    rawdbz45map = pfdata['dbz45_height'][:] # map of 45 dBZ ETH
+                    rawdbz50map = pfdata['dbz50_height'][:] # map of 50 dBZ ETHs
+                    rawcsamap = pfdata['csa'][:] # map of convective, stratiform, anvil categories
+                    rawrainratemap = pfdata['rainrate'][:] # map of rain rate
+                    rawpfnumbermap = pfdata['pf_number'][:] # map of the precipitation feature number attributed to that pixel
+                    rawdataqualitymap = pfdata['mask'][:] # map if good (1) and bad (0) data
+                    lon = pfdata['lon2d'][:]
+                    lat = pfdata['lat2d'][:]
+                    pfdata.close()
+                    #pfdata = xr.open_dataset(radar_filename, autoclose=True)
+                    #pfdata = xr.open_dataset(radar_filename, autoclose=True)
+                    #rawdbzmap = pfdata['dbz_convsf'].data # map of reflectivity 
+                    #rawdbz10map = pfdata['dbz10_height'].data # map of 10 dBZ ETHs
+                    #rawdbz20map = pfdata['dbz20_height'].data # map of 20 dBZ ETHs
+                    #rawdbz30map = pfdata['dbz30_height'].data # map of 30 dBZ ETHs
+                    #rawdbz40map = pfdata['dbz40_height'].data # map of 40 dBZ ETHs
+                    #rawdbz45map = pfdata['dbz45_height'].data # map of 45 dBZ ETH
+                    #rawdbz50map = pfdata['dbz50_height'].data # map of 50 dBZ ETHs
+                    #rawcsamap = pfdata['csa'].data # map of convective, stratiform, anvil categories
+                    #rawrainratemap = pfdata['rainrate'].data # map of rain rate
+                    #rawpfnumbermap = pfdata['pf_number'].data # map of the precipitation feature number attributed to that pixel
+                    #rawdataqualitymap = pfdata['mask'].data # map if good (1) and bad (0) data
+                    #lon = pfdata['lon2d'].data
+                    #lat = pfdata['lat2d'].data
 
                     # Fill missing data with fill value so consistent with other data
                     rawdbzmap = np.ma.filled(rawdbzmap.astype(float), fillvalue)
@@ -169,8 +199,11 @@ def identifypf_mergedir_nmq(mcsstats_filebase, cloudid_filebase,  pfdata_filebas
 
                     # Load accumulation data is available. If not present fill array with fill value
                     if os.path.isfile(rainaccumulation_filename):
-                        rainaccumulationdata = xr.open_dataset(rainaccumulation_filename, autoclose=True)
-                        rawrainaccumulationmap = rainaccumulationdata['precipitation'].data
+                        rainaccumulationdata = Dataset(rainaccumulation_filename, 'r')
+                        rawrainaccumulationmap = rainaccumulationdata['precipitation'][:]
+                        rainaccumulationdata.close()
+                        #rainaccumulationdata = xr.open_dataset(rainaccumulation_filename, autoclose=True)
+                        #rawrainaccumulationmap = rainaccumulationdata['precipitation'].data
 
                         rawrainaccumulationmap = np.ma.filled(rawrainaccumulationmap.astype(float), fillvalue)
                     else:
@@ -178,7 +211,7 @@ def identifypf_mergedir_nmq(mcsstats_filebase, cloudid_filebase,  pfdata_filebas
 
                     ##########################################################################
                     # Get dimensions of data. Data should be preprocesses so that their latittude and longitude dimensions are the same
-                    ydim, xdim = np.shape(cloudiddata['latitude'].data)
+                    ydim, xdim = np.shape(lat)
 
                     #########################################################################
                     # Intialize matrices for only MCS data
@@ -194,7 +227,7 @@ def identifypf_mergedir_nmq(mcsstats_filebase, cloudid_filebase,  pfdata_filebas
 
                     ############################################################################
                     # Find matching cloud number
-                    icloudlocationt, icloudlocationy, icloudlocationx = np.array(np.where(cloudiddata['cloudnumber'].data == ittcloudnumber))
+                    icloudlocationt, icloudlocationy, icloudlocationx = np.array(np.where(cloudnumbermap == ittcloudnumber))
                     ncloudpix = len(icloudlocationy)
 
                     if ncloudpix > 0:
@@ -207,7 +240,7 @@ def identifypf_mergedir_nmq(mcsstats_filebase, cloudid_filebase,  pfdata_filebas
                             # Loop over each merging cloud
                             for imc in idmergecloudnumber:
                                 # Find location of the merging cloud
-                                imergelocationt, imergelocationy, imergelocationx = np.array(np.where(cloudiddata['cloudnumber'].data == ittmergecloudnumber[imc]))
+                                imergelocationt, imergelocationy, imergelocationx = np.array(np.where(cloudnumbermap == ittmergecloudnumber[imc]))
                                 nmergepix = len(imergelocationy)
 
                                 # Add merge pixes to mcs pixels
@@ -225,7 +258,7 @@ def identifypf_mergedir_nmq(mcsstats_filebase, cloudid_filebase,  pfdata_filebas
                             # Loop over each merging cloud
                             for imc in idsplitcloudnumber:
                                 # Find location of the merging cloud
-                                isplitlocationt, isplitlocationy, isplitlocationx = np.array(np.where(cloudiddata['cloudnumber'].data == ittsplitcloudnumber[imc]))
+                                isplitlocationt, isplitlocationy, isplitlocationx = np.array(np.where(cloudnumbermap == ittsplitcloudnumber[imc]))
                                 nsplitpix = len(isplitlocationy)
 
                                 # Add split pixes to mcs pixels
