@@ -18,13 +18,15 @@ import xarray as xr
 # Specify which sets of code to run. (1 = run code, 0 = don't run code)
 run_idclouds = 0        # Segment and identify cloud systems
 run_tracksingle = 0     # Track single consecutive cloudid files
-run_gettracks = 0       # Run trackig for all files
-run_finalstats = 0      # Calculate final statistics
-run_identifycell = 0    # Isolate cells
-run_labelcell = 1        # Create maps of MCSs
+run_gettracks = 1       # Run trackig for all files
+run_finalstats = 1      # Calculate final statistics
+run_identifycell = 1    # Isolate cells
+run_labelcell = 0        # Create maps of MCSs
 
 # Set version of cloudid code
 cloudidmethod = 'futyan4'
+keep_singlemergesplit = 1 # 0=all short tracks removed, 1=only short tracks that are not mergers or splits are removed
+show_alltracks = 0 # 0=do not create maps of all tracks in map stage, 1=create maps of all tracks (greatly slows the code)
 
 # Specify version of code using
 cloudid_version = 'v1.0'
@@ -37,8 +39,8 @@ curr_track_version = 'v1.0'
 curr_tracknumbers_version = 'v1.0'
 
 # Specify days to run
-startdate = '20160830.2000'
-enddate = '20160830.2300'
+startdate = '20160830.1600'
+enddate = '20160830.1800'
 
 # Specify domain size
 ny = int(1200)
@@ -291,7 +293,7 @@ if run_gettracks == 1:
 
     # Call function
     print('Getting track numbers')
-    gettracknumbers_mergedir(datasource, datadescription, tracking_outpath, stats_outpath, startdate, enddate, timegap, maxnclouds, cloudid_filebase, npxname, tracknumber_version, singletrack_filebase, keepsingletrack=1, removestartendtracks=1)
+    gettracknumbers_mergedir(datasource, datadescription, tracking_outpath, stats_outpath, startdate, enddate, timegap, maxnclouds, cloudid_filebase, npxname, tracknumber_version, singletrack_filebase, keepsingletrack=keep_singlemergesplit, removestartendtracks=1)
     tracknumbers_filebase = 'tracknumbers' + tracknumber_version
 
 ############################################################
@@ -322,10 +324,10 @@ if run_identifycell == 1:
     print('Identifying Cells')
 
     # Load function
-    from identifycell import identifycell_LES_netcdf4
+    from identifycell import identifycell_LES_xarray
 
     # Call satellite version of function
-    identifycell_LES(trackstats_filebase, stats_outpath, startdate, enddate, datatimeresolution, geolimits, maincloud_duration, merge_duration, split_duration, lengthrange[1])
+    identifycell_LES_xarray(trackstats_filebase, stats_outpath, startdate, enddate, datatimeresolution, geolimits, maincloud_duration, merge_duration, split_duration, lengthrange[1])
     cellstats_filebase =  'cell_tracks_'
 
 ############################################################
@@ -382,17 +384,18 @@ if run_labelcell == 1:
     list_absolutelwp_threshs = np.ones((cloudidfilestep-1, 2))*absolutelwp_threshs
     list_startdate = [startdate]*(cloudidfilestep-1)
     list_enddate = [enddate]*(cloudidfilestep-1)
+    list_showalltracks = [show_alltracks]*(cloudidfilestep-1)
 
-    cellmap_input = zip(cloudidfiles, cloudidfiles_basetime, list_cellstat_filebase, list_trackstat_filebase, list_celltracking_path, list_stats_path, list_absolutelwp_threshs, list_startdate, list_enddate)
+    cellmap_input = zip(cloudidfiles, cloudidfiles_basetime, list_cellstat_filebase, list_trackstat_filebase, list_celltracking_path, list_stats_path, list_absolutelwp_threshs, list_startdate, list_enddate,list_showalltracks)
 
     ## Call function
-    #for iunique in range(0, cloudidfilestep-1):
-    #   mapcell_LES(cellmap_input[iunique])
+    for iunique in range(0, cloudidfilestep-1):
+       mapcell_LES(cellmap_input[iunique])
 
-    if __name__ == '__main__':
-        print('Creating maps of tracked MCSs')
-        pool = Pool(4)
-        pool.map(mapcell_LES, cellmap_input)
-        pool.close()
-        pool.join()
+    #if __name__ == '__main__':
+    #    print('Creating maps of tracked MCSs')
+    #    pool = Pool(4)
+    #    pool.map(mapcell_LES, cellmap_input)
+    #    pool.close()
+    #    pool.join()
 

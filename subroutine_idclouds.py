@@ -29,11 +29,9 @@ def futyan4_mergedir(ir, pixel_radius, tb_threshs, area_thresh, mincorecoldpix, 
     import numpy as np
     from scipy.ndimage import label, binary_dilation, generate_binary_structure, filters
     from scipy.interpolate import RectBivariateSpline
-    #import matplotlib.pyplot as plt
 
     ######################################################################
     # Define constants:
-    fillvalue = -9999
 
     # Separate array threshold
     thresh_core = tb_threshs[0]     # Convective core threshold [K]
@@ -138,7 +136,7 @@ def futyan4_mergedir(ir, pixel_radius, tb_threshs, area_thresh, mincorecoldpix, 
 
         #############################################################
         # Check if cores satisfy size threshold
-        labelcore_npix = np.ones(nlabelcores, dtype=float)*fillvalue
+        labelcore_npix = np.ones(nlabelcores, dtype=int)*-9999
         for ilabelcore in range(1, nlabelcores+1):
             temp_labelcore_npix = len(np.array(np.where(labelcore_number2d == ilabelcore))[0, :])
             if temp_labelcore_npix > mincorecoldpix:
@@ -247,20 +245,6 @@ def futyan4_mergedir(ir, pixel_radius, tb_threshs, area_thresh, mincorecoldpix, 
                     # Count the number of dilated pixels. Add to the keepspreading variable. As long as this variables is > 0 the code continues to run the dilating portion. Also at this point have a requirement that can't dilate more than 20 times. This shoudl be removed when have actual data.
                     keepspreading = keepspreading + len(np.extract(expansionzone == 1, expansionzone))
 
-            #plt.figure()
-            #im = plt.pcolormesh(np.ma.masked_invalid(np.atleast_2d(labelcorecold_number2d)))
-            #plt.colorbar(im)
-
-            #plt.figure()
-            #im = plt.pcolormesh(np.ma.masked_invalid(np.atleast_2d(smooth_cloudid)))
-            #plt.colorbar(im)
-
-            #plt.figure()
-            #im = plt.pcolormesh(np.ma.masked_invalid(np.atleast_2d(final_cloudid)))
-            #plt.colorbar(im)
-
-            #plt.show()
-
         #############################################################
         # Create blank core and cold anvil arrays if no cores present
         elif ncores == 0:
@@ -285,7 +269,7 @@ def futyan4_mergedir(ir, pixel_radius, tb_threshs, area_thresh, mincorecoldpix, 
 
             #############################################################
             # Check if features satisfy size threshold
-            labelisolated_npix = np.ones(nlabelisolated, dtype=float)*fillvalue
+            labelisolated_npix = np.ones(nlabelisolated, dtype=int)*-9999
             for ilabelisolated in range(1, nlabelisolated+1):
                 temp_labelisolated_npix = len(np.array(np.where(labelisolated_number2d == ilabelisolated))[0, :])
                 if temp_labelisolated_npix > nthresh:
@@ -350,9 +334,9 @@ def futyan4_mergedir(ir, pixel_radius, tb_threshs, area_thresh, mincorecoldpix, 
 
         # Re-number cores
         sortedcorecoldisolated_number2d = np.zeros((ny, nx), dtype=int)
-        final_ncorepix = np.ones(ncorecoldisolated, dtype=int)*fillvalue
-        final_ncoldpix = np.ones(ncorecoldisolated, dtype=int)*fillvalue
-        final_nwarmpix = np.ones(ncorecoldisolated, dtype=int)*fillvalue
+        final_ncorepix = np.ones(ncorecoldisolated, dtype=int)*-9999
+        final_ncoldpix = np.ones(ncorecoldisolated, dtype=int)*-9999
+        final_nwarmpix = np.ones(ncorecoldisolated, dtype=int)*-9999
         featurecount = 0
         for ifeature in range(0, ncorecoldisolated):
             feature_indices = np.where(labelcorecoldisolated_number2d == sortedcorecoldisolated_number1d[ifeature])
@@ -387,9 +371,9 @@ def futyan4_mergedir(ir, pixel_radius, tb_threshs, area_thresh, mincorecoldpix, 
         # Loop through clouds and only keep those where core + cold anvil exceed threshold
         if ncorecold > 0 :
             labelcorecold_number2d = np.zeros((ny, nx), dtype=int)
-            labelcore_npix = np.ones(ncorecold, dtype=int)*fillvalue
-            labelcold_npix = np.ones(ncorecold, dtype=int)*fillvalue
-            labelwarm_npix = np.ones(ncorecold, dtype=int)*fillvalue
+            labelcore_npix = np.ones(ncorecold, dtype=int)*-9999
+            labelcold_npix = np.ones(ncorecold, dtype=int)*-9999
+            labelwarm_npix = np.ones(ncorecold, dtype=int)*-9999
             featurecount = 0
 
             for ifeature in range (1, ncorecold+1):
@@ -756,7 +740,6 @@ def futyan4_LES(lwp, pixel_radius, tb_threshs, area_thresh, mincorecoldpix, smoo
 
     ######################################################################
     # Define constants:
-    fillvalue = -9999
 
     # Separate array threshold
     thresh_core = tb_threshs[0]     # Convective core threshold [K]
@@ -861,7 +844,7 @@ def futyan4_LES(lwp, pixel_radius, tb_threshs, area_thresh, mincorecoldpix, smoo
 
         #############################################################
         # Check if cores satisfy size threshold
-        labelcore_npix = np.ones(nlabelcores, dtype=float)*fillvalue
+        labelcore_npix = np.ones(nlabelcores, dtype=int)*-9999
         for ilabelcore in range(1, nlabelcores+1):
             temp_labelcore_npix = len(np.array(np.where(labelcore_number2d == ilabelcore))[0, :])
             if temp_labelcore_npix > mincorecoldpix:
@@ -1008,7 +991,7 @@ def futyan4_LES(lwp, pixel_radius, tb_threshs, area_thresh, mincorecoldpix, smoo
 
             #############################################################
             # Check if features satisfy size threshold
-            labelisolated_npix = np.ones(nlabelisolated, dtype=float)*fillvalue
+            labelisolated_npix = np.ones(nlabelisolated, dtype=int)*-9999
             for ilabelisolated in range(1, nlabelisolated+1):
                 temp_labelisolated_npix = len(np.array(np.where(labelisolated_number2d == ilabelisolated))[0, :])
                 if temp_labelisolated_npix > nthresh:
@@ -1073,9 +1056,9 @@ def futyan4_LES(lwp, pixel_radius, tb_threshs, area_thresh, mincorecoldpix, smoo
 
         # Re-number cores
         sortedcorecoldisolated_number2d = np.zeros((ny, nx), dtype=int)
-        final_ncorepix = np.ones(ncorecoldisolated, dtype=int)*fillvalue
-        final_ncoldpix = np.ones(ncorecoldisolated, dtype=int)*fillvalue
-        final_nwarmpix = np.ones(ncorecoldisolated, dtype=int)*fillvalue
+        final_ncorepix = np.ones(ncorecoldisolated, dtype=int)*-9999
+        final_ncoldpix = np.ones(ncorecoldisolated, dtype=int)*-9999
+        final_nwarmpix = np.ones(ncorecoldisolated, dtype=int)*-9999
         featurecount = 0
         for ifeature in range(0, ncorecoldisolated):
             feature_indices = np.where(labelcorecoldisolated_number2d == sortedcorecoldisolated_number1d[ifeature])
@@ -1110,9 +1093,9 @@ def futyan4_LES(lwp, pixel_radius, tb_threshs, area_thresh, mincorecoldpix, smoo
         # Loop through clouds and only keep those where core + cold anvil exceed threshold
         if ncorecold > 0 :
             labelcorecold_number2d = np.zeros((ny, nx), dtype=int)
-            labelcore_npix = np.ones(ncorecold, dtype=int)*fillvalue
-            labelcold_npix = np.ones(ncorecold, dtype=int)*fillvalue
-            labelwarm_npix = np.ones(ncorecold, dtype=int)*fillvalue
+            labelcore_npix = np.ones(ncorecold, dtype=int)*-9999
+            labelcold_npix = np.ones(ncorecold, dtype=int)*-9999
+            labelwarm_npix = np.ones(ncorecold, dtype=int)*-9999
             featurecount = 0
 
             for ifeature in range (1, ncorecold+1):

@@ -1,22 +1,22 @@
+# Purpose: Track clouds successively from the single track files produced in previous step.
+
+# Author: IDL version written by Sally A. McFarlane (sally.mcfarlane@pnnl.gov) and revised by Zhe Feng (zhe.feng@pnnl.gov). Python version written by Hannah C. Barnes (hannah.barnes@pnnl.gov)
+
 # Define function to track clouds that were identified in merged ir data
 def gettracknumbers_mergedir(datasource, datadescription, datainpath, dataoutpath, startdate, enddate, timegap, maxnclouds, cloudid_filebase, npxname, tracknumbers_version, singletrack_filebase, keepsingletrack=1, removestartendtracks=0, tdimname='time', xdimname='lon', ydimname='lat'):
-    # Purpose: Track clouds successively from teh singel elsecloud files produced in trackclouds_mergedir.py.
-
-    # Aassociateduthor: IDL version written by Sally A. McFarlane (sally.mcfarlane@pnnl.gov) and re, linewidth=2vised by Zhe Feng (, zlib=True, complevel=5, fill_value=fillvaluezhe.feng@pnnl.gov). Python version written by Hannah C. Barnes (hannah.barnes@pnnl.gov)
-
-    # Currently must be run on fill dataset one at a time.
-
     # Inputs:
     # datasource - source of the data
     # datadescription - description of data source, included in all output file names
+    # datainpath - location of the single track files
+    # dataoutpath - location where the statistics matrix will be saved
     # startdate - data to start processing in YYYYMMDD format
     # enddate - data to stop processing in YYYYMMDD format
-    # timegap - M High values indicates refmean horizontal distribution of reflectivity more peaked. Its value has been replicated for each profile so this data has profiler time resolution.aximum time gap (missing time) allowed (in hours) between two consecutive files
-    # cloudid_filepath - Directory of cloudid files
-    # npxname - variable name fo reht number of cloud object pixels
-    # track_version - Version of track single cloud files
-    # track_filepath - Directory of the track single cloud files
-    # track_filebase - File base name of the track single cloud files
+    # timegap - maximum time gap (missing time) allowed (in hours) between two consecutive files
+    # maxnclouds - maximum number of clouds allowed to be in one track 
+    # cloudid_filebase - header of the cloudid data files
+    # npxname - variable name of the type of cloud that is being tracked
+    # track_version - Version of track single cloud files that will be used
+    # singletrack_filebase - header of the single track files
 
     # Optional keywords
     # keepsingletrack - Keep tracks that only have 1 fram but merge/split with others
@@ -25,11 +25,14 @@ def gettracknumbers_mergedir(datasource, datadescription, datainpath, dataoutpat
     # xdimname - name of the x-dimension for the output netcdf file
     # ydimname - name of the y-dimentions for the output netcdf
 
-    # Output
-    # tracknumber - track number of the given cloud
-    # trackmergesplitnumber - for any cloud in which there is a smaller fragment of a merger or split, this gives the track number of the larger fragment. This is used so you can connect merged/split clouds.
-    # trackstatuss - -9999=default/no cloud in current file; 0=track stops, cloud not found in next file; 1=cloud track continues to next file; 2=cloud continues to the next file and it is the larger fragment of a merger; 3=cloud is the larger fragment of a split from the previous file; 10=start of a new track; 11=track stops, cloud is the smaller fragment of a merger, 12=new track, cloud is the smaller fragment of a split from the previous file
-
+    # Output: (One netcdf file with statistics about each cloud that is tracked in each file)
+    # ntracks - number of tracks identified
+    # basetimes - seconds since 1970-01-01 of each file
+    # track_numbers - track number associate with a cloud
+    # track_status - flag that indicates how a cloud evolves over time.
+    # track_mergenumbers - track number which a small cloud merges into.
+    # track_splitnumbers - track number which a small cloud splits from.
+    # track_reset - flag indicating when a track starts or ends in a period with continuous data or whether there is a gap in the data. 
 
     ################################################################################
     # Import modules
@@ -37,7 +40,7 @@ def gettracknumbers_mergedir(datasource, datadescription, datainpath, dataoutpat
     import os, fnmatch
     import time, datetime, calendar
     from pytz import timezone, utc
-    from netCDF4 import Dataset, stringtochar, chartostring
+    from netCDF4 import Dataset, stringtochar, chartostring, num2date
     import sys
     import xarray as xr
     import pandas as pd
@@ -50,6 +53,8 @@ def gettracknumbers_mergedir(datasource, datadescription, datainpath, dataoutpat
 
     ##################################################################################
     # Get single track files sort
+    print('Determining which files will be processed')
+    print(time.ctime())
     singletrackfiles = fnmatch.filter(os.listdir(datainpath), singletrack_filebase +'*')
 
     # Put in temporal order
@@ -77,9 +82,6 @@ def gettracknumbers_mergedir(datasource, datadescription, datainpath, dataoutpat
 
         TEMP_fulltime = calendar.timegm(datetime.datetime(year[filestep], month[filestep], day[filestep], hour[filestep], minute[filestep], 0, 0).timetuple())
         basetime[filestep] = np.datetime64(np.array([pd.to_datetime(TEMP_fulltime, unit='s')][0], dtype='datetime64[s]'))
-
-        #TEMP_fulltime = datetime.datetime(year[filestep], month[filestep], day[filestep], hour[filestep], minute[filestep], 0, 0, tzinfo=utc)
-        #basetime[filestep] = calendar.timegm(TEMP_fulltime.timetuple())
 
     #############################################################################
     # Keep only files and date/times within start - end time interval
@@ -129,35 +131,39 @@ def gettracknumbers_mergedir(datasource, datadescription, datainpath, dataoutpat
 
     ############################################################################
     # Initialize matrices
-    fillvalue = -9999
-
     nfiles = int(len(files))+2*gap
-    tracknumber = np.ones((1, nfiles, maxnclouds), dtype=int)*fillvalue
-    referencetrackstatus = np.ones((nfiles, maxnclouds), dtype=float)*fillvalue
-    newtrackstatus = np.ones((nfiles, maxnclouds), dtype=float)*fillvalue
-    trackstatus = np.ones((1, nfiles, maxnclouds), dtype=int)*fillvalue
-    trackmergenumber = np.ones((1, nfiles, maxnclouds), dtype=int)*fillvalue
-    tracksplitnumber = np.ones((1, nfiles, maxnclouds), dtype=int)*fillvalue
+    tracknumber = np.ones((1, nfiles, maxnclouds), dtype=int)*-9999
+    referencetrackstatus = np.ones((nfiles, maxnclouds), dtype=float)*np.nan
+    newtrackstatus = np.ones((nfiles, maxnclouds), dtype=float)*np.nan
+    trackstatus = np.ones((1, nfiles, maxnclouds), dtype=int)*-9999
+    trackmergenumber = np.ones((1, nfiles, maxnclouds), dtype=int)*-9999
+    tracksplitnumber = np.ones((1, nfiles, maxnclouds), dtype=int)*-9999
     basetime = np.empty(nfiles, dtype='datetime64[s]')
-    #basetime = np.ones(nfiles, dtype=int)*fillvalue
-    trackreset = np.ones((1, nfiles, maxnclouds), dtype=int)*fillvalue
+    trackreset = np.ones((1, nfiles, maxnclouds), dtype=int)*-9999
 
     ############################################################################
     # Load first file
-    singletracking_data = xr.open_dataset(datainpath + files[0], autoclose=True)                      # Open file
-    nclouds_reference = len(singletracking_data['nclouds_ref'].data)                               # Number of clouds in reference file
+    print('Processing first file')
+    print(time.ctime())
+    singletracking_data = Dataset(datainpath + files[0], 'r')                      # Open file
+    nclouds_reference = int(np.nanmax(singletracking_data['nclouds_ref'][:]) + 1)  # Number of clouds in reference file
+    basetime_ref = singletracking_data['basetime_ref'][:]
+    basetime_units =  singletracking_data['basetime_ref'].units
+    basetime_calendar = singletracking_data['basetime_ref'].calendar
+    ref_file = singletracking_data.getncattr('ref_file')
+    singletracking_data.close()
 
     # Make sure number of clouds does not exceed maximum. If does indicates over-segmenting data
     if nclouds_reference > maxnclouds:
         sys.exit('# of clouds in reference file exceed allowed maximum number of clouds')
 
     # Isolate file name and add it to the filelist
-    basetime[0] = np.datetime64(pd.to_datetime(singletracking_data['basetime_ref'].data)[0])
+    basetime[0] = np.array([pd.to_datetime(num2date(basetime_ref, units=basetime_units, calendar=basetime_calendar))], dtype='datetime64[s]')[0, 0]
 
-    temp_referencefile = os.path.basename(singletracking_data.attrs['ref_file'])
+    temp_referencefile = os.path.basename(ref_file)
     strlength = len(temp_referencefile)
     cloudidfiles =  np.chararray((nfiles, int(strlength)))
-    cloudidfiles[0, :] = list(os.path.basename(singletracking_data.attrs['ref_file']))
+    cloudidfiles[0, :] = list(os.path.basename(ref_file))
 
     # Initate track numbers
     tracknumber[0, 0, 0:int(nclouds_reference)] = np.arange(0, int(nclouds_reference))+1
@@ -168,17 +174,32 @@ def gettracknumbers_mergedir(datasource, datadescription, datainpath, dataoutpat
 
     ###########################################################################
     # Loop over files and generate tracks
+    print('Loop through the rest of the files')
+    print('Number of files: ' + str(nfiles))
+    print(time.ctime())
     ifill = 0
     for ifile in range(0,nfiles-1):
         print(files[ifile])
+        print(time.ctime())
 
         ######################################################################
         # Load single track file
-        singletracking_data = xr.open_dataset(datainpath + files[ifile], autoclose=True)                  # Open file
-        nclouds_reference = int(np.nanmax(singletracking_data['nclouds_ref'].data) + 1)                               # Number of clouds in reference file
-        nclouds_new = int(np.nanmax(singletracking_data['nclouds_new'].data) + 1)                                     # Number of clouds in new file
-        refcloud_forward_index = singletracking_data['refcloud_forward_index'].data.astype(int)               # Each row represents a cloud in the reference file and the numbers in that row are indices of clouds in new file linked that cloud in the reference file
-        newcloud_backward_index = singletracking_data['newcloud_backward_index'].data.astype(int)             # Each row represents a cloud in the new file and the numbers in that row are indices of clouds in the reference file linked that cloud in the new file
+        print('Load track data')
+        print(time.ctime())
+        singletracking_data = Dataset(datainpath + files[ifile], 'r')                  # Open file
+        nclouds_reference = int(np.nanmax(singletracking_data['nclouds_ref'][:]) + 1)                               # Number of clouds in reference file
+        nclouds_new = int(np.nanmax(singletracking_data['nclouds_new'][:]) + 1)
+        basetime_ref = singletracking_data['basetime_ref'][:]
+        basetime_new = singletracking_data['basetime_new'][:]
+        basetime_units =  singletracking_data['basetime_ref'].units
+        basetime_calendar = singletracking_data['basetime_ref'].calendar# Number of clouds in new file
+        refcloud_forward_index = singletracking_data['refcloud_forward_index'][:].astype(int)               # Each row represents a cloud in the reference file and the numbers in that row are indices of clouds in new file linked that cloud in the reference file
+        newcloud_backward_index = singletracking_data['newcloud_backward_index'][:].astype(int)             # Each row represents a cloud in the new file and the numbers in that row are indices of clouds in the reference file linked that cloud in the new file
+        ref_file = singletracking_data.getncattr('ref_file')
+        new_file = singletracking_data.getncattr('new_file')
+        ref_date = singletracking_data.getncattr('ref_date')
+        new_date = singletracking_data.getncattr('new_date')
+        singletracking_data.close()
 
         # Make sure number of clouds does not exceed maximum. If does indicates over-segmenting data
         if nclouds_reference > maxnclouds:
@@ -186,31 +207,37 @@ def gettracknumbers_mergedir(datasource, datadescription, datainpath, dataoutpat
 
         ########################################################################
         # Load cloudid files
+        print('Load cloudid files')
+        print(time.ctime())
         # Reference cloudid file
-        referencecloudid_data = xr.open_dataset(singletracking_data.attrs['ref_file'], autoclose=True)
-        npix_reference = referencecloudid_data[npxname].data
+        referencecloudid_data = Dataset(ref_file, 'r')
+        npix_reference = referencecloudid_data[npxname][:]
+        referencecloudid_data.close()
 
         # New cloudid file
-        newcloudid_data = xr.open_dataset(singletracking_data.attrs['new_file'], autoclose=True)
-        npix_new = newcloudid_data[npxname].data
+        newcloudid_data = Dataset(new_file, 'r')
+        npix_new = newcloudid_data[npxname][:]
+        newcloudid_data.close()
 
         ########################################################################
         # Check time gap between consecutive track files
+        print('Checking if time gap between files satisfactory')
+        print(time.ctime())
 
         # Set previous and new times
         if ifile < 1:
-            time_prev = singletracking_data['basetime_new'].data[0]
+            time_prev = np.copy(basetime_new[0])
 
-        time_new = singletracking_data['basetime_new'].data[0]
+        time_new =  np.copy(basetime_new[0])
 
         # Check if files immediately follow each other. Missing files can exist. If missing files exist need to incrament index and track numbers
         if ifile > 0:
             hour_diff = np.array([time_new - time_prev]).astype(float)
             if hour_diff > (timegap*3.6*10**12):
-                print('Track terminates on: ' + singletracking_data.attrs['ref_date'])
+                print('Track terminates on: ' + ref_date)
                 print('Time difference: ' + str(hour_diff))
                 print('Maximum timegap allowed: ' + str(timegap))
-                print('New track starts on: ' + singletracking_data.attrs['new_date'])
+                print('New track starts on: ' + new_date)
 
                 # Flag the previous file as the last file
                 trackreset[0, ifill, :] = 2
@@ -218,8 +245,8 @@ def gettracknumbers_mergedir(datasource, datadescription, datainpath, dataoutpat
                 ifill = ifill + 2
 
                 # Fill tracking matrices with reference data and record that the track ended
-                cloudidfiles[ifill, :] = list(os.path.basename(singletracking_data.attrs['ref_file']))
-                basetime[ifill] = np.datetime64(pd.to_datetime(singletracking_data['basetime_ref'].data)[0])
+                cloudidfiles[ifill, :] = list(os.path.basename(ref_file))
+                basetime[ifill] = np.array([pd.to_datetime(num2date(basetime_ref, units=basetime_units, calendar=basetime_calendar))], dtype='datetime64[s]')[0, 0]
 
                 # Record that break in data occurs
                 trackreset[0, ifill, :] = 1
@@ -230,16 +257,23 @@ def gettracknumbers_mergedir(datasource, datadescription, datainpath, dataoutpat
                     itrack = itrack + 1
 
         time_prev = time_new
-        cloudidfiles[ifill + 1,:] = list(os.path.basename(singletracking_data.attrs['new_file']))
-        basetime[ifill + 1] = np.datetime64(pd.to_datetime(singletracking_data['basetime_new'].data)[0])
+        cloudidfiles[ifill + 1,:] = list(os.path.basename(new_file))
+        basetime[ifill + 1] = np.array([pd.to_datetime(num2date(basetime_new, units=basetime_units, calendar=basetime_calendar))], dtype='datetime64[s]')[0, 0]
 
         ########################################################################################
         # Compare forward and backward single track matirces to link new and reference clouds
         # Intiailize matrix for this time period
-        trackfound = np.ones(nclouds_reference+1, dtype=int)*fillvalue
+        print('Generating tracks')
+        print(time.ctime())
+        trackfound = np.ones(nclouds_reference+1, dtype=int)*-9999
 
         # Loop over all reference clouds
-        for ncr in np.arange(1,nclouds_reference+1): # Looping over each reference cloud. Start at 1 since clouds numbered starting at 1. 
+        print('Looping over all clouds in the reference file')
+        print('Number of clouds to process: ' + str(nclouds_reference))
+        print(time.ctime())
+        for ncr in np.arange(1,nclouds_reference+1): # Looping over each reference cloud. Start at 1 since clouds numbered starting at 1.
+            print('Reference cloud #: ' + str(ncr))
+            print(time.ctime())
             if trackfound[ncr-1] < 1:
 
                 # Find all clouds (both forward and backward) associated with this reference cloud
@@ -248,11 +282,15 @@ def gettracknumbers_mergedir(datasource, datadescription, datainpath, dataoutpat
                 temp_referenceclouds = [ncr]
 
                 trackpresent = 0
+                print('Finding all associated clouds')
+                print(time.ctime())
                 while ntemp_referenceclouds > nreferenceclouds:
                     associated_referenceclouds = np.copy(temp_referenceclouds).astype(int)
                     nreferenceclouds = ntemp_referenceclouds
 
                     for nr in range(0, nreferenceclouds):
+                        print('Processing cloud #: ' + str(nr))
+                        print(time.ctime())
                         tempncr = associated_referenceclouds[nr]
 
                         # Find indices of forward linked clouds.
@@ -308,8 +346,9 @@ def gettracknumbers_mergedir(datasource, datadescription, datainpath, dataoutpat
 
                 #################################################################
                 # Now get the track status
+                print('Determing status of clouds in track')
+                print(time.ctime())
                 if nnewclouds > 0:
-
                     ############################################################
                     # Find the largest reference and new clouds
 
@@ -329,6 +368,8 @@ def gettracknumbers_mergedir(datasource, datadescription, datainpath, dataoutpat
                     if nnewclouds == 1 and nreferenceclouds == 1:
                         ############################################################
                         # Simple continuation
+                        print('Simple continuation')
+                        print(time.ctime())
 
                         # Check trackstatus already has a valid value. This will prtrack splits from a previous step being overwritten
 
@@ -337,18 +378,14 @@ def gettracknumbers_mergedir(datasource, datadescription, datainpath, dataoutpat
                         trackfound[ncr-1] = 1
                         tracknumber[0, ifill+1, associated_newclouds-1] = np.copy(tracknumber[0, ifill, ncr-1])
 
-                        #print('Continuation')
-                        #print(ncr-1)
-                        #print(associated_newclouds-1)
-                        #print(trackstatus[ifill,ncr-1])
-                        #raw_input('Waiting for User')
-
                     elif nreferenceclouds > 1:
                         ##############################################################
                         # Merging only
 
                         # Loop through the reference clouds and assign th track to the largestst one, the rest just go away
                         if nnewclouds == 1:
+                            print('Merge only')
+                            print(time.ctime())
                             for tempreferencecloud in associated_referenceclouds:
                                 trackfound[tempreferencecloud-1] = 1
 
@@ -363,25 +400,15 @@ def gettracknumbers_mergedir(datasource, datadescription, datainpath, dataoutpat
                                     referencetrackstatus[ifill, tempreferencecloud-1] = 21
                                     trackmergenumber[0, ifill, tempreferencecloud-1] = np.copy(tracknumber[0, ifill, largest_referencecloud-1])
 
-                                #print('Merge Only')
-                                #print(largest_referencecloud-1)
-                                #print(tempreferencecloud-1)
-                                #print(associated_newclouds-1)
-                                #print(trackstatus[ifill,tempreferencecloud-1])
-                                #print(trackmergenumber[ifill,tempreferencecloud-1])
-                                #raw_input('Waiting for User')
-
                         #################################################################
                         # Merging and spliting
                         else:
-                            #print(trackstatus[ifill,tempreferencecloud-1])
-                            #print('Merger and Split')
+                            print('Merging and splitting')
+                            print(time.ctime())
                            
                             # Loop over the reference clouds and assign the track the largest one
                             for tempreferencecloud in associated_referenceclouds:
                                 trackfound[tempreferencecloud-1] = 1
-
-                                #print(trackstatus[ifill,tempreferencecloud-1])
 
                                 # If this is the larger fragment ofthe merger, label the reference time (ifill) as large merger (2) and the actual merging track at the next time [ifill+1]
                                 if tempreferencecloud == largest_referencecloud:
@@ -391,12 +418,6 @@ def gettracknumbers_mergedir(datasource, datadescription, datainpath, dataoutpat
                                 else:
                                     referencetrackstatus[ifill,tempreferencecloud-1] = 21 + 13
                                     trackmergenumber[0, ifill, tempreferencecloud-1] = np.copy(tracknumber[0, ifill, largest_referencecloud-1])
-
-                                #print(tempreferencecloud-1)
-                                #print(largest_referencecloud-1)
-                                #print(trackstatus[ifill,tempreferencecloud-1])
-                                #print(trackmergenumber[ifill,tempreferencecloud-1])
-                                #raw_input('Waiting for User')
 
                             # Loop through the new clouds and assign the smaller ones a new track
                             for tempnewcloud in associated_newclouds:
@@ -416,19 +437,14 @@ def gettracknumbers_mergedir(datasource, datadescription, datainpath, dataoutpat
                                     newtrackstatus[ifill+1,tempnewcloud-1] = 3
                                     tracknumber[0, ifill+1, tempnewcloud-1] = np.copy(tracknumber[0, ifill, largest_referencecloud-1])
 
-                                #print(tempnewcloud-1)
-                                #print(largest_newcloud-1)
-                                #print(trackstatus[ifill+1,tempnewcloud-1])
-                                #print(tracksplitnumber[ifill+1,tempnewcloud-1])
-                                #raw_input('Waiting for User')
-
                     #####################################################################
                     # Splitting only
-
                     elif nnewclouds > 1:
+                        print('Splitting only')
+                        print(time.ctime())
                         # Label reference cloud as a pure split
-                        #print(trackstatus[ifill,ncr-1])
                         referencetrackstatus[ifill, ncr-1] = 13
+                        tracknumber[0, ifill, ncr-1] = itrack
 
                         # Loop over the clouds and assign new tracks to the smaller ones
                         for tempnewcloud in associated_newclouds:
@@ -447,33 +463,23 @@ def gettracknumbers_mergedir(datasource, datadescription, datainpath, dataoutpat
                                 newtrackstatus[ifill+1, tempnewcloud-1] = 3
                                 tracknumber[0, ifill+1, tempnewcloud-1] = np.copy(tracknumber[0, ifill, ncr-1])
 
-                            #print('Split only')
-                            #print(ncr-1)
-                            #print(tempnewcloud-1)
-                            #print(largest_newcloud-1)
-                            #print(trackstatus[ifill+1,tempnewcloud-1])
-                            #print(trackstatus[ifill,ncr-1])
-                            #raw_input('Waiting for User')
-
                     else:
                         sys.exit(str(ncr) + ' How did we get here?')
 
                 ######################################################################################
                 # No new clouds. Track dissipated
                 else:
-                    trackfound[ncr-1] = 1
+                    print('Track ending')
+                    print(time.ctime())
 
-                    #print(trackstatus[ifill,ncr-1])
+                    trackfound[ncr-1] = 1
 
                     referencetrackstatus[ifill, ncr-1] = 0
 
-                    #print('Track ends')
-                    #print(ncr-1)
-                    #print(trackstatus[ifill, ncr-1])
-                    #raw_input('Waiting for User')
-
         ##############################################################################
         # Find any clouds in the new track that don't have a track number. These are new clouds this file
+        print('Identifying new tracks')
+        print(time.ctime())
         for ncn in range(1, int(nclouds_new)+1):
             if tracknumber[0, ifill+1, ncn-1] < 0:
                 tracknumber[0, ifill+1, ncn-1] = itrack
@@ -491,64 +497,66 @@ def gettracknumbers_mergedir(datasource, datadescription, datainpath, dataoutpat
         # Incrament to next fill
         ifill = ifill + 1
 
-    referencetrackstatus[referencetrackstatus == fillvalue] = np.nan
-    newtrackstatus[newtrackstatus == fillvalue] = np.nan
-
     trackstatus[0, :, :] = np.nansum(np.dstack((referencetrackstatus, newtrackstatus)), 2)
-
-    notracky, notrackx = np.array(np.where((np.isnan(referencetrackstatus) & np.isnan(newtrackstatus))))
-    trackstatus[0, notracky, notrackx] = fillvalue
-    referencetrackstatus[notracky, notrackx] = fillvalue
-    newtrackstatus[notracky, notrackx] = fillvalue
-
-    tempindices = np.where(trackstatus == 0)
+    trackstatus[np.isnan(trackstatus)] = -9999
 
     print('Tracking Done')
 
     #################################################################
-    # Remove all tracks that have only one cloud.
     # Create histograms of the values in tracknumber. This effectively counts the number of times each track number appaers in tracknumber, which is equivalent to calculating the length of the track. 
     tracklengths, trackbins = np.histogram(tracknumber[0, :, :], bins=np.arange(1,itrack+1,1), range=(1,itrack+1))
 
+    #################################################################
+    # Remove all tracks that have only one cloud.
+    print('Removing short tracks')
+    print(time.ctime())
+
     # Identify single cloud tracks
     singletracks = np.array(np.where(tracklengths <= 1))[0,:]
+    raw_input('check')
     nsingletracks = len(singletracks)
+    #singleindices = np.logical_or(tracknumber[0, :, :] == singletracks)
 
     # Loop over single cloudtracks
     nsingleremove = 0
     for strack in singletracks:
+        print('single track: ' + str(strack))
+        print('Getting track index')
         # Indentify clouds in this track
         cloudindex = np.array(np.where(tracknumber[0, :, :] == strack+1)) # Need to add one since singletracks lists the index in the matrix, which starts at zero. Track number starts at one.
+        print(cloudindex)
+        print(tracknumber[0, cloudindex[0], cloudindex[1]])
+        print(referencetrackstatus[cloudindex[0], cloudindex[1]])
+        print(newtrackstatus[cloudindex[0], cloudindex[1]])
+        print(tracksplitnumber[0, cloudindex[0], cloudindex[1]])
+        print(trackmergenumber[0, cloudindex[0], cloudindex[1]])
+        raw_input('check')
 
-        # Only remove single track if it is not small merger or small split. This is only done if keepsingletrack == 1.
+        print('Filtering data')
+        # Only remove single track if it is not small merger or small split. This is only done if keepsingletrack == 1. This is the default.
         if keepsingletrack == 1:
-            if referencetrackstatus[cloudindex[0], cloudindex[1]] in [21, 34]:
+            if referencetrackstatus[cloudindex[0], cloudindex[1]] not in [21, 34]:
                 tracknumber[0, cloudindex[0], cloudindex[1]] = -2
-                trackstatus[0, cloudindex[0], cloudindex[1]] = fillvalue
-                referencetrackstatus[cloudindex[0], cloudindex[1]] = fillvalue
-                newtrackstatus[cloudindex[0], cloudindex[1]] = fillvalue
+                trackstatus[0, cloudindex[0], cloudindex[1]] = -9999
                 nsingleremove = nsingleremove + 1
-                tracklengths[strack] = fillvalue
-            if newtrackstatus[cloudindex[0], cloudindex[1]] == 31:
+                tracklengths[strack] = -9999
+            if newtrackstatus[cloudindex[0], cloudindex[1]] != 31:
                 tracknumber[0, cloudindex[0], cloudindex[1]] = -2
-                trackstatus[0, cloudindex[0], cloudindex[1]] = fillvalue
-                referencetrackstatus[cloudindex[0], cloudindex[1]] = fillvalue
-                newtrackstatus[cloudindex[0], cloudindex[1]] = fillvalue
+                trackstatus[0, cloudindex[0], cloudindex[1]] = -9999
                 nsingleremove = nsingleremove + 1
-                tracklengths[strack] = fillvalue
+                tracklengths[strack] = -9999
 
-        # Remove all single tracks. This corresponds to keepsingletrack == 0, which is the default
+        # Remove all single tracks. This corresponds to keepsingletrack == 0.
         else:
             tracknumber[0, cloudindex[0], cloudindex[1]] = -2
-            trackstatus[0, cloudindex[0], cloudindex[1]] = fillvalue
-            referencetrackstatus[cloudindex[0], cloudindex[1]] = fillvalue
-            newtrackstatus[cloudindex[0], cloudindex[1]] = fillvalue
+            trackstatus[0, cloudindex[0], cloudindex[1]] = -9999
             nsingleremove = nsingleremove + 1
-            tracklengths[strack] = fillvalue
+            tracklengths[strack] = -9999
 
     #######################################################################
     # Save file
     print('Writing all track statistics file')
+    print(time.ctime())
     print(tracknumbers_outfile)
     print('')
 
@@ -560,7 +568,7 @@ def gettracknumbers_mergedir(datasource, datadescription, datainpath, dataoutpat
                               'basetimes': (['nfiles'], basetime), \
                               'cloudid_files': (['nfiles', 'ncharacters'], cloudidfiles), \
                               'track_numbers': (['time', 'nfiles', 'nclouds'], tracknumber), \
-                              'track_status': (['time', 'nfiles', 'nclouds'], trackstatus), \
+                              'track_status': (['time', 'nfiles', 'nclouds'], trackstatus.astype(int)), \
                               'track_mergenumbers': (['time', 'nfiles', 'nclouds'], trackmergenumber), \
                               'track_splitnumbers': (['time', 'nfiles', 'nclouds'], tracksplitnumber), \
                               'track_reset': (['time', 'nfiles', 'nclouds'], trackreset)}, \
@@ -623,13 +631,13 @@ def gettracknumbers_mergedir(datasource, datadescription, datainpath, dataoutpat
     # Write netcdf file
     output_data.to_netcdf(path=tracknumbers_outfile, mode='w', format='NETCDF4_CLASSIC', unlimited_dims='ntracks', \
                           encoding={'ntracks': {'dtype': 'int', 'zlib':True}, \
-                                    'basetimes': {'dtype': 'int64', 'zlib':True, '_FillValue': fillvalue, 'units': 'seconds since 1970-01-01'}, \
+                                    'basetimes': {'dtype': 'int64', 'zlib':True, 'units': 'seconds since 1970-01-01'}, \
                                     'cloudid_files': {'zlib':True,}, \
-                                    'track_numbers': {'dtype': 'int', 'zlib':True, '_FillValue': fillvalue}, \
-                                    'track_status':{'dtype': 'int', 'zlib':True, '_FillValue': fillvalue}, \
-                                    'track_mergenumbers': {'dtype': 'int', 'zlib':True, '_FillValue': fillvalue}, \
-                                    'track_splitnumbers': {'dtype': 'int', 'zlib':True, '_FillValue': fillvalue}, \
-                                    'track_reset': {'dtype': 'int', 'zlib':True, '_FillValue': fillvalue}})
+                                    'track_numbers': {'dtype': 'int', 'zlib':True, '_FillValue': -9999}, \
+                                    'track_status':{'dtype': 'int', 'zlib':True, '_FillValue': -9999}, \
+                                    'track_mergenumbers': {'dtype': 'int', 'zlib':True, '_FillValue': -9999}, \
+                                    'track_splitnumbers': {'dtype': 'int', 'zlib':True, '_FillValue': -9999}, \
+                                    'track_reset': {'dtype': 'int', 'zlib':True, '_FillValue': -9999}})
 
 
 

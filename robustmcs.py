@@ -1,10 +1,85 @@
-# Purpose: Filter MCS using NMQ radar variables so that only robust MCSs are included.
-
-# Comments: Method similar to Coniglio et al (2010) MWR. 
+# Purpose: Filter MCS using NMQ radar variables so that only MCSs statisfying radar thresholds are retained. The lifecycle of these robust MCS is also identified. Method similar to Coniglio et al (2010) MWR. 
 
 # Author: Original IDL code written by Zhe Feng (zhe.feng@pnnl.gov), Python version written by Hannah C. Barnes (hannah.barnes@pnnl.gov)
 
 def filtermcs_mergedir_nmq(stats_path, pfstats_filebase, startdate, enddate, timeresolution, geolimits, majoraxisthresh, durationthresh, aspectratiothresh, lifecyclethresh, lengththresh, gapthresh):
+    # Inputs:
+    # stats_path - directory which stores this statistics data. this is where the output from this code will be placed
+    # pfstats_filebase - file header of the precipitation feature statistics file generated in the previous code.
+    # startdate - starting date and time of the data
+    # enddate - ending date and time of the data
+    # time_resolution - time resolution of the satellite and radar data
+    # geolimits - 4-element array with plotting boundaries [lat_min, lon_min, lat_max, lon_max]
+    # majoraxisthresh - minimum major axis length of the largest precipitation feature in a robust MCSs
+    # durationthresh - minimum length of precipitation feature in a robust MCS
+    # aspectratiothresh - minimum aspect ratio the largest precipitation feature must have to called a squall line
+    # lifecyclethresh - minimum duration required for the lifecycles of an MCS to be classified
+    # lengththresh - minimum size required for the lifecycles of an MCS to be classified
+    # gapthresh - minimum allowable time gap between precipitation features that allow the storm to still be classified as a robust MCS
+
+    # Outputs: (One netcdf file with satellite, radar, and rain accumulation statistics about MCSs that satisfy both satellite and radar requirements)
+    # MCS_length - duration of MCS
+    # mcs_type - flag indicating whether this is squall line, based on satellite definition
+    # pf_lifetime - length of time in which precipitation is observed during each track
+    # status - flag indicating the evolution of each cloud in a MCS
+    # startstatus - flag indicating how a MCS starts
+    # endstatus - flag indicating how a MCS ends
+    # interruptions - flag indicating if the satellite data used to indentify this MCS is incomplete
+    # boundary - flag indicating if a MCS touches the edge of the domain
+    # base_time - seconds since 1970-01-01 for each cloud in a MCS
+    # datetimestring - string of date and time of each cloud in a MCS
+    # meanlat - mean latitude of the MCS
+    # meanlon - mean longitude of the MCS
+    # core_area - area of the core of MCS
+    # ccs_area - area of the core and cold anvil of the MCS
+    # cloudnumber - numbers indicating which clouds in the cloudid files are associated with a MCS
+    # mergecloudnumber - numbers indicating which clouds in the cloudid files merge into this track
+    # splitcloudnumber - numbers indicating which clouds in the cloudid files split from this track
+    # pf_mcsstatus - flag indicating which part of the tracks are part of the robust MCS
+    # lifecycle_complete_flag - flag indicating if this MCS has each element in the MCS life cycle
+    # lifecycle_index - time index when each phase of the MCS life cycle starts
+    # lifecycle_stage - flag indicating the lifestage of each cloud in a robust MCS
+    # nmq_frac - fraction of the cloud that exists within the radar domain
+    # npf - number of precipitation features at each time
+    # pf_area - area of the precipitation features in a MCS
+    # pf_lon - mean longitudes of the precipitaiton features in a MCS
+    # pf_lat - mean latitudes of the precipitation features in a MCS
+    # pf_rainrate - mean rainrates of the precipition features in a MCS
+    # pf_skewness - skewness of the rainrains in precipitation features in a MCS
+    # pf_majoraxislength - major axis lengths of the precipitation features in a MCS
+    # pf_minoraxislength - minor axis lengths of the precipitation features in a MCS
+    # pf_aspectratio - aspect ratios of the precipitation features in a MCS
+    # pf_eccentricity - eccentricity of the precipitation features in a MCS
+    # pf_orientation - angular position of the precipitation deatures in a MCS
+    # pf_dbz40area - area covered by 40 dbZ echos in a precipitaiton feature in a MCS
+    # pf_dbz50area - area covered by 50 dbZ echos in a precipitaiton feature in a MCS
+    # pf_ccrainrate - mean rain rate of the largest few convective cores in a MCS
+    # pf_sfrainrate - mean rain rate of the largest few stratiform regions in a MCS
+    # pf_ccarea - mean area of the largest few convective cores in a MCS
+    # pf_sfarea - mean area of the largest few stratiform regions in a MCS
+    # pf_ccdbz10 - average height of the 10 dBZ echo top in the largest few convective cores in a MCS
+    # pf_ccdbz20 - average height of the 20 dBZ echo top in the largest few convective cores in a MCS
+    # pf_ccdbz30 - average height of the 30 dBZ echo top in the largest few convective cores in a MCS
+    # pf_ccdbz40 - average height of the 40 dBZ echo top in the largest few convective cores in a MCS
+    # pf_ncores - number of convective cores at each time during an MCS
+    # pf_corelon - mean longitude of the convective cores in a MCS
+    # pf_corelat - mean latitude of the convective cores in a MCS
+    # pf_corearea - area of the convective cores in a MCS
+    # pf_coremajoraxislength - major axis length of convective cores in a MCS
+    # pf_coreminoraxislength - minor axis length of convective cores in a MCS
+    # pf_coreaspectratio - aspect ratio of convective cores in a MCS
+    # pf_coreccentricity - eccentricity of convective cores in a MCS
+    # of_coreorientation - angular position of convective cores in a MCS
+    # pf_coremaxdbz10 - maximum height of the 10 dBZ echo contour in convective cores
+    # pf_coremaxdbz20 - maximum height of the 20 dBZ echo contour in convective cores
+    # pf_coremaxdbz30 - maximum height of the 30 dBZ echo contour in convective cores
+    # pf_coremaxdbz40 - maximum height of the 40 dBZ echo contour in convective cores
+    # pf_coreavgdbz10 - average height of the 10 dBZ echo contour in convective cores
+    # pf_coreavgdbz20 - average height of the 20 dBZ echo contour in convective cores
+    # pf_coreavgdbz30 - average height of the 30 dBZ echo contour in convective cores
+    # pf_coreavgdbz40 - average height of the 40 dBZ echo contour in convective cores
+
+
     ######################################################
     # Import modules
     import numpy as np
@@ -15,10 +90,6 @@ def filtermcs_mergedir_nmq(stats_path, pfstats_filebase, startdate, enddate, tim
     import pandas as pd
     import time, datetime, calendar
     np.set_printoptions(threshold=np.inf)
-
-    ######################################################
-    # Set constants
-    fillvalue = -9999
 
     ######################################################
     # Load mergedir mcs and pf data
@@ -51,13 +122,14 @@ def filtermcs_mergedir_nmq(stats_path, pfstats_filebase, startdate, enddate, tim
     trackid_mcs = []
     trackid_nonmcs = []
 
-    pf_mcstype = np.ones(ntracks, dtype=int)*fillvalue
-    pf_mcsstatus = np.ones((ntracks, ntimes), dtype=float)*fillvalue
-    pf_cctype = np.ones((ntracks, ntimes), dtype=float)*fillvalue
+    pf_mcstype = np.ones(ntracks, dtype=int)*-9999
+    pf_mcsstatus = np.ones((ntracks, ntimes), dtype=int)*-9999
+    pf_cctype = np.ones((ntracks, ntimes), dtype=int)*-9999
 
     ###################################################
     # Loop through each track
     for nt in range(0, ntracks):
+        print('Track # ' + str(nt))
 
         ############################################
         # Isolate data from this track 
@@ -86,11 +158,6 @@ def filtermcs_mergedir_nmq(stats_path, pfstats_filebase, startdate, enddate, tim
                 # Find continuous duration indices
                 groups = np.split(ipfmcs, np.where(np.diff(ipfmcs) != gapthresh)[0]+1)
                 nbreaks = len(groups)
-                print(gapthresh)
-                print(ipfmcs)
-                print(groups)
-                print(nbreaks)
-                raw_input('check')
 
                 for igroup in range(0, nbreaks):
 
@@ -98,11 +165,6 @@ def filtermcs_mergedir_nmq(stats_path, pfstats_filebase, startdate, enddate, tim
                     # Determine if each group statisfies duration threshold
                     igroup_indices = np.array(np.copy(groups[igroup][:]))
                     nigroup = len(igroup_indices)
-                    print(igroup_indices)
-                    print(nigroup)
-                    print(np.multiply(len(groups[igroup][:]), time_res))
-                    print(durationthresh)
-                    raw_input('check')
 
                     # Group satisfies duration threshold
                     if np.multiply(len(groups[igroup][:]), time_res) > durationthresh:
@@ -115,8 +177,7 @@ def filtermcs_mergedir_nmq(stats_path, pfstats_filebase, startdate, enddate, tim
 
                         # Label this period as an mcs
                         pf_mcsstatus[nt, igroup_indices] = 1
-                        print(pf_mcsstatus[nt, :])
-                        raw_input('check')
+                        print('MCS')
 
                         ## Determine type of mcs (squall or non-squall)
                         #isquall = np.array(np.where(igroup_ccaspectratio > aspectratiothresh))[0, :]
@@ -130,14 +191,19 @@ def filtermcs_mergedir_nmq(stats_path, pfstats_filebase, startdate, enddate, tim
                         #    # Label as non-squall
                         #    pf_mcstype[nt] = 2
                         #    pf_cctype[nt, igroup_indices[isquall]] = 2
+                    else:
+                        print('Not MCS')
 
             # Group does not satistfy duration threshold
             else:
                 trackid_nonmcs = np.append(trackid_nonmcs, nt)
-                
+                print('Not NCS')
+        else:
+            print('Not MCS')
+
     # Isolate tracks that have robust MCS
-    TEMP_mcsstatus = np.copy(pf_mcsstatus)
-    TEMP_mcsstatus[TEMP_mcsstatus == fillvalue] = np.nan
+    TEMP_mcsstatus = np.copy(pf_mcsstatus).astype(float)
+    TEMP_mcsstatus[TEMP_mcsstatus == -9999] = np.nan
     trackid_mcs = np.array(np.where(np.nansum(TEMP_mcsstatus, axis=1)))[0, :]
     nmcs = len(trackid_mcs)
 
@@ -162,8 +228,8 @@ def filtermcs_mergedir_nmq(stats_path, pfstats_filebase, startdate, enddate, tim
     pf_meansfarea = pf_meansfarea[trackid_mcs, :]
 
     # Determine how long MCS track criteria is statisfied
-    TEMP_mcsstatus = np.copy(pf_mcsstatus)
-    TEMP_mcsstatus[TEMP_mcsstatus == fillvalue] = np.nan
+    TEMP_mcsstatus = np.copy(pf_mcsstatus).astype(float)
+    TEMP_mcsstatus[TEMP_mcsstatus == -9999] = np.nan
     mcs_length = np.nansum(TEMP_mcsstatus, axis=1)
 
     # Get lifetime when a significant precip feature is present
@@ -187,17 +253,17 @@ def filtermcs_mergedir_nmq(stats_path, pfstats_filebase, startdate, enddate, tim
 
     if nlongmcs > 0:
         # Initialize arrays
-        cycle_complete = np.ones(nmcs, dtype=float)*fillvalue
-        cycle_stage = np.ones((nmcs, ntimes), dtype=float)*fillvalue
-        cycle_index = np.ones((nmcs, 5), dtype=int)*fillvalue
+        cycle_complete = np.ones(nmcs, dtype=int)*-9999
+        cycle_stage = np.ones((nmcs, ntimes), dtype=int)*-9999
+        cycle_index = np.ones((nmcs, 5), dtype=int)*-9999
 
         mcs_basetime = np.empty((nmcs, ntimes), dtype='datetime64[s]')
 
         # Loop through each mcs
         for ilm in range(0, nlongmcs):
             # Initialize arrays
-            ilm_index = np.ones(5, dtype=float)*fillvalue
-            ilm_cycle = np.ones(ntimes, dtype=float)*fillvalue
+            ilm_index = np.ones(5, dtype=int)*-9999
+            ilm_cycle = np.ones(ntimes, dtype=int)*-9999
 
             # Isolate data from this track
             ilm_irtracklength = np.copy(ir_tracklength[ilongmcs[ilm]]).astype(int)
@@ -219,8 +285,6 @@ def filtermcs_mergedir_nmq(stats_path, pfstats_filebase, startdate, enddate, tim
 
             # Find times with convective core area > 0
             iccarea = np.array(np.where(ilm_maxpfccarea > 0))[0, :]
-            #print(ilm_maxpfccarea)
-            #print(iccarea)
             iccarea_groups = np.split(iccarea, np.where(np.diff(iccarea) > 2)[0]+1)
             if len(iccarea) > 0 and len(iccarea_groups) > 1:
                 grouplength = np.empty(len(iccarea_groups))
@@ -231,13 +295,9 @@ def filtermcs_mergedir_nmq(stats_path, pfstats_filebase, startdate, enddate, tim
             elif len(iccarea) > 0 :
                 iccarea = np.arange(iccarea[0], iccarea[-1]+1)
             nccarea = len(iccarea)
-            #print(iccarea)
-            #raw_input('check area')
 
             # Find times with convective major axis length greater than 100 km
             iccline = np.array(np.where(ilm_maxpfccmajoraxis > 100))[0, :]
-            #print(ilm_maxpfccmajoraxis)
-            #print(iccline)
             iccline_groups = np.split(iccline, np.where(np.diff(iccline) > 2)[0]+1)
             if len(iccline) > 0 and len(iccline_groups) > 1:
                 grouplength = np.empty(len(iccline_groups))
@@ -248,15 +308,10 @@ def filtermcs_mergedir_nmq(stats_path, pfstats_filebase, startdate, enddate, tim
             elif len(iccline) > 0:
                 iccline = np.arange(iccline[0], iccline[-1]+1)
             nccline = len(iccline)
-            #print(iccline)
-            #raw_input('check line')
 
             # Find times with convective major axis length greater than 100 km and stratiform area greater than the median amount of stratiform
-            ilm_meansfarea[ilm_meansfarea == fillvalue] = np.nan
+            #ilm_meansfarea[ilm_meansfarea == fillvalue] = np.nan
             isfarea = np.array(np.where((ilm_maxpfccmajoraxis > 100) & (ilm_meansfarea > np.nanmean(ilm_meansfarea))))[0, :]
-            #print(ilm_meansfarea)
-            #print(np.nanmean(ilm_meansfarea))
-            #print(isfarea)
             isfarea_groups = np.split(isfarea, np.where(np.diff(isfarea) > 2)[0]+1)
             if len(isfarea) > 0 and len(isfarea_groups) > 1:
                 grouplength = np.empty(len(isfarea_groups))
@@ -267,16 +322,11 @@ def filtermcs_mergedir_nmq(stats_path, pfstats_filebase, startdate, enddate, tim
             elif len(isfarea) > 0 :
                 isfarea = np.arange(isfarea[0], isfarea[-1]+1)
             nsfarea = len(isfarea)
-            #print(isfarea)
-            #raw_input('check sf area')
-
 
             # Find times with convective major axis length less than 100 km
             if nsfarea > 0:
                 inoccline = np.array(np.where(ilm_maxpfccmajoraxis < 100))[0, :]
                 inoccline = inoccline[np.where((inoccline > isfarea[-1]) & (inoccline > iccline[-1]))]
-                #print(ilm_maxpfccmajoraxis)
-                #print(inoccline)
                 inoccline_groups = np.split(inoccline, np.where(np.diff(inoccline) > 2)[0]+1)
                 if len(inoccline) > 0 and len(inoccline_groups) > 1:
                     grouplength = np.empty(len(inoccline_groups))
@@ -287,8 +337,6 @@ def filtermcs_mergedir_nmq(stats_path, pfstats_filebase, startdate, enddate, tim
                 elif len(inoccline) > 0:
                     inoccline = np.arange(inoccline[0], inoccline[-1]+1)
                 nnoccline = len(inoccline)
-                #print(inoccline)
-                #raw_input('check no line')
 
             ###############################################################################
             # Classify cloud only stage 
@@ -302,15 +350,7 @@ def filtermcs_mergedir_nmq(stats_path, pfstats_filebase, startdate, enddate, tim
 
                 ilm_index[1] = iccarea[0] # Start of unorganized convective cells 
 
-            #print(iccarea)
-            #print(ilm_irtracklength-1)
-            #print(ilm_index)
-            #print(ilm_cycle)
-            #raw_input('check 1')
-
             # If convective line exists
-            #print(iccline)
-            #raw_input('check Convective')
             if nccline > 1:
                 # If the convective line occurs after the first storm time (use second index since convective line must be around for one hour prior to classifying as genesis)
                 # Label when convective cores first appear, but are not organized into a line
@@ -347,42 +387,19 @@ def filtermcs_mergedir_nmq(stats_path, pfstats_filebase, startdate, enddate, tim
                     
                             #        ilm_cycle[isfarea[3]:isfarea[-1]+1] = 4 # Time period of mature MCS
 
-                            #print(isfarea)
-                            #print(iccline)
-                            #print(iccarea)
-                            #print(ilm_index)
-                            #print(ilm_cycle)
-                            #raw_input('check 2')
-
                             # Label dissipating times. Buy default this is all times after the mature stage
                             ilm_index[4] =  isfarea[-1]+1 
                             ilm_cycle[isfarea[-1]+1:ilm_irtracklength+1] = 5 # Time period of dissipation
-
-                #print(isfarea)
-                #print(iccline)
-                #print(inoccline)
-                #print(ilm_index)
-                #print(ilm_cycle)
-                #raw_input('check 3')            
 
             ############################################################
             # Final life cycle processing
             istage = np.array(np.where(ilm_cycle >= 0))[0, :]
             nstage = len(istage)
 
-            #print(ilm_cycle)
-            #print(istage)
-            #print(nstage)
-            #raw_input('Final Processing 1')
-
             if nstage > 0:
                 cyclepresent = np.copy(ilm_cycle[istage])
                 uniquecycle = np.unique(cyclepresent)
                 
-                #print(cyclepresent)
-                #print(uniquecycle)
-                #raw_input('Final Processing 2')
-
                 # Label as complete cycle if 1-4 present
                 if len(uniquecycle) >= 4:
                     cycle_complete[ilongmcs[ilm]] = 1
@@ -390,11 +407,6 @@ def filtermcs_mergedir_nmq(stats_path, pfstats_filebase, startdate, enddate, tim
                 # Save data
                 cycle_stage[ilongmcs[ilm], :] = np.copy(ilm_cycle)
                 cycle_index[ilongmcs[ilm], :] = np.copy(ilm_index)
-
-                #print(cycle_complete[ilongmcs[ilm]])
-                #print(cycle_stage[ilongmcs[ilm], :])
-                #print(cycle_index[ilongmcs[ilm], :])
-                #raw_input('Final Processing 3')
 
     #################################################################################
     # Save data to netcdf file
@@ -437,6 +449,7 @@ def filtermcs_mergedir_nmq(stats_path, pfstats_filebase, startdate, enddate, tim
                               'pf_eccentricity': (['track', 'time', 'pfs'], data['pf_eccentricity'][trackid_mcs, :, :]), \
                               'pf_orientation': (['track', 'time', 'pfs'], data['pf_orientation'][trackid_mcs, :, :]), \
                               'pf_dbz40area': (['track', 'time', 'pfs'], data['pf_dbz40area'][trackid_mcs, :, :]), \
+                              'pf_dbz50area': (['track', 'time', 'pfs'], data['pf_dbz50area'][trackid_mcs, :, :]), \
                               'pf_ccrainrate': (['track', 'time'], data['pf_ccrainrate'][trackid_mcs, :]), \
                               'pf_sfrainrate': (['track', 'time'], data['pf_sfrainrate'][trackid_mcs, :]), \
                               'pf_ccarea': (['track', 'time'], data['pf_ccarea'][trackid_mcs, :]), \
@@ -474,7 +487,7 @@ def filtermcs_mergedir_nmq(stats_path, pfstats_filebase, startdate, enddate, tim
                                     'source2': data.attrs['source2'], \
                                     'description': data.attrs['description'], \
                                     'startdate': data.attrs['startdate'], \
-                                    'enddate': data.attrs['enddate'], '_FillValue': data.attrs['_FillValue'], \
+                                    'enddate': data.attrs['enddate'], \
                                     'time_resolution_hour': data.attrs['time_resolution_hour'], \
                                     'mergedir_pixel_radius': data.attrs['mergdir_pixel_radius'], \
                                     'MCS_IR_area_km2': data.attrs['MCS_IR_area_thresh_km2'], \
@@ -569,6 +582,9 @@ def filtermcs_mergedir_nmq(stats_path, pfstats_filebase, startdate, enddate, tim
 
     output_data.pf_dbz40area.attrs['long_name'] = 'area of the precipitation feature with column maximum reflectivity >= 40 dBZ at a given time'
     output_data.pf_dbz40area.attrs['units'] = 'km^2'
+
+    output_data.pf_dbz50area.attrs['long_name'] = 'area of the precipitation feature with column maximum reflectivity >= 50 dBZ at a given time'
+    output_data.pf_dbz50area.attrs['units'] = 'km^2'
 
     output_data.core_area.attrs['long_name'] = 'area of the cold core at the given time'
     output_data.core_area.attrs['units'] = 'km^2'
@@ -746,60 +762,64 @@ def filtermcs_mergedir_nmq(stats_path, pfstats_filebase, startdate, enddate, tim
     print(statistics_outfile)
 
     output_data.to_netcdf(path=statistics_outfile, mode='w', format='NETCDF4_CLASSIC', unlimited_dims='track', \
-                          encoding={'mcs_length': {'zlib':True, '_FillValue': fillvalue}, \
-                                    'mcs_type': {'zlib':True, '_FillValue': fillvalue}, \
-                                    'pf_lifetime': {'zlib':True, '_FillValue': fillvalue}, \
-                                    'status': {'zlib':True, '_FillValue': fillvalue}, \
-                                    'startstatus': {'zlib':True, '_FillValue': fillvalue}, \
-                                    'endstatus': {'zlib':True, '_FillValue': fillvalue}, \
-                                    'base_time': {'zlib':True, '_FillValue': fillvalue, 'units': 'seconds since 1970-01-01'}, \
-                                    'datetimestring': {'zlib':True, '_FillValue': fillvalue}, \
-                                    'meanlat': {'zlib':True, '_FillValue': fillvalue}, \
-                                    'meanlon': {'zlib':True, '_FillValue': fillvalue}, \
-                                    'core_area': {'zlib':True, '_FillValue': fillvalue}, \
-                                    'ccs_area': {'zlib':True, '_FillValue': fillvalue}, \
-                                    'cloudnumber': {'zlib':True, '_FillValue': fillvalue}, \
-                                    'mergecloudnumber': {'zlib':True, '_FillValue': fillvalue}, \
-                                    'splitcloudnumber': {'zlib':True, '_FillValue': fillvalue}, \
-                                    'nmq_frac': {'zlib':True, '_FillValue': fillvalue}, \
-                                    'pf_area': {'zlib':True, '_FillValue': fillvalue}, \
-                                    'pf_lon': {'zlib':True, '_FillValue': fillvalue}, \
-                                    'pf_lat': {'zlib':True, '_FillValue': fillvalue}, \
-                                    'pf_rainrate': {'zlib':True, '_FillValue': fillvalue}, \
-                                    'pf_skewness': {'zlib':True, '_FillValue': fillvalue}, \
-                                    'pf_majoraxislength': {'zlib':True, '_FillValue': fillvalue}, \
-                                    'pf_minoraxislength': {'zlib':True, '_FillValue': fillvalue}, \
-                                    'pf_aspectratio': {'zlib':True, '_FillValue': fillvalue}, \
-                                    'pf_orientation': {'zlib':True, '_FillValue': fillvalue}, \
-                                    'pf_eccentricity': {'zlib':True, '_FillValue': fillvalue}, \
-                                    'pf_ccarea': {'zlib':True, '_FillValue': fillvalue}, \
-                                    'pf_sfarea': {'zlib':True, '_FillValue': fillvalue}, \
-                                    'pf_ccrainrate': {'zlib':True, '_FillValue': fillvalue}, \
-                                    'pf_sfrainrate': {'zlib':True, '_FillValue': fillvalue}, \
-                                    'pf_ccdbz40': {'zlib':True, '_FillValue': fillvalue}, \
-                                    'pf_ncores': {'zlib':True, '_FillValue': fillvalue}, \
-                                    'pf_corelon': {'zlib':True, '_FillValue': fillvalue}, \
-                                    'pf_corelat': {'zlib':True, '_FillValue': fillvalue}, \
-                                    'pf_corearea': {'zlib':True, '_FillValue': fillvalue}, \
-                                    'pf_coremajoraxislength': {'zlib':True, '_FillValue': fillvalue}, \
-                                    'pf_minoraxislength': {'zlib':True, '_FillValue': fillvalue}, \
-                                    'pf_coreaspectratio': {'zlib':True, '_FillValue': fillvalue}, \
-                                    'pf_coreorientation': {'zlib':True, '_FillValue': fillvalue}, \
-                                    'pf_coreeccentricity': {'zlib':True, '_FillValue': fillvalue}, \
-                                    'pf_coremaxdbz10': {'zlib':True, '_FillValue': fillvalue}, \
-                                    'pf_coremaxdbz20': {'zlib':True, '_FillValue': fillvalue}, \
-                                    'pf_coremaxdbz30': {'zlib':True, '_FillValue': fillvalue}, \
-                                    'pf_coremaxdbz40': {'zlib':True, '_FillValue': fillvalue}, \
-                                    'pf_coreavgdbz10': {'zlib':True, '_FillValue': fillvalue}, \
-                                    'pf_coreavgdbz20': {'zlib':True, '_FillValue': fillvalue}, \
-                                    'pf_coreavgdbz30': {'zlib':True, '_FillValue': fillvalue}, \
-                                    'pf_coreavgdbz40': {'zlib':True, '_FillValue': fillvalue}, \
-                                    #'pf_mcstype': {'zlib':True, '_FillValue': fillvalue}, \
-                                    #'pf_cctype': {'zlib':True, '_FillValue': fillvalue}, \
-                                    'pf_mcsstatus': {'zlib':True, '_FillValue': fillvalue}, \
-                                    'lifecycle_complete_flag': {'zlib':True, '_FillValue': fillvalue}, \
-                                    'lifecycle_index': {'zlib':True, '_FillValue': fillvalue}, \
-                                    'lifecycle_stage': {'zlib':True, '_FillValue': fillvalue}})
+                          encoding={'mcs_length': {'dtype': 'int', 'zlib':True, '_FillValue': -9999}, \
+                                    'mcs_type': {'dtype': 'int', 'zlib':True, '_FillValue': -9999}, \
+                                    'pf_lifetime': {'dtype': 'int','zlib':True, '_FillValue': -9999}, \
+                                    'status': {'dtype': 'int', 'zlib':True, '_FillValue': -9999}, \
+                                    'startstatus': {'dtype': 'int', 'zlib':True, '_FillValue': -9999}, \
+                                    'endstatus': {'dtype': 'int', 'zlib':True, '_FillValue': -9999}, \
+                                    'base_time': {'zlib':True, 'units': 'seconds since 1970-01-01'}, \
+                                    'boundary': {'dtype': 'int', 'zlib':True, '_FillValue': -9999}, \
+                                    'interruptions': {'dtype': 'int', 'zlib':True, '_FillValue': -9999}, \
+                                    'datetimestring': {'zlib':True}, \
+                                    'meanlat': {'zlib':True, '_FillValue': np.nan}, \
+                                    'meanlon': {'zlib':True, '_FillValue': np.nan}, \
+                                    'core_area': {'zlib':True, '_FillValue': np.nan}, \
+                                    'ccs_area': {'zlib':True, '_FillValue': np.nan}, \
+                                    'cloudnumber': {'dtype': 'int', 'zlib':True, '_FillValue': -9999}, \
+                                    'mergecloudnumber': {'dtype': 'int', 'zlib':True, '_FillValue': -9999}, \
+                                    'splitcloudnumber': {'dtype': 'int', 'zlib':True, '_FillValue': -9999}, \
+                                    'nmq_frac': {'zlib':True, '_FillValue': np.nan}, \
+                                    'pf_area': {'zlib':True, '_FillValue': np.nan}, \
+                                    'pf_lon': {'zlib':True, '_FillValue': np.nan}, \
+                                    'pf_lat': {'zlib':True, '_FillValue': np.nan}, \
+                                    'pf_dbz40area': {'zlib':True, '_FillValue': np.nan}, \
+                                    'pf_dbz50area': {'zlib':True, '_FillValue': np.nan}, \
+                                    'pf_rainrate': {'zlib':True, '_FillValue': np.nan}, \
+                                    'pf_skewness': {'zlib':True, '_FillValue': np.nan}, \
+                                    'pf_majoraxislength': {'zlib':True, '_FillValue': np.nan}, \
+                                    'pf_minoraxislength': {'zlib':True, '_FillValue': np.nan}, \
+                                    'pf_aspectratio': {'zlib':True, '_FillValue': np.nan}, \
+                                    'pf_orientation': {'zlib':True, '_FillValue': np.nan}, \
+                                    'pf_eccentricity': {'zlib':True, '_FillValue': np.nan}, \
+                                    'pf_ccarea': {'zlib':True, '_FillValue': np.nan}, \
+                                    'pf_sfarea': {'zlib':True, '_FillValue': np.nan}, \
+                                    'pf_ccrainrate': {'zlib':True, '_FillValue': np.nan}, \
+                                    'pf_sfrainrate': {'zlib':True, '_FillValue': np.nan}, \
+                                    'pf_ccdbz40': {'zlib':True, '_FillValue': np.nan}, \
+                                    'pf_ncores': {'dtype': 'int', 'zlib':True, '_FillValue': -9999}, \
+                                    'pf_corelon': {'zlib':True, '_FillValue': np.nan}, \
+                                    'pf_corelat': {'zlib':True, '_FillValue': np.nan}, \
+                                    'pf_corearea': {'zlib':True, '_FillValue': np.nan}, \
+                                    'pf_coremajoraxislength': {'zlib':True, '_FillValue': np.nan}, \
+                                    'pf_minoraxislength': {'zlib':True, '_FillValue': np.nan}, \
+                                    'pf_coreaspectratio': {'zlib':True, '_FillValue': np.nan}, \
+                                    'pf_coreorientation': {'zlib':True, '_FillValue': np.nan}, \
+                                    'pf_coreeccentricity': {'zlib':True, '_FillValue': np.nan}, \
+                                    'pf_coremaxdbz10': {'zlib':True, '_FillValue': np.nan}, \
+                                    'pf_coremaxdbz20': {'zlib':True, '_FillValue': np.nan}, \
+                                    'pf_coremaxdbz30': {'zlib':True, '_FillValue': np.nan}, \
+                                    'pf_coremaxdbz40': {'zlib':True, '_FillValue': np.nan}, \
+                                    'pf_coreavgdbz10': {'zlib':True, '_FillValue': np.nan}, \
+                                    'pf_coreavgdbz20': {'zlib':True, '_FillValue': np.nan}, \
+                                    'pf_coreavgdbz30': {'zlib':True, '_FillValue': np.nan}, \
+                                    'pf_coreavgdbz40': {'zlib':True, '_FillValue': np.nan}, \
+                                    #'pf_mcstype': {'dtype': 'int', 'zlib':True, '_FillValue': -9999}, \
+                                    #'pf_cctype': {'dtype': 'int', 'zlib':True, '_FillValue': -9999}, \
+                                    'pf_mcsstatus': {'dtype': 'int', 'zlib':True, '_FillValue': -9999}, \
+                                    'lifecycle_complete_flag': {'dtype': 'int', 'zlib':True, '_FillValue': -9999}, \
+                                    'lifecycle_index': {'dtype': 'int', 'zlib':True, '_FillValue': -9999}, \
+                                    'lifecycle_stage': {'dtype': 'int', 'zlib':True, '_FillValue': -9999}})
 
 
 

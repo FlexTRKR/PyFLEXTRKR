@@ -25,10 +25,10 @@ import xarray as xr
 # Set variables describing data, file structure, and tracking thresholds
 
 # Specify which sets of code to run. (1 = run code, 0 = don't run code)
-run_idclouds = 1        # Segment and identify cloud systems
-run_tracksingle = 1     # Track single consecutive cloudid files
-run_gettracks = 1       # Run trackig for all files
-run_finalstats = 1      # Calculate final statistics
+run_idclouds = 0        # Segment and identify cloud systems
+run_tracksingle = 0     # Track single consecutive cloudid files
+run_gettracks = 0       # Run trackig for all files
+run_finalstats = 0      # Calculate final statistics
 run_identifymcs = 1     # Isolate MCSs
 run_matchpf = 1         # Identify precipitation features with MCSs
 run_robustmcs = 1       # Filter potential mcs cases using nmq radar variables

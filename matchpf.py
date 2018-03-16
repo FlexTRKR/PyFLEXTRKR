@@ -1,11 +1,93 @@
-# Purpose: match mergedir tracked MCS with NMQ CSA to calculate radar-based statsitics underneath the cloud features.
+# Purpose: match mergedir tracked MCS with NMQ CSA and calculate radar-based statistics underneath the cloud features.
 
 # Author: Original IDL code written by Zhe Feng (zhe.feng@pnnl.gov), Python version written by Hannah C. Barnes (hannah.barnes@pnnl.gov)
 
-def identifypf_mergedir_nmq(mcsstats_filebase, cloudid_filebase,  pfdata_filebase, rainaccumulation_filebase, stats_path, cloudidtrack_path, pfdata_path, rainaccumulation_path, startdate, enddate, geolimits, nmaxpf, nmaxcore, nmaxpix, nmaxclouds, rr_min, pixel_radius, irdatasource, nmqdatasource, datadescription, datatimeresolution, mcs_irareathresh, mcs_irdurationthresh, mcs_ireccentricitythresh):
+def identifypf_mergedir_nmq(mcsstats_filebase, cloudid_filebase, pfdata_filebase, rainaccumulation_filebase, stats_path, cloudidtrack_path, pfdata_path, rainaccumulation_path, startdate, enddate, geolimits, nmaxpf, nmaxcore, nmaxclouds, rr_min, pixel_radius, irdatasource, nmqdatasource, datadescription, datatimeresolution, mcs_irareathresh, mcs_irdurationthresh, mcs_ireccentricitythresh):
+    # Input:
+    # mcsstats_filebase - file header of the mcs statistics file that has the satellite data and was produced in the previous step
+    # cloudid_filebase - file header of the cloudid file created in the idclouds step
+    # pfdata_filebase - file header of the radar data
+    # rainaccumulation_filebase - file header of the rain accumulation data
+    # stats_path - directory which stores this statistics data. this is where the output from this code will be placed.
+    # cloudidtrack_path - directory that contains the cloudid data created in the idclouds step
+    # pfdata_path - directory that contains the radar data
+    # rainaccumulation_path - directory containing the rain accumulation data
+    # startdate - starting date and time of the data
+    # enddate - ending date and time of the data
+    # geolimits - 4-element array with plotting boundaries [lat_min, lon_min, lat_max, lon_max]
+    # namxpf - maximum number of precipitation features that can exist within one satellite defined MCS at a given time
+    # nmaxcore - maximum number of convective cores that can exist within one satellite defined MCS at a given time
+    # nmaxclouds - maximum number of clouds allowed to be within one track
+    # rr_min - minimum rain rate used when classifying precipitation features
+    # pixel_radius - radius of pixels in km
+    # irdatasource - source of the raw satellite data
+    # nmqdatasource - source of the radar data
+    # datadescription - description of the satellite data source
+    # datatimeresolution - time resolution of the satellite data
+    # mcs_irareathresh - satellite area threshold for MCS identificaiton
+    # mcs_irdurationthresh - satellite duration threshold for MCS identification
+    # mcs_ireccentricitythresh - satellite eccentricity threshold used for classifying squall lines
+
+    # Output: (One netcdf with statistics about the satellite, radar, and rain accumulation characteristics for each satellite defined MCS)
+    # mcs_length - duration of MCS portion of each track
+    # length - total duration of each track (MCS and nonMCS components)
+    # mcs_type - flag indicating whether this is squall line, based on satellite definition
+    # status - flag indicating the evolution of each cloud in a MCS
+    # startstatus - flag indicating how a MCS starts
+    # endstatus - flag indicating how a MCS ends
+    # trackinterruptions - flag indicating if the data used to identify this MCS is incomplete
+    # boundary - flag indicating if a MCS touches the edge of the domain
+    # basetime - seconds since 1970-01-01 for each cloud in a MCS
+    # datetimestring - string of date and time of each cloud in a MCS
+    # meanlat - mean latitude of the MCS
+    # meanlon - mean longitude of the MCS
+    # core_area - area of the core of MCS
+    # ccs_area - area of the core and cold anvil of the MCS
+    # cloudnumber - numbers indicating which clouds in the cloudid files are associated with a MCS
+    # mergecloudnumber - numbers indicating which clouds in the cloudid files merge into this track
+    # splitcloudnumber - numbers indicating which clouds in the cloudid files split from this track
+    # nmq_frac - fraction of the cloud that exists within the radar domain
+    # npf - number of precipitation features at reach time
+    # pf_area - area of the precipitation features in a MCS
+    # pf_lon - mean longitudes of the precipitaiton features in a MCS
+    # pf_lat - mean latitudes of the precipitation features in a MCS
+    # pf_rainrate - mean rainrates of the precipition features in a MCS
+    # pf_skewness - skewness of the rainrains in precipitation features in a MCS
+    # pf_majoraxislength - major axis lengths of the precipitation features in a MCS
+    # pf_minoraxislength - minor axis lengths of the precipitation features in a MCS
+    # pf_aspectratio - aspect ratios of the precipitation features in a MCS
+    # pf_eccentricity - eccentricity of the precipitation features in a MCS
+    # pf_orientation - angular position of the precipitation deatures in a MCS
+    # pf_dbz40area - area covered by 40 dbZ echos in a precipitaiton feature in a MCS
+    # pf_dbz45area - area covered by 45 dbZ echos in a precipitaiton feature in a MCS
+    # pf_dbz50area - area covered by 50 dbZ echos in a precipitaiton feature in a MCS
+    # pf_ccrainrate - mean rain rate of the largest few convective cores in a MCS
+    # pf_sfrainrate - mean rain rate of the largest few stratiform regions in a MCS
+    # pf_ccdbz10 - average height of the 10 dBZ echo top in the largest few convective cores in a MCS
+    # pf_ccdbz20 - average height of the 20 dBZ echo top in the largest few convective cores in a MCS
+    # pf_ccdbz30 - average height of the 30 dBZ echo top in the largest few convective cores in a MCS
+    # pf_ccdbz40 - average height of the 40 dBZ echo top in the largest few convective cores in a MCS
+    # pf_ncores - number of convective cores at each time during an MCS
+    # pf_corelon - mean longitude of the convective cores in a MCS
+    # pf_corelat - mean latitude of the convective cores in a MCS
+    # pf_corearea - area of the convective cores in a MCS
+    # pf_coremajoraxislength - major axis length of convective cores in a MCS
+    # pf_coreminoraxislength - minor axis length of convective cores in a MCS
+    # pf_coreaspectratio - aspect ratio of convective cores in a MCS
+    # pf_coreccentricity - eccentricity of convective cores in a MCS
+    # of_coreorientation - angular position of convective cores in a MCS
+    # pf_coremaxdbz10 - maximum height of the 10 dBZ echo contour in convective cores
+    # pf_coremaxdbz20 - maximum height of the 20 dBZ echo contour in convective cores
+    # pf_coremaxdbz30 - maximum height of the 30 dBZ echo contour in convective cores
+    # pf_coremaxdbz40 - maximum height of the 40 dBZ echo contour in convective cores
+    # pf_coreavgdbz10 - average height of the 10 dBZ echo contour in convective cores
+    # pf_coreavgdbz20 - average height of the 20 dBZ echo contour in convective cores
+    # pf_coreavgdbz30 - average height of the 30 dBZ echo contour in convective cores
+    # pf_coreavgdbz40 - average height of the 40 dBZ echo contour in convective cores
+
     import numpy as np
     import os.path
-    from netCDF4 import Dataset
+    from netCDF4 import Dataset, num2date
     from scipy.ndimage import label, binary_dilation, generate_binary_structure
     from skimage.measure import regionprops
     from math import pi
@@ -17,11 +99,9 @@ def identifypf_mergedir_nmq(mcsstats_filebase, cloudid_filebase,  pfdata_filebas
     np.set_printoptions(threshold=np.inf)
 
     #########################################################
-    # Set constants
-    fillvalue = -9999
-
-    #########################################################
     # Load MCS track stats
+    print('Loading IR data')
+    print(time.ctime())
     mcsirstatistics_file = stats_path + mcsstats_filebase + startdate + '_' + enddate + '.nc'
     print(mcsirstatistics_file)
 
@@ -29,84 +109,96 @@ def identifypf_mergedir_nmq(mcsstats_filebase, cloudid_filebase,  pfdata_filebas
     ir_ntracks = np.nanmax(mcsirstatdata['ntracks']) + 1
     ir_nmaxlength = np.nanmax(mcsirstatdata['ntimes']) + 1
     ir_basetime = mcsirstatdata['mcs_basetime'][:]
+    basetime_units =  mcsirstatdata['mcs_basetime'].units
+    basetime_calendar = mcsirstatdata['mcs_basetime'].calendar
     ir_datetimestring = mcsirstatdata['mcs_datetimestring'][:]
     ir_cloudnumber = mcsirstatdata['mcs_cloudnumber'][:]
     ir_mergecloudnumber = mcsirstatdata['mcs_mergecloudnumber'][:]
     ir_splitcloudnumber = mcsirstatdata['mcs_splitcloudnumber'][:]
+    ir_mcslength = mcsirstatdata['mcs_length'][:]
+    ir_tracklength = mcsirstatdata['track_length'][:]
+    ir_mcstype = mcsirstatdata['mcs_type'][:]
+    ir_status = mcsirstatdata['mcs_status'][:]
+    ir_startstatus = mcsirstatdata['mcs_startstatus'][:]
+    ir_endstatus = mcsirstatdata['mcs_endstatus'][:]
+    ir_trackinterruptions = mcsirstatdata['mcs_trackinterruptions'][:]
+    ir_boundary = mcsirstatdata['mcs_boundary'][:]
+    ir_meanlat = mcsirstatdata['mcs_meanlat'][:]
+    ir_meanlon = mcsirstatdata['mcs_meanlon'][:]
+    ir_corearea = mcsirstatdata['mcs_corearea'][:]
+    ir_ccsarea = mcsirstatdata['mcs_ccsarea'][:]
     mcsirstatdata.close()
-    #mcsirstatdata = xr.open_dataset(mcsirstatistics_file, autoclose=True)
-    #ir_ntracks = (np.nanmax(mcsirstatdata['ntracks'].data) + 1).astype(int) # Total number of tracked features
-    #ir_nmaxlength = (np.nanmax(mcsirstatdata['ntimes'].data) + 1).astype(int) # Maximum number of features in a given track
+
+    ir_datetimestring = ir_datetimestring[:, :, :, 0]
 
     ###################################################################
     # Intialize precipitation statistic matrices
+    print('Initializing matrices')
+    print(time.ctime())
 
     # Variables for each precipitation feature
-    radar_npf = np.ones((ir_ntracks, ir_nmaxlength), dtype=int)*fillvalue
-    radar_pflon = np.ones((ir_ntracks, ir_nmaxlength, nmaxpf), dtype=float)*fillvalue
-    radar_pflat = np.ones((ir_ntracks, ir_nmaxlength, nmaxpf), dtype=float)*fillvalue
-    radar_pfnpix = np.ones((ir_ntracks, ir_nmaxlength, nmaxpf), dtype=float)*fillvalue
-    radar_pfrainrate = np.ones((ir_ntracks, ir_nmaxlength, nmaxpf), dtype=float)*fillvalue
-    radar_pfskewness = np.ones((ir_ntracks, ir_nmaxlength, nmaxpf), dtype=float)*fillvalue
-    radar_pfmajoraxis = np.ones((ir_ntracks, ir_nmaxlength, nmaxpf), dtype=float)*fillvalue
-    radar_pfminoraxis = np.ones((ir_ntracks, ir_nmaxlength, nmaxpf), dtype=float)*fillvalue
-    radar_pfaspectratio = np.ones((ir_ntracks, ir_nmaxlength, nmaxpf), dtype=float)*fillvalue
-    radar_pforientation = np.ones((ir_ntracks, ir_nmaxlength, nmaxpf), dtype=float)*fillvalue
-    radar_pfeccentricity = np.ones((ir_ntracks, ir_nmaxlength, nmaxpf), dtype=float)*fillvalue
-    radar_pfdbz40npix = np.ones((ir_ntracks, ir_nmaxlength, nmaxpf), dtype=float)*fillvalue
-    radar_pfdbz45npix = np.ones((ir_ntracks, ir_nmaxlength, nmaxpf), dtype=float)*fillvalue
-    radar_pfdbz50npix = np.ones((ir_ntracks, ir_nmaxlength, nmaxpf), dtype=float)*fillvalue
+    radar_npf = np.ones((ir_ntracks, ir_nmaxlength), dtype=int)*-9999
+    radar_pflon = np.ones((ir_ntracks, ir_nmaxlength, nmaxpf), dtype=float)*np.nan
+    radar_pflat = np.ones((ir_ntracks, ir_nmaxlength, nmaxpf), dtype=float)*np.nan
+    radar_pfnpix = np.ones((ir_ntracks, ir_nmaxlength, nmaxpf), dtype=int)*-9999
+    radar_pfrainrate = np.ones((ir_ntracks, ir_nmaxlength, nmaxpf), dtype=float)*np.nan
+    radar_pfskewness = np.ones((ir_ntracks, ir_nmaxlength, nmaxpf), dtype=float)*np.nan
+    radar_pfmajoraxis = np.ones((ir_ntracks, ir_nmaxlength, nmaxpf), dtype=float)*np.nan
+    radar_pfminoraxis = np.ones((ir_ntracks, ir_nmaxlength, nmaxpf), dtype=float)*np.nan
+    radar_pfaspectratio = np.ones((ir_ntracks, ir_nmaxlength, nmaxpf), dtype=float)*np.nan
+    radar_pforientation = np.ones((ir_ntracks, ir_nmaxlength, nmaxpf), dtype=float)*np.nan
+    radar_pfeccentricity = np.ones((ir_ntracks, ir_nmaxlength, nmaxpf), dtype=float)*np.nan
+    radar_pfdbz40npix = np.ones((ir_ntracks, ir_nmaxlength, nmaxpf), dtype=int)*-9999
+    radar_pfdbz45npix = np.ones((ir_ntracks, ir_nmaxlength, nmaxpf), dtype=int)*-9999
+    radar_pfdbz50npix = np.ones((ir_ntracks, ir_nmaxlength, nmaxpf), dtype=int)*-9999
     radar_basetime = np.empty((ir_ntracks, ir_nmaxlength), dtype='datetime64[s]')
 
     # Variables average for the largest few precipitation features
-    radar_ccavgrainrate = np.ones((ir_ntracks, ir_nmaxlength), dtype=float)*fillvalue
-    radar_ccavgnpix = np.ones((ir_ntracks, ir_nmaxlength), dtype=float)*fillvalue
-    radar_ccavgdbz10 = np.ones((ir_ntracks, ir_nmaxlength), dtype=float)*fillvalue
-    radar_ccavgdbz20 = np.ones((ir_ntracks, ir_nmaxlength), dtype=float)*fillvalue
-    radar_ccavgdbz30 = np.ones((ir_ntracks, ir_nmaxlength), dtype=float)*fillvalue
-    radar_ccavgdbz40 = np.ones((ir_ntracks, ir_nmaxlength), dtype=float)*fillvalue
-    radar_sfavgnpix = np.ones((ir_ntracks, ir_nmaxlength), dtype=float)*fillvalue
-    radar_sfavgrainrate = np.ones((ir_ntracks, ir_nmaxlength), dtype=float)*fillvalue
+    radar_ccavgrainrate = np.ones((ir_ntracks, ir_nmaxlength), dtype=float)*np.nan
+    radar_ccavgnpix = np.ones((ir_ntracks, ir_nmaxlength), dtype=int)*-9999
+    radar_ccavgdbz10 = np.ones((ir_ntracks, ir_nmaxlength), dtype=float)*np.nan
+    radar_ccavgdbz20 = np.ones((ir_ntracks, ir_nmaxlength), dtype=float)*np.nan
+    radar_ccavgdbz30 = np.ones((ir_ntracks, ir_nmaxlength), dtype=float)*np.nan
+    radar_ccavgdbz40 = np.ones((ir_ntracks, ir_nmaxlength), dtype=float)*np.nan
+    radar_sfavgnpix = np.ones((ir_ntracks, ir_nmaxlength), dtype=int)*-9999
+    radar_sfavgrainrate = np.ones((ir_ntracks, ir_nmaxlength), dtype=float)*np.nan
 
     # Variables for each convective core
-    radar_ccncores = np.ones((ir_ntracks, ir_nmaxlength), dtype=int)*fillvalue
-    radar_cclon = np.ones((ir_ntracks, ir_nmaxlength, nmaxcore), dtype=float)*fillvalue
-    radar_cclat = np.ones((ir_ntracks, ir_nmaxlength, nmaxcore), dtype=float)*fillvalue
-    radar_ccnpix = np.ones((ir_ntracks, ir_nmaxlength, nmaxcore), dtype=float)*fillvalue
-    radar_ccxcentroid = np.ones((ir_ntracks, ir_nmaxlength, nmaxcore), dtype=float)*fillvalue
-    radar_ccycentroid = np.ones((ir_ntracks, ir_nmaxlength, nmaxcore), dtype=float)*fillvalue
-    radar_ccxweightedcentroid = np.ones((ir_ntracks, ir_nmaxlength, nmaxcore), dtype=float)*fillvalue
-    radar_ccyweightedcentroid = np.ones((ir_ntracks, ir_nmaxlength, nmaxcore), dtype=float)*fillvalue
-    radar_ccmajoraxis = np.ones((ir_ntracks, ir_nmaxlength, nmaxcore), dtype=float)*fillvalue
-    radar_ccminoraxis = np.ones((ir_ntracks, ir_nmaxlength, nmaxcore), dtype=float)*fillvalue
-    radar_ccaspectratio = np.ones((ir_ntracks, ir_nmaxlength, nmaxcore), dtype=float)*fillvalue
-    radar_ccorientation = np.ones((ir_ntracks, ir_nmaxlength, nmaxcore), dtype=float)*fillvalue
-    radar_ccperimeter = np.ones((ir_ntracks, ir_nmaxlength, nmaxcore), dtype=float)*fillvalue
-    radar_cceccentricity = np.ones((ir_ntracks, ir_nmaxlength, nmaxcore), dtype=float)*fillvalue
-    radar_ccmaxdbz10 = np.ones((ir_ntracks, ir_nmaxlength, nmaxcore), dtype=float)*fillvalue
-    radar_ccmaxdbz20 = np.ones((ir_ntracks, ir_nmaxlength, nmaxcore), dtype=float)*fillvalue
-    radar_ccmaxdbz30 = np.ones((ir_ntracks, ir_nmaxlength, nmaxcore), dtype=float)*fillvalue
-    radar_ccmaxdbz40 = np.ones((ir_ntracks, ir_nmaxlength, nmaxcore), dtype=float)*fillvalue
-    radar_ccdbz10mean = np.ones((ir_ntracks, ir_nmaxlength, nmaxcore), dtype=float)*fillvalue
-    radar_ccdbz20mean = np.ones((ir_ntracks, ir_nmaxlength, nmaxcore), dtype=float)*fillvalue
-    radar_ccdbz30mean = np.ones((ir_ntracks, ir_nmaxlength, nmaxcore), dtype=float)*fillvalue
-    radar_ccdbz40mean = np.ones((ir_ntracks, ir_nmaxlength, nmaxcore), dtype=float)*fillvalue
+    radar_ccncores = np.ones((ir_ntracks, ir_nmaxlength), dtype=int)*-9999
+    radar_cclon = np.ones((ir_ntracks, ir_nmaxlength, nmaxcore), dtype=float)*np.nan
+    radar_cclat = np.ones((ir_ntracks, ir_nmaxlength, nmaxcore), dtype=float)*np.nan
+    radar_ccnpix = np.ones((ir_ntracks, ir_nmaxlength, nmaxcore), dtype=int)*-9999
+    radar_ccxcentroid = np.ones((ir_ntracks, ir_nmaxlength, nmaxcore), dtype=int)*-9999
+    radar_ccycentroid = np.ones((ir_ntracks, ir_nmaxlength, nmaxcore), dtype=int)*-9999
+    radar_ccxweightedcentroid = np.ones((ir_ntracks, ir_nmaxlength, nmaxcore), dtype=int)*-9999
+    radar_ccyweightedcentroid = np.ones((ir_ntracks, ir_nmaxlength, nmaxcore), dtype=int)*-9999
+    radar_ccmajoraxis = np.ones((ir_ntracks, ir_nmaxlength, nmaxcore), dtype=float)*np.nan
+    radar_ccminoraxis = np.ones((ir_ntracks, ir_nmaxlength, nmaxcore), dtype=float)*np.nan
+    radar_ccaspectratio = np.ones((ir_ntracks, ir_nmaxlength, nmaxcore), dtype=float)*np.nan
+    radar_ccorientation = np.ones((ir_ntracks, ir_nmaxlength, nmaxcore), dtype=float)*np.nan
+    radar_ccperimeter = np.ones((ir_ntracks, ir_nmaxlength, nmaxcore), dtype=float)*np.nan
+    radar_cceccentricity = np.ones((ir_ntracks, ir_nmaxlength, nmaxcore), dtype=float)*np.nan
+    radar_ccmaxdbz10 = np.ones((ir_ntracks, ir_nmaxlength, nmaxcore), dtype=float)*np.nan
+    radar_ccmaxdbz20 = np.ones((ir_ntracks, ir_nmaxlength, nmaxcore), dtype=float)*np.nan
+    radar_ccmaxdbz30 = np.ones((ir_ntracks, ir_nmaxlength, nmaxcore), dtype=float)*np.nan
+    radar_ccmaxdbz40 = np.ones((ir_ntracks, ir_nmaxlength, nmaxcore), dtype=float)*np.nan
+    radar_ccdbz10mean = np.ones((ir_ntracks, ir_nmaxlength, nmaxcore), dtype=float)*np.nan
+    radar_ccdbz20mean = np.ones((ir_ntracks, ir_nmaxlength, nmaxcore), dtype=float)*np.nan
+    radar_ccdbz30mean = np.ones((ir_ntracks, ir_nmaxlength, nmaxcore), dtype=float)*np.nan
+    radar_ccdbz40mean = np.ones((ir_ntracks, ir_nmaxlength, nmaxcore), dtype=float)*np.nan
 
-    radar_pffrac = np.ones((ir_ntracks, ir_nmaxlength), dtype=float)*fillvalue
-
-    # Variables for accumulated rainfall
-    radar_nuniqpix = np.ones(ir_ntracks, dtype=float)*fillvalue
-    radar_locidx = np.ones((ir_ntracks, nmaxpix), dtype=float)*fillvalue
-    radar_durtime = np.ones((ir_ntracks, nmaxpix), dtype=float)*fillvalue
-    radar_durrainrate = np.ones((ir_ntracks, nmaxpix), dtype=float)*fillvalue
+    radar_pffrac = np.ones((ir_ntracks, ir_nmaxlength), dtype=float)*np.nan
 
     ##############################################################
     # Find precipitation feature in each mcs
     print('Total Number of Tracks:' + str(ir_ntracks))
 
     # Loop over each track
+    print('Looping over each track')
+    print(time.ctime())
     for it in range(0, ir_ntracks):
         print('Processing track ' + str(int(it)))
+        print(time.ctime())
 
         # Isolate ir statistics about this track
         itbasetime = np.copy(ir_basetime[it, :])
@@ -114,17 +206,15 @@ def identifypf_mergedir_nmq(mcsstats_filebase, cloudid_filebase,  pfdata_filebas
         itcloudnumber = np.copy(ir_cloudnumber[it, :])
         itmergecloudnumber = np.copy(ir_mergecloudnumber[it, :, :])
         itsplitcloudnumber = np.copy(ir_splitcloudnumber[it, :, :])
-        #itbasetime = np.copy(mcsirstatdata['mcs_basetime'][it, :])
-        #itdatetimestring = np.copy(mcsirstatdata['mcs_datetimestring'][it][:][:])
-        #itcloudnumber = np.copy(mcsirstatdata['mcs_cloudnumber'][it, :])
-        #itmergecloudnumber = np.copy(mcsirstatdata['mcs_mergecloudnumber'][it, :, :])
-        #itsplitcloudnumber = np.copy(mcsirstatdata['mcs_splitcloudnumber'][it, :, :])
 
         # Loop through each time in the track
         irindices = np.array(np.where(itcloudnumber > 0))[0, :]
+        print('Looping through each time step')
+        print('Number of time steps: ' + str(len(irindices)))
         for itt in irindices:
+            print('Time step #: ' + str(itt))
             # Isolate the data at this time
-            radar_basetime[it, itt] = np.datetime64(pd.to_datetime(itbasetime[itt]))
+            radar_basetime[it, itt] = np.array([pd.to_datetime(num2date(itbasetime[itt], units=basetime_units, calendar=basetime_calendar))], dtype='datetime64[s]')[0]
             ittcloudnumber = np.copy(itcloudnumber[itt])
             ittmergecloudnumber = np.copy(itmergecloudnumber[itt, :])
             ittsplitcloudnumber = np.copy(itsplitcloudnumber[itt, :])
@@ -144,14 +234,16 @@ def identifypf_mergedir_nmq(mcsstats_filebase, cloudid_filebase,  pfdata_filebas
 
                 # Load cloudid and precip feature data
                 if os.path.isfile(cloudid_filename) and os.path.isfile(radar_filename):
+                    print('Data Present')
                     # Load cloudid data
+                    print('Loading cloudid data')
                     print(cloudid_filename)
                     cloudiddata = Dataset(cloudid_filename, 'r')
                     cloudnumbermap = cloudiddata['cloudnumber'][:]
                     cloudiddata.close()
-                    #cloudiddata = xr.open_dataset(cloudid_filename, autoclose=True)
 
                     # Read precipitation data
+                    print('Loading radar data')
                     print(radar_filename)
                     pfdata = Dataset(radar_filename, 'r')
                     rawdbzmap = pfdata['dbz_convsf'][:] # map of reflectivity 
@@ -168,46 +260,32 @@ def identifypf_mergedir_nmq(mcsstats_filebase, cloudid_filebase,  pfdata_filebas
                     lon = pfdata['lon2d'][:]
                     lat = pfdata['lat2d'][:]
                     pfdata.close()
-                    #pfdata = xr.open_dataset(radar_filename, autoclose=True)
-                    #pfdata = xr.open_dataset(radar_filename, autoclose=True)
-                    #rawdbzmap = pfdata['dbz_convsf'].data # map of reflectivity 
-                    #rawdbz10map = pfdata['dbz10_height'].data # map of 10 dBZ ETHs
-                    #rawdbz20map = pfdata['dbz20_height'].data # map of 20 dBZ ETHs
-                    #rawdbz30map = pfdata['dbz30_height'].data # map of 30 dBZ ETHs
-                    #rawdbz40map = pfdata['dbz40_height'].data # map of 40 dBZ ETHs
-                    #rawdbz45map = pfdata['dbz45_height'].data # map of 45 dBZ ETH
-                    #rawdbz50map = pfdata['dbz50_height'].data # map of 50 dBZ ETHs
-                    #rawcsamap = pfdata['csa'].data # map of convective, stratiform, anvil categories
-                    #rawrainratemap = pfdata['rainrate'].data # map of rain rate
-                    #rawpfnumbermap = pfdata['pf_number'].data # map of the precipitation feature number attributed to that pixel
-                    #rawdataqualitymap = pfdata['mask'].data # map if good (1) and bad (0) data
-                    #lon = pfdata['lon2d'].data
-                    #lat = pfdata['lat2d'].data
 
-                    # Fill missing data with fill value so consistent with other data
-                    rawdbzmap = np.ma.filled(rawdbzmap.astype(float), fillvalue)
-                    rawdbz10map = np.ma.filled(rawdbz10map.astype(float), fillvalue)
-                    rawdbz20map = np.ma.filled(rawdbz20map.astype(float), fillvalue)
-                    rawdbz30map = np.ma.filled(rawdbz30map.astype(float), fillvalue)
-                    rawdbz40map = np.ma.filled(rawdbz40map.astype(float), fillvalue)
-                    rawdbz45map = np.ma.filled(rawdbz40map.astype(float), fillvalue)
-                    rawdbz50map = np.ma.filled(rawdbz40map.astype(float), fillvalue)
-                    rawcsamap = np.ma.filled(rawcsamap.astype(float), fillvalue)
-                    rawrainratemap = np.ma.filled(rawrainratemap.astype(float), fillvalue)
-                    rawpfnumbermap = np.ma.filled(rawpfnumbermap.astype(float), fillvalue)
-                    rawdataqualitymap = np.ma.filled(rawdataqualitymap.astype(float), fillvalue)
+                    ## Fill missing data with fill value so consistent with other data
+                    #rawdbzmap = np.ma.filled(rawdbzmap.astype(float), fillvalue)
+                    #rawdbz10map = np.ma.filled(rawdbz10map.astype(float), fillvalue)
+                    #rawdbz20map = np.ma.filled(rawdbz20map.astype(float), fillvalue)
+                    #rawdbz30map = np.ma.filled(rawdbz30map.astype(float), fillvalue)
+                    #rawdbz40map = np.ma.filled(rawdbz40map.astype(float), fillvalue)
+                    #rawdbz45map = np.ma.filled(rawdbz45map.astype(float), fillvalue)
+                    #rawdbz50map = np.ma.filled(rawdbz50map.astype(float), fillvalue)
+                    #rawcsamap = np.ma.filled(rawcsamap.astype(float), fillvalue)
+                    #rawrainratemap = np.ma.filled(rawrainratemap.astype(float), fillvalue)
+                    #rawpfnumbermap = np.ma.filled(rawpfnumbermap.astype(float), fillvalue)
+                    #rawdataqualitymap = np.ma.filled(rawdataqualitymap.astype(float), fillvalue)
 
                     # Load accumulation data is available. If not present fill array with fill value
+                    print('Loading accumulation data')
+                    print(rainaccumulation_filename)
                     if os.path.isfile(rainaccumulation_filename):
                         rainaccumulationdata = Dataset(rainaccumulation_filename, 'r')
                         rawrainaccumulationmap = rainaccumulationdata['precipitation'][:]
                         rainaccumulationdata.close()
-                        #rainaccumulationdata = xr.open_dataset(rainaccumulation_filename, autoclose=True)
-                        #rawrainaccumulationmap = rainaccumulationdata['precipitation'].data
 
-                        rawrainaccumulationmap = np.ma.filled(rawrainaccumulationmap.astype(float), fillvalue)
+                        #rawrainaccumulationmap = np.ma.filled(rawrainaccumulationmap.astype(float), fillvalue)
                     else:
-                        rawrainaccumulationmap = np.ones((ny, nx), dtype=float)*fillvalue
+                        nt, ny, nx = np.shape(rawdbzmap)
+                        rawrainaccumulationmap = np.ones((nt, ny, nx), dtype=float)*np.nan
 
                     ##########################################################################
                     # Get dimensions of data. Data should be preprocesses so that their latittude and longitude dimensions are the same
@@ -215,14 +293,14 @@ def identifypf_mergedir_nmq(mcsstats_filebase, cloudid_filebase,  pfdata_filebas
 
                     #########################################################################
                     # Intialize matrices for only MCS data
-                    filteredrainratemap = np.ones((ydim, xdim), dtype=float)*fillvalue
-                    filtereddbzmap = np.ones((ydim, xdim), dtype=float)*fillvalue
-                    filtereddbz10map = np.ones((ydim, xdim), dtype=float)*fillvalue
-                    filtereddbz20map = np.ones((ydim, xdim), dtype=float)*fillvalue
-                    filtereddbz30map = np.ones((ydim, xdim), dtype=float)*fillvalue
-                    filtereddbz40map = np.ones((ydim, xdim), dtype=float)*fillvalue
-                    filtereddbz45map = np.ones((ydim, xdim), dtype=float)*fillvalue
-                    filtereddbz50map = np.ones((ydim, xdim), dtype=float)*fillvalue
+                    filteredrainratemap = np.ones((ydim, xdim), dtype=float)*np.nan
+                    filtereddbzmap = np.ones((ydim, xdim), dtype=float)*np.nan
+                    filtereddbz10map = np.ones((ydim, xdim), dtype=float)*np.nan
+                    filtereddbz20map = np.ones((ydim, xdim), dtype=float)*np.nan
+                    filtereddbz30map = np.ones((ydim, xdim), dtype=float)*np.nan
+                    filtereddbz40map = np.ones((ydim, xdim), dtype=float)*np.nan
+                    filtereddbz45map = np.ones((ydim, xdim), dtype=float)*np.nan
+                    filtereddbz50map = np.ones((ydim, xdim), dtype=float)*np.nan
                     filteredcsamap = np.zeros((ydim, xdim), dtype=int)
 
                     ############################################################################
@@ -231,8 +309,10 @@ def identifypf_mergedir_nmq(mcsstats_filebase, cloudid_filebase,  pfdata_filebas
                     ncloudpix = len(icloudlocationy)
 
                     if ncloudpix > 0:
+                        print('IR Clouds Present')
                         ######################################################################
                         # Check if any small clouds merge
+                        print('Finding mergers')
                         idmergecloudnumber = np.array(np.where(ittmergecloudnumber > 0))[0, :]
                         nmergecloud = len(idmergecloudnumber)
 
@@ -251,6 +331,7 @@ def identifypf_mergedir_nmq(mcsstats_filebase, cloudid_filebase,  pfdata_filebas
 
                         ######################################################################
                         # Check if any small clouds split
+                        print('Finding splits')
                         idsplitcloudnumber = np.array(np.where(ittsplitcloudnumber > 0))[0, :]
                         nsplitcloud = len(idsplitcloudnumber)
 
@@ -269,6 +350,7 @@ def identifypf_mergedir_nmq(mcsstats_filebase, cloudid_filebase,  pfdata_filebas
 
                         ########################################################################
                         # Fill matrices with mcs data
+                        print('Fill map with data')
                         filteredrainratemap[icloudlocationy, icloudlocationx] = np.copy(rawrainratemap[icloudlocationt, icloudlocationy, icloudlocationx])
                         filtereddbzmap[icloudlocationy, icloudlocationx] = np.copy(rawdbzmap[icloudlocationt, icloudlocationy, icloudlocationx])
                         filtereddbz10map[icloudlocationy, icloudlocationx] = np.copy(rawdbz10map[icloudlocationt, icloudlocationy, icloudlocationx])
@@ -281,6 +363,7 @@ def identifypf_mergedir_nmq(mcsstats_filebase, cloudid_filebase,  pfdata_filebas
 
                         ########################################################################
                         # isolate small region of cloud data around mcs at this time
+                        print('Calculate new shape statistics')
 
                         # Set edges of boundary
                         miny = np.nanmin(icloudlocationy)
@@ -329,6 +412,7 @@ def identifypf_mergedir_nmq(mcsstats_filebase, cloudid_filebase,  pfdata_filebas
 
                         #####################################################
                         # Get convective core statistics
+                        print('Checking for convective cores')
                         icy, icx = np.array(np.where(subcsamap == 6))
                         nc = len(icy)
 
@@ -341,30 +425,32 @@ def identifypf_mergedir_nmq(mcsstats_filebase, cloudid_filebase,  pfdata_filebas
 
                             # If convective cores exist calculate statistics
                             if ncc > 0:
+                                print('Convective cores present, getting statistics')
                                 # Initialize matrices
-                                cclon = np.ones(ncc, dtype=float)*fillvalue
-                                cclat = np.ones(ncc, dtype=float)*fillvalue
-                                ccnpix = np.ones(ncc, dtype=float)*fillvalue
-                                ccxcentroid = np.ones(ncc, dtype=float)*fillvalue
-                                ccycentroid = np.ones(ncc, dtype=float)*fillvalue
-                                ccxweightedcentroid = np.ones(ncc, dtype=float)*fillvalue
-                                ccyweightedcentroid = np.ones(ncc, dtype=float)*fillvalue
-                                ccmajoraxis = np.ones(ncc, dtype=float)*fillvalue
-                                ccminoraxis = np.ones(ncc, dtype=float)*fillvalue
-                                ccaspectratio = np.ones(ncc, dtype=float)*fillvalue
-                                ccorientation = np.ones(ncc, dtype=float)*fillvalue
-                                ccperimeter = np.ones(ncc, dtype=float)*fillvalue
-                                cceccentricity = np.ones(ncc, dtype=float)*fillvalue
-                                ccmaxdbz10 = np.ones(ncc, dtype=float)*fillvalue
-                                ccmaxdbz20 = np.ones(ncc, dtype=float)*fillvalue
-                                ccmaxdbz30 = np.ones(ncc, dtype=float)*fillvalue
-                                ccmaxdbz40 = np.ones(ncc, dtype=float)*fillvalue
-                                ccavgdbz10 = np.ones(ncc, dtype=float)*fillvalue
-                                ccavgdbz20 = np.ones(ncc, dtype=float)*fillvalue
-                                ccavgdbz30 = np.ones(ncc, dtype=float)*fillvalue
-                                ccavgdbz40 = np.ones(ncc, dtype=float)*fillvalue
+                                cclon = np.ones(ncc, dtype=float)*np.nan
+                                cclat = np.ones(ncc, dtype=float)*np.nan
+                                ccnpix = np.ones(ncc, dtype=int)*-9999
+                                ccxcentroid = np.ones(ncc, dtype=int)*-9999
+                                ccycentroid = np.ones(ncc, dtype=int)*-9999
+                                ccxweightedcentroid = np.ones(ncc, dtype=int)*-9999
+                                ccyweightedcentroid = np.ones(ncc, dtype=int)*-9999
+                                ccmajoraxis = np.ones(ncc, dtype=float)*np.nan
+                                ccminoraxis = np.ones(ncc, dtype=float)*np.nan
+                                ccaspectratio = np.ones(ncc, dtype=float)*np.nan
+                                ccorientation = np.ones(ncc, dtype=float)*np.nan
+                                ccperimeter = np.ones(ncc, dtype=float)*np.nan
+                                cceccentricity = np.ones(ncc, dtype=float)*np.nan
+                                ccmaxdbz10 = np.ones(ncc, dtype=float)*np.nan
+                                ccmaxdbz20 = np.ones(ncc, dtype=float)*np.nan
+                                ccmaxdbz30 = np.ones(ncc, dtype=float)*np.nan
+                                ccmaxdbz40 = np.ones(ncc, dtype=float)*np.nan
+                                ccavgdbz10 = np.ones(ncc, dtype=float)*np.nan
+                                ccavgdbz20 = np.ones(ncc, dtype=float)*np.nan
+                                ccavgdbz30 = np.ones(ncc, dtype=float)*np.nan
+                                ccavgdbz40 = np.ones(ncc, dtype=float)*np.nan
 
                                 # Loop over each core
+                                print('Looping through each convective core: ' + str(ncc))
                                 for cc in range(1, ncc+1):
                                     # Isolate core
                                     iiccy, iiccx = np.array(np.where(ccnumberlabelmap == cc))
@@ -392,7 +478,9 @@ def identifypf_mergedir_nmq(mcsstats_filebase, cloudid_filebase,  pfdata_filebas
                                     iiccflagmap[iiccy, iiccx] = 1
 
                                     # Get core geometric statistics
-                                    coreproperties = regionprops(iiccflagmap, intensity_image=subdbzmap)
+                                    tsubdbzmap = np.copy(subdbzmap)
+                                    tsubdbzmap[np.isnan(subdbzmap)] = -9999
+                                    coreproperties = regionprops(iiccflagmap, intensity_image=tsubdbzmap)
                                     cceccentricity[cc-1] = coreproperties[0].eccentricity
                                     ccmajoraxis[cc-1] = coreproperties[0].major_axis_length*pixel_radius
                                     ccminoraxis[cc-1] = coreproperties[0].minor_axis_length*pixel_radius
@@ -409,6 +497,7 @@ def identifypf_mergedir_nmq(mcsstats_filebase, cloudid_filebase,  pfdata_filebas
 
                                 ####################################################
                                 # Sort based on size, largest to smallest
+                                print('Sorting convective cores by size')
                                 order = np.argsort(ccnpix)
                                 order = order[::-1]
 
@@ -470,6 +559,7 @@ def identifypf_mergedir_nmq(mcsstats_filebase, cloudid_filebase,  pfdata_filebas
 
                             ######################################################   !!!!!!!!!!!!!!! Slow Step !!!!!!!!1
                             # Derive precipitation feature statistics
+                            print('Calculating precipitation statistics')
                             ipfy, ipfx = np.array(np.where(((filteredcsamap == 5) | (filteredcsamap == 6)) & (filteredrainratemap > rr_min)))
                             nrainpix = len(ipfy)
 
@@ -490,6 +580,7 @@ def identifypf_mergedir_nmq(mcsstats_filebase, cloudid_filebase,  pfdata_filebas
                                 print(numpf)
 
                                 if numpf > 0:
+                                    print('PFs present, initializing matrices')
 
                                    ##############################################
                                    # Initialize matrices
@@ -497,34 +588,34 @@ def identifypf_mergedir_nmq(mcsstats_filebase, cloudid_filebase,  pfdata_filebas
                                     pfdbz40npix = np.zeros(numpf, dtype=float)
                                     pfdbz45npix = np.zeros(numpf, dtype=float)
                                     pfdbz50npix = np.zeros(numpf, dtype=float)
-                                    pfid = np.ones(numpf, dtype=float)*fillvalue
-                                    pflon = np.ones(numpf, dtype=float)*fillvalue
-                                    pflat = np.ones(numpf, dtype=float)*fillvalue
-                                    pfbasetime = np.ones(numpf, dtype=float)*fillvalue
-                                    pfxcentroid = np.ones(numpf, dtype=float)*fillvalue
-                                    pfycentroid = np.ones(numpf, dtype=float)*fillvalue
-                                    pfxweightedcentroid = np.ones(numpf, dtype=float)*fillvalue
-                                    pfyweightedcentroid = np.ones(numpf, dtype=float)*fillvalue
-                                    pfrainrate = np.ones(numpf, dtype=float)*fillvalue
-                                    pfskewness = np.ones(numpf, dtype=float)*fillvalue
-                                    pfmajoraxis = np.ones(numpf, dtype=float)*fillvalue
-                                    pfminoraxis = np.ones(numpf, dtype=float)*fillvalue
-                                    pfaspectratio = np.ones(numpf, dtype=float)*fillvalue
-                                    pfeccentricity = np.ones(numpf, dtype=float)*fillvalue
-                                    pfperimeter = np.ones(numpf, dtype=float)*fillvalue
-                                    pforientation = np.ones(numpf, dtype=float)*fillvalue
+                                    pfid = np.ones(numpf, dtype=int)*-9999
+                                    pflon = np.ones(numpf, dtype=float)*np.nan
+                                    pflat = np.ones(numpf, dtype=float)*np.nan
+                                    pfxcentroid = np.ones(numpf, dtype=float)*np.nan
+                                    pfycentroid = np.ones(numpf, dtype=float)*np.nan
+                                    pfxweightedcentroid = np.ones(numpf, dtype=float)*np.nan
+                                    pfyweightedcentroid = np.ones(numpf, dtype=float)*np.nan
+                                    pfrainrate = np.ones(numpf, dtype=float)*np.nan
+                                    pfskewness = np.ones(numpf, dtype=float)*np.nan
+                                    pfmajoraxis = np.ones(numpf, dtype=float)*np.nan
+                                    pfminoraxis = np.ones(numpf, dtype=float)*np.nan
+                                    pfaspectratio = np.ones(numpf, dtype=float)*np.nan
+                                    pfeccentricity = np.ones(numpf, dtype=float)*np.nan
+                                    pfperimeter = np.ones(numpf, dtype=float)*np.nan
+                                    pforientation = np.ones(numpf, dtype=float)*np.nan
 
-                                    pfccnpix = np.ones(numpf, dtype=float)*fillvalue
-                                    pfccrainrate = np.ones(numpf, dtype=float)*fillvalue
-                                    pfccdbz10 = np.ones(numpf, dtype=float)*fillvalue
-                                    pfccdbz20 = np.ones(numpf, dtype=float)*fillvalue
-                                    pfccdbz30 = np.ones(numpf, dtype=float)*fillvalue
-                                    pfccdbz40 = np.ones(numpf, dtype=float)*fillvalue
+                                    pfccnpix = np.ones(numpf, dtype=int)*-9999
+                                    pfccrainrate = np.ones(numpf, dtype=float)*np.nan
+                                    pfccdbz10 = np.ones(numpf, dtype=float)*np.nan
+                                    pfccdbz20 = np.ones(numpf, dtype=float)*np.nan
+                                    pfccdbz30 = np.ones(numpf, dtype=float)*np.nan
+                                    pfccdbz40 = np.ones(numpf, dtype=float)*np.nan
 
-                                    pfsfnpix = np.ones(numpf, dtype=float)*fillvalue
-                                    pfsfrainrate = np.ones(numpf, dtype=float)*fillvalue
+                                    pfsfnpix = np.ones(numpf, dtype=int)*-9999
+                                    pfsfrainrate = np.ones(numpf, dtype=float)*np.nan
 
-                                    print('Loop Start ' + str(numpf))
+                                    print('Looping through each feature to calculate statistics')
+                                    print('Number of PFs ' + str(numpf))
                                     ###############################################
                                     # Loop through each feature
                                     for ipf in range(1, numpf+1):
@@ -534,7 +625,6 @@ def identifypf_mergedir_nmq(mcsstats_filebase, cloudid_filebase,  pfdata_filebas
                                         # Find associated indices
                                         iipfy, iipfx = np.array(np.where(((pfnumberlabelmap == ipf)) & (filteredcsamap>=5) & (filteredcsamap<=6)))
                                         niipfpix = len(iipfy)
-                                        print('Size:' + str(niipfpix))
 
                                         if niipfpix > 0:
                                             ##########################################
@@ -553,7 +643,9 @@ def identifypf_mergedir_nmq(mcsstats_filebase, cloudid_filebase,  pfdata_filebas
                                             iipfflagmap[iipfy, iipfx] = 1
 
                                             # Geometric statistics
-                                            pfproperties = regionprops(iipfflagmap, intensity_image=filteredrainratemap)
+                                            tfilteredrainratemap = np.copy(filteredrainratemap)
+                                            tfilteredrainratemap[np.isnan(tfilteredrainratemap)] = -9999
+                                            pfproperties = regionprops(iipfflagmap, intensity_image=tfilteredrainratemap)
                                             pfeccentricity[ipf-1] = pfproperties[0].eccentricity
                                             pfmajoraxis[ipf-1] = pfproperties[0].major_axis_length*pixel_radius
                                             # Need to treat minor axis length with an error except since the python algorthim occsionally throws an error. 
@@ -561,7 +653,7 @@ def identifypf_mergedir_nmq(mcsstats_filebase, cloudid_filebase,  pfdata_filebas
                                                 pfminoraxis[ipf-1] = pfproperties[0].minor_axis_length*pixel_radius
                                             except ValueError:
                                                 pass
-                                            if pfminoraxis[ipf-1]!=fillvalue or pfmajoraxis[ipf-1]!=fillvalue:
+                                            if ~np.isnan(pfminoraxis[ipf-1]) or ~np.isnan(pfmajoraxis[ipf-1]):
                                                 pfaspectratio[ipf-1] = np.divide(pfmajoraxis[ipf-1], pfminoraxis[ipf-1])
                                             pforientation[ipf-1] = (pfproperties[0].orientation)*(180/float(pi))
                                             pfperimeter[ipf-1] = pfproperties[0].perimeter*pixel_radius
@@ -576,25 +668,30 @@ def identifypf_mergedir_nmq(mcsstats_filebase, cloudid_filebase,  pfdata_filebas
                                                 pfccnpix[ipf-1] = np.copy(niipfcc)
                                                 pfccrainrate[ipf-1] = filteredrainratemap[iipfccy, iipfccx].mean()
 
-                                                ifiltereddbz10map = np.copy(filtereddbz10map[iipfccy, iipfccx])
-                                                ifiltereddbz10map = ifiltereddbz10map[ifiltereddbz10map != fillvalue]
-                                                if len(ifiltereddbz10map) > 0:
-                                                    pfccdbz10[ipf-1] = np.nanmean(ifiltereddbz10map)
+                                                pfccdbz10[ipf-1] = filtereddbz10map[iipfccy, iipfccx].mean()
+                                                pfccdbz20[ipf-1] = filtereddbz20map[iipfccy, iipfccx].mean()
+                                                pfccdbz30[ipf-1] = filtereddbz30map[iipfccy, iipfccx].mean()
+                                                pfccdbz40[ipf-1] = filtereddbz40map[iipfccy, iipfccx].mean()
 
-                                                ifiltereddbz20map = np.copy(filtereddbz20map[iipfccy, iipfccx])
-                                                ifiltereddbz20map = ifiltereddbz20map[ifiltereddbz20map != fillvalue]
-                                                if len(ifiltereddbz20map) > 0:
-                                                    pfccdbz20[ipf-1] = np.nanmean(ifiltereddbz20map)
+                                                #ifiltereddbz10map = np.copy(filtereddbz10map[iipfccy, iipfccx])
+                                                #ifiltereddbz10map = ifiltereddbz10map[ifiltereddbz10map != fillvalue]
+                                                #if len(ifiltereddbz10map) > 0:
+                                                #    pfccdbz10[ipf-1] = np.nanmean(ifiltereddbz10map)
 
-                                                ifiltereddbz30map = np.copy(filtereddbz30map[iipfccy, iipfccx])
-                                                ifiltereddbz30map = ifiltereddbz30map[ifiltereddbz30map != fillvalue]
-                                                if len(ifiltereddbz30map) > 0:
-                                                    pfccdbz30[ipf-1] = np.nanmean(ifiltereddbz30map)
+                                                #ifiltereddbz20map = np.copy(filtereddbz20map[iipfccy, iipfccx])
+                                                #ifiltereddbz20map = ifiltereddbz20map[ifiltereddbz20map != fillvalue]
+                                                #if len(ifiltereddbz20map) > 0:
+                                                #    pfccdbz20[ipf-1] = np.nanmean(ifiltereddbz20map)
 
-                                                ifiltereddbz40map = np.copy(filtereddbz40map[iipfccy, iipfccx])
-                                                ifiltereddbz40map = ifiltereddbz40map[ifiltereddbz40map != fillvalue]
-                                                if len(ifiltereddbz40map) > 0:
-                                                    pfccdbz40[ipf-1] = np.nanmean(ifiltereddbz40map)
+                                                #ifiltereddbz30map = np.copy(filtereddbz30map[iipfccy, iipfccx])
+                                                #ifiltereddbz30map = ifiltereddbz30map[ifiltereddbz30map != fillvalue]
+                                                #if len(ifiltereddbz30map) > 0:
+                                                #    pfccdbz30[ipf-1] = np.nanmean(ifiltereddbz30map)
+
+                                                #ifiltereddbz40map = np.copy(filtereddbz40map[iipfccy, iipfccx])
+                                                #ifiltereddbz40map = ifiltereddbz40map[ifiltereddbz40map != fillvalue]
+                                                #if len(ifiltereddbz40map) > 0:
+                                                #    pfccdbz40[ipf-1] = np.nanmean(ifiltereddbz40map)
 
                                             # Stratiform statistics
                                             iipfsy, iipfsx = np.array(np.where((pfnumberlabelmap == ipf) & (filteredcsamap == 5)))
@@ -612,6 +709,7 @@ def identifypf_mergedir_nmq(mcsstats_filebase, cloudid_filebase,  pfdata_filebas
                                     print('Loop done')
                                     ##############################################################
                                     # Sort precipitation features by size, large to small
+                                    print('Sorting PFs by size')
                                     pforder = np.argsort(pfnpix)
                                     pforder = pforder[::-1]
 
@@ -663,33 +761,38 @@ def identifypf_mergedir_nmq(mcsstats_filebase, cloudid_filebase,  pfdata_filebas
 
                                     ####################################################
                                     # Average the first twe largest precipitation features to represent the cloud system
+                                    print('Calculating statistics for the few largest convective and stratiform components')
                                     radar_ccavgnpix[it, itt] = np.nansum(spfccnpix[0:nradar_save])
-                                    if radar_ccavgnpix[it, itt] != fillvalue:
-                                        radar_ccavgrainrate[it, itt] = np.nanmean(spfccrainrate[np.where(spfccrainrate[0:nradar_save] != fillvalue)])
+                                    if radar_ccavgnpix[it, itt] > 0: 
+                                        radar_ccavgrainrate[it, itt] = np.nanmean(spfccrainrate[np.where(~np.isnan(spfccrainrate[0:nradar_save]))])
+                                        radar_ccavgdbz10[it, itt] = np.nanmean(spfccdbz10[0:nradar_save])
+                                        radar_ccavgdbz20[it, itt] = np.nanmean(spfccdbz20[0:nradar_save])
+                                        radar_ccavgdbz30[it, itt] = np.nanmean(spfccdbz30[0:nradar_save])
+                                        radar_ccavgdbz40[it, itt] = np.nanmean(spfccdbz40[0:nradar_save])
 
-                                        ispfccdbz10 = spfccdbz10[0:nradar_save]
-                                        ispfccdbz10 = ispfccdbz10[ispfccdbz10 != fillvalue]
-                                        if len(ispfccdbz10) > 0:
-                                            radar_ccavgdbz10[it, itt] = np.nanmean(ispfccdbz10)
+                                        #ispfccdbz10 = spfccdbz10[0:nradar_save]
+                                        #ispfccdbz10 = ispfccdbz10[ispfccdbz10 != fillvalue]
+                                        #if len(ispfccdbz10) > 0:
+                                        #    radar_ccavgdbz10[it, itt] = np.nanmean(ispfccdbz10)
 
-                                        ispfccdbz20 = spfccdbz20[0:nradar_save]
-                                        ispfccdbz20 = ispfccdbz20[ispfccdbz20 != fillvalue]
-                                        if len(ispfccdbz20) > 0:
-                                            radar_ccavgdbz20[it, itt] = np.nanmean(ispfccdbz20)
+                                        #ispfccdbz20 = spfccdbz20[0:nradar_save]
+                                        #ispfccdbz20 = ispfccdbz20[ispfccdbz20 != fillvalue]
+                                        #if len(ispfccdbz20) > 0:
+                                        #    radar_ccavgdbz20[it, itt] = np.nanmean(ispfccdbz20)
 
-                                        ispfccdbz30 = spfccdbz30[0:nradar_save]
-                                        ispfccdbz30 = ispfccdbz30[ispfccdbz30 != fillvalue]
-                                        if len(ispfccdbz30) > 0:
-                                            radar_ccavgdbz30[it, itt] = np.nanmean(ispfccdbz30)
+                                        #ispfccdbz30 = spfccdbz30[0:nradar_save]
+                                        #ispfccdbz30 = ispfccdbz30[ispfccdbz30 != fillvalue]
+                                        #if len(ispfccdbz30) > 0:
+                                        #    radar_ccavgdbz30[it, itt] = np.nanmean(ispfccdbz30)
 
-                                        ispfccdbz40 = spfccdbz40[0:nradar_save]
-                                        ispfccdbz40 = ispfccdbz40[ispfccdbz40 != fillvalue]
-                                        if len(ispfccdbz40) > 0:
-                                            radar_ccavgdbz40[it, itt] = np.nanmean(ispfccdbz40)
+                                        #ispfccdbz40 = spfccdbz40[0:nradar_save]
+                                        #ispfccdbz40 = ispfccdbz40[ispfccdbz40 != fillvalue]
+                                        #if len(ispfccdbz40) > 0:
+                                        #    radar_ccavgdbz40[it, itt] = np.nanmean(ispfccdbz40)
 
                                     radar_sfavgnpix[it, itt] = np.nansum(spfsfnpix[0:nradar_save])
-                                    if radar_sfavgnpix[it, itt] != fillvalue:
-                                        radar_sfavgrainrate[it, itt] = np.nanmean(spfsfrainrate[np.where(spfrainrate[0:nradar_save] != fillvalue)])
+                                    if radar_sfavgnpix[it, itt] != -9999:
+                                        radar_sfavgrainrate[it, itt] = np.nanmean(spfsfrainrate[np.where(~np.isnan(spfrainrate[0:nradar_save]))])
 
                 else:
                     print('One or both files do not exist: ' + cloudid_filename + ', ' + radar_filename)
@@ -700,55 +803,57 @@ def identifypf_mergedir_nmq(mcsstats_filebase, cloudid_filebase,  pfdata_filebas
 
     ###################################
     # Convert number of pixels to area
+    print('Converting pixels to area')
+    print(time.ctime())
 
     radar_pfdbz40area = np.multiply(radar_pfdbz40npix, np.square(pixel_radius))
-    radar_pfdbz40area[radar_pfdbz40area < 0] = fillvalue
+    #radar_pfdbz40area[radar_pfdbz40area < 0] = fillvalue
 
     radar_pfdbz45area = np.multiply(radar_pfdbz45npix, np.square(pixel_radius))
-    radar_pfdbz45area[radar_pfdbz45area < 0] = fillvalue
+    #radar_pfdbz45area[radar_pfdbz45area < 0] = fillvalue
 
     radar_pfdbz50area = np.multiply(radar_pfdbz50npix, np.square(pixel_radius))
-    radar_pfdbz50area[radar_pfdbz50area < 0] = fillvalue
+    #radar_pfdbz50area[radar_pfdbz50area < 0] = fillvalue
     
     radar_pfarea = np.multiply(radar_pfnpix, np.square(pixel_radius))
-    radar_pfarea[radar_pfarea < 0] = fillvalue
+    #radar_pfarea[radar_pfarea < 0] = fillvalue
 
     radar_ccavgarea = np.multiply(radar_ccavgnpix, np.square(pixel_radius))
-    radar_ccavgarea[radar_ccavgarea < 0] = fillvalue
+    #radar_ccavgarea[radar_ccavgarea < 0] = fillvalue
 
     radar_sfavgarea = np.multiply(radar_sfavgnpix, np.square(pixel_radius))
-    radar_sfavgarea[radar_sfavgarea < 0] = fillvalue
+    #radar_sfavgarea[radar_sfavgarea < 0] = fillvalue
 
     radar_ccarea = np.multiply(radar_ccnpix, np.square(pixel_radius))
-    radar_ccarea[radar_ccarea < 0] = fillvalue
+    #radar_ccarea[radar_ccarea < 0] = fillvalue
 
     ##################################
     # Save output to netCDF file
+    print('Saving data')
+    print(time.ctime())
 
     # Check if file already exists. If exists, delete
     if os.path.isfile(statistics_outfile):
         os.remove(statistics_outfile)
 
     # Definte xarray dataset
-    output_data = xr.Dataset({'mcs_length':(['track'], np.squeeze(mcsirstatdata['mcs_length'].data)), \
-                              'length': (['track'], mcsirstatdata['track_length']), \
-                              'mcs_type': (['track'], mcsirstatdata['mcs_type']), \
-                              'status': (['track', 'time'], mcsirstatdata['mcs_status']), \
-                              'startstatus': (['track'], mcsirstatdata['mcs_startstatus']), \
-                              'endstatus': (['track'], mcsirstatdata['mcs_endstatus']), \
-                              'interruptions': (['track'], mcsirstatdata['mcs_trackinterruptions']), \
-                              'boundary': (['track'], mcsirstatdata['mcs_boundary']), \
+    output_data = xr.Dataset({'mcs_length':(['track'], np.squeeze(ir_mcslength)), \
+                              'length': (['track'], ir_tracklength), \
+                              'mcs_type': (['track'], ir_mcstype), \
+                              'status': (['track', 'time'], ir_status), \
+                              'startstatus': (['track'], ir_startstatus), \
+                              'endstatus': (['track'], ir_endstatus), \
+                              'interruptions': (['track'], ir_trackinterruptions), \
+                              'boundary': (['track'], ir_boundary), \
                               'basetime': (['track', 'time'], radar_basetime), \
-                              'datetimestring': (['track', 'time', 'characters'], mcsirstatdata['mcs_datetimestring']), \
-                              'meanlat': (['track', 'time'], mcsirstatdata['mcs_meanlat']), \
-                              'meanlon': (['track', 'time'], mcsirstatdata['mcs_meanlon']), \
-                              'core_area': (['track', 'time'], mcsirstatdata['mcs_corearea']), \
-                              'ccs_area': (['track', 'time'], mcsirstatdata['mcs_corearea']), \
-                              'ccs_area': (['track', 'time'], mcsirstatdata['mcs_corearea']), \
-                              'ccs_area': (['track', 'time'],  mcsirstatdata['mcs_ccsarea']), \
-                              'cloudnumber': (['track', 'time'],  mcsirstatdata['mcs_cloudnumber']), \
-                              'mergecloudnumber': (['track', 'time', 'mergesplit'], mcsirstatdata['mcs_mergecloudnumber']), \
-                              'splitcloudnumber': (['track', 'time', 'mergesplit'], mcsirstatdata['mcs_splitcloudnumber']), \
+                              'datetimestring': (['track', 'time', 'characters'], ir_datetimestring), \
+                              'meanlat': (['track', 'time'], ir_meanlat), \
+                              'meanlon': (['track', 'time'], ir_meanlon), \
+                              'core_area': (['track', 'time'], ir_corearea), \
+                              'ccs_area': (['track', 'time'],  ir_ccsarea), \
+                              'cloudnumber': (['track', 'time'],  ir_cloudnumber), \
+                              'mergecloudnumber': (['track', 'time', 'mergesplit'], ir_mergecloudnumber), \
+                              'splitcloudnumber': (['track', 'time', 'mergesplit'], ir_splitcloudnumber), \
                               'nmq_frac': (['track', 'time'], radar_pffrac), \
                               'npf': (['track', 'time'], radar_npf), \
                               'pf_area': (['track', 'time', 'pfs'], radar_pfarea), \
@@ -793,15 +898,14 @@ def identifypf_mergedir_nmq(mcsstats_filebase, cloudid_filebase,  pfdata_filebas
                                      'time': (['time'], np.arange(0, ir_nmaxlength)), \
                                      'pfs':(['pfs'], np.arange(0, nmaxpf)), \
                                      'cores': (['cores'], np.arange(0, nmaxcore)), \
-                                     'mergesplit': (['mergesplit'], np.arange(0, nmaxclouds)), \
-                                     'characters': (['characters'], np.ones(13)*fillvalue)}, \
+                                     'mergesplit': (['mergesplit'], np.arange(0, np.shape(ir_mergecloudnumber)[2])), \
+                                     'characters': (['characters'], np.ones(13)*-9999)}, \
                              attrs={'title':'File containing ir and precpitation statistics for each track', \
                                     'source1':irdatasource, \
                                     'source2':nmqdatasource, \
                                     'description':datadescription, \
                                     'startdate':startdate, \
                                     'enddate':enddate, \
-                                    '_FillValue':str(int(fillvalue)), \
                                     'time_resolution_hour':str(int(datatimeresolution)), \
                                     'mergdir_pixel_radius':pixel_radius, \
                                     'MCS_IR_area_thresh_km2':str(int(mcs_irareathresh)), \
@@ -1052,58 +1156,60 @@ def identifypf_mergedir_nmq(mcsstats_filebase, cloudid_filebase,  pfdata_filebas
     print('')
     print(statistics_outfile)
     output_data.to_netcdf(path=statistics_outfile, mode='w', format='NETCDF4_CLASSIC', unlimited_dims='track', \
-                          encoding={'mcs_length': {'zlib':True, '_FillValue': fillvalue}, \
-                                    'mcs_type': {'zlib':True, '_FillValue': fillvalue}, \
-                                    'status': {'zlib':True, '_FillValue': fillvalue}, \
-                                    'startstatus': {'zlib':True, '_FillValue': fillvalue}, \
-                                    'endstatus': {'zlib':True, '_FillValue': fillvalue}, \
-                                    'basetime': {'zlib':True, '_FillValue': fillvalue, 'units': 'seconds since 1970-01-01'}, \
-                                    'datetimestring': {'zlib':True, '_FillValue': fillvalue}, \
-                                    'meanlat': {'zlib':True, '_FillValue': fillvalue}, \
-                                    'meanlon': {'zlib':True, '_FillValue': fillvalue}, \
-                                    'core_area': {'zlib':True, '_FillValue': fillvalue}, \
-                                    'ccs_area': {'zlib':True, '_FillValue': fillvalue}, \
-                                    'cloudnumber': {'zlib':True, '_FillValue': fillvalue}, \
-                                    'mergecloudnumber': {'zlib':True, '_FillValue': fillvalue}, \
-                                    'splitcloudnumber': {'zlib':True, '_FillValue': fillvalue}, \
-                                    'nmq_frac': {'zlib':True, '_FillValue': fillvalue}, \
-                                    'pf_area': {'zlib':True, '_FillValue': fillvalue}, \
-                                    'pf_lon': {'zlib':True, '_FillValue': fillvalue}, \
-                                    'pf_lat': {'zlib':True, '_FillValue': fillvalue}, \
-                                    'pf_rainrate': {'zlib':True, '_FillValue': fillvalue}, \
-                                    'pf_skewness': {'zlib':True, '_FillValue': fillvalue}, \
-                                    'pf_majoraxislength': {'zlib':True, '_FillValue': fillvalue}, \
-                                    'pf_minoraxislength': {'zlib':True, '_FillValue': fillvalue}, \
-                                    'pf_aspectratio': {'zlib':True, '_FillValue': fillvalue}, \
-                                    'pf_orientation': {'zlib':True, '_FillValue': fillvalue}, \
-                                    'pf_eccentricity': {'zlib':True, '_FillValue': fillvalue}, \
-                                    'pf_dbz40area': {'zlib':True, '_FillValue': fillvalue}, \
-                                    'pf_dbz45area': {'zlib':True, '_FillValue': fillvalue}, \
-                                    'pf_dbz50area': {'zlib':True, '_FillValue': fillvalue}, \
-                                    'pf_ccarea': {'zlib':True, '_FillValue': fillvalue}, \
-                                    'pf_sfarea': {'zlib':True, '_FillValue': fillvalue}, \
-                                    'pf_ccrainrate': {'zlib':True, '_FillValue': fillvalue}, \
-                                    'pf_sfrainrate': {'zlib':True, '_FillValue': fillvalue}, \
-                                    'pf_ccdbz10': {'zlib':True, '_FillValue': fillvalue}, \
-                                    'pf_ccdbz20': {'zlib':True, '_FillValue': fillvalue}, \
-                                    'pf_ccdbz30': {'zlib':True, '_FillValue': fillvalue}, \
-                                    'pf_ccdbz40': {'zlib':True, '_FillValue': fillvalue}, \
-                                    'pf_ncores': {'zlib':True, '_FillValue': fillvalue}, \
-                                    'pf_corelon': {'zlib':True, '_FillValue': fillvalue}, \
-                                    'pf_corelat': {'zlib':True, '_FillValue': fillvalue}, \
-                                    'pf_corearea': {'zlib':True, '_FillValue': fillvalue}, \
-                                    'pf_coremajoraxislength': {'zlib':True, '_FillValue': fillvalue}, \
-                                    'pf_minoraxislength': {'zlib':True, '_FillValue': fillvalue}, \
-                                    'pf_coreaspectratio': {'zlib':True, '_FillValue': fillvalue}, \
-                                    'pf_coreorientation': {'zlib':True, '_FillValue': fillvalue}, \
-                                    'pf_coreeccentricity': {'zlib':True, '_FillValue': fillvalue}, \
-                                    'pf_coremaxdbz10': {'zlib':True, '_FillValue': fillvalue}, \
-                                    'pf_coremaxdbz20': {'zlib':True, '_FillValue': fillvalue}, \
-                                    'pf_coremaxdbz30': {'zlib':True, '_FillValue': fillvalue}, \
-                                    'pf_coremaxdbz40': {'zlib':True, '_FillValue': fillvalue}, \
-                                    'pf_coreavgdbz10': {'zlib':True, '_FillValue': fillvalue}, \
-                                    'pf_coreavgdbz20': {'zlib':True, '_FillValue': fillvalue}, \
-                                    'pf_coreavgdbz30': {'zlib':True, '_FillValue': fillvalue}, \
-                                    'pf_coreavgdbz40': {'zlib':True, '_FillValue': fillvalue}})
+                          encoding={'mcs_length': {'dtype': 'int', 'zlib':True, '_FillValue': -9999}, \
+                                    'mcs_type': {'dtype': 'int', 'zlib':True, '_FillValue': -9999}, \
+                                    'status': {'dtype': 'int', 'zlib':True, '_FillValue': -9999}, \
+                                    'startstatus': {'dtype': 'int', 'zlib':True, '_FillValue': -9999}, \
+                                    'endstatus': {'dtype': 'int', 'zlib':True, '_FillValue': -9999}, \
+                                    'basetime': {'zlib':True, 'units': 'seconds since 1970-01-01'}, \
+                                    'datetimestring': {'zlib':True}, \
+                                    'boundary': {'dtype': 'int', 'zlib':True, '_FillValue': -9999}, \
+                                    'interruptions': {'dtype': 'int', 'zlib':True, '_FillValue': -9999}, \
+                                    'meanlat': {'zlib':True, '_FillValue': np.nan}, \
+                                    'meanlon': {'zlib':True, '_FillValue': np.nan}, \
+                                    'core_area': {'zlib':True, '_FillValue': np.nan}, \
+                                    'ccs_area': {'zlib':True, '_FillValue': np.nan}, \
+                                    'cloudnumber': {'dtype': 'int', 'zlib':True, '_FillValue': -9999}, \
+                                    'mergecloudnumber': {'dtype': 'int', 'zlib':True, '_FillValue': -9999}, \
+                                    'splitcloudnumber': {'dtype': 'int', 'zlib':True, '_FillValue': -9999}, \
+                                    'nmq_frac': {'zlib':True, '_FillValue': np.nan}, \
+                                    'pf_area': {'zlib':True, '_FillValue': np.nan}, \
+                                    'pf_lon': {'zlib':True, '_FillValue': np.nan}, \
+                                    'pf_lat': {'zlib':True, '_FillValue': np.nan}, \
+                                    'pf_rainrate': {'zlib':True, '_FillValue': np.nan}, \
+                                    'pf_skewness': {'zlib':True, '_FillValue': np.nan}, \
+                                    'pf_majoraxislength': {'zlib':True, '_FillValue': np.nan}, \
+                                    'pf_minoraxislength': {'zlib':True, '_FillValue': np.nan}, \
+                                    'pf_aspectratio': {'zlib':True, '_FillValue': np.nan}, \
+                                    'pf_orientation': {'zlib':True, '_FillValue': np.nan}, \
+                                    'pf_eccentricity': {'zlib':True, '_FillValue': np.nan}, \
+                                    'pf_dbz40area': {'zlib':True, '_FillValue': np.nan}, \
+                                    'pf_dbz45area': {'zlib':True, '_FillValue': np.nan}, \
+                                    'pf_dbz50area': {'zlib':True, '_FillValue': np.nan}, \
+                                    'pf_ccarea': {'zlib':True, '_FillValue': np.nan}, \
+                                    'pf_sfarea': {'zlib':True, '_FillValue': np.nan}, \
+                                    'pf_ccrainrate': {'zlib':True, '_FillValue': np.nan}, \
+                                    'pf_sfrainrate': {'zlib':True, '_FillValue': np.nan}, \
+                                    'pf_ccdbz10': {'zlib':True, '_FillValue': np.nan}, \
+                                    'pf_ccdbz20': {'zlib':True, '_FillValue': np.nan}, \
+                                    'pf_ccdbz30': {'zlib':True, '_FillValue': np.nan}, \
+                                    'pf_ccdbz40': {'zlib':True, '_FillValue': np.nan}, \
+                                    'pf_ncores': {'dtype': 'int', 'zlib':True, '_FillValue': -9999}, \
+                                    'pf_corelon': {'zlib':True, '_FillValue': np.nan}, \
+                                    'pf_corelat': {'zlib':True, '_FillValue': np.nan}, \
+                                    'pf_corearea': {'zlib':True, '_FillValue': np.nan}, \
+                                    'pf_coremajoraxislength': {'zlib':True, '_FillValue': np.nan}, \
+                                    'pf_minoraxislength': {'zlib':True, '_FillValue': np.nan}, \
+                                    'pf_coreaspectratio': {'zlib':True, '_FillValue': np.nan}, \
+                                    'pf_coreorientation': {'zlib':True, '_FillValue': np.nan}, \
+                                    'pf_coreeccentricity': {'zlib':True, '_FillValue': np.nan}, \
+                                    'pf_coremaxdbz10': {'zlib':True, '_FillValue': np.nan}, \
+                                    'pf_coremaxdbz20': {'zlib':True, '_FillValue': np.nan}, \
+                                    'pf_coremaxdbz30': {'zlib':True, '_FillValue': np.nan}, \
+                                    'pf_coremaxdbz40': {'zlib':True, '_FillValue': np.nan}, \
+                                    'pf_coreavgdbz10': {'zlib':True, '_FillValue': np.nan}, \
+                                    'pf_coreavgdbz20': {'zlib':True, '_FillValue': np.nan}, \
+                                    'pf_coreavgdbz30': {'zlib':True, '_FillValue': np.nan}, \
+                                    'pf_coreavgdbz40': {'zlib':True, '_FillValue': np.nan}})
     
 

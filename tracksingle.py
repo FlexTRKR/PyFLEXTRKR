@@ -1,5 +1,3 @@
-# Name: trackclouds_singlefile
-
 # Purpose: Track clouds in successive pairs of cloudid files. Output netCDF file for each pair of cloudid files.
 
 # Comment: Futyan and DelGenio (2007) - tracking procedure
@@ -7,16 +5,31 @@
 # Authors: IDL version written by Sally A. McFarlane (sally.mcfarlane@pnnl.gov) and revised by Zhe Feng (zhe.feng@pnnl.gov). Python version written by Hannah C. Barnes (hannah.barnes@pnnl.gov)
 
 # Inputs:
-# datasource - source of the data
-# datapath - path to data
-# datadescription - description of data source, included in all output file names
-# timegap - M High values indicates refmean horizontal distribution of reflectivity more peaked. Its value has been replicated for each profile so this data has profiler time resolution.aximum time gap (missing time) allowed (in hours) between two consecutive files
-# startdate - data to start processing in YYYYMMDD format
-# enddate - data to stop processing in YYYYMMDD format
-# id_filepath - path to input cloudid files
-# id_filebase - basename of cloudid files
+# firstcloudfilename - name of the reference fdata to stop processing in YYYYMMDD formatile
+# secondcloudidfilename - name of the new file
+# firstdatestring - string with year, month, and day of the reference file
+# seconddatestring - string with yearm, month, and day of the new file
+# firsttimestring - string with hour and minute of the reference file
+# secondtimestring - string with hour and minute of the new file
+# firstbasetime - seconds since 1970-01-01 of the first file
+# secondbasetime -seconds since 1970-01-01 of the second file
+# dataoutpath - directory where the output will be stored
+# track_version - flag for saving purposes indicating version of classification. Used when more than one comparison is done on the data.
+# timegap - maximum time gap (missing time) allowed (in hours) between two consecutive files
+# nmaxlinks - maximum number of clouds that any single cloud can be linked to
+# othresh - overlap threshold used to determine if two clouds are linked in time
+# startdate - start date and time of the full dataset
+# enddate - end date and time of the full dataset
 
-def trackclouds_mergedir(zipped_inputs): #firstcloudidfilename, secondcloudidfilename, firstdatestring, seconddatestring, firsttimestring, secondtimestring, firstbasetime, secondbasetime, dataoutpath, track_version, timegap, nmaxlinks, othresh, startdate, enddate):
+# Outputs: (One netcdf output for each pair of cloud files)
+# basetime_new - seconds since 1970-01-01 of the reference (first) file
+# basetime_ref - seconds since 1970-01-01 of the new (second) file
+# newcloud_backward_index - each row represents a cloud in the new file and numbers in each row indicate what cloud in the reference file is linked to that new cloud.
+# newcloud_backward_size - each row represents a cloud in the new file and numbers provide the area of all reference clouds linked to that new cloud
+# refcloud_forward_index - each row represents a cloud in the new file and numbers in each row indicate what cloud in the reference file is linked to that new cloud.
+# refcloud_forward_size - each row represents a cloud in the new file and numbers provide the area of all reference clouds linked to that new cloud
+
+def trackclouds_mergedir(zipped_inputs): 
     ########################################################
     import numpy as np
     import glob
@@ -28,6 +41,8 @@ def trackclouds_mergedir(zipped_inputs): #firstcloudidfilename, secondcloudidfil
     from pytz import timezone, utc
     import sys
     import xarray as xr
+    import pandas as pd
+
 
     # Separate inputs
     firstcloudidfilename = zipped_inputs[0]
@@ -50,8 +65,6 @@ def trackclouds_mergedir(zipped_inputs): #firstcloudidfilename, secondcloudidfil
     # Set constants
     # Version information
     outfilebase = 'track' + track_version + '_'
-
-    fillvalue = -9999
 
     ########################################################
     # Isolate new and reference file and base times
@@ -80,9 +93,6 @@ def trackclouds_mergedir(zipped_inputs): #firstcloudidfilename, secondcloudidfil
         reference_convcold_cloudnumber = reference_data['convcold_cloudnumber'].data                    # Load cloud id map
         nreference = reference_data['nclouds'].data                                                     # Load number of clouds / features
 
-        # Replace nans with -9999
-        reference_convcold_cloudnumber[np.where(~np.isfinite(reference_convcold_cloudnumber))] = fillvalue
-
         ##########################################################
         # Load cloudid file from before, called new file
         print(new_filedatetime)
@@ -91,19 +101,16 @@ def trackclouds_mergedir(zipped_inputs): #firstcloudidfilename, secondcloudidfil
         new_convcold_cloudnumber = new_data['convcold_cloudnumber'].data                # Load cloud id map
         nnew = new_data['nclouds'].data                                                 # Load number of clouds / features
 
-        # Replace nans with -9999
-        new_convcold_cloudnumber[np.where(~np.isfinite(new_convcold_cloudnumber))] = fillvalue
-
         ############################################################
         # Get size of data
         times, ny, nx = np.shape(new_convcold_cloudnumber)
 
         #######################################################
         # Initialize matrices
-        reference_forward_index = np.ones((1, int(nreference), int(nmaxlinks)), dtype=int)*fillvalue
-        reference_forward_size = np.ones((1, int(nreference), int(nmaxlinks)), dtype=int)*fillvalue
-        new_backward_index = np.ones((1, int(nnew), int(nmaxlinks)), dtype=int)*fillvalue
-        new_backward_size =  np.ones((1, int(nnew), int(nmaxlinks)), dtype=int)*fillvalue
+        reference_forward_index = np.ones((1, int(nreference), int(nmaxlinks)), dtype=int)*-9999
+        reference_forward_size = np.ones((1, int(nreference), int(nmaxlinks)), dtype=int)*-9999
+        new_backward_index = np.ones((1, int(nnew), int(nmaxlinks)), dtype=int)*-9999
+        new_backward_size =  np.ones((1, int(nnew), int(nmaxlinks)), dtype=int)*-9999
 
         ######################################################
         # Loop through each cloud / feature in reference time and look for overlaping clouds / features in the new file
@@ -173,13 +180,13 @@ def trackclouds_mergedir(zipped_inputs): #firstcloudidfilename, secondcloudidfil
         if os.path.isfile(track_outfile):
             os.remove(track_outfile)
 
-        print('Writing all tracks')
+        print('Writing single tracks')
         print(track_outfile)
         print('')
 
         # Define xarracy dataset
-        output_data = xr.Dataset({'basetime_new': (['time'], new_data['basetime'].data), \
-                                  'basetime_ref': (['time'], reference_data['basetime'].data), \
+        output_data = xr.Dataset({'basetime_new': (['time'], np.array([pd.to_datetime(new_data['basetime'].data, unit='s')], dtype='datetime64[s]')[0]), \
+                                  'basetime_ref': (['time'], np.array([pd.to_datetime(reference_data['basetime'].data, unit='s')], dtype='datetime64[s]')[0]), \
                                   'newcloud_backward_index': (['time', 'nclouds_new', 'nlinks'], new_backward_index), \
                                   'newcloud_backward_size': (['time', 'nclouds_new', 'nlinks'], new_backward_size), \
                                   'refcloud_forward_index': (['time', 'nclouds_ref', 'nlinks'], reference_forward_index), \
@@ -198,7 +205,7 @@ def trackclouds_mergedir(zipped_inputs): #firstcloudidfilename, secondcloudidfil
                                         'new_file': new_file, \
                                         'ref_file': reference_file, \
                                         'tracking_version_number': track_version, \
-                                        'overlap_threshold': str(othresh) +'%', \
+                                        'overlap_threshold': str(int(othresh*100)) +'%', \
                                         'maximum_gap_allowed': str(timegap)+ ' hr'})
 
         # Specify variable attributes
@@ -239,12 +246,12 @@ def trackclouds_mergedir(zipped_inputs): #firstcloudidfilename, secondcloudidfil
 
         # Write netcdf files
         output_data.to_netcdf(path=track_outfile, mode='w', format='NETCDF4_CLASSIC', unlimited_dims='times', \
-                              encoding={'basetime_new': {'dtype':'int64', 'zlib':True}, \
-                                        'basetime_ref': {'dtype':'int64', 'zlib':True}, \
-                                        'newcloud_backward_index': {'dtype': 'int', 'zlib':True, '_FillValue': fillvalue}, \
-                                        'newcloud_backward_size': {'dtype': 'int', 'zlib':True, '_FillValue': fillvalue}, \
-                                        'refcloud_forward_index': {'dtype': 'int', 'zlib':True, '_FillValue': fillvalue}, \
-                                        'refcloud_forward_size': {'dtype': 'int', 'zlib':True, '_FillValue': fillvalue}})
+                              encoding={'basetime_new': {'dtype':'int64', 'zlib':True, 'units': 'seconds since 1970-01-01'}, \
+                                        'basetime_ref': {'dtype':'int64', 'zlib':True, 'units': 'seconds since 1970-01-01'}, \
+                                        'newcloud_backward_index': {'dtype': 'int', 'zlib':True, '_FillValue': -9999}, \
+                                        'newcloud_backward_size': {'dtype': 'int', 'zlib':True, '_FillValue': -9999}, \
+                                        'refcloud_forward_index': {'dtype': 'int', 'zlib':True, '_FillValue': -9999}, \
+                                        'refcloud_forward_size': {'dtype': 'int', 'zlib':True, '_FillValue': -9999}})
 
 
 

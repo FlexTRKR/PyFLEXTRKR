@@ -3,6 +3,35 @@
 # Author: Original IDL code written by Zhe Feng (zhe.feng@pnnl.gov), Python version written by Hannah C. Barnes (hannah.barnes@pnnl.gov)
 
 def identifycell_LES_xarray(statistics_filebase, stats_path, startdate, enddate, time_resolution, geolimits, maincloud_duration, merge_duration, split_duration, nmaxmerge):
+    # Inputs:
+    # statistics_filebase - header of the track statistics file that was generated in the previous code
+    # stats_path - location of the track data. also the location where the data from this code will be saved
+    # startdate - starting date and time of the data
+    # enddate - ending date and time of the data
+    # geolimits - 4-element array with plotting boundaries [lat_min, lon_min, lat_max, lon_max]
+    # time_resolution - time resolution of the raw data
+    # maincloud_duration - minimum time a cloud must be tracked to be considered a tracked cell
+    # split_duration - splitting tracks with durations less than this will be label as a splitting track. tracks longer that this will be labeled as their own MCS
+    # merge_duration - merging tracks with durations less than this will be label as a merging track. tracks longer that this will be labeled as their own MCS
+    # nmaxmerge - maximum number of clouds that can split or merge into one cloud
+
+    # Output: (One netcdf with statisitics about each liquid water path defined cell track in each row)
+    # cell_basetime - seconds since 1970-01-01 for each cloud in a cell
+    # cell_datetimestring - string of date and time of each cloud in a cell
+    # cell_length - duration of each cell
+    # cell_status - flag indicating the evolution of each cloud in a cell
+    # cell_startstatus - flag indicating how a cell starts
+    # cell_endstatus - flag indicating how a cell ends
+    # cell_boundary - flag indicating if a cell touches the edge of the domain
+    # cell_trackinterruptions - flag indicating if the data used to identify this cell is incomplete
+    # cell_meanlat - mean latitude of the cell
+    # cell_meanlon - mean longitude of the cell
+    # cell_corearea - area of the core of cell
+    # cell_ccsarea - area of the core and cold anvil of the cell
+    # cell_cloudnumber - numbers indicating which clouds in the cloudid files are associated with a cell
+    # cell_mergenumber - numbers indicating which clouds in the cloudid files merge into this track
+    # cell_splitnumber - numbers indicating which clouds in the cloudid files split from this track
+
     #######################################################################
     # Import modules
     import numpy as np
@@ -23,24 +52,17 @@ def identifycell_LES_xarray(statistics_filebase, stats_path, startdate, enddate,
     allstatdata = xr.open_dataset(statistics_file, autoclose=True)
     ntracks_all = np.nanmax(allstatdata['ntracks'].data) + 1 # Total number of tracked features
     nmaxlength = np.nanmax(allstatdata['nmaxlength'].data) + 1 # Maximum number of features in a given track
-
-    fillvalue = -9999
-    
-    #for itest in range(0, ntracks_all):
-    #    print(trackstat_basetime[itest, 0:20])
-    #    testy, testx = np.where(trackstat_mergenumbers == itest + 1)
-    #    print(trackstat_basetime[testy, testx])
-    #    if len(testy) > 0:
-    #        for ii in range(0, len(testy)):
-    #            print(np.where(trackstat_basetime[itest, :] == trackstat_basetime[testy[ii], testx[ii]]))
-    #    raw_input('waiting')
+    nconv = allstatdata['nconv'].data
+    ncoldanvil = allstatdata['ncoldanvil'].data
 
     ####################################################################
     # Set up duration and area variables
 
     # Cold Cloud Shield (CCS) area
-    trackstat_corearea = np.copy(allstatdata['nconv'].data) * np.copy(allstatdata.attrs['pixel_radius_km'])**2
-    trackstat_ccsarea = (np.copy(allstatdata['nconv'].data) + np.copy(allstatdata['ncoldanvil'].data)) * np.copy(allstatdata.attrs['pixel_radius_km'])**2
+    nconv[np.where(~np.isfinite(nconv))] = 0
+    ncoldanvil[np.where(~np.isfinite(ncoldanvil))] = 0
+    trackstat_corearea = nconv * np.copy(allstatdata.attrs['pixel_radius_km'])**2
+    trackstat_ccsarea = (nconv + ncoldanvil) * np.copy(allstatdata.attrs['pixel_radius_km'])**2
 
     # Convert path duration to time
     trackstat_duration = np.copy(allstatdata['lifetime'].data) * time_resolution
@@ -59,13 +81,13 @@ def identifycell_LES_xarray(statistics_filebase, stats_path, startdate, enddate,
     maincelllength = np.copy(allstatdata['lifetime'][maincelltrackid])
 
     ###############################################################
-    # Find small merging and spliting louds and add to MCS
-    cellmergecloudnumber = np.ones((nmaincell, int(nmaxlength), nmaxmerge), dtype=int)*fillvalue
-    cellmergestatus = np.ones((nmaincell, int(nmaxlength), nmaxmerge), dtype=int)*fillvalue
-    cellsplitcloudnumber = np.ones((nmaincell, int(nmaxlength), nmaxmerge), dtype=int)*fillvalue
-    cellsplitstatus = np.ones((nmaincell, int(nmaxlength), nmaxmerge), dtype=int)*fillvalue
+    # Find small merging and spliting louds and add to cell
+    cellmergecloudnumber = np.ones((nmaincell, int(nmaxlength), nmaxmerge), dtype=int)*-9999
+    cellmergestatus = np.ones((nmaincell, int(nmaxlength), nmaxmerge), dtype=int)*-9999
+    cellsplitcloudnumber = np.ones((nmaincell, int(nmaxlength), nmaxmerge), dtype=int)*-9999
+    cellsplitstatus = np.ones((nmaincell, int(nmaxlength), nmaxmerge), dtype=int)*-9999
 
-    # Loop through each MCS and link small clouds merging in
+    # Loop through each cell and link small clouds merging in
     print('Number of main cells: ' + str(int(nmaincell)))
     for icell in np.arange(0, nmaincell):
         print('')
@@ -98,12 +120,12 @@ def identifycell_LES_xarray(statistics_filebase, stats_path, startdate, enddate,
             if len(mergingcell) > 0:
                 for iremove in np.arange(0,len(mergingcell)):
                     removemerges = np.array(np.where(mergefile == mergingcell[iremove]))[0,:]
-                    mergefile[removemerges] = fillvalue
-                    mergefeature[removemerges] = fillvalue
-                mergefile = mergefile[mergefile != fillvalue]
-                mergefeature = mergefeature[mergefeature != fillvalue]
+                    mergefile[removemerges] = -9999
+                    mergefeature[removemerges] = -9999
+                mergefile = mergefile[mergefile != -9999]
+                mergefeature = mergefeature[mergefeature != -9999]
 
-            # Continue if mergers satisfy duration and CELL restriction
+            # Continue if mergers satisfy duration and cell restriction
             if len(mergefile) > 0:
 
                 # Get data about merging tracks
@@ -112,22 +134,10 @@ def identifycell_LES_xarray(statistics_filebase, stats_path, startdate, enddate,
                 mergingstatus = np.copy(allstatdata['status'][mergefile, :])
                 mergingdatetime = np.copy(allstatdata['datetimestrings'][mergefile, :, :])
 
-                #mergingstatus = mergingstatus[mergingcloudnumber != fillvalue]
-                #mergingdatetime = mergingdatetime[mergingcloudnumber != fillvalue]
-                #mergingbasetime = mergingbasetime[mergingcloudnumber != fillvalue]
-                #mergingcloudnumber = mergingcloudnumber[mergingcloudnumber != fillvalue]
-
-                # Get data about CELL track
+                # Get data about cell track
                 maincellbasetime = np.copy(allstatdata['basetime'][int(maincelltracknumbers[icell])-1, 0:int(maincelllength[icell])])
 
-                #print(cellbasetime)
-                #print(mergingbasetime)
-                #for itest in range(0, len(mergingbasetime)):
-                #    print(np.where(cellbasetime == mergingbasetime[itest]))
-                #    print(np.where(trackstat_basetime[int(celltracknumbers[icell])-1,:] == mergingbasetime[itest]))
-                #raw_input('waiting')
-
-                # Loop through each timestep in the CELL track
+                # Loop through each timestep in the cell track
                 for t in np.arange(0, maincelllength[icell]):
 
                     # Find merging cloud times that match current cell track time
@@ -139,12 +149,6 @@ def identifycell_LES_xarray(statistics_filebase, stats_path, startdate, enddate,
                         nmergers = np.shape(timematch)[1]
                         cellmergecloudnumber[icell, int(t), 0:nmergers] = mergingcloudnumber[timematch]
                         cellmergestatus[icell, int(t), 0:nmergers] = mergingstatus[timematch]
-
-                        #print('merge')
-                        #print(mergingdatetime[timematch[0,:]])
-                        #print(cellmergestatus[icell, int(t), 0:nmergers])
-                        #print(cellmergecloudnumber[icell, int(t), 0:nmergers])
-                        #raw_input('Waiting for user')
 
         ############################################################
         # Find splits
@@ -158,17 +162,17 @@ def identifycell_LES_xarray(statistics_filebase, stats_path, startdate, enddate,
             splitfeature = splitfeature[trackstat_duration[splitfile] < split_duration]
             splitfile = splitfile[trackstat_duration[splitfile] < split_duration]
 
-            # Make sure the spliter itself is not an CELL
+            # Make sure the spliter itself is not an cell
             splittingcell = np.intersect1d(splitfile, maincelltracknumbers)
             if len(splittingcell) > 0:
                 for iremove in np.arange(0, len(splittingcell)):
                     removesplits = np.array(np.where(splitfile == splittingcell[iremove]))[0,:]
-                    splitfile[removesplits] = fillvalue
-                    splitfeature[removesplits] = fillvalue
-                splitfile = splitfile[splitfile != fillvalue]
-                splitfeature = splitfeature[splitfeature != fillvalue]
+                    splitfile[removesplits] = -9999
+                    splitfeature[removesplits] = -9999
+                splitfile = splitfile[splitfile != -9999]
+                splitfeature = splitfeature[splitfeature != -9999]
                 
-            # Continue if spliters satisfy duration and CELL restriction
+            # Continue if spliters satisfy duration and cell restriction
             if len(splitfile) > 0:
 
                 # Get data about splitting tracks
@@ -177,15 +181,10 @@ def identifycell_LES_xarray(statistics_filebase, stats_path, startdate, enddate,
                 splittingstatus = np.copy(allstatdata['status'][splitfile, :])
                 splittingdatetime = np.copy(allstatdata['datetimestrings'][splitfile, :, :])
 
-                #splittingstatus = splittingstatus[splittingcloudnumber != fillvalue]
-                #splittingdatetime = splittingdatetime[splittingcloudnumber != fillvalue]
-                #splittingbasetime = splittingbasetime[splittingcloudnumber != fillvalue]
-                #splittingcloudnumber = splittingcloudnumber[splittingcloudnumber != fillvalue]
-
-                # Get data about CELL track
+                # Get data about cell track
                 maincellbasetime = np.copy(allstatdata['basetime'][int(maincelltracknumbers[icell])-1,0:int(maincelllength[icell])])
 
-                # Loop through each timestep in the CELL track
+                # Loop through each timestep in the cell track
                 for t in np.arange(0, maincelllength[icell]):
 
                     # Find splitting cloud times that match current cell track time
@@ -197,14 +196,8 @@ def identifycell_LES_xarray(statistics_filebase, stats_path, startdate, enddate,
                         cellsplitcloudnumber[icell, int(t), 0:nspliters] = splittingcloudnumber[timematch]
                         cellsplitstatus[icell, int(t), 0:nspliters] = splittingstatus[timematch]
 
-                        #print('Split')
-                        #print(splittingdatetime[timematch[0,:]])
-                        #print(cellsplitstatus[icell, int(t), 0:nspliters])
-                        #print(cellsplitcloudnumber[icell, int(t), 0:nspliters])
-                        #raw_input('Waiting for user')
-
     ########################################################################
-    # Subset keeping just CELL tracks
+    # Subset keeping just cell tracks
     maincelltrackid = np.copy(maincelltrackid.astype(int))
 
     ###########################################################################
@@ -331,23 +324,52 @@ def identifycell_LES_xarray(statistics_filebase, stats_path, startdate, enddate,
     print('')
 
     output_data.to_netcdf(path=celltrackstatistics_outfile, mode='w', format='NETCDF4_CLASSIC', unlimited_dims='ntracks', \
-                          encoding={'cell_basetime': {'dtype': 'int64', 'zlib':True, '_FillValue': fillvalue, 'units': 'seconds since 1970-01-01'}, \
-                                    'cell_datetimestring': {'zlib':True, '_FillValue': fillvalue}, \
-                                    'cell_length': {'zlib':True, '_FillValue': fillvalue}, \
-                                    'cell_status': {'dtype':'int', 'zlib':True, '_FillValue': fillvalue}, \
-                                    'cell_startstatus': {'dtype':'int', 'zlib':True, '_FillValue': fillvalue}, \
-                                    'cell_endstatus': {'dtype':'int', 'zlib':True, '_FillValue': fillvalue}, \
-                                    'cell_boundary': {'dtype':'int', 'zlib':True, '_FillValue': fillvalue}, \
-                                    'cell_trackinterruptions': {'dtype':'int', 'zlib':True, '_FillValue': fillvalue}, \
-                                    'cell_meanlat': {'zlib':True, '_FillValue': fillvalue}, \
-                                    'cell_meanlon': {'zlib':True, '_FillValue': fillvalue}, \
-                                    'cell_corearea': {'zlib':True, '_FillValue': fillvalue}, \
-                                    'cell_ccsarea': {'zlib':True, '_FillValue': fillvalue}, \
-                                    'cell_cloudnumber': {'dtype':'int', 'zlib':True, '_FillValue': fillvalue}, \
-                                    'cell_mergecloudnumber': {'dtype':'int', 'zlib':True, '_FillValue': fillvalue}, \
-                                    'cell_splitcloudnumber': {'dtype':'int', 'zlib':True, '_FillValue': fillvalue}})
+                          encoding={'cell_basetime': {'zlib':True, 'units': 'seconds since 1970-01-01'}, \
+                                    'cell_datetimestring': {'zlib':True}, \
+                                    'cell_length': {'zlib':True, '_FillValue': -9999}, \
+                                    'cell_status': {'dtype':'int', 'zlib':True, '_FillValue': -9999}, \
+                                    'cell_startstatus': {'dtype':'int', 'zlib':True, '_FillValue': -9999}, \
+                                    'cell_endstatus': {'dtype':'int', 'zlib':True, '_FillValue': -9999}, \
+                                    'cell_boundary': {'dtype':'int', 'zlib':True, '_FillValue': -9999}, \
+                                    'cell_trackinterruptions': {'dtype':'int', 'zlib':True, '_FillValue': -9999}, \
+                                    'cell_meanlat': {'zlib':True, '_FillValue': np.nan}, \
+                                    'cell_meanlon': {'zlib':True, '_FillValue': np.nan}, \
+                                    'cell_corearea': {'zlib':True, '_FillValue': np.nan}, \
+                                    'cell_ccsarea': {'zlib':True, '_FillValue': np.nan}, \
+                                    'cell_cloudnumber': {'dtype':'int', 'zlib':True, '_FillValue': -9999}, \
+                                    'cell_mergecloudnumber': {'dtype':'int', 'zlib':True, '_FillValue': -9999}, \
+                                    'cell_splitcloudnumber': {'dtype':'int', 'zlib':True, '_FillValue': -9999}})
 
 def identifycell_LES_netcdf4(statistics_filebase, stats_path, startdate, enddate, time_resolution, geolimits, maincloud_duration, merge_duration, split_duration, nmaxmerge):
+    # Inputs:
+    # statistics_filebase - header of the track statistics file that was generated in the previous code
+    # stats_path - location of the track data. also the location where the data from this code will be saved
+    # startdate - starting date and time of the data
+    # enddate - ending date and time of the data
+    # geolimits - 4-element array with plotting boundaries [lat_min, lon_min, lat_max, lon_max]
+    # time_resolution - time resolution of the raw data
+    # maincloud_duration - minimum time a cloud must be tracked to be considered a tracked cell
+    # split_duration - splitting tracks with durations less than this will be label as a splitting track. tracks longer that this will be labeled as their own MCS
+    # merge_duration - merging tracks with durations less than this will be label as a merging track. tracks longer that this will be labeled as their own MCS
+    # nmaxmerge - maximum number of clouds that can split or merge into one cloud
+
+    # Output: (One netcdf with statisitics about each liquid water path defined cell track in each row)
+    # cell_basetime - seconds since 1970-01-01 for each cloud in a cell
+    # cell_datetimestring - string of date and time of each cloud in a cell
+    # cell_length - duration of each cell
+    # cell_status - flag indicating the evolution of each cloud in a cell
+    # cell_startstatus - flag indicating how a cell starts
+    # cell_endstatus - flag indicating how a cell ends
+    # cell_boundary - flag indicating if a cell touches the edge of the domain
+    # cell_trackinterruptions - flag indicating if the data used to identify this cell is incomplete
+    # cell_meanlat - mean latitude of the cell
+    # cell_meanlon - mean longitude of the cell
+    # cell_corearea - area of the core of cell
+    # cell_ccsarea - area of the core and cold anvil of the cell
+    # cell_cloudnumber - numbers indicating which clouds in the cloudid files are associated with a cell
+    # cell_mergenumber - numbers indicating which clouds in the cloudid files merge into this track
+    # cell_splitnumber - numbers indicating which clouds in the cloudid files split from this track
+
     #######################################################################
     # Import modules
     import numpy as np
@@ -389,21 +411,12 @@ def identifycell_LES_netcdf4(statistics_filebase, stats_path, startdate, enddate
     pixelradius = float(allstatdata.pixel_radius_km)
     allstatdata.close()
 
-    fillvalue = -9999
-    
-    #for itest in range(0, ntracks_all):
-    #    print(trackstat_basetime[itest, 0:20])
-    #    testy, testx = np.where(trackstat_mergenumbers == itest + 1)
-    #    print(trackstat_basetime[testy, testx])
-    #    if len(testy) > 0:
-    #        for ii in range(0, len(testy)):
-    #            print(np.where(trackstat_basetime[itest, :] == trackstat_basetime[testy[ii], testx[ii]]))
-    #    raw_input('waiting')
-
     ####################################################################
     # Set up duration and area variables
 
     # Cold Cloud Shield (CCS) area
+    nconv[np.where(~np.isfinite(nconv))] = 0
+    ncoldanvil[np.where(~np.isfinite(ncoldanvil))] = 0
     trackstat_corearea = np.multiply(nconv, pixelradius**2)
     trackstat_ccsarea = np.multiply((nconv + ncoldanvil), np.copy(pixelradius)**2)
 
@@ -424,13 +437,13 @@ def identifycell_LES_netcdf4(statistics_filebase, stats_path, startdate, enddate
     maincelllength = np.copy(lifetime[maincelltrackid])
 
     ###############################################################
-    # Find small merging and spliting louds and add to MCS
-    cellmergecloudnumber = np.ones((nmaincell, int(nmaxlength), nmaxmerge), dtype=int)*fillvalue
-    cellmergestatus = np.ones((nmaincell, int(nmaxlength), nmaxmerge), dtype=int)*fillvalue
-    cellsplitcloudnumber = np.ones((nmaincell, int(nmaxlength), nmaxmerge), dtype=int)*fillvalue
-    cellsplitstatus = np.ones((nmaincell, int(nmaxlength), nmaxmerge), dtype=int)*fillvalue
+    # Find small merging and spliting louds and add to cell
+    cellmergecloudnumber = np.ones((nmaincell, int(nmaxlength), nmaxmerge), dtype=int)*-9999
+    cellmergestatus = np.ones((nmaincell, int(nmaxlength), nmaxmerge), dtype=int)*-9999
+    cellsplitcloudnumber = np.ones((nmaincell, int(nmaxlength), nmaxmerge), dtype=int)*-9999
+    cellsplitstatus = np.ones((nmaincell, int(nmaxlength), nmaxmerge), dtype=int)*-9999
 
-    # Loop through each MCS and link small clouds merging in
+    # Loop through each cell and link small clouds merging in
     print('Number of main cells: ' + str(int(nmaincell)))
     for icell in np.arange(0, nmaincell):
         print('')
@@ -463,12 +476,12 @@ def identifycell_LES_netcdf4(statistics_filebase, stats_path, startdate, enddate
             if len(mergingcell) > 0:
                 for iremove in np.arange(0,len(mergingcell)):
                     removemerges = np.array(np.where(mergefile == mergingcell[iremove]))[0,:]
-                    mergefile[removemerges] = fillvalue
-                    mergefeature[removemerges] = fillvalue
-                mergefile = mergefile[mergefile != fillvalue]
-                mergefeature = mergefeature[mergefeature != fillvalue]
+                    mergefile[removemerges] = -9999
+                    mergefeature[removemerges] = -9999
+                mergefile = mergefile[mergefile != -9999].astype(int)
+                mergefeature = mergefeature[mergefeature != -9999].astype(int)
 
-            # Continue if mergers satisfy duration and CELL restriction
+            # Continue if mergers satisfy duration and cell restriction
             if len(mergefile) > 0:
 
                 # Get data about merging tracks
@@ -477,22 +490,10 @@ def identifycell_LES_netcdf4(statistics_filebase, stats_path, startdate, enddate
                 mergingstatus = np.copy(status[mergefile, :])
                 mergingdatetime = np.copy(datetimestrings[mergefile, :, :])
 
-                #mergingstatus = mergingstatus[mergingcloudnumber != fillvalue]
-                #mergingdatetime = mergingdatetime[mergingcloudnumber != fillvalue]
-                #mergingbasetime = mergingbasetime[mergingcloudnumber != fillvalue]
-                #mergingcloudnumber = mergingcloudnumber[mergingcloudnumber != fillvalue]
-
-                # Get data about CELL track
+                # Get data about cell track
                 maincellbasetime = np.copy(basetime[int(maincelltracknumbers[icell])-1, 0:int(maincelllength[icell])])
 
-                #print(cellbasetime)
-                #print(mergingbasetime)
-                #for itest in range(0, len(mergingbasetime)):
-                #    print(np.where(cellbasetime == mergingbasetime[itest]))
-                #    print(np.where(trackstat_basetime[int(celltracknumbers[icell])-1,:] == mergingbasetime[itest]))
-                #raw_input('waiting')
-
-                # Loop through each timestep in the CELL track
+                # Loop through each timestep in the cell track
                 for t in np.arange(0, maincelllength[icell]):
 
                     # Find merging cloud times that match current cell track time
@@ -505,16 +506,10 @@ def identifycell_LES_netcdf4(statistics_filebase, stats_path, startdate, enddate
                         cellmergecloudnumber[icell, int(t), 0:nmergers] = mergingcloudnumber[timematch]
                         cellmergestatus[icell, int(t), 0:nmergers] = mergingstatus[timematch]
 
-                        #print('merge')
-                        #print(mergingdatetime[timematch[0,:]])
-                        #print(cellmergestatus[icell, int(t), 0:nmergers])
-                        #print(cellmergecloudnumber[icell, int(t), 0:nmergers])
-                        #raw_input('Waiting for user')
-
         ############################################################
         # Find splits
         print('Determining splits')
-        [splitfile, splitfeature] = np.array(np.where(np.copy(splitnumbers == maincelltracknumbers[icell]))
+        [splitfile, splitfeature] = np.array(np.where(np.copy(splitnumbers == maincelltracknumbers[icell])))
 
         # Loop through all splitting tracks, if present
         print(len(splitfile))
@@ -523,17 +518,17 @@ def identifycell_LES_netcdf4(statistics_filebase, stats_path, startdate, enddate
             splitfeature = splitfeature[trackstat_duration[splitfile] < split_duration]
             splitfile = splitfile[trackstat_duration[splitfile] < split_duration]
 
-            # Make sure the spliter itself is not an CELL
+            # Make sure the spliter itself is not an cell
             splittingcell = np.intersect1d(splitfile, maincelltracknumbers)
             if len(splittingcell) > 0:
                 for iremove in np.arange(0, len(splittingcell)):
                     removesplits = np.array(np.where(splitfile == splittingcell[iremove]))[0,:]
-                    splitfile[removesplits] = fillvalue
-                    splitfeature[removesplits] = fillvalue
-                splitfile = splitfile[splitfile != fillvalue]
-                splitfeature = splitfeature[splitfeature != fillvalue]
+                    splitfile[removesplits] = -9999
+                    splitfeature[removesplits] = -9999
+                splitfile = splitfile[splitfile != -9999]
+                splitfeature = splitfeature[splitfeature != -9999]
                 
-            # Continue if spliters satisfy duration and CELL restriction
+            # Continue if spliters satisfy duration and cell restriction
             if len(splitfile) > 0:
 
                 # Get data about splitting tracks
@@ -542,15 +537,10 @@ def identifycell_LES_netcdf4(statistics_filebase, stats_path, startdate, enddate
                 splittingstatus = np.copy(status[splitfile, :])
                 splittingdatetime = np.copy(datetimestrings[splitfile, :, :])
 
-                #splittingstatus = splittingstatus[splittingcloudnumber != fillvalue]
-                #splittingdatetime = splittingdatetime[splittingcloudnumber != fillvalue]
-                #splittingbasetime = splittingbasetime[splittingcloudnumber != fillvalue]
-                #splittingcloudnumber = splittingcloudnumber[splittingcloudnumber != fillvalue]
-
-                # Get data about CELL track
+                # Get data about cell track
                 maincellbasetime = np.copy(basetime[int(maincelltracknumbers[icell])-1,0:int(maincelllength[icell])])
 
-                # Loop through each timestep in the CELL track
+                # Loop through each timestep in the cell track
                 for t in np.arange(0, maincelllength[icell]):
 
                     # Find splitting cloud times that match current cell track time
@@ -562,14 +552,8 @@ def identifycell_LES_netcdf4(statistics_filebase, stats_path, startdate, enddate
                         cellsplitcloudnumber[icell, int(t), 0:nspliters] = splittingcloudnumber[timematch]
                         cellsplitstatus[icell, int(t), 0:nspliters] = splittingstatus[timematch]
 
-                        #print('Split')
-                        #print(splittingdatetime[timematch[0,:]])
-                        #print(cellsplitstatus[icell, int(t), 0:nspliters])
-                        #print(cellsplitcloudnumber[icell, int(t), 0:nspliters])
-                        #raw_input('Waiting for user')
-
     ########################################################################
-    # Subset keeping just CELL tracks
+    # Subset keeping just cell tracks
     maincelltrackid = np.copy(maincelltrackid.astype(int))
 
     ###########################################################################
@@ -612,7 +596,7 @@ def identifycell_LES_netcdf4(statistics_filebase, stats_path, startdate, enddate
                                     'startdate': startdate, \
                                     'enddate': enddate, \
                                     'time_resolution_hour': time_resolution, \
-                                    'pixel_radius_km': pixelradius], \
+                                    'pixel_radius_km': pixelradius, \
                                     'Main_cell_duration_hr': str(maincloud_duration), \
                                     'Merge_duration_hr': str(merge_duration), \
                                     'Split_duration_hr': str(split_duration)})
@@ -696,19 +680,19 @@ def identifycell_LES_netcdf4(statistics_filebase, stats_path, startdate, enddate
     print('')
 
     output_data.to_netcdf(path=celltrackstatistics_outfile, mode='w', format='NETCDF4_CLASSIC', unlimited_dims='ntracks', \
-                          encoding={'cell_basetime': {'dtype': 'int64', 'zlib':True, '_FillValue': fillvalue, 'units': 'seconds since 1970-01-01'}, \
-                                    'cell_datetimestring': {'zlib':True, '_FillValue': fillvalue}, \
-                                    'cell_length': {'zlib':True, '_FillValue': fillvalue}, \
-                                    'cell_status': {'dtype':'int', 'zlib':True, '_FillValue': fillvalue}, \
-                                    'cell_startstatus': {'dtype':'int', 'zlib':True, '_FillValue': fillvalue}, \
-                                    'cell_endstatus': {'dtype':'int', 'zlib':True, '_FillValue': fillvalue}, \
-                                    'cell_boundary': {'dtype':'int', 'zlib':True, '_FillValue': fillvalue}, \
-                                    'cell_trackinterruptions': {'dtype':'int', 'zlib':True, '_FillValue': fillvalue}, \
-                                    'cell_meanlat': {'zlib':True, '_FillValue': fillvalue}, \
-                                    'cell_meanlon': {'zlib':True, '_FillValue': fillvalue}, \
-                                    'cell_corearea': {'zlib':True, '_FillValue': fillvalue}, \
-                                    'cell_ccsarea': {'zlib':True, '_FillValue': fillvalue}, \
-                                    'cell_cloudnumber': {'dtype':'int', 'zlib':True, '_FillValue': fillvalue}, \
-                                    'cell_mergecloudnumber': {'dtype':'int', 'zlib':True, '_FillValue': fillvalue}, \
-                                    'cell_splitcloudnumber': {'dtype':'int', 'zlib':True, '_FillValue': fillvalue}})
+                          encoding={'cell_basetime': {'dtype': 'int64', 'zlib':True, 'units': 'seconds since 1970-01-01'}, \
+                                    'cell_datetimestring': {'zlib':True}, \
+                                    'cell_length': {'zlib':True, '_FillValue': -9999}, \
+                                    'cell_status': {'dtype':'int', 'zlib':True, '_FillValue': -9999}, \
+                                    'cell_startstatus': {'dtype':'int', 'zlib':True, '_FillValue': -9999}, \
+                                    'cell_endstatus': {'dtype':'int', 'zlib':True, '_FillValue': -9999}, \
+                                    'cell_boundary': {'dtype':'int', 'zlib':True, '_FillValue': -9999}, \
+                                    'cell_trackinterruptions': {'dtype':'int', 'zlib':True, '_FillValue': -9999}, \
+                                    'cell_meanlat': {'zlib':True, '_FillValue': np.nan}, \
+                                    'cell_meanlon': {'zlib':True, '_FillValue': np.nan}, \
+                                    'cell_corearea': {'zlib':True, '_FillValue': np.nan}, \
+                                    'cell_ccsarea': {'zlib':True, '_FillValue': np.nan}, \
+                                    'cell_cloudnumber': {'dtype':'int', 'zlib':True, '_FillValue': -9999}, \
+                                    'cell_mergecloudnumber': {'dtype':'int', 'zlib':True, '_FillValue': -9999}, \
+                                    'cell_splitcloudnumber': {'dtype':'int', 'zlib':True, '_FillValue': -9999}})
 
