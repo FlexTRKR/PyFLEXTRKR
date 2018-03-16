@@ -504,7 +504,7 @@ def gettracknumbers_mergedir(datasource, datadescription, datainpath, dataoutpat
 
     #################################################################
     # Create histograms of the values in tracknumber. This effectively counts the number of times each track number appaers in tracknumber, which is equivalent to calculating the length of the track. 
-    tracklengths, trackbins = np.histogram(tracknumber[0, :, :], bins=np.arange(1,itrack+1,1), range=(1,itrack+1))
+    tracklengths, trackbins = np.histogram(np.copy(tracknumber[0, :, :]), bins=np.arange(1,itrack+1,1), range=(1,itrack+1))
 
     #################################################################
     # Remove all tracks that have only one cloud.
@@ -513,34 +513,26 @@ def gettracknumbers_mergedir(datasource, datadescription, datainpath, dataoutpat
 
     # Identify single cloud tracks
     singletracks = np.array(np.where(tracklengths <= 1))[0,:]
-    raw_input('check')
     nsingletracks = len(singletracks)
     #singleindices = np.logical_or(tracknumber[0, :, :] == singletracks)
 
+    print(np.unique(tracknumber[0, :, :]))
+    print(itrack)
+    print(np.where(tracknumber == 1))
+    print(np.where(tracknumber == float(1)))
+    print(np.where(tracknumber == int(1)))
     # Loop over single cloudtracks
     nsingleremove = 0
     for strack in singletracks:
-        print('single track: ' + str(strack))
+        print('single track: ' + str(strack+1))
         print('Getting track index')
         # Indentify clouds in this track
-        cloudindex = np.array(np.where(tracknumber[0, :, :] == strack+1)) # Need to add one since singletracks lists the index in the matrix, which starts at zero. Track number starts at one.
-        print(cloudindex)
-        print(tracknumber[0, cloudindex[0], cloudindex[1]])
-        print(referencetrackstatus[cloudindex[0], cloudindex[1]])
-        print(newtrackstatus[cloudindex[0], cloudindex[1]])
-        print(tracksplitnumber[0, cloudindex[0], cloudindex[1]])
-        print(trackmergenumber[0, cloudindex[0], cloudindex[1]])
-        raw_input('check')
+        cloudindex = np.array(np.where(tracknumber[0, :, :] == int(strack+1))) # Need to add one since singletracks lists the index in the matrix, which starts at zero. Track number starts at one.
 
         print('Filtering data')
         # Only remove single track if it is not small merger or small split. This is only done if keepsingletrack == 1. This is the default.
         if keepsingletrack == 1:
-            if referencetrackstatus[cloudindex[0], cloudindex[1]] not in [21, 34]:
-                tracknumber[0, cloudindex[0], cloudindex[1]] = -2
-                trackstatus[0, cloudindex[0], cloudindex[1]] = -9999
-                nsingleremove = nsingleremove + 1
-                tracklengths[strack] = -9999
-            if newtrackstatus[cloudindex[0], cloudindex[1]] != 31:
+            if tracksplitnumber[0, cloudindex[0], cloudindex[1]] < 0 and trackmergenumber[0, cloudindex[0], cloudindex[1]] < 0:
                 tracknumber[0, cloudindex[0], cloudindex[1]] = -2
                 trackstatus[0, cloudindex[0], cloudindex[1]] = -9999
                 nsingleremove = nsingleremove + 1
