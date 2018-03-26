@@ -63,12 +63,11 @@ def trackstats_sat(datasource, datadescription, pixel_radius, latlon_file, geoli
     ###################################################################################
     # Initialize modules
     import numpy as np
-    from netCDF4 import Dataset, chartostring, stringtochar, num2date
+    from netCDF4 import Dataset, num2date
     import os, fnmatch
     import sys
     from math import pi
     from skimage.measure import regionprops
-    from matplotlib.patches import Ellipse
     import time
     import gc
     import datetime
@@ -793,12 +792,11 @@ def trackstats_LES(datasource, datadescription, pixel_radius, latlon_file, geoli
     ###################################################################################
     # Initialize modules
     import numpy as np
-    from netCDF4 import Dataset, chartostring, stringtochar, num2date
+    from netCDF4 import Dataset, num2date
     import os, fnmatch
     import sys
     from math import pi
     from skimage.measure import regionprops
-    from matplotlib.patches import Ellipse
     import time
     import datetime
     import gc

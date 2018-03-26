@@ -32,12 +32,10 @@
 def trackclouds_mergedir(zipped_inputs): 
     ########################################################
     import numpy as np
-    import glob
     import os
     import re
     import fnmatch
     from netCDF4 import Dataset
-    import time, datetime, calendar
     from pytz import timezone, utc
     import sys
     import xarray as xr

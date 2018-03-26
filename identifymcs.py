@@ -44,7 +44,6 @@ def identifymcs_mergedir_xarray(statistics_filebase, stats_path, startdate, endd
     import sys
     import xarray as xr
     import pandas as pd
-    import time, datetime, calendar
     np.set_printoptions(threshold=np.inf)
 
     ##########################################################################
@@ -478,7 +477,6 @@ def identifymcs_mergedir_netcdf4(statistics_filebase, stats_path, startdate, end
     import sys
     import xarray as xr
     import pandas as pd
-    import time, datetime, calendar
     np.set_printoptions(threshold=np.inf)
 
     ##########################################################################

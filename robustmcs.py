@@ -88,7 +88,6 @@ def filtermcs_mergedir_nmq(stats_path, pfstats_filebase, startdate, enddate, tim
     import time
     import warnings
     import pandas as pd
-    import time, datetime, calendar
     np.set_printoptions(threshold=np.inf)
 
     ######################################################

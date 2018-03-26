@@ -41,7 +41,7 @@ def identifycell_LES_xarray(statistics_filebase, stats_path, startdate, enddate,
     import sys
     import xarray as xr
     import pandas as pd
-    import time, datetime, calendar
+    import time
     np.set_printoptions(threshold=np.inf)
 
     ##########################################################################
@@ -379,7 +379,6 @@ def identifycell_LES_netcdf4(statistics_filebase, stats_path, startdate, enddate
     import sys
     import xarray as xr
     import pandas as pd
-    import time, datetime, calendar
     np.set_printoptions(threshold=np.inf)
 
     ##########################################################################

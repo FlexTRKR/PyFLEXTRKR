@@ -40,7 +40,6 @@ def mapcell_LES(zipped_inputs):
     import sys
     import xarray as xr
     import pandas as pd
-    import time, datetime, calendar
     from netCDF4 import Dataset, num2date
     np.set_printoptions(threshold=np.inf)
 

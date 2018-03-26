@@ -39,8 +39,8 @@ def gettracknumbers_mergedir(datasource, datadescription, datainpath, dataoutpat
     import numpy as np
     import os, fnmatch
     import time, datetime, calendar
-    from pytz import timezone, utc
-    from netCDF4 import Dataset, stringtochar, chartostring, num2date
+    from pytz import  utc
+    from netCDF4 import Dataset, num2date
     import sys
     import xarray as xr
     import pandas as pd

@@ -1,11 +1,11 @@
 import numpy as np
 import os, fnmatch
 import time, datetime, calendar
-from pytz import timezone, utc
+from pytz import utc
 from multiprocessing import Pool
 from netCDF4 import Dataset
 import xarray as xr
-import cProfile
+#import cProfile
 
 # Purpose: Master script for tracking MCS identified using IR satellite and radar data in the central and eastern USA. 
 
@@ -26,16 +26,17 @@ print(time.ctime())
 run_idclouds = 0        # Segment and identify cloud systems
 run_tracksingle = 0     # Track single consecutive cloudid files
 run_gettracks = 1       # Run trackig for all files
-run_finalstats = 0      # Calculate final statistics
-run_identifymcs = 0     # Isolate MCSs
-run_matchpf = 0         # Identify precipitation features with MCSs
-run_robustmcs = 0       # Filter potential mcs cases using nmq radar variables
+run_finalstats = 1      # Calculate final statistics
+run_identifymcs = 1     # Isolate MCSs
+run_matchpf = 1         # Identify precipitation features with MCSs
+run_robustmcs = 1       # Filter potential mcs cases using nmq radar variables
 run_labelmcs = 0        # Create maps of MCSs
 
 # Set version ofcode
 cloudidmethod = 'futyan4' # Option: futyan3 = identify cores and cold anvils and expand to get warm anvil, futyan4=identify core and expand for cold and warm anvils
 keep_singlemergesplit = 1 # Options: 0=All short tracks are removed, 1=Only short tracks without mergers or splits are removed
 show_alltracks = 1 # Options: 0=Maps of all tracks are not created, 1=Maps of all tracks are created (much slower)
+run_parallel = 1 # Options: 0-run serially, 1-run parallel (uses Pool from Multiprocessing)
 
 # Specify version of code using
 cloudid_version = 'v1.0'
@@ -210,18 +211,21 @@ if run_idclouds == 1:
     idclouds_input = zip(rawdatafiles, list_irdatasource, list_datadescription, list_datavariablename, list_cloudidversion, list_trackingoutpath, list_latlonfile, list_latname, list_lonname, list_geolimits, list_startdate, list_enddate, list_pixelradius, list_areathresh, list_cloudtbthreshs, list_absolutetbthreshs, list_missthresh, list_cloudidmethod, list_coldcorethresh, list_smoothsize, list_warmanvilexpansion, list_processhalfhour)
 
     ## Call function
-    ## Serial version
-    #for ifile in range(0, filestep):
-    #    idclouds_gpmmergedir(idclouds_input[ifile])
-
-    # Parallel version
-    if __name__ == '__main__':
-        print('Identifying clouds')
-        print(time.ctime())
-        pool = Pool(4)
-        pool.map(idclouds_gpmmergedir, idclouds_input)
-        pool.close()
-        pool.join()
+    if run_parallel == 0:
+        # Serial version
+        for ifile in range(0, filestep):
+            idclouds_gpmmergedir(idclouds_input[ifile])
+    elif run_parallel == 1:
+        # Parallel version
+        if __name__ == '__main__':
+            print('Identifying clouds')
+            print(time.ctime())
+            pool = Pool(4)
+            pool.map(idclouds_gpmmergedir, idclouds_input)
+            pool.close()
+            pool.join()
+    else:
+        sys.exit('Valid parallelization flag not provided')
 
     cloudid_filebase = irdatasource + '_' + datadescription + '_cloudid' + cloudid_version + '_'
 
@@ -291,16 +295,19 @@ if run_tracksingle == 1:
 
     trackclouds_input = zip(cloudidfiles[0:-1], cloudidfiles[1::], cloudidfiles_datestring[0:-1], cloudidfiles_datestring[1::], cloudidfiles_timestring[0:-1], cloudidfiles_timestring[1::], cloudidfiles_basetime[0:-1], cloudidfiles_basetime[1::], list_trackingoutpath, list_trackversion, list_timegap, list_nmaxlinks, list_othresh, list_startdate, list_enddate)
 
-    # Serial version
-    #for ifile in range(0, cloudidfilestep-1):
-    #    trackclouds_mergedir(trackclouds_input[ifile])
-
-    # parallelize version
-    if __name__ == '__main__':
-        pool = Pool(4)
-        pool.map(trackclouds_mergedir, trackclouds_input)
-        pool.close()
-        pool.join()
+    if run_parallel == 0:
+        # Serial version
+        for ifile in range(0, cloudidfilestep-1):
+            trackclouds_mergedir(trackclouds_input[ifile])
+    elif run_parallel == 1:
+        # parallelize version
+        if __name__ == '__main__':
+            pool = Pool(4)
+            pool.map(trackclouds_mergedir, trackclouds_input)
+            pool.close()
+            pool.join()
+    else:
+        sys.exit('Valid parallelization flag not provided.')
 
     singletrack_filebase = 'track' + track_version + '_'
 
@@ -468,17 +475,20 @@ if run_labelmcs == 1:
 
     robustmcsmap_input = zip(cloudidfiles, cloudidfiles_basetime, list_robustmcsstat_filebase, list_trackstat_filebase, list_pfdata_filebase, list_rainaccumulation_filebase, list_mcstracking_path, list_stats_path, list_pfdata_path, list_rainaccumulation_path, list_pcp_thresh, list_nmaxpf, list_absolutetb_threshs, list_startdate, list_enddate, list_showalltracks)
 
-    # Call function
-    for iunique in range(0, cloudidfilestep-1):
-        mapmcs_pf(robustmcsmap_input[iunique])
+    if run_parallel == 0:
+        # Call function
+        for iunique in range(0, cloudidfilestep-1):
+            mapmcs_pf(robustmcsmap_input[iunique])
 
-    #cProfile.run('mapmcs_pf(robustmcsmap_input[200])')
-
-    #if __name__ == '__main__':
-    #    print('Creating maps of tracked MCSs')
-    #    print(time.ctime())
-    #    pool = Pool(24)
-    #    pool.map(mapmcs_pf, robustmcsmap_input)
-    #    pool.close()
-    #    pool.join()
+        #cProfile.run('mapmcs_pf(robustmcsmap_input[200])')
+    elif run_parallel == 1:
+        if __name__ == '__main__':
+            print('Creating maps of tracked MCSs')
+            print(time.ctime())
+            pool = Pool(24)
+            pool.map(mapmcs_pf, robustmcsmap_input)
+            pool.close()
+            pool.join()
+    else:
+        sys.ext('Valid parallelization flag not provided')
 
