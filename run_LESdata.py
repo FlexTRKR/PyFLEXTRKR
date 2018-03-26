@@ -18,15 +18,16 @@ import xarray as xr
 # Specify which sets of code to run. (1 = run code, 0 = don't run code)
 run_idclouds = 0        # Segment and identify cloud systems
 run_tracksingle = 0     # Track single consecutive cloudid files
-run_gettracks = 1       # Run trackig for all files
-run_finalstats = 1      # Calculate final statistics
-run_identifycell = 1    # Isolate cells
-run_labelcell = 0        # Create maps of MCSs
+run_gettracks = 0       # Run trackig for all files
+run_finalstats = 0      # Calculate final statistics
+run_identifycell = 0    # Isolate cells
+run_labelcell = 1        # Create maps of MCSs
 
 # Set version of cloudid code
 cloudidmethod = 'futyan4'
 keep_singlemergesplit = 1 # 0=all short tracks removed, 1=only short tracks that are not mergers or splits are removed
 show_alltracks = 0 # 0=do not create maps of all tracks in map stage, 1=create maps of all tracks (greatly slows the code)
+run_parallel = 1 # Options: 0-run serially, 1-run parallel (uses Pool from Multiprocessing)
 
 # Specify version of code using
 cloudid_version = 'v1.0'
@@ -188,18 +189,21 @@ if run_idclouds == 1:
 
     idclouds_input = zip(rawdatafiles, files_datestring, files_timestring, files_basetime, list_datasource, list_datadescription, list_cloudidversion, list_trackingoutpath, list_latlonfile, list_geolimits, list_xsize, list_ysize, list_startdate, list_enddate, list_pixelradius, list_areathresh, list_cloudlwpthreshs, list_absolutelwpthreshs, list_missthresh, list_cloudidmethod, list_coldcorethresh, list_smoothsize, list_warmanvilexpansion)
 
-    # Call function
-    # Serial version
-    #for ifile in range(0, filestep):
-    #    idclouds_LES(idclouds_input[ifile])
-
-    # Parallel version
-    if __name__ == '__main__':
-        print('Identifying clouds')
-        pool = Pool(24)
-        pool.map(idclouds_LES, idclouds_input)
-        pool.close()
-        pool.join()
+    ## Call function
+    if run_parallel == 0:
+        # Serial version
+        for ifile in range(0, filestep):
+            idclouds_LES(idclouds_input[ifile])
+    elif run_parallel == 1:
+        # Parallel version
+        if __name__ == '__main__':
+            print('Identifying clouds')
+            pool = Pool(24)
+            pool.map(idclouds_LES, idclouds_input)
+            pool.close()
+            pool.join()
+    else:
+        sys.exit('Valid parallelization flag not provided')
 
     cloudid_filebase = datasource + '_' + datadescription + '_cloudid' + cloudid_version + '_'
 
@@ -266,16 +270,19 @@ if run_tracksingle == 1:
 
     trackclouds_input = zip(cloudidfiles[0:-1], cloudidfiles[1::], cloudidfiles_datestring[0:-1], cloudidfiles_datestring[1::], cloudidfiles_timestring[0:-1], cloudidfiles_timestring[1::], cloudidfiles_basetime[0:-1], cloudidfiles_basetime[1::], list_trackingoutpath, list_trackversion, list_timegap, list_nmaxlinks, list_othresh, list_startdate, list_enddate)
 
-    # Serial version
-    #for ifile in range(0, cloudidfilestep-1):
-    #    trackclouds_mergedir(trackclouds_input[ifile])
-
-    # parallelize version
-    if __name__ == '__main__':
-        pool = Pool(24)
-        pool.map(trackclouds_mergedir, trackclouds_input)
-        pool.close()
-        pool.join()
+    if run_parallel == 0:
+        # Serial version
+        for ifile in range(0, cloudidfilestep-1):
+            trackclouds_mergedir(trackclouds_input[ifile])
+    elif run_parallel == 1:
+        # parallelize version
+        if __name__ == '__main__':
+            pool = Pool(24)
+            pool.map(trackclouds_mergedir, trackclouds_input)
+            pool.close()
+            pool.join()
+    else:
+        sys.exit('Valid parallelization flag not provided.')
 
     singletrack_filebase = 'track' + track_version + '_'
 
@@ -389,13 +396,16 @@ if run_labelcell == 1:
     cellmap_input = zip(cloudidfiles, cloudidfiles_basetime, list_cellstat_filebase, list_trackstat_filebase, list_celltracking_path, list_stats_path, list_absolutelwp_threshs, list_startdate, list_enddate,list_showalltracks)
 
     ## Call function
-    for iunique in range(0, cloudidfilestep-1):
-       mapcell_LES(cellmap_input[iunique])
-
-    #if __name__ == '__main__':
-    #    print('Creating maps of tracked MCSs')
-    #    pool = Pool(4)
-    #    pool.map(mapcell_LES, cellmap_input)
-    #    pool.close()
-    #    pool.join()
-
+    if run_parallel == 0:
+        # Call function
+        for iunique in range(0, cloudidfilestep-1):
+            mapcell_LES(cellmap_input[iunique])
+    elif run_parallel == 1:
+        if __name__ == '__main__':
+            print('Creating maps of tracked MCSs')
+            pool = Pool(24)
+            pool.map(mapcell_LES, cellmap_input)
+            pool.close()
+            pool.join()
+    else:
+        sys.ext('Valid parallelization flag not provided')
