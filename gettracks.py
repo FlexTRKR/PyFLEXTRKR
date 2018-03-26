@@ -444,7 +444,7 @@ def gettracknumbers_mergedir(datasource, datadescription, datainpath, dataoutpat
                         print(time.ctime())
                         # Label reference cloud as a pure split
                         referencetrackstatus[ifill, ncr-1] = 13
-                        tracknumber[0, ifill, ncr-1] = itrack
+                        tracknumber[0, ifill, ncr-1] = np.copy(tracknumber[0, ifill, largest_referencecloud-1])
 
                         # Loop over the clouds and assign new tracks to the smaller ones
                         for tempnewcloud in associated_newclouds:
@@ -516,11 +516,6 @@ def gettracknumbers_mergedir(datasource, datadescription, datainpath, dataoutpat
     nsingletracks = len(singletracks)
     #singleindices = np.logical_or(tracknumber[0, :, :] == singletracks)
 
-    print(np.unique(tracknumber[0, :, :]))
-    print(itrack)
-    print(np.where(tracknumber == 1))
-    print(np.where(tracknumber == float(1)))
-    print(np.where(tracknumber == int(1)))
     # Loop over single cloudtracks
     nsingleremove = 0
     for strack in singletracks:
