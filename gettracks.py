@@ -3,7 +3,7 @@
 # Author: IDL version written by Sally A. McFarlane (sally.mcfarlane@pnnl.gov) and revised by Zhe Feng (zhe.feng@pnnl.gov). Python version written by Hannah C. Barnes (hannah.barnes@pnnl.gov)
 
 # Define function to track clouds that were identified in merged ir data
-def gettracknumbers_mergedir(datasource, datadescription, datainpath, dataoutpath, startdate, enddate, timegap, maxnclouds, cloudid_filebase, npxname, tracknumbers_version, singletrack_filebase, keepsingletrack=1, removestartendtracks=0, tdimname='time', xdimname='lon', ydimname='lat'):
+def gettracknumbers(datasource, datadescription, datainpath, dataoutpath, startdate, enddate, timegap, maxnclouds, cloudid_filebase, npxname, tracknumbers_version, singletrack_filebase, keepsingletrack=1, removestartendtracks=0, tdimname='time', xdimname='lon', ydimname='lat'):
     # Inputs:
     # datasource - source of the data
     # datadescription - description of data source, included in all output file names

@@ -296,11 +296,11 @@ if run_tracksingle == 0:
 # Call function
 if run_gettracks == 1:
     # Load function
-    from gettracks import gettracknumbers_mergedir
+    from gettracks import gettracknumbers
 
     # Call function
     print('Getting track numbers')
-    gettracknumbers_mergedir(datasource, datadescription, tracking_outpath, stats_outpath, startdate, enddate, timegap, maxnclouds, cloudid_filebase, npxname, tracknumber_version, singletrack_filebase, keepsingletrack=keep_singlemergesplit, removestartendtracks=1)
+    gettracknumbers(datasource, datadescription, tracking_outpath, stats_outpath, startdate, enddate, timegap, maxnclouds, cloudid_filebase, npxname, tracknumber_version, singletrack_filebase, keepsingletrack=keep_singlemergesplit, removestartendtracks=1)
     tracknumbers_filebase = 'tracknumbers' + tracknumber_version
 
 ############################################################

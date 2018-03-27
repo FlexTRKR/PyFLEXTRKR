@@ -3,7 +3,7 @@
 # Author: Orginial IDL version written by Sally A. McFarline (sally.mcfarlane@pnnl.gov) and modified for Zhe Feng (zhe.feng@pnnl.gov). Python version written by Hannah C. Barnes (hannah.barnes@pnnl.gov)
 
 # Define function that calculates track statistics for satellite data
-def trackstats_sat(datasource, datadescription, pixel_radius, latlon_file, geolimits, areathresh, cloudtb_threshs, absolutetb_threshs, startdate, enddate, timegap, cloudid_filebase, tracking_inpath, stats_path, track_version, tracknumbers_version, tracknumbers_filebase, lengthrange=[2,120]):
+def trackstats_sat(datasource, datadescription, pixel_radius, geolimits, areathresh, cloudtb_threshs, absolutetb_threshs, startdate, enddate, timegap, cloudid_filebase, tracking_inpath, stats_path, track_version, tracknumbers_version, tracknumbers_filebase, lengthrange=[2,120]):
     # Inputs:
     # datasource - source of the data
     # datadescription - description of data source, included in all output file names
@@ -252,24 +252,24 @@ def trackstats_sat(datasource, datadescription, pixel_radius, latlon_file, geoli
                         corecoldlat = latitude[corecoldarea[0], corecoldarea[1]]
                         corecoldlon = longitude[corecoldarea[0], corecoldarea[1]]
 
-                        finaltrack_corecold_meanlat[itrack-1,nc] = np.nanmean(corecoldlat)
-                        finaltrack_corecold_meanlon[itrack-1,nc] = np.nanmean(corecoldlon)
+                        finaltrack_corecold_meanlat[itrack-1, nc] = np.nanmean(corecoldlat)
+                        finaltrack_corecold_meanlon[itrack-1, nc] = np.nanmean(corecoldlon)
 
-                        finaltrack_corecold_minlat[itrack-1,nc] = np.nanmin(corecoldlat)
-                        finaltrack_corecold_minlon[itrack-1,nc] = np.nanmin(corecoldlon)
+                        finaltrack_corecold_minlat[itrack-1, nc] = np.nanmin(corecoldlat)
+                        finaltrack_corecold_minlon[itrack-1, nc] = np.nanmin(corecoldlon)
 
-                        finaltrack_corecold_maxlat[itrack-1,nc] = np.nanmax(corecoldlat)
-                        finaltrack_corecold_maxlon[itrack-1,nc] = np.nanmax(corecoldlon)
+                        finaltrack_corecold_maxlat[itrack-1, nc] = np.nanmax(corecoldlat)
+                        finaltrack_corecold_maxlon[itrack-1, nc] = np.nanmax(corecoldlon)
 
                         # Determine if core+cold touches of the boundaries of the domain
-                        if np.absolute(finaltrack_corecold_minlat[itrack-1,nc]-geolimits[0]) < 0.1 or np.absolute(finaltrack_corecold_maxlat[itrack-1,nc]-geolimits[2]) < 0.1 or np.absolute(finaltrack_corecold_minlon[itrack-1,nc]-geolimits[1]) < 0.1 or np.absolute(finaltrack_corecold_maxlon[itrack-1,nc]-geolimits[3]) < 0.1:
+                        if np.absolute(finaltrack_corecold_minlat[itrack-1, nc]-geolimits[0]) < 0.1 or np.absolute(finaltrack_corecold_maxlat[itrack-1, nc]-geolimits[2]) < 0.1 or np.absolute(finaltrack_corecold_minlon[itrack-1, nc]-geolimits[1]) < 0.1 or np.absolute(finaltrack_corecold_maxlon[itrack-1, nc]-geolimits[3]) < 0.1:
                             finaltrack_corecold_boundary[itrack-1] = 1
 
                         # Save number of pixels (metric for size)
-                        finaltrack_ncorecoldpix[itrack-1,nc] = ncorecoldpix
-                        finaltrack_ncorepix[itrack-1,nc] = ncorepix
-                        finaltrack_ncoldpix[itrack-1,nc] = ncoldpix
-                        finaltrack_nwarmpix[itrack-1,nc] = nwarmpix
+                        finaltrack_ncorecoldpix[itrack-1, nc] = ncorecoldpix
+                        finaltrack_ncorepix[itrack-1, nc] = ncorepix
+                        finaltrack_ncoldpix[itrack-1, nc] = ncoldpix
+                        finaltrack_nwarmpix[itrack-1, nc] = nwarmpix
 
                         # Calculate physical characteristics associated with cloud system
                         # Create a padded region around the cloud.
@@ -309,31 +309,31 @@ def trackstats_sat(datasource, datadescription, pixel_radius, latlon_file, geoli
                         # Calculate major axis, orientation, eccentricity
                         cloudproperities = regionprops(isolatedcloudnumber, intensity_image=isolatedtb)
                     
-                        finaltrack_corecold_eccentricity[itrack-1,nc] = cloudproperities[0].eccentricity
-                        finaltrack_corecold_majoraxis[itrack-1,nc] = cloudproperities[0].major_axis_length*pixel_radius
-                        finaltrack_corecold_orientation[itrack-1,nc] = (cloudproperities[0].orientation)*(180/float(pi))
-                        finaltrack_corecold_perimeter[itrack-1,nc] = cloudproperities[0].perimeter*pixel_radius
+                        finaltrack_corecold_eccentricity[itrack-1, nc] = cloudproperities[0].eccentricity
+                        finaltrack_corecold_majoraxis[itrack-1, nc] = cloudproperities[0].major_axis_length*pixel_radius
+                        finaltrack_corecold_orientation[itrack-1, nc] = (cloudproperities[0].orientation)*(180/float(pi))
+                        finaltrack_corecold_perimeter[itrack-1, nc] = cloudproperities[0].perimeter*pixel_radius
                         [temp_ycenter, temp_xcenter] = cloudproperities[0].centroid
-                        [finaltrack_corecold_ycenter[itrack-1,nc], finaltrack_corecold_xcenter[itrack-1,nc]] = np.add([temp_ycenter,temp_xcenter], [minyindex, minxindex]).astype(int)
+                        [finaltrack_corecold_ycenter[itrack-1, nc], finaltrack_corecold_xcenter[itrack-1,nc]] = np.add([temp_ycenter,temp_xcenter], [minyindex, minxindex]).astype(int)
                         [temp_yweightedcenter, temp_xweightedcenter] = cloudproperities[0].weighted_centroid
-                        [finaltrack_corecold_yweightedcenter[itrack-1,nc], finaltrack_corecold_xweightedcenter[itrack-1,nc]] = np.add([temp_yweightedcenter, temp_xweightedcenter], [minyindex, minxindex]).astype(int)
+                        [finaltrack_corecold_yweightedcenter[itrack-1, nc], finaltrack_corecold_xweightedcenter[itrack-1, nc]] = np.add([temp_yweightedcenter, temp_xweightedcenter], [minyindex, minxindex]).astype(int)
 
                         # Determine equivalent radius of core+cold. Assuming circular area = (number pixels)*(pixel radius)^2, equivalent radius = sqrt(Area / pi)
-                        finaltrack_corecold_radius[itrack-1,nc] = np.sqrt(np.divide(ncorecoldpix*(np.square(pixel_radius)), pi))
+                        finaltrack_corecold_radius[itrack-1, nc] = np.sqrt(np.divide(ncorecoldpix*(np.square(pixel_radius)), pi))
 
                         # Determine equivalent radius of core+cold+warm. Assuming circular area = (number pixels)*(pixel radius)^2, equivalent radius = sqrt(Area / pi)
-                        finaltrack_corecoldwarm_radius[itrack-1,nc] = np.sqrt(np.divide((ncorepix + ncoldpix + nwarmpix)*(np.square(pixel_radius)), pi))
+                        finaltrack_corecoldwarm_radius[itrack-1, nc] = np.sqrt(np.divide((ncorepix + ncoldpix + nwarmpix)*(np.square(pixel_radius)), pi))
 
                         ##############################################################
                         # Calculate brightness temperature statistics of core+cold anvil
                         corecoldtb = np.copy(file_tb[0,corecoldarea[0], corecoldarea[1]])
 
-                        finaltrack_corecold_mintb[itrack-1,nc] = np.nanmin(corecoldtb)
-                        finaltrack_corecold_meantb[itrack-1,nc] = np.nanmean(corecoldtb)
+                        finaltrack_corecold_mintb[itrack-1, nc] = np.nanmin(corecoldtb)
+                        finaltrack_corecold_meantb[itrack-1, nc] = np.nanmean(corecoldtb)
 
                         ################################################################
                         # Histogram of brightness temperature for core+cold anvil
-                        finaltrack_corecold_histtb[itrack-1,nc,:], usedtbbins = np.histogram(corecoldtb, range=(mintb_thresh, maxtb_thresh), bins=tbbins)
+                        finaltrack_corecold_histtb[itrack-1, nc,:], usedtbbins = np.histogram(corecoldtb, range=(mintb_thresh, maxtb_thresh), bins=tbbins)
 
                         # Save track information. Need to subtract one since cloudnumber gives the number of the cloud (which starts at one), but we are looking for its index (which starts at zero)
                         finaltrack_corecold_status[itrack-1, nc] = np.copy(trackstatus[0, nf, cloudindex])
@@ -351,7 +351,7 @@ def trackstats_sat(datasource, datadescription, pixel_radius, latlon_file, geoli
                         sys.exit(str(nc) + ' greater than maximum allowed number clouds, ' + str(nmaxclouds))
 
                 elif len(cloudnumber) > 1:
-                    sys.exit(str(cloudnumbers) + ' clouds linked to one track. Each track should only be linked to one cloud in each file in the track_number array. The track_number variable only tracks the largest cell in mergers and splits. The small clouds in tracks and mergers should only be listed in the track_splitnumbers and track_mergenumbers arrays.')
+                    sys.exit(str(cloudnumber) + ' clouds linked to one track. Each track should only be linked to one cloud in each file in the track_number array. The track_number variable only tracks the largest cell in mergers and splits. The small clouds in tracks and mergers should only be listed in the track_splitnumbers and track_mergenumbers arrays.')
 
     ###############################################################
     ## Remove tracks that have no cells. These tracks are short.
@@ -359,7 +359,7 @@ def trackstats_sat(datasource, datadescription, pixel_radius, latlon_file, geoli
     print(time.ctime())
     gc.collect()
 
-    cloudindexpresent = np.array(np.where(finaltrack_tracklength != -9999))[0,:]
+    cloudindexpresent = np.array(np.where(finaltrack_tracklength != -9999))[0, :]
     numtracks = len(cloudindexpresent)
 
     maxtracklength = np.nanmax(finaltrack_tracklength)
@@ -1074,7 +1074,7 @@ def trackstats_LES(datasource, datadescription, pixel_radius, latlon_file, geoli
                         nc = nc + 1
 
                 elif len(cloudnumber) > 1:
-                    sys.exit(str(cloudnumbers) + ' clouds linked to one track. Each track should only be linked to one cloud in each file in the track_number array. The track_number variable only tracks the largest cell in mergers and splits. The small clouds in tracks and mergers should only be listed in the track_splitnumbers and track_mergenumbers arrays.')
+                    sys.exit(str(cloudnumber) + ' clouds linked to one track. Each track should only be linked to one cloud in each file in the track_number array. The track_number variable only tracks the largest cell in mergers and splits. The small clouds in tracks and mergers should only be listed in the track_splitnumbers and track_mergenumbers arrays.')
 
     ###############################################################
     ## Remove tracks that have no cells. These tracks are short.

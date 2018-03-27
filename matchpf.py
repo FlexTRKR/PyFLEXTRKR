@@ -261,19 +261,6 @@ def identifypf_mergedir_nmq(mcsstats_filebase, cloudid_filebase, pfdata_filebase
                     lat = pfdata['lat2d'][:]
                     pfdata.close()
 
-                    ## Fill missing data with fill value so consistent with other data
-                    #rawdbzmap = np.ma.filled(rawdbzmap.astype(float), fillvalue)
-                    #rawdbz10map = np.ma.filled(rawdbz10map.astype(float), fillvalue)
-                    #rawdbz20map = np.ma.filled(rawdbz20map.astype(float), fillvalue)
-                    #rawdbz30map = np.ma.filled(rawdbz30map.astype(float), fillvalue)
-                    #rawdbz40map = np.ma.filled(rawdbz40map.astype(float), fillvalue)
-                    #rawdbz45map = np.ma.filled(rawdbz45map.astype(float), fillvalue)
-                    #rawdbz50map = np.ma.filled(rawdbz50map.astype(float), fillvalue)
-                    #rawcsamap = np.ma.filled(rawcsamap.astype(float), fillvalue)
-                    #rawrainratemap = np.ma.filled(rawrainratemap.astype(float), fillvalue)
-                    #rawpfnumbermap = np.ma.filled(rawpfnumbermap.astype(float), fillvalue)
-                    #rawdataqualitymap = np.ma.filled(rawdataqualitymap.astype(float), fillvalue)
-
                     # Load accumulation data is available. If not present fill array with fill value
                     print('Loading accumulation data')
                     print(rainaccumulation_filename)
@@ -282,7 +269,6 @@ def identifypf_mergedir_nmq(mcsstats_filebase, cloudid_filebase, pfdata_filebase
                         rawrainaccumulationmap = rainaccumulationdata['precipitation'][:]
                         rainaccumulationdata.close()
 
-                        #rawrainaccumulationmap = np.ma.filled(rawrainaccumulationmap.astype(float), fillvalue)
                     else:
                         nt, ny, nx = np.shape(rawdbzmap)
                         rawrainaccumulationmap = np.ones((nt, ny, nx), dtype=float)*np.nan
@@ -660,7 +646,7 @@ def identifypf_mergedir_nmq(mcsstats_filebase, cloudid_filebase, pfdata_filebase
                                             [pfycentroid[ipf-1], pfxcentroid[ipf-1]] = pfproperties[0].centroid
                                             [pfyweightedcentroid[ipf-1], pfxweightedcentroid[ipf-1]] = pfproperties[0].weighted_centroid
 
-                                            # Convective statistics
+                                            # Convective precipitation statistics
                                             iipfccy, iipfccx = np.array(np.where((pfnumberlabelmap == ipf) & (filteredcsamap == 6)))
                                             niipfcc = len(iipfccy)
 
@@ -673,27 +659,7 @@ def identifypf_mergedir_nmq(mcsstats_filebase, cloudid_filebase, pfdata_filebase
                                                 pfccdbz30[ipf-1] = filtereddbz30map[iipfccy, iipfccx].mean()
                                                 pfccdbz40[ipf-1] = filtereddbz40map[iipfccy, iipfccx].mean()
 
-                                                #ifiltereddbz10map = np.copy(filtereddbz10map[iipfccy, iipfccx])
-                                                #ifiltereddbz10map = ifiltereddbz10map[ifiltereddbz10map != fillvalue]
-                                                #if len(ifiltereddbz10map) > 0:
-                                                #    pfccdbz10[ipf-1] = np.nanmean(ifiltereddbz10map)
-
-                                                #ifiltereddbz20map = np.copy(filtereddbz20map[iipfccy, iipfccx])
-                                                #ifiltereddbz20map = ifiltereddbz20map[ifiltereddbz20map != fillvalue]
-                                                #if len(ifiltereddbz20map) > 0:
-                                                #    pfccdbz20[ipf-1] = np.nanmean(ifiltereddbz20map)
-
-                                                #ifiltereddbz30map = np.copy(filtereddbz30map[iipfccy, iipfccx])
-                                                #ifiltereddbz30map = ifiltereddbz30map[ifiltereddbz30map != fillvalue]
-                                                #if len(ifiltereddbz30map) > 0:
-                                                #    pfccdbz30[ipf-1] = np.nanmean(ifiltereddbz30map)
-
-                                                #ifiltereddbz40map = np.copy(filtereddbz40map[iipfccy, iipfccx])
-                                                #ifiltereddbz40map = ifiltereddbz40map[ifiltereddbz40map != fillvalue]
-                                                #if len(ifiltereddbz40map) > 0:
-                                                #    pfccdbz40[ipf-1] = np.nanmean(ifiltereddbz40map)
-
-                                            # Stratiform statistics
+                                            # Stratiform precipitation feature statistics
                                             iipfsy, iipfsx = np.array(np.where((pfnumberlabelmap == ipf) & (filteredcsamap == 5)))
                                             niipfs = len(iipfsy)
 
@@ -760,7 +726,7 @@ def identifypf_mergedir_nmq(mcsstats_filebase, cloudid_filebase, pfdata_filebase
                                     radar_pfdbz50npix[it, itt, 0:nradar_save] = spfdbz50npix[0:nradar_save]
 
                                     ####################################################
-                                    # Average the first twe largest precipitation features to represent the cloud system
+                                    # Average the first two largest precipitation features to represent the cloud system
                                     print('Calculating statistics for the few largest convective and stratiform components')
                                     radar_ccavgnpix[it, itt] = np.nansum(spfccnpix[0:nradar_save])
                                     if radar_ccavgnpix[it, itt] > 0: 
@@ -769,26 +735,6 @@ def identifypf_mergedir_nmq(mcsstats_filebase, cloudid_filebase, pfdata_filebase
                                         radar_ccavgdbz20[it, itt] = np.nanmean(spfccdbz20[0:nradar_save])
                                         radar_ccavgdbz30[it, itt] = np.nanmean(spfccdbz30[0:nradar_save])
                                         radar_ccavgdbz40[it, itt] = np.nanmean(spfccdbz40[0:nradar_save])
-
-                                        #ispfccdbz10 = spfccdbz10[0:nradar_save]
-                                        #ispfccdbz10 = ispfccdbz10[ispfccdbz10 != fillvalue]
-                                        #if len(ispfccdbz10) > 0:
-                                        #    radar_ccavgdbz10[it, itt] = np.nanmean(ispfccdbz10)
-
-                                        #ispfccdbz20 = spfccdbz20[0:nradar_save]
-                                        #ispfccdbz20 = ispfccdbz20[ispfccdbz20 != fillvalue]
-                                        #if len(ispfccdbz20) > 0:
-                                        #    radar_ccavgdbz20[it, itt] = np.nanmean(ispfccdbz20)
-
-                                        #ispfccdbz30 = spfccdbz30[0:nradar_save]
-                                        #ispfccdbz30 = ispfccdbz30[ispfccdbz30 != fillvalue]
-                                        #if len(ispfccdbz30) > 0:
-                                        #    radar_ccavgdbz30[it, itt] = np.nanmean(ispfccdbz30)
-
-                                        #ispfccdbz40 = spfccdbz40[0:nradar_save]
-                                        #ispfccdbz40 = ispfccdbz40[ispfccdbz40 != fillvalue]
-                                        #if len(ispfccdbz40) > 0:
-                                        #    radar_ccavgdbz40[it, itt] = np.nanmean(ispfccdbz40)
 
                                     radar_sfavgnpix[it, itt] = np.nansum(spfsfnpix[0:nradar_save])
                                     if radar_sfavgnpix[it, itt] != -9999:
@@ -807,25 +753,14 @@ def identifypf_mergedir_nmq(mcsstats_filebase, cloudid_filebase, pfdata_filebase
     print(time.ctime())
 
     radar_pfdbz40area = np.multiply(radar_pfdbz40npix, np.square(pixel_radius))
-    #radar_pfdbz40area[radar_pfdbz40area < 0] = fillvalue
-
     radar_pfdbz45area = np.multiply(radar_pfdbz45npix, np.square(pixel_radius))
-    #radar_pfdbz45area[radar_pfdbz45area < 0] = fillvalue
-
     radar_pfdbz50area = np.multiply(radar_pfdbz50npix, np.square(pixel_radius))
-    #radar_pfdbz50area[radar_pfdbz50area < 0] = fillvalue
-    
+
     radar_pfarea = np.multiply(radar_pfnpix, np.square(pixel_radius))
-    #radar_pfarea[radar_pfarea < 0] = fillvalue
-
     radar_ccavgarea = np.multiply(radar_ccavgnpix, np.square(pixel_radius))
-    #radar_ccavgarea[radar_ccavgarea < 0] = fillvalue
-
     radar_sfavgarea = np.multiply(radar_sfavgnpix, np.square(pixel_radius))
-    #radar_sfavgarea[radar_sfavgarea < 0] = fillvalue
 
     radar_ccarea = np.multiply(radar_ccnpix, np.square(pixel_radius))
-    #radar_ccarea[radar_ccarea < 0] = fillvalue
 
     ##################################
     # Save output to netCDF file

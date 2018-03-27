@@ -92,7 +92,7 @@ def trackclouds_mergedir(zipped_inputs):
         nreference = reference_data['nclouds'].data                                                     # Load number of clouds / features
 
         ##########################################################
-        # Load cloudid file from before, called new file
+        # Load next cloudid file, called new file
         print(new_filedatetime)
 
         new_data = xr.open_dataset(new_file, autoclose=True)                            # Open file

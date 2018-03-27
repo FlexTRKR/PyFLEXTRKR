@@ -35,8 +35,9 @@ run_labelmcs = 0        # Create maps of MCSs
 # Set version ofcode
 cloudidmethod = 'futyan4' # Option: futyan3 = identify cores and cold anvils and expand to get warm anvil, futyan4=identify core and expand for cold and warm anvils
 keep_singlemergesplit = 1 # Options: 0=All short tracks are removed, 1=Only short tracks without mergers or splits are removed
-show_alltracks = 1 # Options: 0=Maps of all tracks are not created, 1=Maps of all tracks are created (much slower)
+show_alltracks = 1 # Options: 0=Maps of all tracks are not created, 1=Maps of all tracks are created (much slower!)
 run_parallel = 1 # Options: 0-run serially, 1-run parallel (uses Pool from Multiprocessing)
+process_halfhours = 0                       # 0 = No, 1 = Yes
 
 # Specify version of code using
 cloudid_version = 'v1.0'
@@ -48,7 +49,7 @@ curr_id_version = 'v1.0'
 curr_track_version = 'v1.0'
 curr_tracknumbers_version = 'v1.0'
 
-# Specify days to run
+# Specify days to run, (YYYYMMDD.hhmm)
 startdate = '20110401.0000'
 enddate = '20110831.2300'
 
@@ -66,7 +67,7 @@ othresh = 0.5                              # overlap percentage threshold
 lengthrange = np.array([2,120])            # A vector [minlength,maxlength] to specify the lifetime range for the tracks
 nmaxlinks = 20                             # Maximum number of clouds that any single cloud can be linked to
 nmaxclouds = 1000                          # Maximum number of clouds allowed to be in one track
-absolutetb_threshs = np.array([160,330])   # k A vector [min, max] brightness temperature allowed. Brightness temperatures outside this range are ignored.
+absolutetb_threshs = np.array([160, 330])   # k A vector [min, max] brightness temperature allowed. Brightness temperatures outside this range are ignored.
 warmanvilexpansion = 0                     # If this is set to one, then the cold anvil is spread laterally until it exceeds the warm anvil threshold
 mincoldcorepix = 4                         # Minimum number of pixels for the cold core, needed for futyan version 4 cloud identification code. Not used if use futyan version 3.
 smoothwindowdimensions = 10                # Dimension of the boxcar filter used for futyan version 4. Not used in futyan version 3
@@ -102,15 +103,12 @@ pfdata_filebase = 'csa4km_'
 rainaccumulation_filebase = 'regrid_q2_'
 
 root_path = '/global/homes/h/hcbarnes/Tracking/SatelliteRadar/'
-#clouddata_path = '/global/project/projectdirs/m1867/zfeng/usa/mergedir/Netcdf/2011/'
 clouddata_path = '/global/homes/h/hcbarnes/Tracking/SatelliteRadar/data/2011/'
 pfdata_path = '/global/project/projectdirs/m1867/zfeng/usa/nmq/csa4km/2011/'
 rainaccumulation_path = '/global/project/projectdirs/m1867/zfeng/usa/nmq/q2/regrid/2011/'
 scratchpath = './'
-latlon_file = '/global/project/projectdirs/m1867/zfeng/usa/mergedir/Geolocation/EUS_Geolocation_Data.nc'
 
 # Specify data structure
-processhalfhours = 0                       # 0 = No, 1 = Yes
 datatimeresolution = 1                     # hours
 dimname = 'nclouds'
 numbername = 'convcold_cloudnumber'
@@ -130,7 +128,6 @@ year = startdate[0:5]
 cloudtb_threshs = np.hstack((cloudtb_core, cloudtb_cold, cloudtb_warm, cloudtb_cloud))
 
 # Specify additional file locations
-#datapath = root_path                            # Location of raw data
 tracking_outpath = root_path + 'tracking/'       # Data on individual features being tracked
 stats_outpath = root_path + 'stats/'             # Data on track statistics
 mcstracking_outpath = root_path + 'mcstracking/' + startdate + '_' + enddate + '/' # Pixel level data for MCSs
@@ -147,10 +144,10 @@ if not os.path.exists(stats_outpath):
 
 ########################################################################
 # Calculate basetime of start and end date
-TEMP_starttime = datetime.datetime(int(startdate[0:4]), int(startdate[4:6]), int(startdate[6:8]), 0, 0, 0, tzinfo=utc)
+TEMP_starttime = datetime.datetime(int(startdate[0:4]), int(startdate[4:6]), int(startdate[6:8]), int(startdate[9:11]), int(startdate[11:13]), 0, tzinfo=utc)
 start_basetime = calendar.timegm(TEMP_starttime.timetuple())
 
-TEMP_endtime = datetime.datetime(int(enddate[0:4]), int(enddate[4:6]), int(enddate[6:8]), 23, 0, 0, tzinfo=utc)
+TEMP_endtime = datetime.datetime(int(enddate[0:4]), int(enddate[4:6]), int(enddate[6:8]), int(enddate[9:11]), int(enddate[11:13]) 0, tzinfo=utc)
 end_basetime = calendar.timegm(TEMP_endtime.timetuple())
 
 ##########################################################################
@@ -206,7 +203,7 @@ if run_idclouds == 1:
     list_warmanvilexpansion = np.ones(filestep)*warmanvilexpansion
     list_coldcorethresh = np.ones(filestep)*mincoldcorepix
     list_smoothsize = [smoothwindowdimensions]*(filestep)
-    list_processhalfhour = [processhalfhours]*(filestep)
+    list_processhalfhour = [process_halfhours]*(filestep)
 
     idclouds_input = zip(rawdatafiles, list_irdatasource, list_datadescription, list_datavariablename, list_cloudidversion, list_trackingoutpath, list_latlonfile, list_latname, list_lonname, list_geolimits, list_startdate, list_enddate, list_pixelradius, list_areathresh, list_cloudtbthreshs, list_absolutetbthreshs, list_missthresh, list_cloudidmethod, list_coldcorethresh, list_smoothsize, list_warmanvilexpansion, list_processhalfhour)
 
@@ -322,12 +319,12 @@ if run_tracksingle == 0:
 # Call function
 if run_gettracks == 1:
     # Load function
-    from gettracks import gettracknumbers_mergedir
+    from gettracks import gettracknumbers
 
     # Call function
     print('Getting track numbers')
     print(time.ctime())
-    gettracknumbers_mergedir(irdatasource, datadescription, tracking_outpath, stats_outpath, startdate, enddate, timegap, nmaxclouds, cloudid_filebase, npxname, tracknumber_version, singletrack_filebase, keepsingletrack=keep_singlemergesplit, removestartendtracks=1)
+    gettracknumbers(irdatasource, datadescription, tracking_outpath, stats_outpath, startdate, enddate, timegap, nmaxclouds, cloudid_filebase, npxname, tracknumber_version, singletrack_filebase, keepsingletrack=keep_singlemergesplit, removestartendtracks=1)
     tracknumbers_filebase = 'tracknumbers' + tracknumber_version
 
 ############################################################
@@ -346,7 +343,7 @@ if run_finalstats == 1:
     # Call satellite version of function
     print('Calculating track statistics')
     print(time.ctime())
-    trackstats_sat(irdatasource, datadescription, pixel_radius, latlon_file, geolimits, area_thresh, cloudtb_threshs, absolutetb_threshs, startdate, enddate, timegap, cloudid_filebase, tracking_outpath, stats_outpath, track_version, tracknumber_version, tracknumbers_filebase, lengthrange=lengthrange)
+    trackstats_sat(irdatasource, datadescription, pixel_radius, geolimits, area_thresh, cloudtb_threshs, absolutetb_threshs, startdate, enddate, timegap, cloudid_filebase, tracking_outpath, stats_outpath, track_version, tracknumber_version, tracknumbers_filebase, lengthrange=lengthrange)
     trackstats_filebase = 'stats_tracknumbers' + tracknumber_version
 
 ##############################################################

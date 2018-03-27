@@ -93,9 +93,9 @@ def idclouds_gpmmergedir(zipped_inputs):
     #########################################################
     # Define processing flag
     if processhalfhour == 0:
-        TimeIndices = 1
+        TimeIndices = 1 # Process hourly data
     else:
-        TimeIndices = 2
+        TimeIndices = 2 # Process half-hourly data
 
     ########################################################
     # load data:
