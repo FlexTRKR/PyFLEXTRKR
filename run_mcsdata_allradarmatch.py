@@ -23,13 +23,13 @@ print(time.ctime())
 # Set variables describing data, file structure, and tracking thresholds
 
 # Specify which sets of code to run. (1 = run code, 0 = don't run code)
-run_idclouds = 0        # Segment and identify cloud systems
+run_idclouds = 1        # Segment and identify cloud systems
 run_tracksingle = 0     # Track single consecutive cloudid files
-run_gettracks = 1       # Run trackig for all files
-run_finalstats = 1      # Calculate final statistics
-run_identifymcs = 1     # Isolate MCSs
-run_matchpf = 1         # Identify precipitation features with MCSs
-run_robustmcs = 1       # Filter potential mcs cases using nmq radar variables
+run_gettracks = 0       # Run trackig for all files
+run_finalstats = 0      # Calculate final statistics
+run_identifymcs = 0     # Isolate MCSs
+run_matchpf = 0         # Identify precipitation features with MCSs
+run_robustmcs = 0       # Filter potential mcs cases using nmq radar variables
 run_labelmcs = 0        # Create maps of MCSs
 
 # Set version ofcode
@@ -51,7 +51,7 @@ curr_tracknumbers_version = 'v1.0'
 
 # Specify days to run, (YYYYMMDD.hhmm)
 startdate = '20110401.0000'
-enddate = '20110831.2300'
+enddate = '20110401.2300'
 
 # Specify cloud tracking parameters
 geolimits = np.array([25, -110, 51, -70])  # 4-element array with plotting boundaries [lat_min, lon_min, lat_max, lon_max]
@@ -104,6 +104,10 @@ rainaccumulation_filebase = 'regrid_q2_'
 
 root_path = '/global/homes/h/hcbarnes/Tracking/SatelliteRadar/'
 clouddata_path = '/global/homes/h/hcbarnes/Tracking/SatelliteRadar/data/2011/'
+#root_path = '/global/homes/h/hcbarnes/Tracking/SatelliteRadar/'
+#root_path = '/scratch3/scratchdirs/feng045/usa/mergir/netcdf/'
+#clouddata_path = '/global/project/projectdirs/m1867/zfeng/usa/mergedir/Netcdf/2011/'
+#clouddata_path = '/scratch3/scratchdirs/feng045/usa/mergir/netcdf/2011/'
 pfdata_path = '/global/project/projectdirs/m1867/zfeng/usa/nmq/csa4km/2011/'
 rainaccumulation_path = '/global/project/projectdirs/m1867/zfeng/usa/nmq/q2/regrid/2011/'
 scratchpath = './'
