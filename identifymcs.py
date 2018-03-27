@@ -747,7 +747,7 @@ def identifymcs_mergedir_netcdf4(statistics_filebase, stats_path, startdate, end
     # Create file
     mcstrackstatistics_outfile = stats_path + 'mcs_tracks_' + startdate + '_' + enddate + '.nc'
 
-        # Check if file already exists. If exists, delete
+    # Check if file already exists. If exists, delete
     if os.path.isfile(mcstrackstatistics_outfile):
         os.remove(mcstrackstatistics_outfile)
 

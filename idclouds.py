@@ -148,7 +148,7 @@ def idclouds_gpmmergedir(zipped_inputs):
             in_ir[in_ir > maxtb_thresh] = np.nan
 
             #####################################################
-            # determine geographic region of interest is within the data set. if it is proceed and limit the data to that geographic region. if not exit the code.
+            # determine if geographic region of interest is within the data set. if it is proceed and limit the data to that geographic region. if not exit the code.
 
             #isolate data within lat/lon range set by limit
             indicesy, indicesx = np.array(np.where((in_lat >= geolimits[0]) & (in_lat <= geolimits[2]) & (in_lon >= geolimits[1]) & (in_lon <= geolimits[3])))
@@ -162,7 +162,7 @@ def idclouds_gpmmergedir(zipped_inputs):
                 ######################################################
                 # proceed only if number of missing data does not exceed an accepable threshold
                 # determine number of missing data
-                missingcount = len(np.array(np.where(np.isnan(out_ir)))[0,:])
+                missingcount = len(np.array(np.where(np.isnan(out_ir)))[0, :])
                 ny, nx = np.shape(out_ir)
 
                 if np.divide(missingcount, (ny*nx)) < miss_thresh:

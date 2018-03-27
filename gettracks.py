@@ -86,10 +86,10 @@ def gettracknumbers(datasource, datadescription, datainpath, dataoutpath, startd
     #############################################################################
     # Keep only files and date/times within start - end time interval
     # Put start and end dates in base time
-    TEMP_starttime = calendar.timegm(datetime.datetime(int(startdate[0:4]), int(startdate[4:6]), int(startdate[6:8]), int(startdate[9:11]), 0, 0, 0).timetuple())
+    TEMP_starttime = calendar.timegm(datetime.datetime(int(startdate[0:4]), int(startdate[4:6]), int(startdate[6:8]), int(startdate[9:11]), int(startdate[11:13]), 0).timetuple())
     start_basetime = np.datetime64(np.array([pd.to_datetime(TEMP_starttime, unit='s')][0], dtype='datetime64[s]'))
 
-    TEMP_endtime = calendar.timegm(datetime.datetime(int(enddate[0:4]), int(enddate[4:6]), int(enddate[6:8]), int(enddate[9:11]), 0, 0, 0).timetuple())
+    TEMP_endtime = calendar.timegm(datetime.datetime(int(enddate[0:4]), int(enddate[4:6]), int(enddate[6:8]), int(enddate[9:11]), int(enddate[11:13]), 0).timetuple())
     end_basetime = np.datetime64(np.array([pd.to_datetime(TEMP_endtime, unit='s')][0], dtype='datetime64[s]'))
 
     # Identify files within the start-end date interval
