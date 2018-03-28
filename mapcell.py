@@ -97,7 +97,7 @@ def mapcell_LES(zipped_inputs):
     file_datetime = time.strftime("%Y%m%d_%H%M", time.gmtime(np.copy(filebasetime)))
     filedate = np.copy(file_datetime[0:8])
     filetime = np.copy(file_datetime[9:14])
-    print('cloudid file: ' + cloudid_filename)
+    print(('cloudid file: ' + cloudid_filename))
 
     # Load cloudid data
     cloudiddata = Dataset(cloudid_filename, 'r')

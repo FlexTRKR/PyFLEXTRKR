@@ -220,8 +220,8 @@ def idclouds_gpmmergedir(zipped_inputs):
                                                          'lat': (['lat'], np.squeeze(out_lat[:, 0])), \
                                                          'lon': (['lon'], np.squeeze(out_lon[0, :])), \
                                                          'clouds': (['clouds'],  np.arange(1, final_nclouds+1)), \
-                                                         'ndatechar': (['ndatechar'], np.arange(0, 8)), \
-                                                         'ntimechar': (['ntimechar'], np.arange(0, 4))}, \
+                                                         'ndatechar': (['ndatechar'], np.arange(0, 32)), \
+                                                         'ntimechar': (['ntimechar'], np.arange(0, 16))}, \
                                                  attrs={'title': 'Statistics about convective features identified in the data from ' + file_datestring[0:4] + '/' + file_datestring[4:6] + '/' + file_datestring[6:8] + ' ' + file_timestring[0:2] + ':' + file_timestring[2:4] + ' utc', \
                                                         'institution': 'Pacific Northwest National Laboratory', \
                                                         'convections': 'CF-1.6', \
@@ -517,7 +517,7 @@ def idclouds_mergedir(zipped_inputs):
 
                 TEMP_basetime = calendar.timegm(datetime.datetime(int(datafiledatestring[0:4]), int(datafiledatestring[4:6]), int(datafiledatestring[6:8]), int(datafiletimestring[0:2]), int(datafiletimestring[2:4]), 0, 0).timetuple())
                 file_basetime = pd.to_datetime(TEMP_basetime, unit='s')
-                print(np.array([file_basetime], dtype='datetime64[ns]'))
+                print((np.array([file_basetime], dtype='datetime64[ns]')))
 
                 # call idclouds subroutine
                 if cloudidmethod == 'futyan3':

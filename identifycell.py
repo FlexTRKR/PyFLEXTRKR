@@ -88,7 +88,7 @@ def identifycell_LES_xarray(statistics_filebase, stats_path, startdate, enddate,
     cellsplitstatus = np.ones((nmaincell, int(nmaxlength), nmaxmerge), dtype=int)*-9999
 
     # Loop through each cell and link small clouds merging in
-    print('Number of main cells: ' + str(int(nmaincell)))
+    print(('Number of main cells: ' + str(int(nmaincell))))
     for icell in np.arange(0, nmaincell):
         print('')
         print(icell)
@@ -109,7 +109,7 @@ def identifycell_LES_xarray(statistics_filebase, stats_path, startdate, enddate,
         [mergefile, mergefeature] = np.array(np.where(np.copy(allstatdata['mergenumbers'].data) == maincelltracknumbers[icell]))
 
         # Loop through all merging tracks, if present
-        print(len(mergefile))
+        print((len(mergefile)))
         if len(mergefile) > 0:
             # Isolate merging cases that have short duration
             mergefeature = mergefeature[trackstat_duration[mergefile] < merge_duration]
@@ -156,7 +156,7 @@ def identifycell_LES_xarray(statistics_filebase, stats_path, startdate, enddate,
         [splitfile, splitfeature] = np.array(np.where(np.copy(allstatdata['splitnumbers'].data) == maincelltracknumbers[icell]))
 
         # Loop through all splitting tracks, if present
-        print(len(splitfile))
+        print((len(splitfile)))
         if len(splitfile) > 0:
             # Isolate splitting cases that have short duration
             splitfeature = splitfeature[trackstat_duration[splitfile] < split_duration]
@@ -443,7 +443,7 @@ def identifycell_LES_netcdf4(statistics_filebase, stats_path, startdate, enddate
     cellsplitstatus = np.ones((nmaincell, int(nmaxlength), nmaxmerge), dtype=int)*-9999
 
     # Loop through each cell and link small clouds merging in
-    print('Number of main cells: ' + str(int(nmaincell)))
+    print(('Number of main cells: ' + str(int(nmaincell))))
     for icell in np.arange(0, nmaincell):
         print('')
         print(icell)
@@ -464,7 +464,7 @@ def identifycell_LES_netcdf4(statistics_filebase, stats_path, startdate, enddate
         [mergefile, mergefeature] = np.array(np.where(np.copy(mergenumbers) == maincelltracknumbers[icell]))
 
         # Loop through all merging tracks, if present
-        print(len(mergefile))
+        print((len(mergefile)))
         if len(mergefile) > 0:
             # Isolate merging cases that have short duration
             mergefeature = mergefeature[trackstat_duration[mergefile] < merge_duration]
@@ -511,7 +511,7 @@ def identifycell_LES_netcdf4(statistics_filebase, stats_path, startdate, enddate
         [splitfile, splitfeature] = np.array(np.where(np.copy(splitnumbers == maincelltracknumbers[icell])))
 
         # Loop through all splitting tracks, if present
-        print(len(splitfile))
+        print((len(splitfile)))
         if len(splitfile) > 0:
             # Isolate splitting cases that have short duration
             splitfeature = splitfeature[trackstat_duration[splitfile] < split_duration]

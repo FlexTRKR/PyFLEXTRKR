@@ -17,7 +17,7 @@ import xarray as xr
 # Author: Orginial IDL version written by Sally McFarlane and Zhe Feng (zhe.feng@pnnl.gov). Adapted to Python by Hannah Barnes (hannah.barnes@pnnl.gov)
 
 print('Code Started')
-print(time.ctime())
+print((time.ctime()))
 
 ##################################################################################################
 # Set variables describing data, file structure, and tracking thresholds
@@ -25,17 +25,17 @@ print(time.ctime())
 # Specify which sets of code to run. (1 = run code, 0 = don't run code)
 run_idclouds = 0        # Segment and identify cloud systems
 run_tracksingle = 0     # Track single consecutive cloudid files
-run_gettracks = 1       # Run trackig for all files
-run_finalstats = 1      # Calculate final statistics
-run_identifymcs = 1     # Isolate MCSs
-run_matchpf = 1         # Identify precipitation features with MCSs
-run_robustmcs = 1       # Filter potential mcs cases using nmq radar variables
-run_labelmcs = 0        # Create maps of MCSs
+run_gettracks = 0       # Run trackig for all files
+run_finalstats = 0      # Calculate final statistics
+run_identifymcs = 0     # Isolate MCSs
+run_matchpf = 0         # Identify precipitation features with MCSs
+run_robustmcs = 0       # Filter potential mcs cases using nmq radar variables
+run_labelmcs = 1        # Create maps of MCSs
 
 # Set version ofcode
 cloudidmethod = 'futyan4' # Option: futyan3 = identify cores and cold anvils and expand to get warm anvil, futyan4=identify core and expand for cold and warm anvils
 keep_singlemergesplit = 1 # Options: 0=All short tracks are removed, 1=Only short tracks without mergers or splits are removed
-show_alltracks = 1 # Options: 0=Maps of all tracks are not created, 1=Maps of all tracks are created (much slower!)
+show_alltracks = 0 # Options: 0=Maps of all tracks are not created, 1=Maps of all tracks are created (much slower!)
 run_parallel = 1 # Options: 0-run serially, 1-run parallel (uses Pool from Multiprocessing)
 process_halfhours = 0                       # 0 = No, 1 = Yes
 
@@ -49,9 +49,15 @@ curr_id_version = 'v1.0'
 curr_track_version = 'v1.0'
 curr_tracknumbers_version = 'v1.0'
 
+<<<<<<< HEAD
 # Specify days to run, (YYYYMMDD.hhmm)
 startdate = '20110401.0000'
-enddate = '20110831.2300'
+enddate = '20110401.2300'
+=======
+# Specify days to run
+startdate = '20110520.0000'
+enddate = '20110521.2300'
+>>>>>>> Ported to Python3, fixed some random bugs.
 
 # Specify cloud tracking parameters
 geolimits = np.array([25, -110, 51, -70])  # 4-element array with plotting boundaries [lat_min, lon_min, lat_max, lon_max]
@@ -65,7 +71,7 @@ cloudtb_warm = 261.                        # K
 cloudtb_cloud = 261.                       # K
 othresh = 0.5                              # overlap percentage threshold
 lengthrange = np.array([2,120])            # A vector [minlength,maxlength] to specify the lifetime range for the tracks
-nmaxlinks = 20                             # Maximum number of clouds that any single cloud can be linked to
+nmaxlinks = 24                             # Maximum number of clouds that any single cloud can be linked to
 nmaxclouds = 1000                          # Maximum number of clouds allowed to be in one track
 absolutetb_threshs = np.array([160, 330])   # k A vector [min, max] brightness temperature allowed. Brightness temperatures outside this range are ignored.
 warmanvilexpansion = 0                     # If this is set to one, then the cold anvil is spread laterally until it exceeds the warm anvil threshold
@@ -104,6 +110,10 @@ rainaccumulation_filebase = 'regrid_q2_'
 
 root_path = '/global/homes/h/hcbarnes/Tracking/SatelliteRadar/'
 clouddata_path = '/global/homes/h/hcbarnes/Tracking/SatelliteRadar/data/2011/'
+#root_path = '/global/homes/h/hcbarnes/Tracking/SatelliteRadar/'
+#root_path = '/scratch3/scratchdirs/feng045/usa/mergir/netcdf/'
+#clouddata_path = '/global/project/projectdirs/m1867/zfeng/usa/mergedir/Netcdf/2011/'
+#clouddata_path = '/scratch3/scratchdirs/feng045/usa/mergir/netcdf/2011/'
 pfdata_path = '/global/project/projectdirs/m1867/zfeng/usa/nmq/csa4km/2011/'
 rainaccumulation_path = '/global/project/projectdirs/m1867/zfeng/usa/nmq/q2/regrid/2011/'
 scratchpath = './'
@@ -156,7 +166,7 @@ if run_idclouds == 1:
     ######################################################################
     # Identify files to process
     print('Identifying raw data files to process.')
-    print(time.ctime())
+    print((time.ctime()))
 
     # Isolate all possible files
     allrawdatafiles = fnmatch.filter(os.listdir(clouddata_path), databasename+'*')
@@ -205,7 +215,7 @@ if run_idclouds == 1:
     list_smoothsize = [smoothwindowdimensions]*(filestep)
     list_processhalfhour = [process_halfhours]*(filestep)
 
-    idclouds_input = zip(rawdatafiles, list_irdatasource, list_datadescription, list_datavariablename, list_cloudidversion, list_trackingoutpath, list_latlonfile, list_latname, list_lonname, list_geolimits, list_startdate, list_enddate, list_pixelradius, list_areathresh, list_cloudtbthreshs, list_absolutetbthreshs, list_missthresh, list_cloudidmethod, list_coldcorethresh, list_smoothsize, list_warmanvilexpansion, list_processhalfhour)
+    idclouds_input = list(zip(rawdatafiles, list_irdatasource, list_datadescription, list_datavariablename, list_cloudidversion, list_trackingoutpath, list_latlonfile, list_latname, list_lonname, list_geolimits, list_startdate, list_enddate, list_pixelradius, list_areathresh, list_cloudtbthreshs, list_absolutetbthreshs, list_missthresh, list_cloudidmethod, list_coldcorethresh, list_smoothsize, list_warmanvilexpansion, list_processhalfhour))
 
     ## Call function
     if run_parallel == 0:
@@ -216,8 +226,8 @@ if run_idclouds == 1:
         # Parallel version
         if __name__ == '__main__':
             print('Identifying clouds')
-            print(time.ctime())
-            pool = Pool(4)
+            print((time.ctime()))
+            pool = Pool(10)
             pool.map(idclouds_gpmmergedir, idclouds_input)
             pool.close()
             pool.join()
@@ -239,7 +249,7 @@ if run_tracksingle == 1:
     ################################################################
     # Identify files to process
     print('Identifying cloudid files to process')
-    print(time.ctime())
+    print((time.ctime()))
 
     # Isolate all possible files
     allcloudidfiles = fnmatch.filter(os.listdir(tracking_outpath), cloudid_filebase +'*')
@@ -288,9 +298,9 @@ if run_tracksingle == 1:
 
     # Call function
     print('Tracking clouds between single files')
-    print(time.ctime())
+    print((time.ctime()))
 
-    trackclouds_input = zip(cloudidfiles[0:-1], cloudidfiles[1::], cloudidfiles_datestring[0:-1], cloudidfiles_datestring[1::], cloudidfiles_timestring[0:-1], cloudidfiles_timestring[1::], cloudidfiles_basetime[0:-1], cloudidfiles_basetime[1::], list_trackingoutpath, list_trackversion, list_timegap, list_nmaxlinks, list_othresh, list_startdate, list_enddate)
+    trackclouds_input = list(zip(cloudidfiles[0:-1], cloudidfiles[1::], cloudidfiles_datestring[0:-1], cloudidfiles_datestring[1::], cloudidfiles_timestring[0:-1], cloudidfiles_timestring[1::], cloudidfiles_basetime[0:-1], cloudidfiles_basetime[1::], list_trackingoutpath, list_trackversion, list_timegap, list_nmaxlinks, list_othresh, list_startdate, list_enddate))
 
     if run_parallel == 0:
         # Serial version
@@ -299,7 +309,7 @@ if run_tracksingle == 1:
     elif run_parallel == 1:
         # parallelize version
         if __name__ == '__main__':
-            pool = Pool(4)
+            pool = Pool(10)
             pool.map(trackclouds_mergedir, trackclouds_input)
             pool.close()
             pool.join()
@@ -323,8 +333,13 @@ if run_gettracks == 1:
 
     # Call function
     print('Getting track numbers')
+<<<<<<< HEAD
     print(time.ctime())
     gettracknumbers(irdatasource, datadescription, tracking_outpath, stats_outpath, startdate, enddate, timegap, nmaxclouds, cloudid_filebase, npxname, tracknumber_version, singletrack_filebase, keepsingletrack=keep_singlemergesplit, removestartendtracks=1)
+=======
+    print((time.ctime()))
+    gettracknumbers_mergedir(irdatasource, datadescription, tracking_outpath, stats_outpath, startdate, enddate, timegap, nmaxclouds, cloudid_filebase, npxname, tracknumber_version, singletrack_filebase, keepsingletrack=keep_singlemergesplit, removestartendtracks=1)
+>>>>>>> Ported to Python3, fixed some random bugs.
     tracknumbers_filebase = 'tracknumbers' + tracknumber_version
 
 ############################################################
@@ -342,8 +357,13 @@ if run_finalstats == 1:
 
     # Call satellite version of function
     print('Calculating track statistics')
+<<<<<<< HEAD
     print(time.ctime())
     trackstats_sat(irdatasource, datadescription, pixel_radius, geolimits, area_thresh, cloudtb_threshs, absolutetb_threshs, startdate, enddate, timegap, cloudid_filebase, tracking_outpath, stats_outpath, track_version, tracknumber_version, tracknumbers_filebase, lengthrange=lengthrange)
+=======
+    print((time.ctime()))
+    trackstats_sat(irdatasource, datadescription, pixel_radius, latlon_file, geolimits, area_thresh, cloudtb_threshs, absolutetb_threshs, startdate, enddate, timegap, cloudid_filebase, tracking_outpath, stats_outpath, track_version, tracknumber_version, tracknumbers_filebase, lengthrange=lengthrange)
+>>>>>>> Ported to Python3, fixed some random bugs.
     trackstats_filebase = 'stats_tracknumbers' + tracknumber_version
 
 ##############################################################
@@ -361,7 +381,7 @@ if run_identifymcs == 1:
     from identifymcs import identifymcs_mergedir_netcdf4
 
     # Call satellite version of function
-    print(time.ctime())
+    print((time.ctime()))
     identifymcs_mergedir_netcdf4(trackstats_filebase, stats_outpath, startdate, enddate, geolimits, datatimeresolution, mcs_mergedir_areathresh, mcs_mergedir_durationthresh, mcs_mergedir_eccentricitythresh, mcs_mergedir_splitduration, mcs_mergedir_mergeduration, nmaxlinks)
     mcsstats_filebase =  'mcs_tracks_'
 
@@ -380,7 +400,7 @@ if run_matchpf == 1:
     from matchpf import identifypf_mergedir_nmq
 
     # Call function
-    print(time.ctime())
+    print((time.ctime()))
     identifypf_mergedir_nmq(mcsstats_filebase, cloudid_filebase, pfdata_filebase, rainaccumulation_filebase, stats_outpath, tracking_outpath, pfdata_path, rainaccumulation_path, startdate, enddate, geolimits, nmaxpf, nmaxcore, nmaxclouds, rr_min, pixel_radius, irdatasource, nmqdatasource, datadescription, datatimeresolution, mcs_mergedir_areathresh, mcs_mergedir_durationthresh, mcs_mergedir_eccentricitythresh)
     pfstats_filebase = 'mcs_tracks_'  + nmqdatasource + '_' 
 
@@ -400,7 +420,7 @@ if run_robustmcs == 1:
     from robustmcs import filtermcs_mergedir_nmq
 
     # Call function
-    print(time.ctime())
+    print((time.ctime()))
     filtermcs_mergedir_nmq(stats_outpath, pfstats_filebase, startdate, enddate, datatimeresolution, geolimits, mcs_pf_majoraxisthresh, mcs_pf_durationthresh, mcs_pf_aspectratiothresh, mcs_pf_lifecyclethresh, mcs_pf_lengththresh, mcs_pf_gap)
     robustmcs_filebase = 'robust_mcs_tracks_nmq_'
 
@@ -470,7 +490,7 @@ if run_labelmcs == 1:
     list_enddate = [enddate]*(cloudidfilestep-1)
     list_showalltracks = [show_alltracks]*(cloudidfilestep-1)
 
-    robustmcsmap_input = zip(cloudidfiles, cloudidfiles_basetime, list_robustmcsstat_filebase, list_trackstat_filebase, list_pfdata_filebase, list_rainaccumulation_filebase, list_mcstracking_path, list_stats_path, list_pfdata_path, list_rainaccumulation_path, list_pcp_thresh, list_nmaxpf, list_absolutetb_threshs, list_startdate, list_enddate, list_showalltracks)
+    robustmcsmap_input = list(zip(cloudidfiles, cloudidfiles_basetime, list_robustmcsstat_filebase, list_trackstat_filebase, list_pfdata_filebase, list_rainaccumulation_filebase, list_mcstracking_path, list_stats_path, list_pfdata_path, list_rainaccumulation_path, list_pcp_thresh, list_nmaxpf, list_absolutetb_threshs, list_startdate, list_enddate, list_showalltracks))
 
     if run_parallel == 0:
         # Call function
@@ -481,7 +501,7 @@ if run_labelmcs == 1:
     elif run_parallel == 1:
         if __name__ == '__main__':
             print('Creating maps of tracked MCSs')
-            print(time.ctime())
+            print((time.ctime()))
             pool = Pool(24)
             pool.map(mapmcs_pf, robustmcsmap_input)
             pool.close()

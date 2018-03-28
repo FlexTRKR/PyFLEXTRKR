@@ -87,7 +87,7 @@ def identifypf_mergedir_nmq(mcsstats_filebase, cloudid_filebase, pfdata_filebase
 
     import numpy as np
     import os.path
-    from netCDF4 import Dataset, num2date
+    from netCDF4 import Dataset, num2date, chartostring
     from scipy.ndimage import label, binary_dilation, generate_binary_structure
     from skimage.measure import regionprops
     from math import pi
@@ -101,7 +101,7 @@ def identifypf_mergedir_nmq(mcsstats_filebase, cloudid_filebase, pfdata_filebase
     #########################################################
     # Load MCS track stats
     print('Loading IR data')
-    print(time.ctime())
+    print((time.ctime()))
     mcsirstatistics_file = stats_path + mcsstats_filebase + startdate + '_' + enddate + '.nc'
     print(mcsirstatistics_file)
 
@@ -129,12 +129,13 @@ def identifypf_mergedir_nmq(mcsstats_filebase, cloudid_filebase, pfdata_filebase
     ir_ccsarea = mcsirstatdata['mcs_ccsarea'][:]
     mcsirstatdata.close()
 
-    ir_datetimestring = ir_datetimestring[:, :, :, 0]
+    #ir_datetimestring = ir_datetimestring[:, :, :, 0]
+    ir_datetimestring = ir_datetimestring[:, :, :]
 
     ###################################################################
     # Intialize precipitation statistic matrices
     print('Initializing matrices')
-    print(time.ctime())
+    print((time.ctime()))
 
     # Variables for each precipitation feature
     radar_npf = np.ones((ir_ntracks, ir_nmaxlength), dtype=int)*-9999
@@ -191,14 +192,14 @@ def identifypf_mergedir_nmq(mcsstats_filebase, cloudid_filebase, pfdata_filebase
 
     ##############################################################
     # Find precipitation feature in each mcs
-    print('Total Number of Tracks:' + str(ir_ntracks))
+    print(('Total Number of Tracks:' + str(ir_ntracks)))
 
     # Loop over each track
     print('Looping over each track')
-    print(time.ctime())
+    print((time.ctime()))
     for it in range(0, ir_ntracks):
-        print('Processing track ' + str(int(it)))
-        print(time.ctime())
+        print(('Processing track ' + str(int(it))))
+        print((time.ctime()))
 
         # Isolate ir statistics about this track
         itbasetime = np.copy(ir_basetime[it, :])
@@ -207,18 +208,21 @@ def identifypf_mergedir_nmq(mcsstats_filebase, cloudid_filebase, pfdata_filebase
         itmergecloudnumber = np.copy(ir_mergecloudnumber[it, :, :])
         itsplitcloudnumber = np.copy(ir_splitcloudnumber[it, :, :])
 
+        statistics_outfile = stats_path + 'mcs_tracks_'  + nmqdatasource + '_' + startdate + '_' + enddate + '.nc'
         # Loop through each time in the track
         irindices = np.array(np.where(itcloudnumber > 0))[0, :]
         print('Looping through each time step')
-        print('Number of time steps: ' + str(len(irindices)))
+        print(('Number of time steps: ' + str(len(irindices))))
         for itt in irindices:
-            print('Time step #: ' + str(itt))
+            print(('Time step #: ' + str(itt)))
             # Isolate the data at this time
             radar_basetime[it, itt] = np.array([pd.to_datetime(num2date(itbasetime[itt], units=basetime_units, calendar=basetime_calendar))], dtype='datetime64[s]')[0]
             ittcloudnumber = np.copy(itcloudnumber[itt])
             ittmergecloudnumber = np.copy(itmergecloudnumber[itt, :])
             ittsplitcloudnumber = np.copy(itsplitcloudnumber[itt, :])
             ittdatetimestring = np.copy(itdatetimestring[itt])
+            ittdatetimestring = str(chartostring(ittdatetimestring[:,0]))
+            #import pdb; pdb.set_trace()
 
             if ittdatetimestring[11:12] == '0':
                 # Generate date file names
@@ -227,7 +231,7 @@ def identifypf_mergedir_nmq(mcsstats_filebase, cloudid_filebase, pfdata_filebase
                 radar_filename = pfdata_path + pfdata_filebase + ittdatetimestring[0:8] + '-' + ittdatetimestring[9::] + '00.nc'
                 rainaccumulation_filename = rainaccumulation_path + rainaccumulation_filebase + ittdatetimestring[0:8] + '.' + ittdatetimestring[9::] + '00.nc'
 
-                statistics_outfile = stats_path + 'mcs_tracks_'  + nmqdatasource + '_' + startdate + '_' + enddate + '.nc'
+                #statistics_outfile = stats_path + 'mcs_tracks_'  + nmqdatasource + '_' + startdate + '_' + enddate + '.nc'
 
                 ########################################################################
                 # Load data
@@ -436,7 +440,7 @@ def identifypf_mergedir_nmq(mcsstats_filebase, cloudid_filebase, pfdata_filebase
                                 ccavgdbz40 = np.ones(ncc, dtype=float)*np.nan
 
                                 # Loop over each core
-                                print('Looping through each convective core: ' + str(ncc))
+                                print(('Looping through each convective core: ' + str(ncc)))
                                 for cc in range(1, ncc+1):
                                     # Isolate core
                                     iiccy, iiccx = np.array(np.where(ccnumberlabelmap == cc))
@@ -601,7 +605,7 @@ def identifypf_mergedir_nmq(mcsstats_filebase, cloudid_filebase, pfdata_filebase
                                     pfsfrainrate = np.ones(numpf, dtype=float)*np.nan
 
                                     print('Looping through each feature to calculate statistics')
-                                    print('Number of PFs ' + str(numpf))
+                                    print(('Number of PFs ' + str(numpf)))
                                     ###############################################
                                     # Loop through each feature
                                     for ipf in range(1, numpf+1):
@@ -741,16 +745,16 @@ def identifypf_mergedir_nmq(mcsstats_filebase, cloudid_filebase, pfdata_filebase
                                         radar_sfavgrainrate[it, itt] = np.nanmean(spfsfrainrate[np.where(~np.isnan(spfrainrate[0:nradar_save]))])
 
                 else:
-                    print('One or both files do not exist: ' + cloudid_filename + ', ' + radar_filename)
+                    print(('One or both files do not exist: ' + cloudid_filename + ', ' + radar_filename))
                                     
             else:
                 print(ittdatetimestring)
-                print('Half-hourly data ?!:' + str(ittdatetimestring))
+                print(('Half-hourly data ?!:' + str(ittdatetimestring)))
 
     ###################################
     # Convert number of pixels to area
     print('Converting pixels to area')
-    print(time.ctime())
+    print((time.ctime()))
 
     radar_pfdbz40area = np.multiply(radar_pfdbz40npix, np.square(pixel_radius))
     radar_pfdbz45area = np.multiply(radar_pfdbz45npix, np.square(pixel_radius))
@@ -765,12 +769,13 @@ def identifypf_mergedir_nmq(mcsstats_filebase, cloudid_filebase, pfdata_filebase
     ##################################
     # Save output to netCDF file
     print('Saving data')
-    print(time.ctime())
+    print((time.ctime()))
 
     # Check if file already exists. If exists, delete
     if os.path.isfile(statistics_outfile):
         os.remove(statistics_outfile)
 
+    #import pdb; pdb.set_trace()
     # Definte xarray dataset
     output_data = xr.Dataset({'mcs_length':(['track'], np.squeeze(ir_mcslength)), \
                               'length': (['track'], ir_tracklength), \
@@ -781,7 +786,7 @@ def identifypf_mergedir_nmq(mcsstats_filebase, cloudid_filebase, pfdata_filebase
                               'interruptions': (['track'], ir_trackinterruptions), \
                               'boundary': (['track'], ir_boundary), \
                               'basetime': (['track', 'time'], radar_basetime), \
-                              'datetimestring': (['track', 'time', 'characters'], ir_datetimestring), \
+                              'datetimestring': (['track', 'time', 'characters'], ir_datetimestring[:,:,:,0]), \
                               'meanlat': (['track', 'time'], ir_meanlat), \
                               'meanlon': (['track', 'time'], ir_meanlon), \
                               'core_area': (['track', 'time'], ir_corearea), \

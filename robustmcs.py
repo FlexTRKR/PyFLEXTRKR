@@ -128,7 +128,7 @@ def filtermcs_mergedir_nmq(stats_path, pfstats_filebase, startdate, enddate, tim
     ###################################################
     # Loop through each track
     for nt in range(0, ntracks):
-        print('Track # ' + str(nt))
+        print(('Track # ' + str(nt)))
 
         ############################################
         # Isolate data from this track 
@@ -210,7 +210,7 @@ def filtermcs_mergedir_nmq(stats_path, pfstats_filebase, startdate, enddate, tim
     if nmcs == 0:
         sys.exit('No MCS found!')
     else:
-        print('Number of robust MCS: ' + str(int(nmcs)))
+        print(('Number of robust MCS: ' + str(int(nmcs))))
 
     # Isolate data associated with robust MCS
     ir_tracklength = ir_tracklength[trackid_mcs]

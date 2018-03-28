@@ -54,7 +54,7 @@ def gettracknumbers(datasource, datadescription, datainpath, dataoutpath, startd
     ##################################################################################
     # Get single track files sort
     print('Determining which files will be processed')
-    print(time.ctime())
+    print((time.ctime()))
     singletrackfiles = fnmatch.filter(os.listdir(datainpath), singletrack_filebase +'*')
 
     # Put in temporal order
@@ -144,7 +144,7 @@ def gettracknumbers(datasource, datadescription, datainpath, dataoutpath, startd
     ############################################################################
     # Load first file
     print('Processing first file')
-    print(time.ctime())
+    print((time.ctime()))
     singletracking_data = Dataset(datainpath + files[0], 'r')                      # Open file
     nclouds_reference = int(np.nanmax(singletracking_data['nclouds_ref'][:]) + 1)  # Number of clouds in reference file
     basetime_ref = singletracking_data['basetime_ref'][:]
@@ -175,17 +175,17 @@ def gettracknumbers(datasource, datadescription, datainpath, dataoutpath, startd
     ###########################################################################
     # Loop over files and generate tracks
     print('Loop through the rest of the files')
-    print('Number of files: ' + str(nfiles))
-    print(time.ctime())
+    print(('Number of files: ' + str(nfiles)))
+    print((time.ctime()))
     ifill = 0
     for ifile in range(0,nfiles-1):
-        print(files[ifile])
-        print(time.ctime())
+        print((files[ifile]))
+        print((time.ctime()))
 
         ######################################################################
         # Load single track file
         print('Load track data')
-        print(time.ctime())
+        print((time.ctime()))
         singletracking_data = Dataset(datainpath + files[ifile], 'r')                  # Open file
         nclouds_reference = int(np.nanmax(singletracking_data['nclouds_ref'][:]) + 1)                               # Number of clouds in reference file
         nclouds_new = int(np.nanmax(singletracking_data['nclouds_new'][:]) + 1)
@@ -208,7 +208,7 @@ def gettracknumbers(datasource, datadescription, datainpath, dataoutpath, startd
         ########################################################################
         # Load cloudid files
         print('Load cloudid files')
-        print(time.ctime())
+        print((time.ctime()))
         # Reference cloudid file
         referencecloudid_data = Dataset(ref_file, 'r')
         npix_reference = referencecloudid_data[npxname][:]
@@ -222,7 +222,7 @@ def gettracknumbers(datasource, datadescription, datainpath, dataoutpath, startd
         ########################################################################
         # Check time gap between consecutive track files
         print('Checking if time gap between files satisfactory')
-        print(time.ctime())
+        print((time.ctime()))
 
         # Set previous and new times
         if ifile < 1:
@@ -234,10 +234,10 @@ def gettracknumbers(datasource, datadescription, datainpath, dataoutpath, startd
         if ifile > 0:
             hour_diff = np.array([time_new - time_prev]).astype(float)
             if hour_diff > (timegap*3.6*10**12):
-                print('Track terminates on: ' + ref_date)
-                print('Time difference: ' + str(hour_diff))
-                print('Maximum timegap allowed: ' + str(timegap))
-                print('New track starts on: ' + new_date)
+                print(('Track terminates on: ' + ref_date))
+                print(('Time difference: ' + str(hour_diff)))
+                print(('Maximum timegap allowed: ' + str(timegap)))
+                print(('New track starts on: ' + new_date))
 
                 # Flag the previous file as the last file
                 trackreset[0, ifill, :] = 2
@@ -264,16 +264,16 @@ def gettracknumbers(datasource, datadescription, datainpath, dataoutpath, startd
         # Compare forward and backward single track matirces to link new and reference clouds
         # Intiailize matrix for this time period
         print('Generating tracks')
-        print(time.ctime())
+        print((time.ctime()))
         trackfound = np.ones(nclouds_reference+1, dtype=int)*-9999
 
         # Loop over all reference clouds
         print('Looping over all clouds in the reference file')
-        print('Number of clouds to process: ' + str(nclouds_reference))
-        print(time.ctime())
+        print(('Number of clouds to process: ' + str(nclouds_reference)))
+        print((time.ctime()))
         for ncr in np.arange(1,nclouds_reference+1): # Looping over each reference cloud. Start at 1 since clouds numbered starting at 1.
-            print('Reference cloud #: ' + str(ncr))
-            print(time.ctime())
+            print(('Reference cloud #: ' + str(ncr)))
+            print((time.ctime()))
             if trackfound[ncr-1] < 1:
 
                 # Find all clouds (both forward and backward) associated with this reference cloud
@@ -283,14 +283,14 @@ def gettracknumbers(datasource, datadescription, datainpath, dataoutpath, startd
 
                 trackpresent = 0
                 print('Finding all associated clouds')
-                print(time.ctime())
+                print((time.ctime()))
                 while ntemp_referenceclouds > nreferenceclouds:
                     associated_referenceclouds = np.copy(temp_referenceclouds).astype(int)
                     nreferenceclouds = ntemp_referenceclouds
 
                     for nr in range(0, nreferenceclouds):
-                        print('Processing cloud #: ' + str(nr))
-                        print(time.ctime())
+                        print(('Processing cloud #: ' + str(nr)))
+                        print((time.ctime()))
                         tempncr = associated_referenceclouds[nr]
 
                         # Find indices of forward linked clouds.
@@ -347,7 +347,7 @@ def gettracknumbers(datasource, datadescription, datainpath, dataoutpath, startd
                 #################################################################
                 # Now get the track status
                 print('Determing status of clouds in track')
-                print(time.ctime())
+                print((time.ctime()))
                 if nnewclouds > 0:
                     ############################################################
                     # Find the largest reference and new clouds
@@ -369,7 +369,7 @@ def gettracknumbers(datasource, datadescription, datainpath, dataoutpath, startd
                         ############################################################
                         # Simple continuation
                         print('Simple continuation')
-                        print(time.ctime())
+                        print((time.ctime()))
 
                         # Check trackstatus already has a valid value. This will prtrack splits from a previous step being overwritten
 
@@ -385,7 +385,7 @@ def gettracknumbers(datasource, datadescription, datainpath, dataoutpath, startd
                         # Loop through the reference clouds and assign th track to the largestst one, the rest just go away
                         if nnewclouds == 1:
                             print('Merge only')
-                            print(time.ctime())
+                            print((time.ctime()))
                             for tempreferencecloud in associated_referenceclouds:
                                 trackfound[tempreferencecloud-1] = 1
 
@@ -404,7 +404,7 @@ def gettracknumbers(datasource, datadescription, datainpath, dataoutpath, startd
                         # Merging and spliting
                         else:
                             print('Merging and splitting')
-                            print(time.ctime())
+                            print((time.ctime()))
                            
                             # Loop over the reference clouds and assign the track the largest one
                             for tempreferencecloud in associated_referenceclouds:
@@ -441,7 +441,7 @@ def gettracknumbers(datasource, datadescription, datainpath, dataoutpath, startd
                     # Splitting only
                     elif nnewclouds > 1:
                         print('Splitting only')
-                        print(time.ctime())
+                        print((time.ctime()))
                         # Label reference cloud as a pure split
                         referencetrackstatus[ifill, ncr-1] = 13
                         tracknumber[0, ifill, ncr-1] = np.copy(tracknumber[0, ifill, largest_referencecloud-1])
@@ -470,7 +470,7 @@ def gettracknumbers(datasource, datadescription, datainpath, dataoutpath, startd
                 # No new clouds. Track dissipated
                 else:
                     print('Track ending')
-                    print(time.ctime())
+                    print((time.ctime()))
 
                     trackfound[ncr-1] = 1
 
@@ -479,7 +479,7 @@ def gettracknumbers(datasource, datadescription, datainpath, dataoutpath, startd
         ##############################################################################
         # Find any clouds in the new track that don't have a track number. These are new clouds this file
         print('Identifying new tracks')
-        print(time.ctime())
+        print((time.ctime()))
         for ncn in range(1, int(nclouds_new)+1):
             if tracknumber[0, ifill+1, ncn-1] < 0:
                 tracknumber[0, ifill+1, ncn-1] = itrack
@@ -509,7 +509,7 @@ def gettracknumbers(datasource, datadescription, datainpath, dataoutpath, startd
     #################################################################
     # Remove all tracks that have only one cloud.
     print('Removing short tracks')
-    print(time.ctime())
+    print((time.ctime()))
 
     # Identify single cloud tracks
     singletracks = np.array(np.where(tracklengths <= 1))[0,:]
@@ -519,7 +519,7 @@ def gettracknumbers(datasource, datadescription, datainpath, dataoutpath, startd
     # Loop over single cloudtracks
     nsingleremove = 0
     for strack in singletracks:
-        print('single track: ' + str(strack+1))
+        print(('single track: ' + str(strack+1)))
         print('Getting track index')
         # Indentify clouds in this track
         cloudindex = np.array(np.where(tracknumber[0, :, :] == int(strack+1))) # Need to add one since singletracks lists the index in the matrix, which starts at zero. Track number starts at one.
@@ -543,7 +543,7 @@ def gettracknumbers(datasource, datadescription, datainpath, dataoutpath, startd
     #######################################################################
     # Save file
     print('Writing all track statistics file')
-    print(time.ctime())
+    print((time.ctime()))
     print(tracknumbers_outfile)
     print('')
 

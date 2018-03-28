@@ -40,6 +40,7 @@ def trackclouds_mergedir(zipped_inputs):
     import sys
     import xarray as xr
     import pandas as pd
+    import time
 
 
     # Separate inputs
@@ -130,8 +131,8 @@ def trackclouds_mergedir(zipped_inputs):
                 
                 if sizematch/float(sizeref) > othresh:
                     if forward_nmatch > nmaxlinks:
-                        print('reference: ' + number_filepath + files[ifile-1])
-                        print('new: ' + number_filepath + files[ifile])
+                        print(('reference: ' + number_filepath + files[ifile-1]))
+                        print(('new: ' + number_filepath + files[ifile]))
                         sys.exit('More than ' + str(int(nmaxlinks)) + ' clouds in new file match with reference cloud?!')
                     else:
                         reference_forward_index[0, int(refindex)-1, forward_nmatch] = matchindex
@@ -159,8 +160,8 @@ def trackclouds_mergedir(zipped_inputs):
                 
                 if sizematch/float(sizenew) > othresh:
                     if backward_nmatch > nmaxlinks:
-                        print('reference: ' + number_filepath + files[ifile-1])
-                        print('new: ' + number_filepath + files[ifile])
+                        print(('reference: ' + number_filepath + files[ifile-1]))
+                        print(('new: ' + number_filepath + files[ifile]))
                         sys.exit('More than ' + str(int(nmaxlinks)) + ' clouds in reference file match with new cloud?!')
                     else:
                         new_backward_index[0, int(newindex)-1, backward_nmatch] = matchindex
