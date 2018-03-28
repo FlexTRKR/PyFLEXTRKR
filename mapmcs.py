@@ -133,9 +133,9 @@ def mapmcs_pf(zipped_inputs):
     filetime = np.copy(file_datetime[9:14])
     ipffile = pfdata_path + pfdata_filebase + str(filedate) + '-' + str(filetime) + '00.nc'
     irainaccumulationfile = rainaccumulation_path + rainaccumulation_filebase + str(filedate) + '.' + str(filetime) + '00.nc'
-    print('cloudid file: ' + cloudid_filename)
-    print('pf file: ' + ipffile)
-    print('rain accumulation file: ' + irainaccumulationfile)
+    print(('cloudid file: ' + cloudid_filename))
+    print(('pf file: ' + ipffile))
+    print(('rain accumulation file: ' + irainaccumulationfile))
 
     # Load cloudid data
     print('Load cloudid data')
@@ -261,7 +261,7 @@ def mapmcs_pf(zipped_inputs):
         # Loop over each cloud in this unique file
         print('Loop over each cloud in the file')
         for jj in range(0, ntimes):
-            print('MCS #: ' + str(int(itrack[jj] + 1)))
+            print(('MCS #: ' + str(int(itrack[jj] + 1))))
             # Get cloud nummber
             jjcloudnumber = mcstrackstat_cloudnumber[itrack[jj],itime[jj]].astype(np.int32)
 
@@ -380,7 +380,8 @@ def mapmcs_pf(zipped_inputs):
                             nlabel = np.copy(nmaxpf)
                             
                         # Loop over each precipitation feature and label it with track number
-                        for ilabel in range(0, nlabel):
+                        #import pdb; pdb.set_trace()
+                        for ilabel in range(0, int(nlabel)):
                             iylabel, ixlabel = np.array(np.where(temppfnumber == uniquepfnumber[order[ilabel]]))
                             nlabelpix = len(ixlabel)
                             if nlabelpix > 0:
@@ -836,7 +837,7 @@ def mapmcs_mergedir(zipped_inputs):
             ##############################################################
             # Loop over each cloud in this unique file
             for jj in range(0,ntimes):
-                print('JJ: ' + str(jj))
+                print(('JJ: ' + str(jj)))
                 # Get cloud nummber
                 jjcloudnumber = mcstrackstat_cloudnumber[itrack[jj],itime[jj]]
 
@@ -849,7 +850,7 @@ def mapmcs_mergedir(zipped_inputs):
                     mcstrackmap_mergesplit[jjcloudypixels, jjcloudxpixels] = itrack[jj] + 1
                     print('All')
                     print(itrack)
-                    print(itrack[jj])
+                    print((itrack[jj]))
 
                     #statusmap[jjcloudypixels, jjcloudxpixels] = timestatus[jj] 
                 else:
@@ -870,7 +871,7 @@ def mapmcs_mergedir(zipped_inputs):
                             mcstrackmap_mergesplit[jjmergeypixels, jjmergexpixels] = itrack[jj] + 1
                             print('Merge')
                             print(itrack)
-                            print(itrack[jj])
+                            print((itrack[jj]))
                             #statusmap[jjmergeypixels, jjmergexpixels] = mcsmergestatus[itrack[jj], itime[jj], imerge]
                         else:
                             sys.exit('Error: No matching merging cloud pixel found?!')
@@ -892,7 +893,7 @@ def mapmcs_mergedir(zipped_inputs):
                             mcstrackmap_mergesplit[jjsplitypixels, jjsplitxpixels] = itrack[jj] + 1
                             print('Split')
                             print(itrack)
-                            print(itrack[jj])
+                            print((itrack[jj]))
                             #statusmap[jjsplitypixels, jjsplitxpixels] = mcssplitstatus[itrack[jj], itime[jj], isplit]
                         else:
                             sys.exit('Error: No matching splitting cloud pixel found?!')

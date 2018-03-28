@@ -63,7 +63,7 @@ def trackstats_sat(datasource, datadescription, pixel_radius, geolimits, areathr
     ###################################################################################
     # Initialize modules
     import numpy as np
-    from netCDF4 import Dataset, num2date
+    from netCDF4 import Dataset, num2date, chartostring
     import os, fnmatch
     import sys
     from math import pi
@@ -88,7 +88,7 @@ def trackstats_sat(datasource, datadescription, pixel_radius, geolimits, areathr
     ###################################################################################
     # Load latitude and longitude grid. These were created in subroutine_idclouds and is saved in each file.
     print('Determining which files will be processed')
-    print(time.ctime())
+    print((time.ctime()))
 
     # Find filenames of idcloud files
     temp_cloudidfiles = fnmatch.filter(os.listdir(tracking_inpath), cloudid_filebase +'*')
@@ -105,7 +105,7 @@ def trackstats_sat(datasource, datadescription, pixel_radius, geolimits, areathr
     #############################################################################
     # Load track data
     print('Loading Data')
-    print(time.ctime())
+    print((time.ctime()))
     cloudtrack_file = stats_path + tracknumbers_filebase + '_' + startdate + '_' + enddate + '.nc'
 
     cloudtrackdata = Dataset(cloudtrack_file, 'r')
@@ -128,7 +128,7 @@ def trackstats_sat(datasource, datadescription, pixel_radius, geolimits, areathr
     ############################################################################
     # Initialize grids
     print('Initiailizinng matrices')
-    print(time.ctime())
+    print((time.ctime()))
 
     nmaxclouds = max(lengthrange)
 
@@ -176,19 +176,22 @@ def trackstats_sat(datasource, datadescription, pixel_radius, geolimits, areathr
     #########################################################################################
     # loop over files. Calculate statistics and organize matrices by tracknumber and cloud
     print('Looping over files and calculating statistics for each file')
-    print(time.ctime())
+    print((time.ctime()))
     for nf in range(0,nfiles):
-        print('File #: ' + str(nf))
-        print(time.ctime())
+        print(('File #: ' + str(nf)))
+        print((time.ctime()))
 
         file_tracknumbers = tracknumbers[0, nf, :]
 
         # Only process file if that file contains a track
         if np.nanmax(file_tracknumbers) > 0:
-            print(''.join(cloudidfiles[nf]))
+            #print((''.join(cloudidfiles[nf])))
+            print((chartostring(cloudidfiles[nf])))
 
             # Load cloudid file
-            cloudid_file = tracking_inpath + ''.join(cloudidfiles[nf])
+            #cloudid_file = tracking_inpath + ''.join(cloudidfiles[nf])
+            #import pdb; pdb.set_trace()
+            cloudid_file = tracking_inpath + str(chartostring(cloudidfiles[nf]))
 
             file_cloudiddata = Dataset(cloudid_file, 'r')
             file_tb = file_cloudiddata['tb'][:]
@@ -210,7 +213,7 @@ def trackstats_sat(datasource, datadescription, pixel_radius, geolimits, areathr
             # Loop over unique tracknumbers
             print('Loop over tracks in file')
             for itrack in uniquetracknumbers:
-                print('Unique track number: ' + str(itrack))
+                print(('Unique track number: ' + str(itrack)))
 
                 # Find cloud number that belongs to the current track in this file
                 cloudnumber = np.array(np.where(file_tracknumbers == itrack))[0, :] + 1 # Finds cloud numbers associated with that track. Need to add one since tells index, which starts at 0, and we want the number, which starts at one
@@ -356,7 +359,7 @@ def trackstats_sat(datasource, datadescription, pixel_radius, geolimits, areathr
     ###############################################################
     ## Remove tracks that have no cells. These tracks are short.
     print('Removing tracks with no cells')
-    print(time.ctime())
+    print((time.ctime()))
     gc.collect()
 
     cloudindexpresent = np.array(np.where(finaltrack_tracklength != -9999))[0, :]
@@ -407,9 +410,9 @@ def trackstats_sat(datasource, datadescription, pixel_radius, geolimits, areathr
     # Initialize adjusted matrices
     adjusted_finaltrack_corecold_mergenumber = np.ones(np.shape(finaltrack_corecold_mergenumber))*-9999
     adjusted_finaltrack_corecold_splitnumber = np.ones(np.shape(finaltrack_corecold_mergenumber))*-9999
-    print('total tracks: ' + str(numtracks))
+    print(('total tracks: ' + str(numtracks)))
     print('Correcting mergers and splits')
-    print(time.ctime())
+    print((time.ctime()))
 
     # Create adjustor
     indexcloudnumber = np.copy(cloudindexpresent) + 1
@@ -434,7 +437,7 @@ def trackstats_sat(datasource, datadescription, pixel_radius, geolimits, areathr
     #########################################################################
     # Record starting and ending status
     print('Determine starting and ending status')
-    print(time.ctime())
+    print((time.ctime()))
 
     # Starting status
     finaltrack_corecold_startstatus = finaltrack_corecold_status[:,0]
@@ -448,7 +451,7 @@ def trackstats_sat(datasource, datadescription, pixel_radius, geolimits, areathr
     #######################################################################
     # Write to netcdf
     print('Writing trackstat netcdf')
-    print(time.ctime())
+    print((time.ctime()))
     print(trackstats_outfile)
     print('')
 
@@ -905,7 +908,7 @@ def trackstats_LES(datasource, datadescription, pixel_radius, latlon_file, geoli
 
         # Only process file if that file contains a track
         if np.nanmax(file_tracknumbers) > 0:
-            print(''.join(cloudidfiles[nf]))
+            print((''.join(cloudidfiles[nf])))
 
             # Load cloudid file
             cloudid_file = tracking_inpath + ''.join(cloudidfiles[nf])
@@ -1070,7 +1073,7 @@ def trackstats_LES(datasource, datadescription, pixel_radius, latlon_file, geoli
                         finaltrack_core_meanlwp[itrack-1,nc] = np.nanmean(corelwp)
 
                     else:
-                        print('Track: ' + str(itrack) + '; ' + str(nc) + ' greater than maximum allowed number clouds, ' + str(nmaxclouds))
+                        print(('Track: ' + str(itrack) + '; ' + str(nc) + ' greater than maximum allowed number clouds, ' + str(nmaxclouds)))
                         nc = nc + 1
 
                 elif len(cloudnumber) > 1:
@@ -1124,7 +1127,7 @@ def trackstats_LES(datasource, datadescription, pixel_radius, latlon_file, geoli
 
     gc.collect()
     print('Tracks with no cells removed')
-    print('Number of Tracks:' + str(int(len(finaltrack_tracklength))))
+    print(('Number of Tracks:' + str(int(len(finaltrack_tracklength)))))
 
     ########################################################
     # Correct merger and split cloud numbers
@@ -1133,7 +1136,7 @@ def trackstats_LES(datasource, datadescription, pixel_radius, latlon_file, geoli
     # Initialize adjusted matrices
     adjusted_finaltrack_corecold_mergenumber = np.ones(np.shape(finaltrack_corecold_mergenumber))*-9999
     adjusted_finaltrack_corecold_splitnumber = np.ones(np.shape(finaltrack_corecold_mergenumber))*-9999
-    print('total tracks: ' + str(numtracks))
+    print(('total tracks: ' + str(numtracks)))
 
     # Create adjustor
     indexcloudnumber = np.copy(cloudindexpresent) + 1

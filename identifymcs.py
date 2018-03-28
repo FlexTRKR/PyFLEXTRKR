@@ -482,7 +482,7 @@ def identifymcs_mergedir_netcdf4(statistics_filebase, stats_path, startdate, end
     ##########################################################################
     # Load statistics file
     print('Loading data')
-    print(time.ctime())
+    print((time.ctime()))
     statistics_file = stats_path + statistics_filebase + '_' + startdate + '_' + enddate + '.nc'
     print(statistics_file)
 
@@ -513,7 +513,7 @@ def identifymcs_mergedir_netcdf4(statistics_filebase, stats_path, startdate, end
     ####################################################################
     # Set up thresholds
     print('Determinine areas')
-    print(time.ctime())
+    print((time.ctime()))
 
     # Cold Cloud Shield (CCS) area
     nconv[np.where(~np.isfinite(nconv))] = 0
@@ -537,10 +537,10 @@ def identifymcs_mergedir_netcdf4(statistics_filebase, stats_path, startdate, end
     ###################################################################
     # Identify MCSs
     print('Looping through all tracks to identify mcs')
-    print(time.ctime())
+    print((time.ctime()))
     print(ntracks_all)
     for nt in range(0, ntracks_all):
-        print('Track number: ' + str(nt))
+        print(('Track number: ' + str(nt)))
         # Get data for a given track
         track_corearea = np.copy(trackstat_corearea[nt, :])
         track_ccsarea = np.copy(trackstat_ccsarea[nt, :])
@@ -615,7 +615,7 @@ def identifymcs_mergedir_netcdf4(statistics_filebase, stats_path, startdate, end
     ###############################################################
     # Find small merging and spliting louds and add to MCS
     print('Finding mergers and splits')
-    print(time.ctime())
+    print((time.ctime()))
     mcsmergecloudnumber = np.ones((nmcs, nmaxlength, nmaxmerge), dtype=np.int32)*-9999
     mcsmergestatus = np.ones((nmcs, nmaxlength, nmaxmerge), dtype=np.int32)*-9999
     mcssplitcloudnumber = np.ones((nmcs, nmaxlength, nmaxmerge), dtype=np.int32)*-9999
@@ -623,8 +623,8 @@ def identifymcs_mergedir_netcdf4(statistics_filebase, stats_path, startdate, end
 
     # Loop through each MCS and link small clouds merging in
     for imcs in np.arange(0,nmcs):
-        print('Analyzing mcs #: ' + str(imcs) + ', MCS: ' + str(trackid[imcs]))
-        print(time.ctime())
+        print(('Analyzing mcs #: ' + str(imcs) + ', MCS: ' + str(trackid[imcs])))
+        print((time.ctime()))
 
         ###################################################################################
         # Isolate basetime data
@@ -637,7 +637,7 @@ def identifymcs_mergedir_netcdf4(statistics_filebase, stats_path, startdate, end
         # Find mergers
         print('Mergers')
         [mergefile, mergefeature] = np.array(np.where(mergenumbers == mcstracknumbers[imcs]))
-        print(len(mergefile))
+        print((len(mergefile)))
         for imerger in range(0, len(mergefile)):
             additionalmergefile, additionalmergefeature = np.array(np.where(mergenumbers == mergefile[imerger]+1))
             if len(additionalmergefile) > 0:
@@ -681,6 +681,7 @@ def identifymcs_mergedir_netcdf4(statistics_filebase, stats_path, startdate, end
                     if np.shape(timematch)[1] > 0:
 
                         # save cloud number of small mergers
+                        #import pdb; pdb.set_trace()
                         nmergers = np.shape(timematch)[1]
                         mcsmergecloudnumber[imcs, int(t), 0:nmergers] = mergingcloudnumber[timematch]
                         mcsmergestatus[imcs, int(t), 0:nmergers] = mergingstatus[timematch]
@@ -689,7 +690,7 @@ def identifymcs_mergedir_netcdf4(statistics_filebase, stats_path, startdate, end
         # Find splits
         print('Splits')
         [splitfile, splitfeature] = np.array(np.where(splitnumbers == mcstracknumbers[imcs]))
-        print(len(splitfile))
+        print((len(splitfile)))
         for isplitr in range(0, len(splitfile)):
             additionalsplitfile, additionalsplitfeature = np.array(np.where(splitnumbers == splitfile[isplitr]+1))
             if len(additionalsplitfile) > 0:
@@ -742,7 +743,7 @@ def identifymcs_mergedir_netcdf4(statistics_filebase, stats_path, startdate, end
     ###########################################################################
     # Write statistics to netcdf file
     print('Saving data')
-    print(time.ctime())
+    print((time.ctime()))
 
     # Create file
     mcstrackstatistics_outfile = stats_path + 'mcs_tracks_' + startdate + '_' + enddate + '.nc'
