@@ -49,15 +49,9 @@ curr_id_version = 'v1.0'
 curr_track_version = 'v1.0'
 curr_tracknumbers_version = 'v1.0'
 
-<<<<<<< HEAD
 # Specify days to run, (YYYYMMDD.hhmm)
 startdate = '20110401.0000'
 enddate = '20110401.2300'
-=======
-# Specify days to run
-startdate = '20110520.0000'
-enddate = '20110521.2300'
->>>>>>> Ported to Python3, fixed some random bugs.
 
 # Specify cloud tracking parameters
 geolimits = np.array([25, -110, 51, -70])  # 4-element array with plotting boundaries [lat_min, lon_min, lat_max, lon_max]
@@ -333,13 +327,8 @@ if run_gettracks == 1:
 
     # Call function
     print('Getting track numbers')
-<<<<<<< HEAD
     print(time.ctime())
     gettracknumbers(irdatasource, datadescription, tracking_outpath, stats_outpath, startdate, enddate, timegap, nmaxclouds, cloudid_filebase, npxname, tracknumber_version, singletrack_filebase, keepsingletrack=keep_singlemergesplit, removestartendtracks=1)
-=======
-    print((time.ctime()))
-    gettracknumbers_mergedir(irdatasource, datadescription, tracking_outpath, stats_outpath, startdate, enddate, timegap, nmaxclouds, cloudid_filebase, npxname, tracknumber_version, singletrack_filebase, keepsingletrack=keep_singlemergesplit, removestartendtracks=1)
->>>>>>> Ported to Python3, fixed some random bugs.
     tracknumbers_filebase = 'tracknumbers' + tracknumber_version
 
 ############################################################
@@ -357,13 +346,8 @@ if run_finalstats == 1:
 
     # Call satellite version of function
     print('Calculating track statistics')
-<<<<<<< HEAD
     print(time.ctime())
     trackstats_sat(irdatasource, datadescription, pixel_radius, geolimits, area_thresh, cloudtb_threshs, absolutetb_threshs, startdate, enddate, timegap, cloudid_filebase, tracking_outpath, stats_outpath, track_version, tracknumber_version, tracknumbers_filebase, lengthrange=lengthrange)
-=======
-    print((time.ctime()))
-    trackstats_sat(irdatasource, datadescription, pixel_radius, latlon_file, geolimits, area_thresh, cloudtb_threshs, absolutetb_threshs, startdate, enddate, timegap, cloudid_filebase, tracking_outpath, stats_outpath, track_version, tracknumber_version, tracknumbers_filebase, lengthrange=lengthrange)
->>>>>>> Ported to Python3, fixed some random bugs.
     trackstats_filebase = 'stats_tracknumbers' + tracknumber_version
 
 ##############################################################
