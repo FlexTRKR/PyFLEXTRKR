@@ -1,0 +1,14 @@
+{
+    "run_idclouds": 0,
+    "run_tracksingle": 0,
+    "run_gettracks": 0,
+    "run_finalstats": 0,
+    "run_identifycell": 1,
+    "run_labelcell": 0,
+    "startdate": "20160830.2000",
+    "enddate": "20160830.2300",
+    "run_parallel": 1,
+    "nprocesses": 4,
+    "root_path": "/global/cscratch1/sd/feng045/hiscale/les/sensitivity5_d02/",
+    "clouddata_path": "/global/cscratch1/sd/feng045/hiscale/les/sensitivity5_d02/lwp_d02_new/"
+}

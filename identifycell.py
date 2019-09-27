@@ -92,6 +92,8 @@ def identifycell_LES_xarray(statistics_filebase, stats_path, startdate, enddate,
     for icell in np.arange(0, nmaincell):
         print('')
         print(icell)
+        # Some cell length exceeds nmaxlength, take the smaller of the two
+        imaincelllength = int(np.min([maincelllength[icell], nmaxlength]))
 
         ###################################################################################
         # Isolate basetime data
@@ -101,11 +103,11 @@ def identifycell_LES_xarray(statistics_filebase, stats_path, startdate, enddate,
         else:
             cellbasetime = np.concatenate((cellbasetime, np.array([pd.to_datetime(allstatdata['basetime'][maincelltrackid[icell], :].data, unit='s')])), axis=0)
 
-        print('Determining Base Time')
+#        print('Determining Base Time')
 
         ###################################################################################
         # Find mergers
-        print('Determining mergers')
+#        print('Determining mergers')
         [mergefile, mergefeature] = np.array(np.where(np.copy(allstatdata['mergenumbers'].data) == maincelltracknumbers[icell]))
 
         # Loop through all merging tracks, if present
@@ -135,10 +137,12 @@ def identifycell_LES_xarray(statistics_filebase, stats_path, startdate, enddate,
                 mergingdatetime = np.copy(allstatdata['datetimestrings'][mergefile, :, :])
 
                 # Get data about cell track
-                maincellbasetime = np.copy(allstatdata['basetime'][int(maincelltracknumbers[icell])-1, 0:int(maincelllength[icell])])
+                #maincellbasetime = np.copy(allstatdata['basetime'][int(maincelltracknumbers[icell])-1, 0:int(maincelllength[icell])])
+                maincellbasetime = np.copy(allstatdata['basetime'][int(maincelltracknumbers[icell])-1, 0:imaincelllength])
 
                 # Loop through each timestep in the cell track
-                for t in np.arange(0, maincelllength[icell]):
+                #for t in np.arange(0, maincelllength[icell]):
+                for t in np.arange(0, imaincelllength):
 
                     # Find merging cloud times that match current cell track time
                     timematch = np.where(mergingbasetime == maincellbasetime[int(t)])
@@ -182,10 +186,12 @@ def identifycell_LES_xarray(statistics_filebase, stats_path, startdate, enddate,
                 splittingdatetime = np.copy(allstatdata['datetimestrings'][splitfile, :, :])
 
                 # Get data about cell track
-                maincellbasetime = np.copy(allstatdata['basetime'][int(maincelltracknumbers[icell])-1,0:int(maincelllength[icell])])
+                #maincellbasetime = np.copy(allstatdata['basetime'][int(maincelltracknumbers[icell])-1,0:int(maincelllength[icell])])
+                maincellbasetime = np.copy(allstatdata['basetime'][int(maincelltracknumbers[icell])-1,0:imaincelllength])
 
                 # Loop through each timestep in the cell track
-                for t in np.arange(0, maincelllength[icell]):
+                #for t in np.arange(0, maincelllength[icell]):
+                for t in np.arange(0, imaincelllength):
 
                     # Find splitting cloud times that match current cell track time
                     timematch = np.where(splittingbasetime == maincellbasetime[int(t)])
@@ -456,11 +462,11 @@ def identifycell_LES_netcdf4(statistics_filebase, stats_path, startdate, enddate
         else:
             cellbasetime = np.concatenate((cellbasetime, np.array([pd.to_datetime(basetime[maincelltrackid[icell], :].data, unit='s')])), axis=0)
 
-        print('Determining Base Time')
+#        print('Determining Base Time')
 
         ###################################################################################
         # Find mergers
-        print('Determining mergers')
+#        print('Determining mergers')
         [mergefile, mergefeature] = np.array(np.where(np.copy(mergenumbers) == maincelltracknumbers[icell]))
 
         # Loop through all merging tracks, if present
@@ -490,10 +496,12 @@ def identifycell_LES_netcdf4(statistics_filebase, stats_path, startdate, enddate
                 mergingdatetime = np.copy(datetimestrings[mergefile, :, :])
 
                 # Get data about cell track
-                maincellbasetime = np.copy(basetime[int(maincelltracknumbers[icell])-1, 0:int(maincelllength[icell])])
+                #maincellbasetime = np.copy(basetime[int(maincelltracknumbers[icell])-1, 0:int(maincelllength[icell])])
+                maincellbasetime = np.copy(basetime[int(maincelltracknumbers[icell])-1, 0:imaincelllength])
 
                 # Loop through each timestep in the cell track
-                for t in np.arange(0, maincelllength[icell]):
+                #for t in np.arange(0, maincelllength[icell]):
+                for t in np.arange(0, imaincelllength):
 
                     # Find merging cloud times that match current cell track time
                     timematch = np.where(mergingbasetime == maincellbasetime[int(t)])
@@ -537,10 +545,12 @@ def identifycell_LES_netcdf4(statistics_filebase, stats_path, startdate, enddate
                 splittingdatetime = np.copy(datetimestrings[splitfile, :, :])
 
                 # Get data about cell track
-                maincellbasetime = np.copy(basetime[int(maincelltracknumbers[icell])-1,0:int(maincelllength[icell])])
+                #maincellbasetime = np.copy(basetime[int(maincelltracknumbers[icell])-1,0:int(maincelllength[icell])])
+                maincellbasetime = np.copy(basetime[int(maincelltracknumbers[icell])-1,0:imaincelllength])
 
                 # Loop through each timestep in the cell track
-                for t in np.arange(0, maincelllength[icell]):
+                #for t in np.arange(0, maincelllength[icell]):
+                for t in np.arange(0, imaincelllength):
 
                     # Find splitting cloud times that match current cell track time
                     timematch = np.where(splittingbasetime == maincellbasetime[int(t)])

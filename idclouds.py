@@ -721,7 +721,7 @@ def idclouds_LES(zipped_inputs):
     # enddate - data to stop processing in yyyymmdd format
     # pixel_radius - radius of pixels in km
     # area_thresh - minimum area thershold to define a feature in km^2
-    # cloudlwp_threshs - ;iquid water path thresholds 
+    # cloudlwp_threshs - liquid water path thresholds 
     # miss_thresh - minimum amount of data required in order for the file to not to be considered corrupt. 
     # cloudidmethod - flag indiciating which method of cloud classification will be used
     # mincoldcorepix - minimum size threshold for a cloud
@@ -811,7 +811,9 @@ def idclouds_LES(zipped_inputs):
 
         # load brighttness temperature data. automatically removes missing values
         in_lwp = np.loadtxt(datafilepath, dtype=float) 
-        in_lwp = np.reshape(in_lwp, (int(ny), int(nx)))
+        in_lwp = np.reshape(in_lwp[:,0], (int(ny), int(nx)))
+#        in_lwp = np.reshape(in_lwp, (int(ny), int(nx)))
+#        import pdb; pdb.set_trace()
 
         #####################################################
         # mask brightness temperatures outside of normal range
@@ -873,11 +875,11 @@ def idclouds_LES(zipped_inputs):
 
                     TEMP_basetime = calendar.timegm(datetime.datetime(int(datafiledatestring[0:4]), int(datafiledatestring[4:6]), int(datafiledatestring[6:8]), int(datafiletimestring[0:2]), int(datafiletimestring[2:4]), 0, 0).timetuple())
                     file_basetime = np.array([pd.to_datetime(TEMP_basetime, unit='s')], dtype='datetime64[s]')
-
+#                    import pdb; pdb.set_trace()
                     # Define xarray dataset
                     output_data = xr.Dataset({'basetime': (['time'], file_basetime), \
-                                              'filedate': (['time', 'ndatechar'],  np.array([stringtochar(np.array(datafiledatestring))])), \
-                                              'filetime': (['time', 'ntimechar'], np.array([stringtochar(np.array(datafiletimestring))])), \
+#                                              'filedate': (['time', 'ndatechar'],  np.array([stringtochar(np.array(datafiledatestring))])), \
+#                                              'filetime': (['time', 'ntimechar'], np.array([stringtochar(np.array(datafiletimestring))])), \
                                               'latitude': (['lat', 'lon'], out_lat), \
                                               'longitude': (['lat', 'lon'], out_lon), \
                                               'lwp': (['time', 'lat', 'lon'], np.expand_dims(out_lwp, axis=0)), \
@@ -893,11 +895,12 @@ def idclouds_LES(zipped_inputs):
                                                      'lat': (['lat'], np.squeeze(out_lat[:, 0])), \
                                                      'lon': (['lon'], np.squeeze(out_lon[0, :])), \
                                                      'clouds': (['clouds'],  np.arange(1, final_nclouds+1)), \
-                                                     'ndatechar': (['ndatechar'], np.arange(0, 8)), \
-                                                     'ntimechar': (['ntimechar'], np.arange(0, 4))}, \
+#                                                     'ndatechar': (['ndatechar'], np.arange(0, 8)), \
+#                                                     'ntimechar': (['ntimechar'], np.arange(0, 4)), \
+                                                    }, \
                                              attrs={'title': 'Statistics about convective features identified in the data from ' + datafiledatestring[0:4] + '/' + datafiledatestring[4:6] + '/' + datafiledatestring[6:8] + ' ' + datafiletimestring[0:2] + ':' + datafiletimestring[2:4] + ' utc', \
                                                     'institution': 'Pacific Northwest National Laboratory', \
-                                                    'convections': 'CF-1.6', \
+                                                    'conventions': 'CF-1.6', \
                                                     'contact': 'Hannah C Barnes: hannah.barnes@pnnl.gov', \
                                                     'created_ok': time.ctime(time.time()), \
                                                     'cloudid_cloud_version': cloudid_version, \
@@ -905,7 +908,9 @@ def idclouds_LES(zipped_inputs):
                                                     'lwp_threshold_coldanvil': str(int(cloudlwp_threshs[1])) + 'K', \
                                                     'lwp_threshold_warmanvil': str(int(cloudlwp_threshs[2])) + 'K', \
                                                     'lwp_threshold_environment': str(int(cloudlwp_threshs[3])) + 'K', \
-                                                    'minimum_cloud_area': str(int(area_thresh)) + 'km^2'})
+                                                    'minimum_cloud_area_km2': area_thresh, \
+#                                                    'minimum_cloud_area': str(int(area_thresh)) + 'km^2'})
+                                                   })\
 
                     # Specify variable attributes
                     output_data.time.attrs['long_name'] = 'epoch time (seconds since 01/01/1970 00:00) in epoch of file'
@@ -925,20 +930,20 @@ def idclouds_LES(zipped_inputs):
                     output_data.clouds.attrs['long_name'] = 'number of distict convective cores identified'
                     output_data.clouds.attrs['units'] = 'unitless'
 
-                    output_data.ndatechar.attrs['long_name'] = 'number of characters in date string'
-                    output_data.ndatechar.attrs['units'] = 'unitless'
+#                    output_data.ndatechar.attrs['long_name'] = 'number of characters in date string'
+#                    output_data.ndatechar.attrs['units'] = 'unitless'
 
-                    output_data.ntimechar.attrs['long_name'] = 'number of characters in time string'
-                    output_data.ntimechar.attrs['units'] = 'unitless'
+#                    output_data.ntimechar.attrs['long_name'] = 'number of characters in time string'
+#                    output_data.ntimechar.attrs['units'] = 'unitless'
 
                     output_data.basetime.attrs['long_name'] = 'epoch time (seconds since 01/01/1970 00:00) of file'
                     output_data.basetime.attrs['standard_name'] = 'time'
 
-                    output_data.filedate.attrs['long_name'] = 'date string of file (yyyymmdd)'
-                    output_data.filedate.attrs['units'] = 'unitless'
+#                    output_data.filedate.attrs['long_name'] = 'date string of file (yyyymmdd)'
+#                    output_data.filedate.attrs['units'] = 'unitless'
 
-                    output_data.filetime.attrs['long_name'] = 'time string of file (hhmm)'
-                    output_data.filetime.attrs['units'] = 'unitless'
+#                    output_data.filetime.attrs['long_name'] = 'time string of file (hhmm)'
+#                    output_data.filetime.attrs['units'] = 'unitless'
 
                     output_data.latitude.attrs['long_name'] = 'cartesian grid of latitude'
                     output_data.latitude.attrs['units'] = 'degrees_north'
@@ -998,8 +1003,8 @@ def idclouds_LES(zipped_inputs):
                                                     'lon': {'zlib':True}, \
                                                     'clouds': {'zlib':True}, \
                                                     'basetime': {'dtype': 'int64', 'zlib':True, 'units': 'seconds since 1970-01-01'}, \
-                                                    'filedate': {'dtype': 'str', 'zlib':True}, \
-                                                    'filetime': {'dtype': 'str', 'zlib':True}, \
+#                                                    'filedate': {'dtype': 'str', 'zlib':True}, \
+#                                                    'filetime': {'dtype': 'str', 'zlib':True}, \
                                                     'longitude': {'zlib':True, '_FillValue': np.nan}, \
                                                     'latitude': {'zlib':True, '_FillValue': np.nan}, \
                                                     'lwp': {'zlib':True, '_FillValue': np.nan}, \

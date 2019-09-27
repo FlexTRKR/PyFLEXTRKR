@@ -168,10 +168,10 @@ def trackstats_sat(datasource, datadescription, pixel_radius, geolimits, areathr
     finaltrack_corecold_orientation = np.ones((int(numtracks),int(nmaxclouds)), dtype=float)*np.nan 
     finaltrack_corecold_eccentricity = np.ones((int(numtracks),int(nmaxclouds)), dtype=float)*np.nan
     finaltrack_corecold_perimeter = np.ones((int(numtracks),int(nmaxclouds)), dtype=float)*np.nan
-    finaltrack_corecold_xcenter = np.ones((int(numtracks),int(nmaxclouds)), dtype=np.int32)*-9999
-    finaltrack_corecold_ycenter = np.ones((int(numtracks),int(nmaxclouds)), dtype=np.int32)*-9999
-    finaltrack_corecold_xweightedcenter = np.ones((int(numtracks),int(nmaxclouds)), dtype=np.int32)*-9999
-    finaltrack_corecold_yweightedcenter = np.ones((int(numtracks),int(nmaxclouds)), dtype=np.int32)*-9999
+    finaltrack_corecold_xcenter = np.ones((int(numtracks),int(nmaxclouds)), dtype=float)*-9999
+    finaltrack_corecold_ycenter = np.ones((int(numtracks),int(nmaxclouds)), dtype=float)*-9999
+    finaltrack_corecold_xweightedcenter = np.ones((int(numtracks),int(nmaxclouds)), dtype=float)*-9999
+    finaltrack_corecold_yweightedcenter = np.ones((int(numtracks),int(nmaxclouds)), dtype=float)*-9999
 
     #########################################################################################
     # loop over files. Calculate statistics and organize matrices by tracknumber and cloud
@@ -795,7 +795,7 @@ def trackstats_LES(datasource, datadescription, pixel_radius, latlon_file, geoli
     ###################################################################################
     # Initialize modules
     import numpy as np
-    from netCDF4 import Dataset, num2date
+    from netCDF4 import Dataset, num2date, chartostring
     import os, fnmatch
     import sys
     from math import pi
@@ -840,6 +840,7 @@ def trackstats_LES(datasource, datadescription, pixel_radius, latlon_file, geoli
     cloudtrackdata = Dataset(cloudtrack_file, 'r')
     numtracks = cloudtrackdata['ntracks'][:]
     cloudidfiles = cloudtrackdata['cloudid_files'][:]
+#    import pdb; pdb.set_trace()
     tracknumbers = cloudtrackdata['track_numbers'][:]
     trackreset = cloudtrackdata['track_reset'][:]
     tracksplit = cloudtrackdata['track_splitnumbers'][:]
@@ -895,23 +896,27 @@ def trackstats_LES(datasource, datadescription, pixel_radius, latlon_file, geoli
     finaltrack_corecold_orientation = np.ones((int(numtracks),int(nmaxclouds)), dtype=float)*np.nan 
     finaltrack_corecold_eccentricity = np.ones((int(numtracks),int(nmaxclouds)), dtype=float)*np.nan
     finaltrack_corecold_perimeter = np.ones((int(numtracks),int(nmaxclouds)), dtype=float)*np.nan
-    finaltrack_corecold_xcenter = np.ones((int(numtracks),int(nmaxclouds)), dtype=int)*-9999
-    finaltrack_corecold_ycenter = np.ones((int(numtracks),int(nmaxclouds)), dtype=int)*-9999
-    finaltrack_corecold_xweightedcenter = np.ones((int(numtracks),int(nmaxclouds)), dtype=int)*-9999
-    finaltrack_corecold_yweightedcenter = np.ones((int(numtracks),int(nmaxclouds)), dtype=int)*-9999
+    finaltrack_corecold_xcenter = np.ones((int(numtracks),int(nmaxclouds)), dtype=float)*-9999
+    finaltrack_corecold_ycenter = np.ones((int(numtracks),int(nmaxclouds)), dtype=float)*-9999
+    finaltrack_corecold_xweightedcenter = np.ones((int(numtracks),int(nmaxclouds)), dtype=float)*-9999
+    finaltrack_corecold_yweightedcenter = np.ones((int(numtracks),int(nmaxclouds)), dtype=float)*-9999
 
     #########################################################################################
     # loop over files. Calculate statistics and organize matrices by tracknumber and cloud
     for nf in range(0,nfiles):
         file_tracknumbers = tracknumbers[0, nf, :]
         #file_tracknumbers = cloudtrackdata['track_numbers'][0, nf, :]
-
+#        import pdb; pdb.set_trace()
         # Only process file if that file contains a track
         if np.nanmax(file_tracknumbers) > 0:
-            print((''.join(cloudidfiles[nf])))
+            fname = ''.join(chartostring(cloudidfiles[nf]))
+#            print((''.join(cloudidfiles[nf])))
+            print(nf, fname)
 
             # Load cloudid file
-            cloudid_file = tracking_inpath + ''.join(cloudidfiles[nf])
+#            cloudid_file = tracking_inpath + ''.join(cloudidfiles[nf])
+#            cloudid_file = tracking_inpath + ''.join(chartostring(cloudidfiles[nf]))
+            cloudid_file = tracking_inpath + fname
 
             file_cloudiddata = Dataset(cloudid_file, 'r')
             file_lwp = file_cloudiddata['lwp'][:]
@@ -963,7 +968,8 @@ def trackstats_LES(datasource, datadescription, pixel_radius, latlon_file, geoli
                         finaltrack_basetime[itrack-1, nc] = np.array([pd.to_datetime(num2date(file_basetime, units=basetime_units, calendar=basetime_calendar))], dtype='datetime64[s]')[0, 0]
                         #finaltrack_basetime[itrack-1, nc] = np.datetime64(pd.to_datetime(file_cloudiddata['basetime'].data)[0])
                         finaltrack_corecold_cloudnumber[itrack-1,nc] = cloudnumber
-                        finaltrack_cloudidfile[itrack-1][nc][:] = list(cloudidfiles[nf])
+                        finaltrack_cloudidfile[itrack-1][nc][:] = fname
+#                        finaltrack_cloudidfile[itrack-1][nc][:] = list(cloudidfiles[nf])
                         finaltrack_datetimestring[int(itrack-1)][int(nc)][:] = file_datetimestring
 
                         ###############################################################
@@ -1168,8 +1174,9 @@ def trackstats_LES(datasource, datadescription, pixel_radius, latlon_file, geoli
 
     # Ending status
     finaltrack_corecold_endstatus = np.ones(len(finaltrack_corecold_startstatus))*-9999
-    for trackstep in range(0, maxtracklength):
-        if finaltrack_tracklength[trackstep] > 0:
+#    for trackstep in range(0, maxtracklength):
+    for trackstep in range(0, numtracks):
+        if ((finaltrack_tracklength[trackstep] > 0) & (finaltrack_tracklength[trackstep] < maxtracklength)):
             finaltrack_corecold_endstatus[trackstep] = np.copy(finaltrack_corecold_status[trackstep,finaltrack_tracklength[trackstep] - 1])
 
     #######################################################################
@@ -1456,4 +1463,4 @@ def trackstats_LES(datasource, datadescription, pixel_radius, latlon_file, geoli
                                     'xcenter': {'zlib':True, '_FillValue': -9999}, \
                                     'ycenter': {'zlib':True, '_FillValue': -9999}, \
                                     'xcenter_weighted': {'zlib':True, '_FillValue': -9999}, \
-                                    'ycenter_weighted': {'zlib':True, '_FillValue': -999}})
+                                    'ycenter_weighted': {'zlib':True, '_FillValue': -9999}})

@@ -1,10 +1,11 @@
 import numpy as np
-import os, fnmatch
+import os, fnmatch, sys
 import time, datetime, calendar
 from pytz import timezone, utc
 from multiprocessing import Pool
 from netCDF4 import Dataset
 import xarray as xr
+import json
 
 # Name: Run_LESData.py
 
@@ -12,22 +13,56 @@ import xarray as xr
 
 # Author: Orginial IDL version written by Zhe Feng (zhe.feng@pnnl.gov). Adapted to Python by Hannah Barnes (hannah.barnes@pnnl.gov)
 
+# Get configuration file name from input
+config_file = sys.argv[1]
+# Read configuration from json file
+with open(config_file, encoding='utf-8') as data_file:
+    config = json.load(data_file)
+
+run_idclouds = config['run_idclouds']        # Segment and identify cloud systems
+run_tracksingle = config['run_tracksingle']     # Track single consecutive cloudid files
+run_gettracks = config['run_gettracks']       # Run trackig for all files
+run_finalstats = config['run_finalstats']      # Calculate final statistics
+run_identifycell = config['run_identifycell']    # Isolate cells
+run_labelcell = config['run_labelcell']        # Create maps of MCSs
+startdate = config['startdate']
+enddate = config['enddate']
+run_parallel = config['run_parallel']
+nprocesses = config['nprocesses']
+root_path = config['root_path']
+clouddata_path = config['clouddata_path']
+
+#run_idclouds = int(sys.argv[1])        # Segment and identify cloud systems
+#run_tracksingle = int(sys.argv[2])     # Track single consecutive cloudid files
+#run_gettracks = int(sys.argv[3])       # Run trackig for all files
+#run_finalstats = int(sys.argv[4])      # Calculate final statistics
+#run_identifycell = int(sys.argv[5])    # Isolate cells
+#run_labelcell = int(sys.argv[6])       # Create maps of MCSs
+#startdate = sys.argv[7]           # Start date/time for tracking
+#enddate = sys.argv[8]             # End date/time for tracking
+#nprocesses = int(sys.argv[9])          # Number of processes to run if run_parallel is set to 1
+
 ################################################################################################
 # Set variables describing data, file structure, and tracking thresholds
 
 # Specify which sets of code to run. (1 = run code, 0 = don't run code)
-run_idclouds = 0        # Segment and identify cloud systems
-run_tracksingle = 0     # Track single consecutive cloudid files
-run_gettracks = 0       # Run trackig for all files
-run_finalstats = 0      # Calculate final statistics
-run_identifycell = 0    # Isolate cells
-run_labelcell = 1        # Create maps of MCSs
+#run_idclouds = 0        # Segment and identify cloud systems
+#run_tracksingle = 0     # Track single consecutive cloudid files
+#run_gettracks = 0       # Run trackig for all files
+#run_finalstats = 1      # Calculate final statistics
+#run_identifycell = 0    # Isolate cells
+#run_labelcell = 0        # Create maps of MCSs
+#
+## Specify days to run
+#startdate = '20160830.1800'
+#enddate = '20160830.2000'
 
 # Set version of cloudid code
 cloudidmethod = 'futyan4'
 keep_singlemergesplit = 1 # 0=all short tracks removed, 1=only short tracks that are not mergers or splits are removed
 show_alltracks = 0 # 0=do not create maps of all tracks in map stage, 1=create maps of all tracks (greatly slows the code)
-run_parallel = 1 # Options: 0-run serially, 1-run parallel (uses Pool from Multiprocessing)
+#run_parallel = 1 # Options: 0-run serially, 1-run parallel (uses Pool from Multiprocessing)
+#nprocesses = 4   # Number of processes to run if run_parallel is set to 1
 
 # Specify version of code using
 cloudid_version = 'v1.0'
@@ -39,16 +74,13 @@ curr_id_version = 'v1.0'
 curr_track_version = 'v1.0'
 curr_tracknumbers_version = 'v1.0'
 
-# Specify days to run
-startdate = '20160830.1600'
-enddate = '20160830.1800'
-
 # Specify domain size
 ny = int(1200)
 nx = int(1200)
 
 # Specify cloud tracking parameters
-geolimits = np.array([36.05, -98.12, 37.15, -96.79])  # 4-element array with plotting boundaries [lat_min, lon_min, lat_max, lon_max]
+#geolimits = np.array([36.05, -98.12, 37.15, -96.79])  # 4-element array with plotting boundaries [lat_min, lon_min, lat_max, lon_max]
+geolimits = np.array([-90., -180., 90., 180.])  # 4-element array with plotting boundaries [lat_min, lon_min, lat_max, lon_max]
 pixel_radius = 0.1                         # km
 timegap = 1.1/float(60)                    # hour
 area_thresh = 0.09                         # km^2
@@ -78,9 +110,13 @@ datadescription = 'SGP'
 databasename = 'outmet_d02_'
 label_filebase = 'cloudtrack_'
 
-root_path = '/scratch2/scratchdirs/hcbarnes/LES/'
-clouddata_path = '/scratch2/scratchdirs/hcbarnes/LES/data/'
-scratchpath = './'
+#root_path = '/scratch2/scratchdirs/hcbarnes/LES/'
+#clouddata_path = '/scratch2/scratchdirs/hcbarnes/LES/data/'
+#root_path = '/global/cscratch1/sd/feng045/hiscale/les/control_d02/'
+#clouddata_path = f'{root_path}control_d02/data/'
+#root_path = '/global/cscratch1/sd/feng045/hiscale/les/sitivity5_d02/'
+#clouddata_path = f'{root_path}/lwp_d02_new/'
+#scratchpath = './'
 latlon_file = clouddata_path + 'coordinates_d02_big.dat'
 
 # Specify data structure
@@ -89,9 +125,9 @@ dimname = 'nclouds'
 numbername = 'convcold_cloudnumber'
 typename = 'cloudtype'
 npxname = 'ncorecoldpix'
-tdimname = 'time'
-xdimname = 'Lat_Grid'
-ydimname = 'Lon_Grid'
+#tdimname = 'time'
+#xdimname = 'Lat_Grid'
+#ydimname = 'Lon_Grid'
 
 ######################################################################
 # Generate additional settings
@@ -117,6 +153,9 @@ if not os.path.exists(tracking_outpath):
 
 if not os.path.exists(stats_outpath):
     os.makedirs(stats_outpath)
+
+if not os.path.exists(celltracking_outpath):
+    os.makedirs(celltracking_outpath)
 
 ########################################################################
 # Calculate basetime of start and end date
@@ -198,7 +237,7 @@ if run_idclouds == 1:
         # Parallel version
         if __name__ == '__main__':
             print('Identifying clouds')
-            pool = Pool(24)
+            pool = Pool(nprocesses)
             pool.map(idclouds_LES, idclouds_input)
             pool.close()
             pool.join()
@@ -277,7 +316,7 @@ if run_tracksingle == 1:
     elif run_parallel == 1:
         # parallelize version
         if __name__ == '__main__':
-            pool = Pool(24)
+            pool = Pool(nprocesses)
             pool.map(trackclouds_mergedir, trackclouds_input)
             pool.close()
             pool.join()
@@ -403,7 +442,7 @@ if run_labelcell == 1:
     elif run_parallel == 1:
         if __name__ == '__main__':
             print('Creating maps of tracked MCSs')
-            pool = Pool(24)
+            pool = Pool(nprocesses)
             pool.map(mapcell_LES, cellmap_input)
             pool.close()
             pool.join()
