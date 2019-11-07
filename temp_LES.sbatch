@@ -1,17 +1,16 @@
-#!/bin/bash
-#SBATCH -A m1642
+#!/bin/csh
+#SBATCH --account emsla50742
 #SBATCH --job-name=run_LESdata.py
-#SBATCH -p regular
-#SBATCH --ntasks=1
-#SBATCH --mail-user=hannah.barnes@pnnl.gov
+#SBATCH --ntasks-per-node=1
+#SBATCH --mail-user=jingyi.chen@pnnl.gov
+#SBATCH --mail-type END
 #SBATCH --nodes=1
 #SBATCH --time=48:00:00
-#SBATCH --output=run_LESdata.py.out
+#SBATCH --output=./log/run_LESdata.py.out
 #SBATCH --exclusive
-module load python/2.7-anaconda
-source activate /global/homes/h/hcbarnes/python_parallel
-module load jpeg
-unset PYTHONSTARTUP
+cd /home/chen696/pyflextrkr-12hr/
+module load hdf5/1.10.1
+setenv HDF5_USE_FILE_LOCKING FALSE
 date
-ipython run_LESdata.py
+srun -n 1 python run_LESdata.py config_sensitivity5.json
 date

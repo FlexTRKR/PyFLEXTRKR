@@ -1,14 +1,14 @@
 {
     "run_idclouds": 0,
-    "run_tracksingle": 0,
-    "run_gettracks": 0,
-    "run_finalstats": 0,
+    "run_tracksingle": 1,
+    "run_gettracks": 1,
+    "run_finalstats": 1,
     "run_identifycell": 1,
-    "run_labelcell": 0,
-    "startdate": "20160830.2000",
-    "enddate": "20160830.2300",
+    "run_labelcell": 1,
+    "startdate": "20160830.1610",
+    "enddate": "20160831.0000",
     "run_parallel": 1,
     "nprocesses": 4,
-    "root_path": "/global/cscratch1/sd/feng045/hiscale/les/sensitivity5_d02/",
-    "clouddata_path": "/global/cscratch1/sd/feng045/hiscale/les/sensitivity5_d02/lwp_d02_new/"
+    "root_path": "/dtemp/emsla50742/chen696/JFs5_tracker_st1610_ed0000_new/",
+    "clouddata_path": "/dtemp/emsla50742/chen696/lwp_d02_new/"
 }
