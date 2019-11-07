@@ -93,7 +93,7 @@ othresh = 0.5                              # overlap percentage threshold
 lengthrange = np.array([5, 100])            # A vector [minlength,maxlength] to specify the lifetime range for the tracks
 maxnclouds = 6000                          # Maximum clouds in one file
 nmaxlinks = 10                             # Maximum number of clouds that any single cloud can be linked to
-absolutelwp_threshs = np.array([0, 20])    # k A vector [min, max] brightness temperature allowed. Brightness temperatures outside this range are ignored.
+absolutelwp_threshs = np.array([-1.0e-6, 20])    # k A vector [min, max] brightness temperature allowed. Brightness temperatures outside this range are ignored.
 warmanvilexpansion = 0                     # If this is set to one, then the cold anvil is spread laterally until it exceeds the warm anvil threshold
 mincoldcorepix = 4                         # Minimum number of pixels for the cold core, needed for futyan version 4 cloud identification code. Not used if use futyan version 3.
 smoothwindowdimensions = 10                # Dimension of the boxcar filter used for futyan version 4. Not used in futyan version 3
@@ -149,20 +149,23 @@ celltracking_outpath = root_path + 'celltracking/' + startdate + '_' + enddate +
 
 # Create output directories
 if not os.path.exists(tracking_outpath):
-    os.makedirs(tracking_outpath)
+    #os.makedirs(tracking_outpath)
+    os.system('mkdir -p ' + tracking_outpath)
 
 if not os.path.exists(stats_outpath):
-    os.makedirs(stats_outpath)
+    #os.makedirs(stats_outpath)
+    os.system('mkdir -p ' + stats_outpath)
 
 if not os.path.exists(celltracking_outpath):
-    os.makedirs(celltracking_outpath)
+    #os.makedirs(celltracking_outpath)
+    os.system('mkdir -p ' + celltracking_outpath)
 
 ########################################################################
 # Calculate basetime of start and end date
-TEMP_starttime = datetime.datetime(int(startdate[0:4]), int(startdate[4:6]), int(startdate[6:8]), int(startdate[9:11]), 0, 0, tzinfo=utc)
+TEMP_starttime = datetime.datetime(int(startdate[0:4]), int(startdate[4:6]), int(startdate[6:8]), int(startdate[9:11]), int(startdate[11:]), 0, tzinfo=utc)
 start_basetime = calendar.timegm(TEMP_starttime.timetuple())
 
-TEMP_endtime = datetime.datetime(int(enddate[0:4]), int(enddate[4:6]), int(enddate[6:8]), int(enddate[9:11]), 0, 0, tzinfo=utc)
+TEMP_endtime = datetime.datetime(int(enddate[0:4]), int(enddate[4:6]), int(enddate[6:8]), int(enddate[9:11]), int(enddate[11:]), 0, tzinfo=utc)
 end_basetime = calendar.timegm(TEMP_endtime.timetuple())
 
 ##########################################################################
@@ -188,6 +191,7 @@ if run_idclouds == 1:
         TEMP_filebasetime = calendar.timegm(TEMP_filetime.timetuple())
 
         if TEMP_filebasetime >= start_basetime and TEMP_filebasetime <= end_basetime: # and int(ifile[nleadingchar+14:nleadingchar+16]) == 0:
+
             rawdatafiles[filestep] = clouddata_path + ifile
             files_timestring[filestep] = ifile[nleadingchar+11:nleadingchar+13] + ifile[nleadingchar+14:nleadingchar+16]
             files_datestring[filestep] = ifile[nleadingchar:nleadingchar+4] + ifile[nleadingchar+5:nleadingchar+7] + ifile[nleadingchar+8:nleadingchar+10]
@@ -339,8 +343,10 @@ if run_gettracks == 1:
 
     # Call function
     print('Getting track numbers')
+    print('tracking_out:' + tracking_outpath)
     gettracknumbers(datasource, datadescription, tracking_outpath, stats_outpath, startdate, enddate, timegap, maxnclouds, cloudid_filebase, npxname, tracknumber_version, singletrack_filebase, keepsingletrack=keep_singlemergesplit, removestartendtracks=1)
     tracknumbers_filebase = 'tracknumbers' + tracknumber_version
+    print('tracking_out done')
 
 ############################################################
 # Calculate final statistics
@@ -352,7 +358,7 @@ if run_gettracks == 0:
 # Call function
 if run_finalstats == 1:
     # Load function
-    from trackstats import trackstats_LES
+    from trackstats_copy_JC import trackstats_LES
 
     # Call satellite version of function
     print('Calculating cell statistics')
