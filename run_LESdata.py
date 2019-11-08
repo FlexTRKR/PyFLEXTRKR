@@ -358,7 +358,7 @@ if run_gettracks == 0:
 # Call function
 if run_finalstats == 1:
     # Load function
-    from trackstats_copy_JC import trackstats_LES
+    from trackstats import trackstats_LES
 
     # Call satellite version of function
     print('Calculating cell statistics')

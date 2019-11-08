@@ -190,7 +190,6 @@ def trackstats_sat(datasource, datadescription, pixel_radius, geolimits, areathr
 
             # Load cloudid file
             #cloudid_file = tracking_inpath + ''.join(cloudidfiles[nf])
-            #import pdb; pdb.set_trace()
             cloudid_file = tracking_inpath + str(chartostring(cloudidfiles[nf]))
 
             file_cloudiddata = Dataset(cloudid_file, 'r')
@@ -840,7 +839,6 @@ def trackstats_LES(datasource, datadescription, pixel_radius, latlon_file, geoli
     cloudtrackdata = Dataset(cloudtrack_file, 'r')
     numtracks = cloudtrackdata['ntracks'][:]
     cloudidfiles = cloudtrackdata['cloudid_files'][:]
-#    import pdb; pdb.set_trace()
     tracknumbers = cloudtrackdata['track_numbers'][:]
     trackreset = cloudtrackdata['track_reset'][:]
     tracksplit = cloudtrackdata['track_splitnumbers'][:]
@@ -854,7 +852,7 @@ def trackstats_LES(datasource, datadescription, pixel_radius, latlon_file, geoli
     # Determine dimensions of data
     nfiles = len(cloudidfiles)
     ny, nx = np.shape(latitude)
-    print(nfiles)
+    print(f'nfiles_cloudid:{nfiles}')
 
     ############################################################################
     # Initialize grids
@@ -864,15 +862,85 @@ def trackstats_LES(datasource, datadescription, pixel_radius, latlon_file, geoli
     maxlwp_thresh = absolutelwp_threshs[1]
     lwpinterval = 0.1
     lwpbins = np.arange(minlwp_thresh, maxlwp_thresh+lwpinterval, lwpinterval)
+    #lwpbins = np.logspace(np.log10(mminlwp_thresh), np.log10(maxlwp_thresh)*1.001,100)
     nbinlwp = len(lwpbins)
 
     finaltrack_tracklength = np.ones(int(numtracks), dtype=int)*-9999
+    finaltrack_corecold_cloudnumber = np.ones((int(numtracks),int(nmaxclouds)), dtype=int)*-9999
+
+    #########################################################################################
+    # loop over files. Calculate the tracknumbers of cell tracks
+
+    print(f'numtracks from previous step:{numtracks}')
+    numtracks_old = numtracks
+
+    for nf in range(0,nfiles):
+        
+        file_tracknumbers = tracknumbers[0, nf, :]
+
+        if np.nanmax(file_tracknumbers) > 0:
+
+            fname = ''.join(chartostring(cloudidfiles[nf]))
+            print(nf, fname)
+
+            # Find unique track numbers
+            uniquetracknumbers = np.unique(file_tracknumbers)
+            uniquetracknumbers = uniquetracknumbers[uniquetracknumbers > 0].astype(int)
+            #print(f'uniquetracknumbers:{uniquetracknumbers}')
+
+            # Loop over unique tracknumbers
+            for itrack in uniquetracknumbers:
+
+                # Find cloud number that belongs to the current track in this file
+                cloudnumber = np.array(np.where(file_tracknumbers == itrack))[0, :] + 1 # Finds cloud numbers associated with that track. Need to add one since tells index, which starts at 0, and we want the number, which starts at one
+
+                if len(cloudnumber) == 1: # Should only be one cloud number. In mergers and split, the associated clouds should be listed in the file_splittracknumbers and file_mergetracknumbers
+
+                    # Find current length of the track. Use for indexing purposes. Also, record the current length the given track.
+                    lengthindex = np.array(np.where(finaltrack_corecold_cloudnumber[itrack-1,:] > 0))
+                    #print(f'lengthindex:{np.shape(lengthindex)[1]}')
+
+                    if np.shape(lengthindex)[1] > 0:
+                        nc = np.nanmax(lengthindex) + 1
+                    else:
+                        nc = 0
+                    finaltrack_tracklength[itrack-1] = nc+1 # Need to add one since array index starts at 0
+
+                    if nc < nmaxclouds:
+                        finaltrack_corecold_cloudnumber[itrack-1,nc] = cloudnumber
+                    else:
+                        print(('Track: ' + str(itrack) + '; ' + str(nc) + ' greater than maximum allowed number clouds, ' + str(nmaxclouds)))
+                        nc = nc + 1
+
+                elif len(cloudnumber) > 1:
+                    sys.exit(str(cloudnumber) + ' clouds linked to one track. Each track should only be linked to one cloud in each file in the track_number array. The track_number variable only tracks the largest cell in mergers and splits. The small clouds in tracks and mergers should only be listed in the track_splitnumbers and track_mergenumbers arrays.')
+
+                    
+    ###############################################################
+    ## Remove tracks that have no cells. These tracks are short.
+
+    gc.collect()
+
+    cloudindexpresent = np.array(np.where(finaltrack_tracklength != -9999))[0,:]
+    numtracks = len(cloudindexpresent)
+
+    maxtracklength = np.nanmin([np.nanmax(finaltrack_tracklength), int(nmaxclouds)])
+    print(('Number of Tracks:' + str(int(len(finaltrack_tracklength)))))
+
+    print(f'numtracks:      {numtracks}')
+    print(f'maxtracklength: {maxtracklength}')
+    #print(f'cloudindexpresent: {cloudindexpresent}')
+
+    print('Tracks with no cells NOT included')
+
+    ###############################################################
+    # to calculate the statistic after having the number of tracks with cells
     finaltrack_corecold_boundary = np.ones(int(numtracks))*-9999
     finaltrack_basetime = np.zeros((int(numtracks),int(nmaxclouds)), dtype='datetime64[s]')
     finaltrack_corecold_minlwp = np.ones((int(numtracks),int(nmaxclouds)), dtype=float)*np.nan
     finaltrack_corecold_meanlwp = np.ones((int(numtracks),int(nmaxclouds)), dtype=float)*np.nan
     finaltrack_core_meanlwp = np.ones((int(numtracks),int(nmaxclouds)), dtype=float)*np.nan
-    finaltrack_corecold_histlwp = np.zeros((int(numtracks),int(nmaxclouds), nbinlwp-1))
+    #finaltrack_corecold_histlwp = np.zeros((int(numtracks),int(nmaxclouds), nbinlwp-1), dtype=float)
     finaltrack_corecold_radius = np.ones((int(numtracks),int(nmaxclouds)), dtype=float)*np.nan
     finaltrack_corecoldwarm_radius = np.ones((int(numtracks),int(nmaxclouds)), dtype=float)*np.nan
     finaltrack_corecold_meanlat = np.ones((int(numtracks),int(nmaxclouds)), dtype=float)*np.nan
@@ -889,7 +957,6 @@ def trackstats_LES(datasource, datadescription, pixel_radius, latlon_file, geoli
     finaltrack_corecold_trackinterruptions = np.ones(int(numtracks), dtype=int)*-9999
     finaltrack_corecold_mergenumber = np.ones((int(numtracks),int(nmaxclouds)), dtype=int)*-9999
     finaltrack_corecold_splitnumber = np.ones((int(numtracks),int(nmaxclouds)), dtype=int)*-9999
-    finaltrack_corecold_cloudnumber = np.ones((int(numtracks),int(nmaxclouds)), dtype=int)*-9999
     finaltrack_datetimestring = [[['' for x in range(13)] for y in range(int(nmaxclouds))] for z in range(int(numtracks))]
     finaltrack_cloudidfile = np.chararray((int(numtracks), int(nmaxclouds), int(numcharfilename)))
     finaltrack_corecold_majoraxis = np.ones((int(numtracks),int(nmaxclouds)), dtype=float)*np.nan
@@ -901,21 +968,22 @@ def trackstats_LES(datasource, datadescription, pixel_radius, latlon_file, geoli
     finaltrack_corecold_xweightedcenter = np.ones((int(numtracks),int(nmaxclouds)), dtype=float)*-9999
     finaltrack_corecold_yweightedcenter = np.ones((int(numtracks),int(nmaxclouds)), dtype=float)*-9999
 
+    finaltrack_tracklength = np.ones(int(numtracks_old), dtype=int)*-9999
+    finaltrack_corecold_cloudnumber = np.ones((int(numtracks_old),int(nmaxclouds)), dtype=int)*-9999
+
     #########################################################################################
     # loop over files. Calculate statistics and organize matrices by tracknumber and cloud
     for nf in range(0,nfiles):
+
         file_tracknumbers = tracknumbers[0, nf, :]
-        #file_tracknumbers = cloudtrackdata['track_numbers'][0, nf, :]
-#        import pdb; pdb.set_trace()
+
         # Only process file if that file contains a track
         if np.nanmax(file_tracknumbers) > 0:
+
             fname = ''.join(chartostring(cloudidfiles[nf]))
-#            print((''.join(cloudidfiles[nf])))
             print(nf, fname)
 
             # Load cloudid file
-#            cloudid_file = tracking_inpath + ''.join(cloudidfiles[nf])
-#            cloudid_file = tracking_inpath + ''.join(chartostring(cloudidfiles[nf]))
             cloudid_file = tracking_inpath + fname
 
             file_cloudiddata = Dataset(cloudid_file, 'r')
@@ -936,6 +1004,13 @@ def trackstats_LES(datasource, datadescription, pixel_radius, latlon_file, geoli
 
             # Loop over unique tracknumbers
             for itrack in uniquetracknumbers:
+
+                # define the index in shortened array
+                icelltrack = np.where(cloudindexpresent==itrack-1)[0][0]
+                #print(f'itrack:{itrack}')
+                #print(f'icelltrack:{icelltrack}')
+                if not np.size(icelltrack):
+                    continue
 
                 # Find cloud number that belongs to the current track in this file
                 cloudnumber = np.array(np.where(file_tracknumbers == itrack))[0, :] + 1 # Finds cloud numbers associated with that track. Need to add one since tells index, which starts at 0, and we want the number, which starts at one
@@ -964,13 +1039,15 @@ def trackstats_LES(datasource, datadescription, pixel_radius, latlon_file, geoli
                     finaltrack_tracklength[itrack-1] = nc+1 # Need to add one since array index starts at 0
 
                     if nc < nmaxclouds:
+
                         # Save information that links this cloud back to its raw pixel level data
-                        finaltrack_basetime[itrack-1, nc] = np.array([pd.to_datetime(num2date(file_basetime, units=basetime_units, calendar=basetime_calendar))], dtype='datetime64[s]')[0, 0]
-                        #finaltrack_basetime[itrack-1, nc] = np.datetime64(pd.to_datetime(file_cloudiddata['basetime'].data)[0])
+                        finaltrack_basetime[icelltrack, nc] = np.array([pd.to_datetime(num2date(file_basetime, units=basetime_units, calendar=basetime_calendar))], dtype='datetime64[s]')[0, 0]
+                        #finaltrack_basetime[icelltrack, nc] = np.datetime64(pd.to_datetime(file_cloudiddata['basetime'].data)[0])
                         finaltrack_corecold_cloudnumber[itrack-1,nc] = cloudnumber
-                        finaltrack_cloudidfile[itrack-1][nc][:] = fname
-#                        finaltrack_cloudidfile[itrack-1][nc][:] = list(cloudidfiles[nf])
-                        finaltrack_datetimestring[int(itrack-1)][int(nc)][:] = file_datetimestring
+                        #print(f'nc:{nc}')
+                        finaltrack_cloudidfile[icelltrack][nc][:] = fname
+#                        finaltrack_cloudidfile[icelltrack][nc][:] = list(cloudidfiles[nf])
+                        finaltrack_datetimestring[int(icelltrack)][int(nc)][:] = file_datetimestring
 
                         ###############################################################
                         # Calculate statistics about this cloud system
@@ -980,25 +1057,25 @@ def trackstats_LES(datasource, datadescription, pixel_radius, latlon_file, geoli
                         corecoldlat = latitude[corecoldarea[0], corecoldarea[1]]
                         corecoldlon = longitude[corecoldarea[0], corecoldarea[1]]
 
-                        finaltrack_corecold_meanlat[itrack-1,nc] = np.nanmean(corecoldlat)
-                        finaltrack_corecold_meanlon[itrack-1,nc] = np.nanmean(corecoldlon)
+                        finaltrack_corecold_meanlat[icelltrack,nc] = np.nanmean(corecoldlat)
+                        finaltrack_corecold_meanlon[icelltrack,nc] = np.nanmean(corecoldlon)
 
-                        finaltrack_corecold_minlat[itrack-1,nc] = np.nanmin(corecoldlat)
-                        finaltrack_corecold_minlon[itrack-1,nc] = np.nanmin(corecoldlon)
+                        finaltrack_corecold_minlat[icelltrack,nc] = np.nanmin(corecoldlat)
+                        finaltrack_corecold_minlon[icelltrack,nc] = np.nanmin(corecoldlon)
 
-                        finaltrack_corecold_maxlat[itrack-1,nc] = np.nanmax(corecoldlat)
-                        finaltrack_corecold_maxlon[itrack-1,nc] = np.nanmax(corecoldlon)
+                        finaltrack_corecold_maxlat[icelltrack,nc] = np.nanmax(corecoldlat)
+                        finaltrack_corecold_maxlon[icelltrack,nc] = np.nanmax(corecoldlon)
 
                         # Determine if core+cold touches of the boundaries of the domain
-                        if np.absolute(finaltrack_corecold_minlat[itrack-1,nc]-geolimits[0]) < 0.1 or np.absolute(finaltrack_corecold_maxlat[itrack-1,nc]-geolimits[2]) < 0.1 or np.absolute(finaltrack_corecold_minlon[itrack-1,nc]-geolimits[1]) < 0.1 or np.absolute(finaltrack_corecold_maxlon[itrack-1,nc]-geolimits[3]) < 0.1:
-                            finaltrack_corecold_boundary[itrack-1] = 1
+                        if np.absolute(finaltrack_corecold_minlat[icelltrack,nc]-geolimits[0]) < 0.1 or np.absolute(finaltrack_corecold_maxlat[icelltrack,nc]-geolimits[2]) < 0.1 or np.absolute(finaltrack_corecold_minlon[icelltrack,nc]-geolimits[1]) < 0.1 or np.absolute(finaltrack_corecold_maxlon[icelltrack,nc]-geolimits[3]) < 0.1:
+                            finaltrack_corecold_boundary[icelltrack] = 1
 
                         ############
                         # Save number of pixels (metric for size)
-                        finaltrack_ncorecoldpix[itrack-1,nc] = ncorecoldpix
-                        finaltrack_ncorepix[itrack-1,nc] = ncorepix
-                        finaltrack_ncoldpix[itrack-1,nc] = ncoldpix
-                        finaltrack_nwarmpix[itrack-1,nc] = nwarmpix
+                        finaltrack_ncorecoldpix[icelltrack,nc] = ncorecoldpix
+                        finaltrack_ncorepix[icelltrack,nc] = ncorepix
+                        finaltrack_ncoldpix[icelltrack,nc] = ncoldpix
+                        finaltrack_nwarmpix[icelltrack,nc] = nwarmpix
 
                         #############
                         # Calculate physical characteristics associated with cloud system
@@ -1040,43 +1117,43 @@ def trackstats_LES(datasource, datadescription, pixel_radius, latlon_file, geoli
                         # Calculate major axis, orientation, eccentricity
                         cloudproperities = regionprops(isolatedcloudnumber, intensity_image=isolatedlwp)
                     
-                        finaltrack_corecold_eccentricity[itrack-1,nc] = cloudproperities[0].eccentricity
-                        finaltrack_corecold_majoraxis[itrack-1,nc] = cloudproperities[0].major_axis_length*pixel_radius
-                        finaltrack_corecold_orientation[itrack-1,nc] = (cloudproperities[0].orientation)*(180/float(pi))
-                        finaltrack_corecold_perimeter[itrack-1,nc] = cloudproperities[0].perimeter*pixel_radius
+                        finaltrack_corecold_eccentricity[icelltrack,nc] = cloudproperities[0].eccentricity
+                        finaltrack_corecold_majoraxis[icelltrack,nc] = cloudproperities[0].major_axis_length*pixel_radius
+                        finaltrack_corecold_orientation[icelltrack,nc] = (cloudproperities[0].orientation)*(180/float(pi))
+                        finaltrack_corecold_perimeter[icelltrack,nc] = cloudproperities[0].perimeter*pixel_radius
                         [temp_ycenter, temp_xcenter] = cloudproperities[0].centroid
-                        [finaltrack_corecold_ycenter[itrack-1,nc], finaltrack_corecold_xcenter[itrack-1,nc]] = np.add([temp_ycenter,temp_xcenter], [minyindex, minxindex]).astype(int)
+                        [finaltrack_corecold_ycenter[icelltrack,nc], finaltrack_corecold_xcenter[icelltrack,nc]] = np.add([temp_ycenter,temp_xcenter], [minyindex, minxindex]).astype(int)
                         [temp_yweightedcenter, temp_xweightedcenter] = cloudproperities[0].weighted_centroid
-                        [finaltrack_corecold_yweightedcenter[itrack-1,nc], finaltrack_corecold_xweightedcenter[itrack-1,nc]] = np.add([temp_yweightedcenter, temp_xweightedcenter], [minyindex, minxindex]).astype(int)
+                        [finaltrack_corecold_yweightedcenter[icelltrack,nc], finaltrack_corecold_xweightedcenter[icelltrack,nc]] = np.add([temp_yweightedcenter, temp_xweightedcenter], [minyindex, minxindex]).astype(int)
 
                         # Determine equivalent radius of core+cold. Assuming circular area = (number pixels)*(pixel radius)^2, equivalent radius = sqrt(Area / pi)
-                        finaltrack_corecold_radius[itrack-1,nc] = np.sqrt(np.divide(ncorecoldpix*(np.square(pixel_radius)), pi))
+                        finaltrack_corecold_radius[icelltrack,nc] = np.sqrt(np.divide(ncorecoldpix*(np.square(pixel_radius)), pi))
 
                         # Determine equivalent radius of core+cold+warm. Assuming circular area = (number pixels)*(pixel radius)^2, equivalent radius = sqrt(Area / pi)
-                        finaltrack_corecoldwarm_radius[itrack-1,nc] = np.sqrt(np.divide((ncorepix + ncoldpix + nwarmpix)*(np.square(pixel_radius)), pi))
+                        finaltrack_corecoldwarm_radius[icelltrack,nc] = np.sqrt(np.divide((ncorepix + ncoldpix + nwarmpix)*(np.square(pixel_radius)), pi))
 
                         ##############################################################
                         # Calculate brightness temperature statistics of core+cold anvil
                         corecoldlwp = np.copy(file_lwp[0,corecoldarea[0], corecoldarea[1]])
 
-                        finaltrack_corecold_minlwp[itrack-1,nc] = np.nanmin(corecoldlwp)
-                        finaltrack_corecold_meanlwp[itrack-1,nc] = np.nanmean(corecoldlwp)
+                        finaltrack_corecold_minlwp[icelltrack,nc] = np.nanmin(corecoldlwp)
+                        finaltrack_corecold_meanlwp[icelltrack,nc] = np.nanmean(corecoldlwp)
 
                         ################################################################
                         # Histogram of brightness temperature for core+cold anvil
-                        finaltrack_corecold_histlwp[itrack-1,nc,:], usedlwpbins = np.histogram(corecoldlwp, range=(minlwp_thresh, maxlwp_thresh), bins=lwpbins)
+                        #finaltrack_corecold_histlwp[icelltrack,nc,:], usedlwpbins = np.histogram(corecoldlwp, range=(minlwp_thresh, maxlwp_thresh), bins=lwpbins)
 
                         # Save track information. Need to subtract one since cloudnumber gives the number of the cloud (which starts at one), but we are looking for its index (which starts at zero)
-                        finaltrack_corecold_status[itrack-1,nc] = np.copy(trackstatus[0, nf, cloudindex])
-                        finaltrack_corecold_mergenumber[itrack-1, nc] = np.copy(trackmerge[0, nf, cloudindex])
-                        finaltrack_corecold_splitnumber[itrack-1, nc] = np.copy(tracksplit[0, nf, cloudindex])
-                        finaltrack_corecold_trackinterruptions[itrack-1] = np.copy(trackreset[0, nf, cloudindex])
+                        finaltrack_corecold_status[icelltrack,nc] = np.copy(trackstatus[0, nf, cloudindex])
+                        finaltrack_corecold_mergenumber[icelltrack, nc] = np.copy(trackmerge[0, nf, cloudindex])
+                        finaltrack_corecold_splitnumber[icelltrack, nc] = np.copy(tracksplit[0, nf, cloudindex])
+                        finaltrack_corecold_trackinterruptions[icelltrack] = np.copy(trackreset[0, nf, cloudindex])
 
                         ####################################################################
                         # Calculate mean brightness temperature for core
                         corelwp = np.copy(file_lwp[0, coldarea[0], coldarea[1]])
 
-                        finaltrack_core_meanlwp[itrack-1,nc] = np.nanmean(corelwp)
+                        finaltrack_core_meanlwp[icelltrack,nc] = np.nanmean(corelwp)
 
                     else:
                         print(('Track: ' + str(itrack) + '; ' + str(nc) + ' greater than maximum allowed number clouds, ' + str(nmaxclouds)))
@@ -1084,56 +1161,10 @@ def trackstats_LES(datasource, datadescription, pixel_radius, latlon_file, geoli
 
                 elif len(cloudnumber) > 1:
                     sys.exit(str(cloudnumber) + ' clouds linked to one track. Each track should only be linked to one cloud in each file in the track_number array. The track_number variable only tracks the largest cell in mergers and splits. The small clouds in tracks and mergers should only be listed in the track_splitnumbers and track_mergenumbers arrays.')
-
-    ###############################################################
-    ## Remove tracks that have no cells. These tracks are short.
-
-    print('Removing tracks with no cells')
-    gc.collect()
-
-    cloudindexpresent = np.array(np.where(finaltrack_tracklength != -9999))[0,:]
-    numtracks = len(cloudindexpresent)
-
-    maxtracklength = np.nanmin([np.nanmax(finaltrack_tracklength), int(nmaxclouds)])
-
+    
+    # remove tracks without cell for those two variables
     finaltrack_tracklength = finaltrack_tracklength[cloudindexpresent]
-    finaltrack_corecold_boundary = finaltrack_corecold_boundary[cloudindexpresent]
-    finaltrack_basetime = finaltrack_basetime[cloudindexpresent, 0:maxtracklength]
-    finaltrack_corecold_minlwp = finaltrack_corecold_minlwp[cloudindexpresent, 0:maxtracklength]
-    finaltrack_corecold_meanlwp = finaltrack_corecold_meanlwp[cloudindexpresent, 0:maxtracklength]
-    finaltrack_core_meanlwp = finaltrack_core_meanlwp[cloudindexpresent, 0:maxtracklength]
-    finaltrack_corecold_histlwp = finaltrack_corecold_histlwp[cloudindexpresent, 0:maxtracklength, :]
-    finaltrack_corecold_radius = finaltrack_corecold_radius[cloudindexpresent, 0:maxtracklength]
-    finaltrack_corecoldwarm_radius = finaltrack_corecoldwarm_radius[cloudindexpresent, 0:maxtracklength]
-    finaltrack_corecold_meanlat = finaltrack_corecold_meanlat[cloudindexpresent, 0:maxtracklength]
-    finaltrack_corecold_meanlon = finaltrack_corecold_meanlon[cloudindexpresent, 0:maxtracklength]
-    finaltrack_corecold_maxlon = finaltrack_corecold_maxlon[cloudindexpresent, 0:maxtracklength]
-    finaltrack_corecold_maxlat = finaltrack_corecold_maxlat[cloudindexpresent, 0:maxtracklength]
-    finaltrack_corecold_minlon = finaltrack_corecold_minlon[cloudindexpresent, 0:maxtracklength]
-    finaltrack_corecold_minlat = finaltrack_corecold_minlat[cloudindexpresent, 0:maxtracklength]
-    finaltrack_ncorecoldpix = finaltrack_ncorecoldpix[cloudindexpresent, 0:maxtracklength]
-    finaltrack_ncorepix = finaltrack_ncorepix[cloudindexpresent, 0:maxtracklength]
-    finaltrack_ncoldpix = finaltrack_ncoldpix[cloudindexpresent, 0:maxtracklength]
-    finaltrack_nwarmpix = finaltrack_nwarmpix[cloudindexpresent, 0:maxtracklength]
-    finaltrack_corecold_status = finaltrack_corecold_status[cloudindexpresent, 0:maxtracklength]
-    finaltrack_corecold_trackinterruptions = finaltrack_corecold_trackinterruptions[cloudindexpresent]
-    finaltrack_corecold_mergenumber = finaltrack_corecold_mergenumber[cloudindexpresent, 0:maxtracklength]
-    finaltrack_corecold_splitnumber = finaltrack_corecold_splitnumber[cloudindexpresent, 0:maxtracklength]
     finaltrack_corecold_cloudnumber = finaltrack_corecold_cloudnumber[cloudindexpresent, 0:maxtracklength]
-    finaltrack_datetimestring = list(finaltrack_datetimestring[i][0:maxtracklength][:] for i in cloudindexpresent)
-    finaltrack_cloudidfile = finaltrack_cloudidfile[cloudindexpresent, 0:maxtracklength, :]
-    finaltrack_corecold_majoraxis = finaltrack_corecold_majoraxis[cloudindexpresent, 0:maxtracklength]
-    finaltrack_corecold_orientation = finaltrack_corecold_orientation[cloudindexpresent, 0:maxtracklength] 
-    finaltrack_corecold_eccentricity = finaltrack_corecold_eccentricity[cloudindexpresent, 0:maxtracklength]
-    finaltrack_corecold_perimeter = finaltrack_corecold_perimeter[cloudindexpresent, 0:maxtracklength]
-    finaltrack_corecold_xcenter = finaltrack_corecold_xcenter[cloudindexpresent, 0:maxtracklength]
-    finaltrack_corecold_ycenter = finaltrack_corecold_ycenter[cloudindexpresent, 0:maxtracklength]
-    finaltrack_corecold_xweightedcenter = finaltrack_corecold_xweightedcenter[cloudindexpresent, 0:maxtracklength]
-    finaltrack_corecold_yweightedcenter = finaltrack_corecold_yweightedcenter[cloudindexpresent, 0:maxtracklength]
-
-    gc.collect()
-    print('Tracks with no cells removed')
-    print(('Number of Tracks:' + str(int(len(finaltrack_tracklength)))))
 
     ########################################################
     # Correct merger and split cloud numbers
@@ -1219,7 +1250,7 @@ def trackstats_LES(datasource, datadescription, pixel_radius, latlon_file, geoli
                               'minlwp': (['ntracks', 'nmaxlength'], finaltrack_corecold_minlwp), \
                               'meanlwp': (['ntracks', 'nmaxlength'], finaltrack_corecold_meanlwp), \
                               'meanlwp_conv': (['ntracks', 'nmaxlength'], finaltrack_core_meanlwp), \
-                              'histlwp': (['ntracks', 'nmaxlength', 'nbins'], finaltrack_corecold_histlwp), \
+                              #'histlwp': (['ntracks', 'nmaxlength', 'nbins'], finaltrack_corecold_histlwp), \
                               'majoraxis': (['ntracks', 'nmaxlength'], finaltrack_corecold_majoraxis), \
                               'orientation': (['ntracks', 'nmaxlength'], finaltrack_corecold_orientation), \
                               'eccentricity': (['ntracks', 'nmaxlength'], finaltrack_corecold_eccentricity), \
@@ -1390,11 +1421,11 @@ def trackstats_LES(datasource, datadescription, pixel_radius, latlon_file, geoli
     output_data.meanlwp_conv.attrs['valid_min'] = minlwp_thresh
     output_data.meanlwp_conv.attrs['valid_max'] = maxlwp_thresh
 
-    output_data.histlwp.attrs['long_name'] = 'Histogram of the liquid water path of the core + cold anvil for each cloud in a track.'
-    output_data.histlwp.attrs['standard_name'] = 'liquid water path'
-    output_data.histlwp.attrs['hist_value'] = minlwp_thresh
-    output_data.histlwp.attrs['valid_max'] =  maxlwp_thresh
-    output_data.histlwp.attrs['units'] = 'K'
+    #output_data.histlwp.attrs['long_name'] = 'Histogram of the liquid water path of the core + cold anvil for each cloud in a track.'
+    #output_data.histlwp.attrs['standard_name'] = 'liquid water path'
+    #output_data.histlwp.attrs['hist_value'] = minlwp_thresh
+    #output_data.histlwp.attrs['valid_max'] =  maxlwp_thresh
+    #output_data.histlwp.attrs['units'] = 'K'
 
     output_data.orientation.attrs['long_name'] = 'Orientation of the major axis of the core + cold anvil for each cloud in a track'
     output_data.orientation.attrs['units'] = 'Degrees clockwise from vertical'
@@ -1455,7 +1486,7 @@ def trackstats_LES(datasource, datadescription, pixel_radius, latlon_file, geoli
                                     'minlwp': {'zlib':True, '_FillValue': np.nan}, \
                                     'meanlwp': {'zlib':True, '_FillValue': np.nan}, \
                                     'meanlwp_conv': {'zlib':True, '_FillValue': np.nan}, \
-                                    'histlwp': {'dtype': 'int', 'zlib':True, '_FillValue': -9999}, \
+                                    #'histlwp': {'dtype': 'int', 'zlib':True, '_FillValue': -9999}, \
                                     'majoraxis': {'zlib':True, '_FillValue': np.nan}, \
                                     'orientation': {'zlib':True, '_FillValue': np.nan}, \
                                     'eccentricity': {'zlib':True, '_FillValue': np.nan}, \
