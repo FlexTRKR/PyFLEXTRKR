@@ -49,7 +49,8 @@ def identifycell_LES_xarray(statistics_filebase, stats_path, startdate, enddate,
     statistics_file = stats_path + statistics_filebase + '_' + startdate + '_' + enddate + '.nc'
     print(statistics_file)
 
-    allstatdata = xr.open_dataset(statistics_file, autoclose=True)
+    #allstatdata = xr.open_dataset(statistics_file, autoclose=True)
+    allstatdata = xr.open_dataset(statistics_file)
     ntracks_all = np.nanmax(allstatdata['ntracks'].data) + 1 # Total number of tracked features
     nmaxlength = np.nanmax(allstatdata['nmaxlength'].data) + 1 # Maximum number of features in a given track
     nconv = allstatdata['nconv'].data

@@ -828,9 +828,9 @@ def idclouds_LES(zipped_inputs):
 
         # proceed if file covers the geographic region in interest
         if len(indicesx) > 0 and len(indicesy) > 0:
-            out_lat = np.copy(in_lat[np.nanmin(indicesy):np.nanmax(indicesy), np.nanmin(indicesx):np.nanmax(indicesx)])
-            out_lon = np.copy(in_lon[np.nanmin(indicesy):np.nanmax(indicesy), np.nanmin(indicesx):np.nanmax(indicesx)])
-            out_lwp = np.copy(in_lwp[np.nanmin(indicesy):np.nanmax(indicesy), np.nanmin(indicesx):np.nanmax(indicesx)])
+            out_lat = np.copy(in_lat[np.nanmin(indicesy):np.nanmax(indicesy)+1, np.nanmin(indicesx):np.nanmax(indicesx)+1])
+            out_lon = np.copy(in_lon[np.nanmin(indicesy):np.nanmax(indicesy)+1, np.nanmin(indicesx):np.nanmax(indicesx)+1])
+            out_lwp = np.copy(in_lwp[np.nanmin(indicesy):np.nanmax(indicesy)+1, np.nanmin(indicesx):np.nanmax(indicesx)+1])
 
             ######################################################
             # proceed only if number of missing data does not exceed an accepable threshold
