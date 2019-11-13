@@ -923,14 +923,15 @@ def trackstats_LES(datasource, datadescription, pixel_radius, latlon_file, geoli
 
     cloudindexpresent = np.array(np.where(finaltrack_tracklength != -9999))[0,:]
     numtracks = len(cloudindexpresent)
-
     maxtracklength = np.nanmin([np.nanmax(finaltrack_tracklength), int(nmaxclouds)])
-    print(('Number of Tracks:' + str(int(len(finaltrack_tracklength)))))
+    if maxtracklength<nmaxclouds:
+        nmaxclouds = maxtracklength
+        finaltrack_corecold_cloudnumber = finaltrack_corecold_cloudnumber[:,:nmaxclouds]
 
+    print(('Number of Tracks:' + str(int(len(finaltrack_tracklength)))))
     print(f'numtracks:      {numtracks}')
     print(f'maxtracklength: {maxtracklength}')
     #print(f'cloudindexpresent: {cloudindexpresent}')
-
     print('Tracks with no cells NOT included')
 
     ###############################################################

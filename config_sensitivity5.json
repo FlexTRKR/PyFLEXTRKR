@@ -1,7 +1,7 @@
 {
     "run_idclouds": 0,
-    "run_tracksingle": 1,
-    "run_gettracks": 1,
+    "run_tracksingle": 0,
+    "run_gettracks": 0,
     "run_finalstats": 1,
     "run_identifycell": 1,
     "run_labelcell": 1,
