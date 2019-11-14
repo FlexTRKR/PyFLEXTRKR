@@ -23,7 +23,7 @@
 # Authors: Orginal IDL version written by Sally A. McFarlane (sally.mcfarlane@pnnl.gov) and modified by Zhe Feng (zhe.feng@pnnl.gov). Python version written by Hannah Barnes (hannah.barnes@pnnl.gov)
 
 # Define function for futyan version 4 method. Isolates cold core then dilates to get cold and warm anvil regions.
-def futyan4_mergedir(ir, pixel_radius, tb_threshs, area_thresh, mincorecoldpix, smoothsize, warmanvilexpansion):
+def futyan4_wrf(ir, pixel_radius, tb_threshs, area_thresh, mincorecoldpix, smoothsize, warmanvilexpansion):
     ######################################################################
     # Import modules
     import numpy as np

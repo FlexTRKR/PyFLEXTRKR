@@ -76,18 +76,16 @@ def filtermcs_wrf_rain(stats_path, pfstats_filebase, startdate, enddate, timeres
 
     pf_area = data['pf_area'].data
     pf_majoraxis = data['pf_majoraxislength'].data
-    pf_dbz50area = data['pf_dbz50area'].data
+    pf_rainrate = data['pf_rainrate'].data   
 
-    pf_meansfarea = data['pf_sfarea']
-
-    pf_ccarea = data['pf_corearea'].data
-    pf_ccmajoraxis = data['pf_coremajoraxislength'].data
-    pf_ccaspectratio = data['pf_coreaspectratio'].data
-
-    time_res = float(data.attrs['time_resolution_hour'])
+    time_res = float(data.attrs['time_resolution_hour_or_minutes']) 
+    if time_res > 5:
+        time_res = (time_res)/60 # puts time res into hr
+    print(time_res)
     mcs_ir_areathresh = float(data.attrs['MCS_IR_area_thresh_km2'])
     mcs_ir_durationthresh = float(data.attrs['MCS_IR_duration_thresh_hr'])
     mcs_ir_eccentricitythresh = float(data.attrs['MCS_IR_eccentricity_thres'])
+    basetime = data['basetime'].data
 
     ##################################################
     # Initialize matrices
@@ -96,7 +94,6 @@ def filtermcs_wrf_rain(stats_path, pfstats_filebase, startdate, enddate, timeres
 
     pf_mcstype = np.ones(ntracks, dtype=int)*-9999
     pf_mcsstatus = np.ones((ntracks, ntimes), dtype=int)*-9999
-    pf_cctype = np.ones((ntracks, ntimes), dtype=int)*-9999
 
     ###################################################
     # Loop through each track
@@ -109,43 +106,42 @@ def filtermcs_wrf_rain(stats_path, pfstats_filebase, startdate, enddate, timeres
 
         # Get the largest precipitation (1st entry in 3rd dimension)
         ipf_majoraxis = np.copy(pf_majoraxis[nt, 0:ilength, 0])
-        ipf_dbz50area = np.copy(pf_dbz50area[nt, 0:ilength, 0])
-
-        # Get the cooresponding convective core and stratiform region data (use the largest feature (1st entry in 3rd dimenstion), when applicable) 
-        ipf_meansfarea = np.copy(pf_meansfarea[nt, 0:ilength])
-        ipf_ccmajoraxis = np.copy(pf_ccmajoraxis[nt, 0:ilength, 0])
-        ipf_ccaspectratio = np.copy(pf_ccaspectratio[nt, 0:ilength, 0])
+        print(ipf_majoraxis)
+        ipf_rainrate = np.copy(pf_rainrate[nt, 0:ilength, 0])
+        print(ipf_rainrate)
 
         ######################################################
-        # Apply radar defined MCS criteria
+        # Apply precip defined MCS criteria
 
-        # Apply PF major axis length > thresh and contains echo >= 50 dbZ criteria
-        ipfmcs = np.array(np.where((ipf_majoraxis > majoraxisthresh) & (ipf_dbz50area > 0)))[0, :]
+        # Apply PF major axis length > thresh and contains rainrates >= 1 mm/hr criteria
+        ipfmcs = np.array(np.where((ipf_majoraxis > majoraxisthresh) & (ipf_rainrate > 1)))[0, :]
         nipfmcs = len(ipfmcs)
+        print(nipfmcs)
+        print(nipfmcs*time_res)
+        print(durationthresh)
 
         if nipfmcs > 0 :
             # Apply duration threshold to entire time period
             if nipfmcs*time_res > durationthresh:
 
                 # Find continuous duration indices
-                groups = np.split(ipfmcs, np.where(np.diff(ipfmcs) != gapthresh)[0]+1)
+                groups = np.split(ipfmcs, np.where(np.diff(ipfmcs) > gapthresh)[0]+1) # KB CHANGED != to >
                 nbreaks = len(groups)
 
                 for igroup in range(0, nbreaks):
 
                     ############################################################
-                    # Determine if each group statisfies duration threshold
+                    # Determine if each group satisfies duration threshold
                     igroup_indices = np.array(np.copy(groups[igroup][:]))
                     nigroup = len(igroup_indices)
 
                     # Group satisfies duration threshold
-                    if np.multiply(len(groups[igroup][:]), time_res) > durationthresh:
+                    #if np.multiply(len(groups[igroup][:]), time_res) > durationthresh:
+                    if np.multiply((groups[igroup][-1]-groups[igroup][0]), time_res) >= durationthresh:   # KB CHANGED
 
                         # Get radar variables for this group
                         igroup_duration = len(groups[igroup])*time_res
                         igroup_pfmajoraxis = np.copy(ipf_majoraxis[igroup_indices])
-                        igroup_ccmajoraxis = np.copy(ipf_ccmajoraxis[igroup_indices])
-                        igroup_ccaspectratio = np.copy(ipf_ccaspectratio[igroup_indices])
 
                         # Label this period as an mcs
                         pf_mcsstatus[nt, igroup_indices] = 1
@@ -187,19 +183,15 @@ def filtermcs_wrf_rain(stats_path, pfstats_filebase, startdate, enddate, timeres
 
     # Isolate data associated with robust MCS
     ir_tracklength = ir_tracklength[trackid_mcs]
+    mcs_basetime = basetime[trackid_mcs]
+    #print(mcs_basetime)
 
     #pf_mcstype = pf_mcstype[trackid_mcs]
     pf_mcsstatus = pf_mcsstatus[trackid_mcs, :]
     pf_majoraxis = pf_majoraxis[trackid_mcs, :, :]
     pf_area = pf_area[trackid_mcs, :, :]
 
-    pf_ccmajoraxis = pf_ccmajoraxis[trackid_mcs, :, :]
-    pf_ccarea = pf_ccarea[trackid_mcs, :, :]
-    #pf_cctype = pf_cctype[trackid_mcs, :]
-
-    pf_meansfarea = pf_meansfarea[trackid_mcs, :]
-
-    # Determine how long MCS track criteria is statisfied
+    # Determine how long MCS track criteria is satisfied
     TEMP_mcsstatus = np.copy(pf_mcsstatus).astype(float)
     TEMP_mcsstatus[TEMP_mcsstatus == -9999] = np.nan
     mcs_length = np.nansum(TEMP_mcsstatus, axis=1)
@@ -224,12 +216,14 @@ def filtermcs_wrf_rain(stats_path, pfstats_filebase, startdate, enddate, timeres
     nlongmcs = len(ilongmcs)
 
     if nlongmcs > 0:
+        print('ENTERED NLONGMCS IF STATEMENT LINES 214')
         # Initialize arrays
         cycle_complete = np.ones(nmcs, dtype=int)*-9999
         cycle_stage = np.ones((nmcs, ntimes), dtype=int)*-9999
         cycle_index = np.ones((nmcs, 5), dtype=int)*-9999
 
         mcs_basetime = np.empty((nmcs, ntimes), dtype='datetime64[s]')
+        print(mcs_basetime)
 
         # Loop through each mcs
         for ilm in range(0, nlongmcs):
@@ -239,14 +233,9 @@ def filtermcs_wrf_rain(stats_path, pfstats_filebase, startdate, enddate, timeres
 
             # Isolate data from this track
             ilm_irtracklength = np.copy(ir_tracklength[ilongmcs[ilm]]).astype(int)
-            ilm_pfcctype = np.copy(pf_cctype[ilongmcs[ilm], 0:ilm_irtracklength])
-            ilm_pfccmajoraxis = np.copy(pf_ccmajoraxis[ilongmcs[ilm], 0:ilm_irtracklength, :])
-            ilm_pfccarea = np.copy(pf_ccarea[ilongmcs[ilm], 0:ilm_irtracklength, :])
-            ilm_meansfarea = np.copy(pf_meansfarea[ilongmcs[ilm], 0:ilm_irtracklength])
             ilm_pfarea = np.copy(pf_area[ilongmcs[ilm], 0:ilm_irtracklength, 0])
-
-            ilm_maxpfccmajoraxis = np.nanmax(ilm_pfccmajoraxis, axis=1)
-            ilm_maxpfccarea = np.nanmax(ilm_pfccarea, axis=1)
+            ilm_pfmajoraxis = np.copy(pf_majoraxis[ilongmcs[ilm], 0:ilm_irtracklength, 0])
+            ilm_maxpfmajoraxis = np.nanmax(ilm_pfmajoraxis, axis=0)
 
             # Get basetime
             TEMP_basetime = np.array([pd.to_datetime(data['basetime'][trackid_mcs[ilongmcs[ilm]], 0:ilm_irtracklength].data, unit='s')])
@@ -255,21 +244,21 @@ def filtermcs_wrf_rain(stats_path, pfstats_filebase, startdate, enddate, timeres
             ##################################################################
             # Find indices of when convective line present and absent and when stratiform present
 
-            # Find times with convective core area > 0
-            iccarea = np.array(np.where(ilm_maxpfccarea > 0))[0, :]
-            iccarea_groups = np.split(iccarea, np.where(np.diff(iccarea) > 2)[0]+1)
-            if len(iccarea) > 0 and len(iccarea_groups) > 1:
-                grouplength = np.empty(len(iccarea_groups))
-                for igroup in range(0, len(iccarea_groups)):
-                    grouplength[igroup] = len(iccarea_groups[igroup][:])
-                maxgroup = np.nanargmax(grouplength)
-                iccarea = iccarea_groups[maxgroup][:]
-            elif len(iccarea) > 0 :
-                iccarea = np.arange(iccarea[0], iccarea[-1]+1)
-            nccarea = len(iccarea)
+#            # Find times with convective core area > 0
+#            iccarea = np.array(np.where(ilm_maxpfccarea > 0))[0, :]
+#            iccarea_groups = np.split(iccarea, np.where(np.diff(iccarea) > 2)[0]+1)
+#            if len(iccarea) > 0 and len(iccarea_groups) > 1:
+#                grouplength = np.empty(len(iccarea_groups))
+#                for igroup in range(0, len(iccarea_groups)):
+#                    grouplength[igroup] = len(iccarea_groups[igroup][:])
+#                maxgroup = np.nanargmax(grouplength)
+#                iccarea = iccarea_groups[maxgroup][:]
+#            elif len(iccarea) > 0 :
+#                iccarea = np.arange(iccarea[0], iccarea[-1]+1)
+#            nccarea = len(iccarea)
 
-            # Find times with convective major axis length greater than 100 km
-            iccline = np.array(np.where(ilm_maxpfccmajoraxis > 100))[0, :]
+            # Find times with major axis length greater than 100 km
+            iccline = np.array(np.where(ilm_maxpfmajoraxis > 100))[0, :]
             iccline_groups = np.split(iccline, np.where(np.diff(iccline) > 2)[0]+1)
             if len(iccline) > 0 and len(iccline_groups) > 1:
                 grouplength = np.empty(len(iccline_groups))
@@ -281,87 +270,27 @@ def filtermcs_wrf_rain(stats_path, pfstats_filebase, startdate, enddate, timeres
                 iccline = np.arange(iccline[0], iccline[-1]+1)
             nccline = len(iccline)
 
-            # Find times with convective major axis length greater than 100 km and stratiform area greater than the median amount of stratiform
-            #ilm_meansfarea[ilm_meansfarea == fillvalue] = np.nan
-            isfarea = np.array(np.where((ilm_maxpfccmajoraxis > 100) & (ilm_meansfarea > np.nanmean(ilm_meansfarea))))[0, :]
-            isfarea_groups = np.split(isfarea, np.where(np.diff(isfarea) > 2)[0]+1)
-            if len(isfarea) > 0 and len(isfarea_groups) > 1:
-                grouplength = np.empty(len(isfarea_groups))
-                for igroup in range(0, len(isfarea_groups)):
-                    grouplength[igroup] = len(isfarea_groups[igroup][:])
-                maxgroup = np.nanargmax(grouplength)
-                isfarea = isfarea_groups[maxgroup][:]
-            elif len(isfarea) > 0 :
-                isfarea = np.arange(isfarea[0], isfarea[-1]+1)
-            nsfarea = len(isfarea)
-
-            # Find times with convective major axis length less than 100 km
-            if nsfarea > 0:
-                inoccline = np.array(np.where(ilm_maxpfccmajoraxis < 100))[0, :]
-                inoccline = inoccline[np.where((inoccline > isfarea[-1]) & (inoccline > iccline[-1]))]
-                inoccline_groups = np.split(inoccline, np.where(np.diff(inoccline) > 2)[0]+1)
-                if len(inoccline) > 0 and len(inoccline_groups) > 1:
-                    grouplength = np.empty(len(inoccline_groups))
-                    for igroup in range(0, len(inoccline_groups)):
-                        grouplength[igroup] = len(inoccline_groups[igroup][:])
-                    maxgroup = np.nanargmax(grouplength)
-                    inoccline = inoccline_groups[maxgroup][:]
-                elif len(inoccline) > 0:
-                    inoccline = np.arange(inoccline[0], inoccline[-1]+1)
-                nnoccline = len(inoccline)
-
             ###############################################################################
             # Classify cloud only stage 
 
             # Cloud only stage
-            if nccarea > 0:
-                # If first convective time is after the first cloud time, label all hours before the convective core appearance time as preconvective
-                if iccarea[0] > 0 and iccarea[0] < ilm_irtracklength-1:
-                    ilm_index[0] = 0 # Start of cloud only
-                    ilm_cycle[0:iccarea[0]] = 1 # Time period of cloud only
+#            if nccarea > 0:
+#                # If first convective time is after the first cloud time, label all hours before the convective core appearance time as preconvective
+#                if iccarea[0] > 0 and iccarea[0] < ilm_irtracklength-1:
+#                    ilm_index[0] = 0 # Start of cloud only
+#                    ilm_cycle[0:iccarea[0]] = 1 # Time period of cloud only
 
-                ilm_index[1] = iccarea[0] # Start of unorganized convective cells 
+#                ilm_index[1] = iccarea[0] # Start of unorganized convective cells 
 
             # If convective line exists
             if nccline > 1:
                 # If the convective line occurs after the first storm time (use second index since convective line must be around for one hour prior to classifying as genesis)
                 # Label when convective cores first appear, but are not organized into a line
-                if iccline[1] > iccarea[0]:
+                if iccline[1] > 0:
                     ilm_index[2] = iccline[1] # Start of organized convection
-                    ilm_cycle[iccarea[0]:iccline[1]] = 2 # Time period of unorganzied convective cells
+                    ilm_cycle[iccline[1]] = 2 # Time period of unorganzied convective cells
                 else:
                     sys.exit('Check convective line in track ' + str(int(ilongmcs[ilm])))
-
-                if nsfarea > 0:
-                    # Label MCS genesis. Test if stratiform area time is two timesteps after the convective line and two time steps before the last time of the cloud track
-                    if isfarea[0] > iccline[1] + 2:
-                        ilm_index[3] = isfarea[0] # Start of mature MCS
-                        ilm_cycle[iccline[1]:isfarea[0]] = 3 # Time period of organized cells before maturation
-
-                        ilm_cycle[isfarea[0]:isfarea[-1]+1] = 4 # Time period of mature mcs
-                    else:
-                        matureindex = isfarea[np.array(np.where(isfarea == iccline[1] + 2))[0, :]]
-                        if len(matureindex) > 0:
-                            ilm_index[3] = np.copy(matureindex[0])
-                            ilm_cycle[iccline[1]:matureindex[0]] = 3 # Time period of organized cells before maturation
-
-                            ilm_cycle[matureindex[0]:isfarea[-1]+1] = 4 # Time period of mature mcs
-
-                            #if isfarea[0] > iccline[1] + 2
-                            #    ilm_index[3] = isfarea[0] # Start of mature MCS
-                            #    ilm_cycle[iccline[1]:isfarea[0]] = 3 # Time period of organized cells before maturation
-                        
-                            #    ilm_cycle[isfarea[0]:isfarea[-1]+1] = 4 # Time period of mature mcs
-                            #else:
-                            #    if nsfarea > 3:
-                            #        ilm_index[3] = isfarea[3] # Start of mature MCS
-                            #        ilm_cycle[iccline[1]:isfarea[3]] = 3 # Time period of organized cells before maturation
-                    
-                            #        ilm_cycle[isfarea[3]:isfarea[-1]+1] = 4 # Time period of mature MCS
-
-                            # Label dissipating times. Buy default this is all times after the mature stage
-                            ilm_index[4] =  isfarea[-1]+1 
-                            ilm_cycle[isfarea[-1]+1:ilm_irtracklength+1] = 5 # Time period of dissipation
 
             ############################################################
             # Final life cycle processing
@@ -398,18 +327,15 @@ def filtermcs_wrf_rain(stats_path, pfstats_filebase, startdate, enddate, timeres
                               'meanlat': (['track', 'time'], data['meanlat'][trackid_mcs, :]), \
                               'meanlon': (['track', 'time'], data['meanlon'][trackid_mcs, :]), \
                               'core_area': (['track', 'time'], data['core_area'][trackid_mcs, :]), \
-                              'ccs_area': (['track', 'time'], data['ccs_area'][trackid_mcs, :]), \
                               'cloudnumber': (['track', 'time'], data['cloudnumber'][trackid_mcs, :]), \
                               'mergecloudnumber': (['track', 'time', 'mergesplit'], data['mergecloudnumber'][trackid_mcs, :, :]), \
                               'splitcloudnumber': (['track', 'time', 'mergesplit'], data['splitcloudnumber'][trackid_mcs, :, :]), \
-                              #'pf_mcstype': (['tracks'], pf_mcstype), \
-                              'pf_mcsstatus': (['track', 'time'], pf_mcsstatus), \
-                              #'pf_cctype': (['track', 'time'], pf_cctype), \
-                              'lifecycle_complete_flag': (['track'], cycle_complete), \
-                              'lifecycle_index': (['track', 'lifestages'], cycle_index), \
-                              'lifecycle_stage': (['track', 'time'], cycle_stage), \
-                              'pf_frac': (['track', 'time'], data['nmq_frac'][trackid_mcs]), \
-                              'npf': (['track', 'time'], data['npf'][trackid_mcs]), \
+                              #'pf_mcsstatus': (['track', 'time'], pf_mcsstatus), \
+                              #'lifecycle_complete_flag': (['track'], cycle_complete), \
+                              #'lifecycle_index': (['track', 'lifestages'], cycle_index), \
+                              #'lifecycle_stage': (['track', 'time'], cycle_stage), \
+                              'pf_frac': (['track', 'time'], data['pf_frac'][trackid_mcs]), \
+                              'npf': (['track', 'time'], data['pf_npf'][trackid_mcs]), \
                               'pf_area': (['track', 'time', 'pfs'], data['pf_area'][trackid_mcs, :, :]), \
                               'pf_lon': (['track', 'time', 'pfs'], data['pf_lon'][trackid_mcs, :, :]), \
                               'pf_lat': (['track', 'time', 'pfs'], data['pf_lat'][trackid_mcs, :, :]), \
@@ -419,22 +345,21 @@ def filtermcs_wrf_rain(stats_path, pfstats_filebase, startdate, enddate, timeres
                               'pf_minoraxislength': (['track', 'time', 'pfs'], data['pf_minoraxislength'][trackid_mcs, :, :]), \
                               'pf_aspectratio': (['track', 'time', 'pfs'], data['pf_aspectratio'][trackid_mcs, :, :]), \
                               'pf_eccentricity': (['track', 'time', 'pfs'], data['pf_eccentricity'][trackid_mcs, :, :]), \
-                              'pf_orientation': (['track', 'time', 'pfs'], data['pf_orientation'][trackid_mcs, :, :]), \
-                              'pf_ncores': (['track', 'time'], data['pf_ncores'][trackid_mcs, :])}, \
-                             coords = {'track': (['track'], np.arange(1, len(trackid_mcs)+1)), \
-                                       'time': (['time'], data.coords['time']), \
-                                       'pfs': (['pfs'], data.coords['pfs']), \
-                                       'cores': (['cores'], data.coords['cores']), \
-                                       'mergesplit': (['mergesplit'], data.coords['mergesplit']), \
-                                       'characters': (['characters'], data.coords['characters']), \
-                                       'lifestages': (['lifestages'], np.arange(0, 5))}, \
-                             attrs={'title':'Statistics of MCS definedusing NMQ precipitation features', \
+                              'pf_orientation': (['track', 'time', 'pfs'], data['pf_orientation'][trackid_mcs, :, :])}, \
+                             coords={'track': (['track'], np.arange(1, len(trackid_mcs)+1)), \
+                                    'time': (['time'], data.coords['time']), \
+                                    'pfs': (['pfs'], data.coords['pfs']), \
+                                    'cores': (['cores'], data.coords['cores']), \
+                                    'mergesplit': (['mergesplit'], data.coords['mergesplit']), \
+                                    'characters': (['characters'], data.coords['characters']), \
+                                    'lifestages': (['lifestages'], np.arange(0, 5))}, \
+                             attrs={'title':'Statistics of MCS defined using WRF precipitation features', \
                                     'source1': data.attrs['source1'], \
                                     'source2': data.attrs['source2'], \
                                     'description': data.attrs['description'], \
                                     'startdate': data.attrs['startdate'], \
                                     'enddate': data.attrs['enddate'], \
-                                    'time_resolution_hour': data.attrs['time_resolution_hour'], \
+                                    'time_resolution_hour': data.attrs['time_resolution_hour_or_minutes'], \
                                     'mergedir_pixel_radius': data.attrs['mergdir_pixel_radius'], \
                                     'MCS_IR_area_km2': data.attrs['MCS_IR_area_thresh_km2'], \
                                     'MCS_IR_duration_hr': data.attrs['MCS_IR_duration_thresh_hr'], \
@@ -465,8 +390,8 @@ def filtermcs_wrf_rain(stats_path, pfstats_filebase, startdate, enddate, timeres
     output_data.characters.attrs['description'] = 'Number of characters in the date-time string'
     output_data.characters.attrs['units'] = 'unitless'
 
-    output_data.lifestages.attrs['description'] = 'Number of MCS life stages'
-    output_data.lifestages.attrs['units'] = 'unitless'
+    #output_data.lifestages.attrs['description'] = 'Number of MCS life stages'
+    #output_data.lifestages.attrs['units'] = 'unitless'
 
     output_data.mcs_length.attrs['long_name'] = 'Length of each MCS in each track'
     output_data.mcs_length.attrs['units'] = 'Temporal resolution of orginal data'
@@ -529,9 +454,6 @@ def filtermcs_wrf_rain(stats_path, pfstats_filebase, startdate, enddate, timeres
     output_data.core_area.attrs['long_name'] = 'area of the cold core at the given time'
     output_data.core_area.attrs['units'] = 'km^2'
 
-    output_data.ccs_area.attrs['long_name'] = 'area of the cold core and cold anvil at the given time'
-    output_data.ccs_area.attrs['units'] = 'km^2'
-
     output_data.cloudnumber.attrs['long_name'] = 'cloud number in the corresponding cloudid file of clouds in the mcs'
     output_data.cloudnumber.attrs['usage'] = 'to link this tracking statistics file with pixel-level cloudid files, use the cloudidfile and cloudnumber together to identify which cloud this current track and time is associated with'
     output_data.cloudnumber.attrs['units'] = 'unitless'
@@ -588,23 +510,17 @@ def filtermcs_wrf_rain(stats_path, pfstats_filebase, startdate, enddate, timeres
     output_data.pf_orientation.attrs['min_value'] = 0
     output_data.pf_orientation.attrs['max_value'] = 360
 
-    #output_data.pf_mcstype.attrs['description'] = 'Flag indicating type of MCS. 1 = Squall, 2 = Non-Squall'
-    #output_data.pf_mcstype.attrs['units'] = 'unitless'
+    #output_data.pf_mcsstatus.attrs['description'] = 'Flag indicating if this time part of the MCS 1 = Yes, 0 = No'
+    #output_data.pf_mcsstatus.attrs['units'] = 'unitless'
 
-    #output_data.pf_cctype.attrs['description'] = 'Flag indicating type of MCS. 1 = Squall, 2 = Non-Squall'
-    #output_data.pf_cctype.attrs['units'] = 'unitless'
+    #output_data.lifecycle_complete_flag.attrs['description'] = 'Flag indicating if this MCS has each element in the MCS life cycle'
+    #output_data.lifecycle_complete_flag.attrs['units'] = 'unitless'
 
-    output_data.pf_mcsstatus.attrs['description'] = 'Flag indicating if this time part of the MCS 1 = Yes, 0 = No'
-    output_data.pf_mcsstatus.attrs['units'] = 'unitless'
+    #output_data.lifecycle_index.attrs['description'] = 'Time index when each phase of the MCS life cycle starts'
+    #output_data.lifecycle_index.attrs['units'] = 'unitless'
 
-    output_data.lifecycle_complete_flag.attrs['description'] = 'Flag indicating if this MCS has each element in the MCS life cycle'
-    output_data.lifecycle_complete_flag.attrs['units'] = 'unitless'
-
-    output_data.lifecycle_index.attrs['description'] = 'Time index when each phase of the MCS life cycle starts'
-    output_data.lifecycle_index.attrs['units'] = 'unitless'
-
-    output_data.lifecycle_stage.attrs['description'] = 'Each time in the MCS is labeled with a flag indicating its phase in the MCS lifecycle. 1 = Cloud only, 2 = Isolated convective cores, 3 = MCS genesis, 4 = MCS maturation, 5 = MCS decay'
-    output_data.lifecycle_stage.attrs['units'] = 'unitless'
+    #output_data.lifecycle_stage.attrs['description'] = 'Each time in the MCS is labeled with a flag indicating its phase in the MCS lifecycle. 1 = Cloud only, 2 = Isolated convective cores, 3 = MCS genesis, 4 = MCS maturation, 5 = MCS decay'
+    #output_data.lifecycle_stage.attrs['units'] = 'unitless'
 
     # Write netcdf file
     print('')
@@ -617,14 +533,13 @@ def filtermcs_wrf_rain(stats_path, pfstats_filebase, startdate, enddate, timeres
                                     'status': {'dtype': 'int', 'zlib':True, '_FillValue': -9999}, \
                                     'startstatus': {'dtype': 'int', 'zlib':True, '_FillValue': -9999}, \
                                     'endstatus': {'dtype': 'int', 'zlib':True, '_FillValue': -9999}, \
-                                    'base_time': {'zlib':True, 'units': 'seconds since 1970-01-01'}, \
+                                    'base_time': {'zlib':True}, \
                                     'boundary': {'dtype': 'int', 'zlib':True, '_FillValue': -9999}, \
                                     'interruptions': {'dtype': 'int', 'zlib':True, '_FillValue': -9999}, \
                                     'datetimestring': {'zlib':True}, \
                                     'meanlat': {'zlib':True, '_FillValue': np.nan}, \
                                     'meanlon': {'zlib':True, '_FillValue': np.nan}, \
                                     'core_area': {'zlib':True, '_FillValue': np.nan}, \
-                                    'ccs_area': {'zlib':True, '_FillValue': np.nan}, \
                                     'cloudnumber': {'dtype': 'int', 'zlib':True, '_FillValue': -9999}, \
                                     'mergecloudnumber': {'dtype': 'int', 'zlib':True, '_FillValue': -9999}, \
                                     'splitcloudnumber': {'dtype': 'int', 'zlib':True, '_FillValue': -9999}, \
@@ -638,13 +553,12 @@ def filtermcs_wrf_rain(stats_path, pfstats_filebase, startdate, enddate, timeres
                                     'pf_minoraxislength': {'zlib':True, '_FillValue': np.nan}, \
                                     'pf_aspectratio': {'zlib':True, '_FillValue': np.nan}, \
                                     'pf_orientation': {'zlib':True, '_FillValue': np.nan}, \
-                                    'pf_eccentricity': {'zlib':True, '_FillValue': np.nan}, \
-                                    #'pf_mcstype': {'dtype': 'int', 'zlib':True, '_FillValue': -9999}, \
-                                    #'pf_cctype': {'dtype': 'int', 'zlib':True, '_FillValue': -9999}, \
-                                    'pf_mcsstatus': {'dtype': 'int', 'zlib':True, '_FillValue': -9999}, \
-                                    'lifecycle_complete_flag': {'dtype': 'int', 'zlib':True, '_FillValue': -9999}, \
-                                    'lifecycle_index': {'dtype': 'int', 'zlib':True, '_FillValue': -9999}, \
-                                    'lifecycle_stage': {'dtype': 'int', 'zlib':True, '_FillValue': -9999}})
+                                    'pf_eccentricity': {'zlib':True, '_FillValue': np.nan}})
+                                    #'pf_eccentricity': {'zlib':True, '_FillValue': np.nan}, \
+                                    #'pf_mcsstatus': {'dtype': 'int', 'zlib':True, '_FillValue': -9999}, \
+                                    #'lifecycle_complete_flag': {'dtype': 'int', 'zlib':True, '_FillValue': -9999}, \
+                                    #'lifecycle_index': {'dtype': 'int', 'zlib':True, '_FillValue': -9999}, \
+                                    #'lifecycle_stage': {'dtype': 'int', 'zlib':True, '_FillValue': -9999}})
 
 
 

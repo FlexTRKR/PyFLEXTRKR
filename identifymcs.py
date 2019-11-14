@@ -1,8 +1,8 @@
 # Purpose: Subset satellite statistics file to keep only MCS. Uses brightness temperature statstics of cold cloud shield area, duration, and eccentricity base on Fritsch et al (1986) and Maddos (1980)
 
-# Author: Original IDL code written by Zhe Feng (zhe.feng@pnnl.gov), Python version written by Hannah C. Barnes (hannah.barnes@pnnl.gov)
+# Author: Original IDL code written by Zhe Feng (zhe.feng@pnnl.gov), Python version written by Hannah C. Barnes (hannah.barnes@pnnl.gov), altered by Katelyn Barber (katelyn.barber@pnnl.gov)
 
-def identifymcs_mergedir_xarray(statistics_filebase, stats_path, startdate, enddate, geolimits, time_resolution, area_thresh, duration_thresh, eccentricity_thresh, split_duration, merge_duration, nmaxmerge):
+def identifymcs_wrf_xarray(statistics_filebase, stats_path, startdate, enddate, geolimits, time_resolution, area_thresh, duration_thresh, eccentricity_thresh, split_duration, merge_duration, nmaxmerge, timegap):
     # Inputs:
     # statistics_filebase - header of the track statistics file that was generated in the previous code
     # stats_path - location of the track data. also the location where the data from this code will be saved
@@ -54,11 +54,12 @@ def identifymcs_mergedir_xarray(statistics_filebase, stats_path, startdate, endd
     allstatdata = Dataset(statistics_file, 'r')
     ntracks_all = np.nanmax(allstatdata['ntracks']) + 1 # Total number of tracked features
     nmaxlength = np.nanmax(allstatdata['nmaxlength']) + 1 # Maximum number of features in a given track
-    nconv = allstatdata['ncov'][:]
+    print(nmaxlength)
+    nconv = allstatdata['nconv'][:]
     ncoldanvil = allstatdata['ncoldanvil'][:]
     lifetime = allstatdata['lifetime'][:]
     eccentricity = allstatdata['eccentricity'][:]
-    basetime = allstatdata['basetime'][:]
+    basetime = allstatdata['basetime'][:]  # epoch time of each cloud in a track (ntracks, nmaxlength)
     basetime_units =  allstatdata['basetime'].units
     basetime_calendar = allstatdata['basetime'].calendar
     mergecloudnumbers = allstatdata['mergenumbers'][:]
@@ -70,12 +71,14 @@ def identifymcs_mergedir_xarray(statistics_filebase, stats_path, startdate, endd
     datetimestrings = allstatdata['datetimestrings'][:]
     boundary = allstatdata['boundary'][:]
     trackinterruptions = allstatdata['trackinterruptions'][:]
-    meanlat = allstatdata['meanlat'][:]
-    meanlon = allstatdata['meanlon'][:]
+    meanlat = np.array(allstatdata['meanlat'][:])
+    meanlon = np.array(allstatdata['meanlon'][:])
     pixelradius = allstatdata.getncattr('pixel_radius_km')
     datasource = allstatdata.getncattr('source')
-    datadescription = allstatdata.getncattr['description']
+    datadescription = allstatdata.getncattr('description')
     allstatdata.close()
+    
+    print('duration threshold: ', duration_thresh)
 
     ####################################################################
     # Set up thresholds
@@ -116,17 +119,25 @@ def identifymcs_mergedir_xarray(statistics_filebase, stats_path, startdate, endd
 
             # Cold cloud shield area requirement
             iccs = np.array(np.where(track_ccsarea > area_thresh))[0,:]
+            print('nt: ', nt)
+            print('len iccs: ', len(iccs))
             nccs = len(iccs)
 
             # Find continuous times
-            groups = np.split(iccs, np.where(np.diff(iccs) != 1)[0]+1)
+            #groups = np.split(iccs, np.where(np.diff(iccs) != 1)[0]+1)  # ORIGINAL
+            groups = np.split(iccs, np.where(np.diff(iccs) > timegap)[0]+1) # KB TESTING TIME GAP (!=1)
             nbreaks = len(groups)
 
             # System may have multiple periods satisfying area and duration requirements. Loop over each period
             if iccs != []:
                 for t in range(0,nbreaks):
                     # Duration requirement
-                    if np.multiply(len(groups[t][:]), time_resolution) > duration_thresh:
+                    #print('len(groups[t][:]): ',len(groups[t][:]))
+                    #print('np multiply: ', np.multiply(len(groups[t][:]), time_resolution))
+                    print('np multiply: ', np.multiply((groups[t][-1]-groups[t][0]), time_resolution))
+                    if np.multiply((groups[t][-1]-groups[t][0]), time_resolution) >= duration_thresh:
+                    #if np.multiply(len(groups[t][:]), time_resolution) >= duration_thresh:
+                        print('Number of times * TIME RESOLUTION GREATER THAN DUR_THRESH')
 
                         # Isolate area and eccentricity for the subperiod
                         subtrack_ccsarea = track_ccsarea[groups[t][:]]
@@ -141,25 +152,38 @@ def identifymcs_mergedir_xarray(statistics_filebase, stats_path, startdate, endd
                             # Label as MCS
                             mcstype[nt] = 1
                             mcsstatus[nt,groups[t][:]] = 1
+                            print('nt: ', nt)
+                            print('eccentricity met-mcs')
                         else:
                             # Label as squall line
                             mcstype[nt] = 2
                             mcsstatus[nt,groups[t][:]] = 2
                             trackid_sql = np.append(trackid_sql, nt)
+                            print('nt: ', nt)
+                            print('eccentricity not met-sl')                            
                         trackid_mcs = np.append(trackid_mcs, nt)
                     else:
                         # Size requirement met but too short of a period
                         trackid_nonmcs = np.append(trackid_nonmcs, nt)
+                        print('nt: ', nt)
+                        print('size met but duration not')
                         
             else:
                 # Size requirement not met
                 trackid_nonmcs = np.append(trackid_nonmcs, nt)
-
+                print('nt: ', nt)
+                print('size not met')
+                
+    ################################################################
+    # Check that there are MCSs to continue processing 
+    if trackid_mcs == []:
+        print('There are no MCSs in the domain, the code will crash')
+    
     ################################################################
     # Subset MCS / Squall track index
     trackid = np.array(np.where(mcstype > 0))[0,:]
     nmcs = len(trackid)
-    print(nmcs)
+    print('nmcs: ', nmcs)
 
     if nmcs > 0:
         mcsstatus = mcsstatus[trackid,:]
@@ -173,7 +197,7 @@ def identifymcs_mergedir_xarray(statistics_filebase, stats_path, startdate, endd
     mcstracknumbers = np.copy(trackid) + 1
 
     ###############################################################
-    # Find small merging and spliting louds and add to MCS
+    # Find small merging and spliting clouds and add to MCS
     mcsmergecloudnumber = np.ones((nmcs, nmaxlength, nmaxmerge), dtype=np.int32)*-9999
     mcsmergestatus = np.ones((nmcs, nmaxlength, nmaxmerge), dtype=np.int32)*-9999
     mcssplitcloudnumber = np.ones((nmcs, nmaxlength, nmaxmerge), dtype=np.int32)*-9999
@@ -181,20 +205,26 @@ def identifymcs_mergedir_xarray(statistics_filebase, stats_path, startdate, endd
 
     # Loop through each MCS and link small clouds merging in
     for imcs in np.arange(0,nmcs):
-
         ###################################################################################
         # Isolate basetime data
         print('')
-
         if imcs == 0:
-            mcsbasetime = np.array([pd.to_datetime(num2date(basetime[trackid[imcs], :], units=basetime_units, calendar=basetime_calendar))], dtype='datetime64[s]')[0, 0]
+            mcsbasetime = np.array([pd.to_datetime(num2date(basetime[trackid[imcs], :], units=basetime_units, calendar=basetime_calendar))], dtype='datetime64[s]')
         else:
-            mcsbasetime = np.concatenate((mcsbasetime, np.array([pd.to_datetime(num2date(basetime[trackid[imcs], :], units=basetime_units, calendar=basetime_calendar))], dtype='datetime64[s]')[0, 0]), axis=0)
+            mcsbasetime = np.concatenate((mcsbasetime, np.array([pd.to_datetime(num2date(basetime[trackid[imcs], :], units=basetime_units, calendar=basetime_calendar))], dtype='datetime64[s]')), axis=0)
+
 
         ###################################################################################
         # Find mergers
-        [mergefile, mergefeature] = np.array(np.where(mergenumbers == mcstracknumbers[imcs]))
-
+        print('Mergers')
+        [mergefile, mergefeature] = np.array(np.where(mergecloudnumbers == mcstracknumbers[imcs]))
+        print((len(mergefile)))
+        for imerger in range(0, len(mergefile)):
+            additionalmergefile, additionalmergefeature = np.array(np.where(mergecloudnumbers == mergefile[imerger]+1))
+            if len(additionalmergefile) > 0:
+                mergefile = np.concatenate((mergefile, additionalmergefile))
+                mergefeature = np.concatenate((mergefeature, additionalmergefeature))
+                
         # Loop through all merging tracks, if present
         if len(mergefile) > 0:
             # Isolate merging cases that have short duration
@@ -215,7 +245,7 @@ def identifymcs_mergedir_xarray(statistics_filebase, stats_path, startdate, endd
             if len(mergefile) > 0:
 
                 # Get data about merging tracks
-                mergingcloudnumber = np.copy(cloudnumber[mergefile, :])
+                mergingcloudnumber = np.copy(cloudnumbers[mergefile, :])
                 mergingbasetime = np.copy(basetime[mergefile, :])
                 mergingstatus = np.copy(status[mergefile, :])
                 mergingdatetime = np.copy(datetimestrings[mergefile, :, :])
@@ -225,20 +255,26 @@ def identifymcs_mergedir_xarray(statistics_filebase, stats_path, startdate, endd
 
                 # Loop through each timestep in the MCS track
                 for t in np.arange(0,mcslength[imcs]):
+                    print('t: ', t)
 
                     # Find merging cloud times that match current mcs track time
                     timematch = np.where(mergingbasetime == imcsbasetime[int(t)])
+                    #print('timematch: ', timematch)
 
                     if np.shape(timematch)[1] > 0:
 
                         # save cloud number of small mergers
                         nmergers = np.shape(timematch)[1]
+                        #print('IMCS: ', imcs)
+                        #print('INT (T): ', int(t))
+                        #print('NMERGERS SHAPE: ', np.shape(timematch)[1])
+                        #print('MERGING CLOUD NUMBER TIMEMATCH: ', mergingcloudnumber[timematch])
                         mcsmergecloudnumber[imcs, int(t), 0:nmergers] = mergingcloudnumber[timematch]
                         mcsmergestatus[imcs, int(t), 0:nmergers] = mergingstatus[timematch]
 
         ############################################################
         # Find splits
-        [splitfile, splitfeature] = np.array(np.where(splitnumbers == mcstracknumbers[imcs]))
+        [splitfile, splitfeature] = np.array(np.where(splitcloudnumbers == mcstracknumbers[imcs]))
 
         # Loop through all splitting tracks, if present
         if len(splitfile) > 0:
@@ -260,7 +296,7 @@ def identifymcs_mergedir_xarray(statistics_filebase, stats_path, startdate, endd
             if len(splitfile) > 0:
 
                 # Get data about splitting tracks
-                splittingcloudnumber = np.copy(cloudnumber[splitfile, :])
+                splittingcloudnumber = np.copy(cloudnumbers[splitfile, :])
                 splittingbasetime = np.copy(basetime[splitfile, :])
                 splittingstatus = np.copy(status[splitfile, :])
                 splittingdatetime = np.copy(datetimestrings[splitfile, :, :])
@@ -308,7 +344,7 @@ def identifymcs_mergedir_xarray(statistics_filebase, stats_path, startdate, endd
                               'mcs_meanlon': (['ntracks', 'ntimes'], meanlon[trackid, :]), \
                               'mcs_corearea': (['ntracks', 'ntimes'], trackstat_corearea[trackid,:]), \
                               'mcs_ccsarea': (['ntracks', 'ntimes'], trackstat_ccsarea[trackid, :]), \
-                              'mcs_cloudnumber': (['ntracks', 'ntimes'], cloudnumber[trackid, :]), \
+                              'mcs_cloudnumber': (['ntracks', 'ntimes'], cloudnumbers[trackid, :]), \
                               'mcs_mergecloudnumber': (['ntracks', 'ntimes', 'nmergers'], mcsmergecloudnumber), \
                               'mcs_splitcloudnumber': (['ntracks', 'ntimes', 'nmergers'], mcssplitcloudnumber)}, \
                              coords={'ntracks': (['ntracks'], np.arange(0, nmcs)), \
@@ -318,7 +354,7 @@ def identifymcs_mergedir_xarray(statistics_filebase, stats_path, startdate, endd
                              attrs={'title': 'File containing statistics for each mcs track', \
                                     'Conventions': 'CF-1.6', \
                                     'Institution': 'Pacific Northwest National Laboratory', \
-                                    'Contact': 'Hannah C Barnes: hannah.barnes@pnnl.gov', \
+                                    'Contact': 'Katelyn Barber: katelyn.barber@pnnl.gov', \
                                     'Created_on': time.ctime(time.time()), \
                                     'source': datasource, \
                                     'description': datadescription, \
@@ -435,7 +471,7 @@ def identifymcs_mergedir_xarray(statistics_filebase, stats_path, startdate, endd
                                     'mcs_splitcloudnumber': {'dtype':'int', 'zlib':True, '_FillValue': -9999}})
 
 
-def identifymcs_mergedir_netcdf4(statistics_filebase, stats_path, startdate, enddate, geolimits, time_resolution, area_thresh, duration_thresh, eccentricity_thresh, split_duration, merge_duration, nmaxmerge):
+def identifymcs_wrf_netcdf4(statistics_filebase, stats_path, startdate, enddate, geolimits, time_resolution, area_thresh, duration_thresh, eccentricity_thresh, split_duration, merge_duration, nmaxmerge):
     # Inputs:
     # statistics_filebase - header of the track statistics file that was generated in the previous code
     # stats_path - location of the track data. also the location where the data from this code will be saved
@@ -608,6 +644,9 @@ def identifymcs_mergedir_netcdf4(statistics_filebase, stats_path, startdate, end
         mcslength = np.ones(len(mcstype), dtype=np.int32)*-9999
         for imcs in range(0,nmcs):
             mcslength[imcs] = len(np.array(np.where(mcsstatus[imcs,:] != -9999))[0,:])
+            
+    else: 
+        mcslength = np.ones(len(mcstype), dtype=np.int32)*-9999
 
     # trackid_mcs is the index number, want the track number so add one
     mcstracknumbers = np.copy(trackid) + 1
@@ -626,12 +665,12 @@ def identifymcs_mergedir_netcdf4(statistics_filebase, stats_path, startdate, end
         print(('Analyzing mcs #: ' + str(imcs) + ', MCS: ' + str(trackid[imcs])))
         print((time.ctime()))
 
-        ###################################################################################
-        # Isolate basetime data
-        if imcs == 0:
-            mcsbasetime = np.array([pd.to_datetime(basetime[trackid[imcs], :], unit='s')])
-        else:
-            mcsbasetime = np.concatenate((mcsbasetime, np.array([pd.to_datetime(basetime[trackid[imcs], :], unit='s')])), axis=0)
+        ####################################################################################
+        ## Isolate basetime data
+        #if imcs == 0:
+            #mcsbasetime = np.array([pd.to_datetime(basetime[trackid[imcs], :], unit='s')])
+        #else:
+            #mcsbasetime = np.concatenate((basetime, np.array([pd.to_datetime(basetime[trackid[imcs], :], unit='s')])), axis=0)
 
         ###################################################################################
         # Find mergers
@@ -753,7 +792,7 @@ def identifymcs_mergedir_netcdf4(statistics_filebase, stats_path, startdate, end
         os.remove(mcstrackstatistics_outfile)
 
     # Defie xarray dataset
-    output_data = xr.Dataset({'mcs_basetime': (['ntracks', 'ntimes'], mcsbasetime), \
+    output_data = xr.Dataset({'mcs_basetime': (['ntracks', 'ntimes'], basetime), \
                               'mcs_datetimestring': (['ntracks', 'ntimes', 'ndatetimechars'], datetimestrings[trackid, :, :]), \
                               'track_length': (['ntracks'], trackstat_duration[trackid]), \
                               'mcs_length': (['ntracks'],  mcslength), \
@@ -777,7 +816,7 @@ def identifymcs_mergedir_netcdf4(statistics_filebase, stats_path, startdate, end
                              attrs={'title': 'File containing statistics for each mcs track', \
                                     'Conventions': 'CF-1.6', \
                                     'Institution': 'Pacific Northwest National Laboratory', \
-                                    'Contact': 'Hannah C Barnes: hannah.barnes@pnnl.gov', \
+                                    'Contact': 'Katelyn Barber: katelyn.barber@pnnl.gov', \
                                     'Created_on': time.ctime(time.time()), \
                                     'source': datasource, \
                                     'description': datadescription, \

@@ -1,8 +1,10 @@
-# Purpose: match mergedir tracked MCS with NMQ CSA and calculate radar-based statistics underneath the cloud features.
+/pf# Purpose: match mergedir tracked MCS with NMQ CSA and calculate radar-based statistics underneath the cloud features.
 
 # Author: Original IDL code written by Zhe Feng (zhe.feng@pnnl.gov), Python version written by Hannah C. Barnes (hannah.barnes@pnnl.gov)
 
-def identifypf_mergedir_nmq(mcsstats_filebase, cloudid_filebase, pfdata_filebase, rainaccumulation_filebase, stats_path, cloudidtrack_path, pfdata_path, rainaccumulation_path, startdate, enddate, geolimits, nmaxpf, nmaxcore, nmaxclouds, rr_min, pixel_radius, irdatasource, nmqdatasource, datadescription, datatimeresolution, mcs_irareathresh, mcs_irdurationthresh, mcs_ireccentricitythresh):
+def identifypf_wrf_rain(mcsstats_filebase, cloudid_filebase, pfdata_filebase, rainaccumulation_filebase, stats_path, cloudidtrack_path, pfdata_path,
+                        rainaccumulation_path, startdate, enddate, geolimits, nmaxpf, nmaxcore, nmaxclouds, rr_min, pixel_radius, irdatasource, 
+                        nmqdatasource, datadescription, datatimeresolution, mcs_irareathresh, mcs_irdurationthresh, mcs_ireccentricitythresh):
     # Input:
     # mcsstats_filebase - file header of the mcs statistics file that has the satellite data and was produced in the previous step
     # cloudid_filebase - file header of the cloudid file created in the idclouds step
@@ -75,7 +77,7 @@ def identifypf_mergedir_nmq(mcsstats_filebase, cloudid_filebase, pfdata_filebase
     # pf_coreminoraxislength - minor axis length of convective cores in a MCS
     # pf_coreaspectratio - aspect ratio of convective cores in a MCS
     # pf_coreccentricity - eccentricity of convective cores in a MCS
-    # of_coreorientation - angular position of convective cores in a MCS
+    # pf_coreorientation - angular position of convective cores in a MCS
     # pf_coremaxdbz10 - maximum height of the 10 dBZ echo contour in convective cores
     # pf_coremaxdbz20 - maximum height of the 20 dBZ echo contour in convective cores
     # pf_coremaxdbz30 - maximum height of the 30 dBZ echo contour in convective cores
@@ -1139,7 +1141,7 @@ def identifypf_mergedir_nmq(mcsstats_filebase, cloudid_filebase, pfdata_filebase
                                     'pf_corelat': {'zlib':True, '_FillValue': np.nan}, \
                                     'pf_corearea': {'zlib':True, '_FillValue': np.nan}, \
                                     'pf_coremajoraxislength': {'zlib':True, '_FillValue': np.nan}, \
-                                    'pf_minoraxislength': {'zlib':True, '_FillValue': np.nan}, \
+                                    'pf_coreminoraxislength': {'zlib':True, '_FillValue': np.nan}, \
                                     'pf_coreaspectratio': {'zlib':True, '_FillValue': np.nan}, \
                                     'pf_coreorientation': {'zlib':True, '_FillValue': np.nan}, \
                                     'pf_coreeccentricity': {'zlib':True, '_FillValue': np.nan}, \

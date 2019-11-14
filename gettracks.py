@@ -129,6 +129,8 @@ def gettracknumbers(datasource, datadescription, datainpath, dataoutpath, startd
         if cutofftime > referencetime:
             gap = gap + 1
 
+    # KB HARDCODED GAP
+    gap = 0
     ############################################################################
     # Initialize matrices
     nfiles = int(len(files))+2*gap
@@ -569,7 +571,7 @@ def gettracknumbers(datasource, datadescription, datainpath, dataoutpath, startd
                              attrs={'Title':  'Indicates the track each cloud is linked to. Flags indicate how the clouds transition(evolve) between files.', \
                                     'Conventions': 'CF-1.6', \
                                     'Insitution': 'Pacific Northwest National Laboratory', \
-                                    'Contact': 'Hannah C Barnes: hannah.barnes@pnnl.gov', \
+                                    'Contact': 'Katelyn Barber: katelyn.barber@pnnl.gov', \
                                     'Created': time.ctime(time.time()), \
                                     'source': datasource, \
                                     'description': datadescription, \
