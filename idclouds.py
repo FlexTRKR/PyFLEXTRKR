@@ -1,10 +1,10 @@
 # Purpose: identifies features and outputs netcdf files. Outputs one file for each raw data file with maps of cloud classifications and numbers. Also provides statistics about the number of pixels in each cloud. 
 
-# Author: orginial idl version written by sally a. mcfarlane (sally.mcfarlane@pnnl.gov) and by zhe feng (zhe.feng@pnnl.gov). python version written by hannah c. barnes (hannah.barnes@pnnl.gov)
+# Author: orginial idl version written by Sally A. Mcfarlane (sally.mcfarlane@pnnl.gov) and by Zhe Feng (zhe.feng@pnnl.gov). python version written by Hannah C. Barnes (hannah.barnes@pnnl.gov), altered by Katelyn Barber (katelyn.barber@pnnl.gov)
 
 ############################################################
 # function used to handle test data
-def idclouds_gpmmergedir(zipped_inputs):
+def idclouds_wrf(zipped_inputs):
     # inputs:
     # datafilepath - path to raw data directory
     # datasource - source of the raw data
@@ -56,11 +56,37 @@ def idclouds_gpmmergedir(zipped_inputs):
     import xarray as xr
     import datetime
     import pandas as pd
+    #from scipy import signal
+    #import scipy as sp
+    #import numpy.ma as ma
     np.set_printoptions(threshold=np.inf)
 
     ########################################################
     # Separate inputs
 
+    #datafilepath = zipped_inputs[0]
+    #datasource = zipped_inputs[1]
+    #datadescription = zipped_inputs[2]
+    #variablename = zipped_inputs[3]
+    #cloudid_version = zipped_inputs[4]
+    #dataoutpath = zipped_inputs[5]
+    #latlon_file = zipped_inputs[6]
+    #latname = zipped_inputs[7]
+    #longname = zipped_inputs[8]
+    #geolimits = zipped_inputs[9]
+    #startdate = zipped_inputs[10]
+    #enddate = zipped_inputs[11]
+    #pixel_radius = zipped_inputs[12]
+    #area_thresh = zipped_inputs[13]
+    #cloudtb_threshs = zipped_inputs[14]
+    #absolutetb_threshs = zipped_inputs[15]
+    #miss_thresh = zipped_inputs[16]
+    #cloudidmethod = zipped_inputs[17]
+    #mincoldcorepix = zipped_inputs[18]
+    #smoothsize = zipped_inputs[19]
+    #warmanvilexpansion = zipped_inputs[20]
+    #processhalfhour = zipped_inputs[21]
+    
     datafilepath = zipped_inputs[0]
     datasource = zipped_inputs[1]
     datadescription = zipped_inputs[2]
@@ -68,21 +94,19 @@ def idclouds_gpmmergedir(zipped_inputs):
     cloudid_version = zipped_inputs[4]
     dataoutpath = zipped_inputs[5]
     latlon_file = zipped_inputs[6]
-    latname = zipped_inputs[7]
-    longname = zipped_inputs[8]
-    geolimits = zipped_inputs[9]
-    startdate = zipped_inputs[10]
-    enddate = zipped_inputs[11]
-    pixel_radius = zipped_inputs[12]
-    area_thresh = zipped_inputs[13]
-    cloudtb_threshs = zipped_inputs[14]
-    absolutetb_threshs = zipped_inputs[15]
-    miss_thresh = zipped_inputs[16]
-    cloudidmethod = zipped_inputs[17]
-    mincoldcorepix = zipped_inputs[18]
-    smoothsize = zipped_inputs[19]
-    warmanvilexpansion = zipped_inputs[20]
-    processhalfhour = zipped_inputs[21]
+    geolimits = zipped_inputs[7]
+    startdate = zipped_inputs[8]
+    enddate = zipped_inputs[9]
+    pixel_radius = zipped_inputs[10]
+    area_thresh = zipped_inputs[11]
+    cloudtb_threshs = zipped_inputs[12]
+    absolutetb_threshs = zipped_inputs[13]
+    miss_thresh = zipped_inputs[14]
+    cloudidmethod = zipped_inputs[15]
+    mincoldcorepix = zipped_inputs[16]
+    smoothsize = zipped_inputs[17]
+    warmanvilexpansion = zipped_inputs[18]
+    processhalfhour = zipped_inputs[19]
 
     ##########################################################
     # define constants:
@@ -99,20 +123,22 @@ def idclouds_gpmmergedir(zipped_inputs):
 
     ########################################################
     # load data:
-    if datasource == 'gpmmergedir':
+    if datasource == 'WRF':
         print(datafilepath)
 
         # load brighttness temperature data. automatically removes missing values
         rawdata = Dataset(datafilepath, 'r')                            # open file
-        original_ir = rawdata[variablename][:]                                           # load brightness temperature data
-        original_lat = rawdata[latname][:]
-        original_lon = rawdata[longname][:]
+        original_ir = rawdata[variablename][:]                          # load brightness temperature data
+        original_lat = rawdata['lat2d'][:]
+        original_lon = rawdata['lon2d'][:]
+        #original_precip = rawdata['rainrate'][:]
+        #print('original_precip shape: ', original_precip.shape)
         original_basetime = rawdata['time'][:]
         basetime_units = rawdata['time'].units
         rawdata.close()
 
         # Create latitude and longitude grids
-        in_lon, in_lat = np.meshgrid(original_lon, original_lat)
+        in_lon, in_lat = [original_lon, original_lat]
 
         for iTime in range(0, TimeIndices):
             # Replace missing ir data with mean
@@ -142,6 +168,19 @@ def idclouds_gpmmergedir(zipped_inputs):
                     subsetir = np.reshape(subsetir, np.shape(subsetir)[0]*np.shape(subsetir)[1] , 1)
                     in_ir[missingdatay[imiss], missingdatax[imiss]] = np.nanmean(subsetir)
 
+           
+            
+
+#            # Deal with missing data 
+#            in_ir = np.squeeze(original_ir,axis=0)
+#            print('in_ir shape: ', in_ir.shape)
+#            df_tb = pd.DataFrame(in_ir)
+#            df_tb.fillna(method ='bfill', inplace = True)
+#            df_tb.fillna(method ='ffill', inplace = True)
+##           df_tb.fillna(df_tb.mean())       
+#            in_ir = df_tb.to_numpy()    
+
+                    
             #####################################################
             # mask brightness temperatures outside of normal range
             in_ir[in_ir < mintb_thresh] = np.nan
@@ -177,8 +216,8 @@ def idclouds_gpmmergedir(zipped_inputs):
                         from subroutine_idclouds import futyan3
                         clouddata = futyan3(out_ir, pixel_radius, cloudtb_threshs, area_thresh, warmanvilexpansion)
                     elif cloudidmethod == 'futyan4':
-                        from subroutine_idclouds import futyan4_mergedir
-                        clouddata = futyan4_mergedir(out_ir, pixel_radius, cloudtb_threshs, area_thresh, mincoldcorepix, smoothsize, warmanvilexpansion)
+                        from subroutine_idclouds import futyan4_wrf
+                        clouddata = futyan4_wrf(out_ir, pixel_radius, cloudtb_threshs, area_thresh, mincoldcorepix, smoothsize, warmanvilexpansion)
 
                     ######################################################
                     # separate output from futyan into the separate variables
@@ -196,6 +235,7 @@ def idclouds_gpmmergedir(zipped_inputs):
                     if final_nclouds > 0:
                         # create filename
                         cloudid_outfile = dataoutpath + datasource + '_' + datadescription + '_cloudid' + cloudid_version + '_' + file_datestring + '_' + file_timestring + '.nc'
+                        print('outcloudfile: ', cloudid_outfile)
 
                         # Check if file exists, if it does delete it
                         if os.path.isfile(cloudid_outfile):
@@ -225,7 +265,7 @@ def idclouds_gpmmergedir(zipped_inputs):
                                                  attrs={'title': 'Statistics about convective features identified in the data from ' + file_datestring[0:4] + '/' + file_datestring[4:6] + '/' + file_datestring[6:8] + ' ' + file_timestring[0:2] + ':' + file_timestring[2:4] + ' utc', \
                                                         'institution': 'Pacific Northwest National Laboratory', \
                                                         'convections': 'CF-1.6', \
-                                                        'contact': 'Hannah C Barnes: hannah.barnes@pnnl.gov', \
+                                                        'contact': 'Katelyn Barber: katelyn.barber@pnnl.gov', \
                                                         'created_ok': time.ctime(time.time()), \
                                                         'cloudid_cloud_version': cloudid_version, \
                                                         'tb_threshold_core':  str(int(cloudtb_threshs[0])) + 'K', \
@@ -280,8 +320,8 @@ def idclouds_gpmmergedir(zipped_inputs):
                         output_data.tb.attrs['long_name'] = 'brightness temperature'
                         output_data.tb.attrs['units'] = 'K'
                         output_data.tb.attrs['valid_min'] = mintb_thresh
-                        output_data.tb.attrs['valid_max'] = maxtb_thresh
-
+                        output_data.tb.attrs['valid_max'] = maxtb_thresh                     
+                        
                         output_data.cloudtype.attrs['long_name'] = 'grid of cloud classifications'
                         output_data.cloudtype.attrs['values'] = '1 = core, 2 = cold anvil, 3 = warm anvil, 4 = other'
                         output_data.cloudtype.attrs['units'] = 'unitless'
@@ -1028,13 +1068,6 @@ def idclouds_LES(zipped_inputs):
             print(datafilepath)
             print('data not within latitude, longitude range. check specified geographic range')
 
-                
-                
-
-
-
-
-
-
+            
 
 \

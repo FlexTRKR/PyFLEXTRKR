@@ -151,7 +151,7 @@ if not os.path.exists(stats_outpath):
 TEMP_starttime = datetime.datetime(int(startdate[0:4]), int(startdate[4:6]), int(startdate[6:8]), int(startdate[9:11]), int(startdate[11:13]), 0, tzinfo=utc)
 start_basetime = calendar.timegm(TEMP_starttime.timetuple())
 
-TEMP_endtime = datetime.datetime(int(enddate[0:4]), int(enddate[4:6]), int(enddate[6:8]), int(enddate[9:11]), int(enddate[11:13]) 0, tzinfo=utc)
+TEMP_endtime = datetime.datetime(int(enddate[0:4]), int(enddate[4:6]), int(enddate[6:8]), int(enddate[9:11]), int(enddate[11:13]), 0, tzinfo=utc)
 end_basetime = calendar.timegm(TEMP_endtime.timetuple())
 
 ##########################################################################

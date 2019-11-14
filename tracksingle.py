@@ -29,7 +29,7 @@
 # refcloud_forward_index - each row represents a cloud in the new file and numbers in each row indicate what cloud in the reference file is linked to that new cloud.
 # refcloud_forward_size - each row represents a cloud in the new file and numbers provide the area of all reference clouds linked to that new cloud
 
-def trackclouds_mergedir(zipped_inputs): 
+def trackclouds_wrf(zipped_inputs): 
     ########################################################
     import numpy as np
     import os
@@ -41,11 +41,12 @@ def trackclouds_mergedir(zipped_inputs):
     import xarray as xr
     import pandas as pd
     import time
-
-
+    
     # Separate inputs
     firstcloudidfilename = zipped_inputs[0]
+    print('firstcloudidfilename: ', firstcloudidfilename)
     secondcloudidfilename = zipped_inputs[1]
+    print('secondcloudidfilename: ', secondcloudidfilename)
     firstdatestring = zipped_inputs[2]
     seconddatestring = zipped_inputs[3]
     firsttimestring = zipped_inputs[4]
@@ -64,41 +65,44 @@ def trackclouds_mergedir(zipped_inputs):
     # Set constants
     # Version information
     outfilebase = 'track' + track_version + '_'
-
     ########################################################
     # Isolate new and reference file and base times
     new_file = secondcloudidfilename
     new_datestring = seconddatestring
     new_timestring = secondtimestring
     new_basetime = secondbasetime
+    print('new basetime: ', new_basetime)
     new_filedatetime = str(new_datestring) + '_' + str(new_timestring)
     
     reference_file = firstcloudidfilename
     reference_datestring = firstdatestring
     reference_timestring = firsttimestring
     reference_basetime = firstbasetime
+    print('ref basetime: ', reference_basetime)
     reference_filedatetime = str(reference_datestring) + '_' + str(reference_timestring)
 
     # Check that new and reference files differ by less than timegap in hours. Use base time (which is the seconds since 01-Jan-1970 00:00:00). Divide base time difference between the files by 3600 to get difference in hours
     hour_diff = (np.subtract(new_basetime, reference_basetime))/float(3600)
     if hour_diff < timegap and hour_diff > 0:
-        print('Linking:')
+        print("Linking:")
 
         ##############################################################
         # Load cloudid file from before, called reference file
         print(reference_filedatetime)
 
-        reference_data = xr.open_dataset(reference_file, autoclose=True)                                # Open file
+        reference_data = xr.open_dataset(reference_file)                                                # Open file
         reference_convcold_cloudnumber = reference_data['convcold_cloudnumber'].data                    # Load cloud id map
         nreference = reference_data['nclouds'].data                                                     # Load number of clouds / features
+        reference_data.close()                                                                           # Close file
 
         ##########################################################
         # Load next cloudid file, called new file
-        print(new_filedatetime)
+        print("new_filedattime: ", new_filedatetime)
 
-        new_data = xr.open_dataset(new_file, autoclose=True)                            # Open file
+        new_data = xr.open_dataset(new_file)                                            # Open file
         new_convcold_cloudnumber = new_data['convcold_cloudnumber'].data                # Load cloud id map
         nnew = new_data['nclouds'].data                                                 # Load number of clouds / features
+        new_data.close()                                                                # Close file
 
         ############################################################
         # Get size of data
@@ -179,7 +183,7 @@ def trackclouds_mergedir(zipped_inputs):
         if os.path.isfile(track_outfile):
             os.remove(track_outfile)
 
-        print('Writing single tracks')
+        print("Writing single tracks")
         print(track_outfile)
         print('')
 
@@ -197,7 +201,7 @@ def trackclouds_mergedir(zipped_inputs):
                                  attrs={'title': 'Indices linking clouds in two consecutive files forward and backward in time and the size of the linked cloud', \
                                         'Conventions':'CF-1.6', \
                                         'Institution': 'Pacific Northwest National Laboratoy', \
-                                        'Contact': 'Hannah C Barnes: hannah.barnes@pnnl.gov', \
+                                        'Contact': 'Katelyn Barber: katelyn.barber@pnnl.gov', \
                                         'Created_on':  time.ctime(time.time()), \
                                         'new_date': new_filedatetime, \
                                         'ref_date': reference_filedatetime, \
