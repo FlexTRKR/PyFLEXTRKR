@@ -130,7 +130,7 @@ def gettracknumbers(datasource, datadescription, datainpath, dataoutpath, startd
             gap = gap + 1
 
     # KB HARDCODED GAP
-    gap = 0
+    # gap = 0
     ############################################################################
     # Initialize matrices
     nfiles = int(len(files))+2*gap
@@ -199,13 +199,13 @@ def gettracknumbers(datasource, datadescription, datainpath, dataoutpath, startd
         newcloud_backward_index = singletracking_data['newcloud_backward_index'][:].astype(int)             # Each row represents a cloud in the new file and the numbers in that row are indices of clouds in the reference file linked that cloud in the new file
         ref_file = singletracking_data.getncattr('ref_file')
         new_file = singletracking_data.getncattr('new_file')
-        ref_file = datainpath + ref_file[-36:] # to change the path after moving the files
-        new_file = datainpath + new_file[-36:]
+        # ref_file = datainpath + ref_file[-36:] # to change the path after moving the files
+        # new_file = datainpath + new_file[-36:]
         ref_date = singletracking_data.getncattr('ref_date')
         new_date = singletracking_data.getncattr('new_date')
 
         singletracking_data.close()
-
+        
         # Make sure number of clouds does not exceed maximum. If does indicates over-segmenting data
         if nclouds_reference > maxnclouds:
             sys.exit('# of clouds in reference file exceed allowed maximum number of clouds')
