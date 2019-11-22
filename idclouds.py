@@ -59,6 +59,8 @@ def idclouds_wrf(zipped_inputs):
     #from scipy import signal
     #import scipy as sp
     #import numpy.ma as ma
+    from scipy.ndimage import label, filters
+    import netcdf_io as net
     np.set_printoptions(threshold=np.inf)
 
     ########################################################
@@ -107,6 +109,17 @@ def idclouds_wrf(zipped_inputs):
     smoothsize = zipped_inputs[17]
     warmanvilexpansion = zipped_inputs[18]
     processhalfhour = zipped_inputs[19]
+    linkpf = zipped_inputs[20]
+    pf_smooth_window = zipped_inputs[21]
+    pf_dbz_thresh = zipped_inputs[22]
+    pf_link_area_thresh = zipped_inputs[23]
+    pfvarname = zipped_inputs[24]
+
+    # Separate array threshold
+    thresh_core = cloudtb_threshs[0]     # Convective core threshold [K]
+    thresh_cold = cloudtb_threshs[1]     # Cold anvil threshold [K]
+    thresh_warm = cloudtb_threshs[2]     # Warm anvil threshold [K]
+    thresh_cloud = cloudtb_threshs[3]    # Warmest cloud area threshold [K]
 
     ##########################################################
     # define constants:
@@ -136,7 +149,7 @@ def idclouds_wrf(zipped_inputs):
         original_basetime = rawdata['time'][:]
         basetime_units = rawdata['time'].units
         rawdata.close()
-
+        
         # Create latitude and longitude grids
         in_lon, in_lat = [original_lon, original_lat]
 
@@ -230,6 +243,68 @@ def idclouds_wrf(zipped_inputs):
                     final_cloudnumber = np.array([clouddata['final_cloudnumber']])
                     final_convcold_cloudnumber = np.array([clouddata['final_convcold_cloudnumber']])
 
+                    # if (final_nclouds == 0):
+                        
+
+                    # import pdb; pdb.set_trace()
+
+                    # Option to linkpf
+                    if (linkpf == 1):
+                        from ftfunctions import sort_renumber, sort_renumber2vars, link_pf_tb
+
+                        # Proceed if there is at least 1 cloud
+                        if (final_nclouds > 0):
+                            # Read PF from idcloudfile
+                            rawdata = Dataset(datafilepath, 'r')
+                            pcp = rawdata[pfvarname][:]
+                            rawdata.close()
+
+                            # Smooth PF variable, then label PF exceeding threshold
+                            pcp_s = filters.uniform_filter(np.squeeze(pcp), size=pf_smooth_window, mode='nearest')
+                            pf_number, npf = label(pcp_s >= pf_dbz_thresh)
+
+                            # Convert PF area threshold to number of pixels
+                            min_npix = np.ceil(pf_link_area_thresh / (pixel_radius**2))
+                            
+                            # Sort and renumber PFs, and remove small PFs
+                            pf_number, pf_npix = sort_renumber(pf_number, min_npix)
+                            # Update number of PFs after sorting and renumbering
+                            npf = np.nanmax(pf_number)
+
+                            # Call function to link clouds with PFs
+                            pf_convcold_cloudnumber, pf_cloudnumber = link_pf_tb(np.squeeze(final_convcold_cloudnumber), np.squeeze(final_cloudnumber), pf_number, out_ir, thresh_cloud)
+
+                            # Sort and renumber the linkpf clouds (removes small clouds after renumbering)
+                            pf_convcold_cloudnumber_sorted, pf_cloudnumber_sorted, npix_convcold_linkpf = sort_renumber2vars(pf_convcold_cloudnumber, pf_cloudnumber, area_thresh/pixel_radius**2)
+                            # Get number of clouds from the sorted linkpf clouds
+                            nclouds_linkpf = np.nanmax(pf_convcold_cloudnumber_sorted)
+
+                            # Make a copy of the original arrays
+                            final_cloudnumber_orig = final_cloudnumber
+                            final_convcold_cloudnumber_orig = final_convcold_cloudnumber
+
+                            # Update output arrays
+                            final_cloudnumber = np.expand_dims(pf_cloudnumber_sorted, axis=0)
+                            final_convcold_cloudnumber = np.expand_dims(pf_convcold_cloudnumber_sorted, axis=0)
+                            final_nclouds = np.array([nclouds_linkpf], dtype=int)
+                            final_pf_number = np.expand_dims(pf_number, axis=0)
+                            final_ncorecoldpix = np.array([npix_convcold_linkpf], dtype=int)
+
+                        else:
+                            # Create default arrays
+                            pcp = np.full(final_convcold_cloudnumber.shape, dtype=float)
+                            final_pf_number = np.full(final_convcold_cloudnumber.shape, dtype=int)
+                            # Make a copy of the original arrays
+                            final_cloudnumber_orig = final_cloudnumber
+                            final_convcold_cloudnumber_orig = final_convcold_cloudnumber
+                    else:
+                        # Create default arrays
+                        pcp = np.full(final_convcold_cloudnumber.shape, dtype=float)
+                        final_pf_number = np.full(final_convcold_cloudnumber.shape, dtype=int)
+                        # Make a copy of the original arrays
+                        final_cloudnumber_orig = final_cloudnumber
+                        final_convcold_cloudnumber_orig = final_convcold_cloudnumber
+
                     #######################################################
                     # output data to netcdf file, only if clouds present
                     if final_nclouds > 0:
@@ -241,144 +316,15 @@ def idclouds_wrf(zipped_inputs):
                         if os.path.isfile(cloudid_outfile):
                             os.remove(cloudid_outfile)
 
-                        # Define xarray dataset
-                        output_data = xr.Dataset({'basetime': (['time'], file_basetime), \
-                                                  'filedate': (['time', 'ndatechar'],  np.array([stringtochar(np.array(file_datestring))])), \
-                                                  'filetime': (['time', 'ntimechar'], np.array([stringtochar(np.array(file_timestring))])), \
-                                                  'latitude': (['lat', 'lon'], out_lat), \
-                                                  'longitude': (['lat', 'lon'], out_lon), \
-                                                  'tb': (['time', 'lat', 'lon'], np.expand_dims(out_ir, axis=0)), \
-                                                  'cloudtype': (['time', 'lat', 'lon'], final_cloudtype), \
-                                                  'convcold_cloudnumber': (['time', 'lat', 'lon'], final_convcold_cloudnumber), \
-                                                  'cloudnumber': (['time', 'lat', 'lon'], final_cloudnumber), \
-                                                  'nclouds': (['time'], final_nclouds), \
-                                                  'ncorepix': (['time', 'clouds'], final_ncorepix), \
-                                                  'ncoldpix': (['time', 'clouds'], final_ncoldpix), \
-                                                  'ncorecoldpix': (['time', 'clouds'], final_ncorecoldpix), \
-                                                  'nwarmpix': (['time', 'clouds'], final_nwarmpix)}, \
-                                                 coords={'time': (['time'], file_basetime), \
-                                                         'lat': (['lat'], np.squeeze(out_lat[:, 0])), \
-                                                         'lon': (['lon'], np.squeeze(out_lon[0, :])), \
-                                                         'clouds': (['clouds'],  np.arange(1, final_nclouds+1)), \
-                                                         'ndatechar': (['ndatechar'], np.arange(0, 32)), \
-                                                         'ntimechar': (['ntimechar'], np.arange(0, 16))}, \
-                                                 attrs={'title': 'Statistics about convective features identified in the data from ' + file_datestring[0:4] + '/' + file_datestring[4:6] + '/' + file_datestring[6:8] + ' ' + file_timestring[0:2] + ':' + file_timestring[2:4] + ' utc', \
-                                                        'institution': 'Pacific Northwest National Laboratory', \
-                                                        'convections': 'CF-1.6', \
-                                                        'contact': 'Katelyn Barber: katelyn.barber@pnnl.gov', \
-                                                        'created_ok': time.ctime(time.time()), \
-                                                        'cloudid_cloud_version': cloudid_version, \
-                                                        'tb_threshold_core':  str(int(cloudtb_threshs[0])) + 'K', \
-                                                        'tb_threshold_coldanvil': str(int(cloudtb_threshs[1])) + 'K', \
-                                                        'tb_threshold_warmanvil': str(int(cloudtb_threshs[2])) + 'K', \
-                                                        'tb_threshold_environment': str(int(cloudtb_threshs[3])) + 'K', \
-                                                        'minimum_cloud_area': str(int(area_thresh)) + 'km^2'})
-                        
-                        # Specify variable attributes
-                        output_data.time.attrs['long_name'] = 'epoch time (seconds since 01/01/1970 00:00) in epoch of file'
-
-                        output_data.lat.attrs['long_name'] = 'Vector of latitudes, y-coordinate in Cartesian system'
-                        output_data.lat.attrs['standard_name'] = 'latitude'
-                        output_data.lat.attrs['units'] = 'degrees_north'
-                        output_data.lat.attrs['valid_min'] = geolimits[0]
-                        output_data.lat.attrs['valid_max'] = geolimits[2]
-
-                        output_data.lon.attrs['long_name'] = 'Vector of longitudes, x-coordinate in Cartesian system'
-                        output_data.lon.attrs['standard_name'] = 'longitude'
-                        output_data.lon.attrs['units'] = 'degrees_east'
-                        output_data.lon.attrs['valid_min'] = geolimits[1]
-                        output_data.lon.attrs['valid_max'] = geolimits[2]
-
-                        output_data.clouds.attrs['long_name'] = 'number of distict convective cores identified'
-                        output_data.clouds.attrs['units'] = 'unitless'
-
-                        output_data.ndatechar.attrs['long_name'] = 'number of characters in date string'
-                        output_data.ndatechar.attrs['units'] = 'unitless'
-
-                        output_data.ntimechar.attrs['long_name'] = 'number of characters in time string'
-                        output_data.ntimechar.attrs['units'] = 'unitless'
-
-                        output_data.basetime.attrs['long_name'] = 'epoch time (seconds since 01/01/1970 00:00) of file'
-                        output_data.basetime.attrs['standard_name'] = 'time'
-
-                        output_data.filedate.attrs['long_name'] = 'date string of file (yyyymmdd)'
-                        output_data.filedate.attrs['units'] = 'unitless'
-
-                        output_data.filetime.attrs['long_name'] = 'time string of file (hhmm)'
-                        output_data.filetime.attrs['units'] = 'unitless'
-                        
-                        output_data.latitude.attrs['long_name'] = 'cartesian grid of latitude'
-                        output_data.latitude.attrs['units'] = 'degrees_north'
-                        output_data.latitude.attrs['valid_min'] = geolimits[0]
-                        output_data.latitude.attrs['valid_max'] = geolimits[2]
-
-                        output_data.longitude.attrs['long_name'] = 'cartesian grid of longitude'
-                        output_data.longitude.attrs['units'] = 'degrees_east'
-                        output_data.longitude.attrs['valid_min'] = geolimits[1]
-                        output_data.longitude.attrs['valid_max'] = geolimits[3]
-
-                        output_data.tb.attrs['long_name'] = 'brightness temperature'
-                        output_data.tb.attrs['units'] = 'K'
-                        output_data.tb.attrs['valid_min'] = mintb_thresh
-                        output_data.tb.attrs['valid_max'] = maxtb_thresh                     
-                        
-                        output_data.cloudtype.attrs['long_name'] = 'grid of cloud classifications'
-                        output_data.cloudtype.attrs['values'] = '1 = core, 2 = cold anvil, 3 = warm anvil, 4 = other'
-                        output_data.cloudtype.attrs['units'] = 'unitless'
-                        output_data.cloudtype.attrs['valid_min'] = 1
-                        output_data.cloudtype.attrs['valid_max'] = 5
-
-                        output_data.convcold_cloudnumber.attrs['long_name'] = 'grid with each classified cloud given a number'
-                        output_data.convcold_cloudnumber.attrs['units'] = 'unitless'
-                        output_data.convcold_cloudnumber.attrs['valid_min'] = 0
-                        output_data.convcold_cloudnumber.attrs['valid_max'] = final_nclouds+1
-                        output_data.convcold_cloudnumber.attrs['comment'] = 'extend of each cloud defined using cold anvil threshold'
-                    
-                        output_data.cloudnumber.attrs['long_name'] = 'grid with each classified cloud given a number'
-                        output_data.cloudnumber.attrs['units'] = 'unitless'
-                        output_data.cloudnumber.attrs['valid_min'] = 0
-                        output_data.cloudnumber.attrs['valid_max'] = final_nclouds+1
-                        output_data.cloudnumber.attrs['comment'] = 'extend of each cloud defined using warm anvil threshold'
-
-                        output_data.nclouds.attrs['long_name'] = 'number of distict convective cores identified in file'
-                        output_data.nclouds.attrs['units'] = 'unitless'
-
-                        output_data.ncorepix.attrs['long_name'] = 'number of convective core pixels in each cloud feature'
-                        output_data.ncorepix.attrs['units'] = 'unitless'
-
-                        output_data.ncoldpix.attrs['long_name'] = 'number of cold anvil pixels in each cloud feature'
-                        output_data.ncoldpix.attrs['units'] = 'unitless'
-
-                        output_data.ncorecoldpix.attrs['long_name'] = 'number of convective core and cold anvil pixels in each cloud feature'
-                        output_data.ncorecoldpix.attrs['units'] = 'unitless'
-
-                        output_data.nwarmpix.attrs['long_name'] = 'number of warm anvil pixels in each cloud feature'
-                        output_data.nwarmpix.attrs['units'] = 'unitless'
-
-                        # Write netCDF file
-                        print(cloudid_outfile)
-                        print('')
-
-                        output_data.to_netcdf(path=cloudid_outfile, mode='w', format='NETCDF4_CLASSIC', unlimited_dims='time', \
-                                              encoding={'time': {'zlib':True, 'units': 'seconds since 1970-01-01'}, \
-                                                        'lon': {'zlib':True}, \
-                                                        'lon': {'zlib':True}, \
-                                                        'clouds': {'zlib':True}, \
-                                                        'basetime': {'dtype': 'int64', 'zlib':True, 'units': 'seconds since 1970-01-01'}, \
-                                                        'filedate': {'dtype': 'str', 'zlib':True}, \
-                                                        'filetime': {'dtype': 'str', 'zlib':True}, \
-                                                        'longitude': {'zlib':True, '_FillValue': np.nan}, \
-                                                        'latitude': {'zlib':True, '_FillValue': np.nan}, \
-                                                        'tb': {'zlib':True, '_FillValue': np.nan}, \
-                                                        'cloudtype': {'zlib':True, '_FillValue': -9999}, \
-                                                        'convcold_cloudnumber': {'dtype': 'int', 'zlib':True, '_FillValue': -9999}, \
-                                                        'cloudnumber': {'dtype': 'int', 'zlib':True, '_FillValue': -9999}, \
-                                                        'nclouds': {'dtype': 'int', 'zlib':True, '_FillValue': -9999},  \
-                                                        'ncorepix': {'dtype': 'int', 'zlib':True, '_FillValue': -9999},  \
-                                                        'ncoldpix': {'dtype': 'int', 'zlib':True, '_FillValue': -9999}, \
-                                                        'ncorecoldpix': {'dtype': 'int', 'zlib':True, '_FillValue': -9999}, \
-                                                        'nwarmpix': {'dtype': 'int', 'zlib':True, '_FillValue': -9999}})
-
+                        # Write output to netCDF file
+                        net.write_cloudid_wrf(cloudid_outfile, file_basetime, file_datestring, file_timestring, \
+                                                out_lat, out_lon, out_ir, \
+                                                final_cloudtype, final_convcold_cloudnumber, final_cloudnumber, \
+                                                final_nclouds, final_ncorepix, final_ncoldpix, final_ncorecoldpix, final_nwarmpix, \
+                                                cloudid_version, cloudtb_threshs, geolimits, mintb_thresh, maxtb_thresh, area_thresh, \
+                                                precipitation=pcp, pf_number=final_pf_number, convcold_cloudnumber_orig=final_convcold_cloudnumber_orig, cloudnumber_orig=final_cloudnumber_orig, \
+                                                linkpf=linkpf, pf_smooth_window=pf_smooth_window, pf_dbz_thresh=pf_dbz_thresh, pf_link_area_thresh=pf_link_area_thresh)
+  
                     else:
                         print(datafilepath)
                         print('No clouds')
@@ -641,7 +587,7 @@ def idclouds_mergedir(zipped_inputs):
                     output_data.lon.attrs['valid_max'] = geolimits[2]
 
                     output_data.clouds.attrs['long_name'] = 'number of distict convective cores identified'
-                    output_data.clouds.attrs['units'] = 'unitless'
+                    output_data.clouds.attrs['units'] = 'units'
 
                     output_data.ndatechar.attrs['long_name'] = 'number of characters in date string'
                     output_data.ndatechar.attrs['units'] = 'unitless'
