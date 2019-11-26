@@ -29,7 +29,7 @@
 # refcloud_forward_index - each row represents a cloud in the new file and numbers in each row indicate what cloud in the reference file is linked to that new cloud.
 # refcloud_forward_size - each row represents a cloud in the new file and numbers provide the area of all reference clouds linked to that new cloud
 
-def trackclouds_wrf(zipped_inputs): 
+def trackclouds(zipped_inputs): 
     ########################################################
     import numpy as np
     import os
