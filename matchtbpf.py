@@ -2,7 +2,7 @@
 
 # Author: Original IDL code written by Zhe Feng (zhe.feng@pnnl.gov), Python version written by Hannah C. Barnes (hannah.barnes@pnnl.gov), Python WRF version modified from original IDL and python versions by Katelyn Barber (katelyn.barber@pnnl.gov)
 
-def identifypf_wrf_rain(mcsstats_filebase, cloudid_filebase, rainaccumulation_filebase, stats_path,cloudidtrack_path,rainaccumulation_path, startdate, enddate, geolimits, nmaxpf, nmaxcore, nmaxclouds, rr_min, pixel_radius, irdatasource, precipdatasource, datadescription, datatimeresolution, mcs_irareathresh, mcs_irdurationthresh, mcs_ireccentricitythresh):
+def identifypf_wrf_rain(mcsstats_filebase, cloudid_filebase, rainaccumulation_filebase, stats_path,cloudidtrack_path,rainaccumulation_path, startdate, enddate, geolimits, nmaxpf, nmaxcore, nmaxclouds, rr_min, pixel_radius, irdatasource, precipdatasource, datadescription, datatimeresolution, mcs_irareathresh, mcs_irdurationthresh, mcs_ireccentricitythresh,pf_link_area_thresh):
 
     # Input:
     # mcsstats_filebase - file header of the mcs statistics file that has the satellite data and was produced in the previous step
@@ -327,8 +327,17 @@ def identifypf_wrf_rain(mcsstats_filebase, cloudid_filebase, rainaccumulation_fi
 
                         # Label precipitation features
                         pfnumberlabelmap, numpf = label(dilatedbinarypfmap)
-                        
-                        if numpf > 0:
+                                                    
+                        # Sort numpf then calculate stats
+                        min_npix = np.ceil(pf_link_area_thresh / (pixel_radius**2))
+                            
+                        # Sort and renumber PFs, and remove small PFs
+                        from ftfunctions import sort_renumber
+                        pf_number, pf_npix = sort_renumber(pfnumberlabelmap, min_npix)
+                        # Update number of PFs after sorting and renumbering
+                        npf_new = np.nanmax(pf_number)
+
+                        if npf_new > 0:
                             print('PFs present, initializing matrices')
 
                            ##############################################
@@ -357,7 +366,7 @@ def identifypf_wrf_rain(mcsstats_filebase, cloudid_filebase, rainaccumulation_fi
                             print(('Number of PFs ' + str(numpf)))
                             ###############################################
                             # Loop through each feature
-                            for ipf in range(1, numpf+1):
+                            for ipf in range(1, npf_new+1):
 
                                 #######################################
                                 # Find associated indices

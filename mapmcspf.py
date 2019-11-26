@@ -56,6 +56,7 @@ def mapmcs_wrf_pf(zipped_inputs):
     cloudid_filename = zipped_inputs[0]
     filebasetime = zipped_inputs[1]
     mcsstats_filebase = zipped_inputs[2]
+    print('mcsstats_filebase: ', mcsstats_filebase)
     statistics_filebase = zipped_inputs[3]
     rainaccumulation_filebase = zipped_inputs[4]
     mcstracking_path = zipped_inputs[5]
