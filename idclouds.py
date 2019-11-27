@@ -233,8 +233,8 @@ def idclouds_wrf(zipped_inputs):
                         from subroutine_idclouds import futyan3
                         clouddata = futyan3(out_ir, pixel_radius, cloudtb_threshs, area_thresh, warmanvilexpansion)
                     elif cloudidmethod == 'futyan4':
-                        from subroutine_idclouds import futyan4_wrf
-                        clouddata = futyan4_wrf(out_ir, pixel_radius, cloudtb_threshs, area_thresh, mincoldcorepix, smoothsize, warmanvilexpansion)
+                        from subroutine_idclouds import futyan4
+                        clouddata = futyan4(out_ir, pixel_radius, cloudtb_threshs, area_thresh, mincoldcorepix, smoothsize, warmanvilexpansion)
 
                     ######################################################
                     # separate output from futyan into the separate variables

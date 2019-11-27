@@ -28,7 +28,7 @@ print((time.ctime()))
 # Set variables describing data, file structure, and tracking thresholds
 
 # Specify which sets of code to run. (1 = run code, 0 = don't run code)
-run_idclouds = 1        # Segment and identify cloud systems
+run_idclouds = 0        # Segment and identify cloud systems
 run_tracksingle = 0     # Track single consecutive cloudid files
 run_gettracks = 0       # Run trackig for all files
 run_finalstats = 0      # Calculate final statistics
@@ -39,7 +39,7 @@ use_wrf_rainrate = 1    # Using wrf rainrate- pfstats file will have 'WRF' ident
 run_robustmcs = 0       # Filter potential mcs cases using nmq radar variables
 run_robustmcspf = 0     # Filter potential mcs cases using precipitation features (NOT REFLECTIVITY)
 run_labelmcs = 0        # Create pixel maps of MCSs
-run_labelmcspf = 0      # Create pixel maps of MCSs from WRF precipitation features (NOT REFLECTIVITY)
+run_labelmcspf = 1      # Create pixel maps of MCSs from WRF precipitation features (NOT REFLECTIVITY)
 
 file_rr_tb = 1          # Input brightness temperature and rainrate from WRF are in the same file (0- they are in separate files)
 
@@ -62,8 +62,8 @@ curr_track_version = 'v1.0'
 curr_tracknumbers_version = 'v1.0'
 
 # Specify days to run, (YYYYMMDD.hhmm)
-startdate = '20150301.0000'
-enddate = '20150302.2330'
+startdate = '20150303.0000'
+enddate = '20150304.2330'
 
 # Specify cloud tracking parameters
 geolimits = np.array([-9, -70, 3, -46])  # 4-element array with plotting boundaries [lat_min, lon_min, lat_max, lon_max]
@@ -341,7 +341,7 @@ if run_tracksingle == 1:
     ################################################################
     # Process files
     # Load function
-    from tracksingle import trackclouds_wrf
+    from tracksingle import trackclouds
 
     # Generate input lists
     list_trackingoutpath = [tracking_outpath]*(cloudidfilestep-1)
@@ -364,12 +364,12 @@ if run_tracksingle == 1:
     if run_parallel == 0:
         # Serial version
         for ifile in range(0, cloudidfilestep-1):
-            trackclouds_wrf(trackclouds_input[ifile])
+            trackclouds(trackclouds_input[ifile])
     elif run_parallel == 1:
         # parallelize version
         if __name__ == '__main__':
             pool = Pool(nprocesses)
-            pool.map(trackclouds_wrf, trackclouds_input)
+            pool.map(trackclouds, trackclouds_input)
             pool.close()
             pool.join()
     else:
@@ -411,12 +411,12 @@ if run_gettracks == 0:
 # Call function
 if run_finalstats == 1:
     # Load function
-    from trackstats import trackstats_wrf
+    from trackstats import trackstats_tb
 
     # Call satellite version of function
     print('Calculating track statistics')
     print(time.ctime())
-    trackstats_wrf(irdatasource, datadescription, pixel_radius, geolimits, area_thresh, 
+    trackstats_tb(irdatasource, datadescription, pixel_radius, geolimits, area_thresh, 
                    cloudtb_threshs, absolutetb_threshs, startdate, enddate, timegap, cloudid_filebase,
                    tracking_outpath, stats_outpath, track_version, tracknumber_version,
                    tracknumbers_filebase, lengthrange=lengthrange)
@@ -434,11 +434,11 @@ if run_identifymcs == 1:
     print('Identifying MCSs')
 
     # Load function
-    from identifymcs import identifymcs_wrf_xarray
+    from identifymcs import identifymcs_tb
 
     # Call wrf version of function
     print((time.ctime()))
-    identifymcs_wrf_xarray(trackstats_filebase, stats_outpath, startdate, enddate,
+    identifymcs_tb(trackstats_filebase, stats_outpath, startdate, enddate,
                             geolimits, datatimeresolution, mcs_mergedir_areathresh, 
                             mcs_mergedir_durationthresh, mcs_mergedir_eccentricitythresh, 
                             mcs_mergedir_splitduration, mcs_mergedir_mergeduration, nmaxlinks, mcs_mergedir_timegap)
