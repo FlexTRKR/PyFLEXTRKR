@@ -193,7 +193,11 @@ def idclouds_wrf(zipped_inputs):
 ##           df_tb.fillna(df_tb.mean())       
 #            in_ir = df_tb.to_numpy()    
 
-                    
+#            # Deal with missing data using interpolation method
+#            in_ir = np.squeeze(original_ir,axis=0)
+#            mask = np.isnan(in_ir)
+#            in_ir[mask] = np.interp(np.flatnonzero(mask), np.flatnonzero(~mask), in_ir[~mask])
+
             #####################################################
             # mask brightness temperatures outside of normal range
             in_ir[in_ir < mintb_thresh] = np.nan
@@ -229,8 +233,8 @@ def idclouds_wrf(zipped_inputs):
                         from subroutine_idclouds import futyan3
                         clouddata = futyan3(out_ir, pixel_radius, cloudtb_threshs, area_thresh, warmanvilexpansion)
                     elif cloudidmethod == 'futyan4':
-                        from subroutine_idclouds import futyan4_wrf
-                        clouddata = futyan4_wrf(out_ir, pixel_radius, cloudtb_threshs, area_thresh, mincoldcorepix, smoothsize, warmanvilexpansion)
+                        from subroutine_idclouds import futyan4
+                        clouddata = futyan4(out_ir, pixel_radius, cloudtb_threshs, area_thresh, mincoldcorepix, smoothsize, warmanvilexpansion)
 
                     ######################################################
                     # separate output from futyan into the separate variables
@@ -307,7 +311,7 @@ def idclouds_wrf(zipped_inputs):
 
                     #######################################################
                     # output data to netcdf file, only if clouds present
-                    if final_nclouds > 0:
+                    if final_nclouds >= 0:   # KB CHANGED 
                         # create filename
                         cloudid_outfile = dataoutpath + datasource + '_' + datadescription + '_cloudid' + cloudid_version + '_' + file_datestring + '_' + file_timestring + '.nc'
                         print('outcloudfile: ', cloudid_outfile)

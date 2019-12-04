@@ -31,15 +31,15 @@ print((time.ctime()))
 run_idclouds = 0        # Segment and identify cloud systems
 run_tracksingle = 0     # Track single consecutive cloudid files
 run_gettracks = 0       # Run trackig for all files
-run_finalstats = 1      # Calculate final statistics
-run_identifymcs = 1     # Isolate MCSs
+run_finalstats = 0      # Calculate final statistics
+run_identifymcs = 0     # Isolate MCSs
 run_matchpf = 0         # Identify precipitation features with MCSs
-run_matchtbpf = 1       # Match brightness temperature tracking defined MCSs with precipitation files from WRF
+run_matchtbpf = 0       # Match brightness temperature tracking defined MCSs with precipitation files from WRF
 use_wrf_rainrate = 1    # Using wrf rainrate- pfstats file will have 'WRF' identification
 run_robustmcs = 0       # Filter potential mcs cases using nmq radar variables
-run_robustmcspf = 1     # Filter potential mcs cases using precipitation features (NOT REFLECTIVITY)
+run_robustmcspf = 0     # Filter potential mcs cases using precipitation features (NOT REFLECTIVITY)
 run_labelmcs = 0        # Create pixel maps of MCSs
-run_labelmcspf = 0      # Create pixel maps of MCSs from WRF precipitation features (NOT REFLECTIVITY)
+run_labelmcspf = 1      # Create pixel maps of MCSs from WRF precipitation features (NOT REFLECTIVITY)
 
 file_rr_tb = 1          # Input brightness temperature and rainrate from WRF are in the same file (0- they are in separate files)
 
@@ -62,8 +62,8 @@ curr_track_version = 'v1.0'
 curr_tracknumbers_version = 'v1.0'
 
 # Specify days to run, (YYYYMMDD.hhmm)
-startdate = '20150310.0000'
-enddate = '20150311.2330'
+startdate = '20150303.0000'
+enddate = '20150304.2330'
 
 # Specify cloud tracking parameters
 geolimits = np.array([-9, -70, 3, -46])  # 4-element array with plotting boundaries [lat_min, lon_min, lat_max, lon_max]
@@ -101,7 +101,7 @@ mcs_pf_gap = 3                             # Allowable gap in data for subMCS ch
 
 # Specify rain rate parameters
 rr_min = 1                                 # Rain rate threshold [mm/hr]
-nmaxpf = 10                                # Maximum number of precipitation features that can be within a cloud feature
+nmaxpf = 3                                 # Maximum number of precipitation features that can be within a cloud feature
 nmaxcore = 20                              # Maximum number of convective cores that can be within a cloud feature
 pcp_thresh = 1                             # Pixels with hourly precipitation larger than this will be labeled with track number
 
@@ -127,10 +127,17 @@ label_filebase = 'cloudtrack_'
 pfdata_filebase = 'csa4km_'
 
 ############### TESTING DIRECTORIES ###########
-root_path = '/global/cscratch1/sd/feng045/goamazon/wrf/AMAZON_CONTROL01/'
+#root_path = '/global/cscratch1/sd/feng045/goamazon/wrf/AMAZON_CONTROL01/'
+#clouddata_path = '/global/cscratch1/sd/barb672/WRF381/AMAZON_CONTROL01/rr_tb/'
+#pfdata_path = '/global/cscratch1/sd/barb672/WRF381/AMAZON_CONTROL01/rr_tb/'
+#rainaccumulation_path = '/global/cscratch1/sd/barb672/WRF381/AMAZON_CONTROL01/rr_tb/'
+#latlon_file = clouddata_path + databasename + '_' + startdate[0:4] + '-' + startdate[4:6] + '-' + startdate[6:8] + '_' + startdate[9:11] + ':' + startdate[11:13] + ':00.nc'
+
+root_path = '/global/homes/b/barb672/Codes/Tracking/Tracking_Barber/'
 clouddata_path = '/global/cscratch1/sd/barb672/WRF381/AMAZON_CONTROL01/rr_tb/'
 pfdata_path = '/global/cscratch1/sd/barb672/WRF381/AMAZON_CONTROL01/rr_tb/'
 rainaccumulation_path = '/global/cscratch1/sd/barb672/WRF381/AMAZON_CONTROL01/rr_tb/'
+scratchpath = '/global/cscratch1/sd/barb672/WRF381/AMAZON_CONTROL01/rr_tb/'
 latlon_file = clouddata_path + databasename + '_' + startdate[0:4] + '-' + startdate[4:6] + '-' + startdate[6:8] + '_' + startdate[9:11] + ':' + startdate[11:13] + ':00.nc'
 
 ###############################################
@@ -156,9 +163,13 @@ year = startdate[0:4]
 cloudtb_threshs = np.hstack((cloudtb_core, cloudtb_cold, cloudtb_warm, cloudtb_cloud))
 
 # Specify additional file locations
-tracking_outpath = root_path + 'tracking/'
-stats_outpath = root_path + 'stats/'
-mcstracking_outpath = root_path + 'mcstracking/' + startdate + '_' + enddate + '/'
+#tracking_outpath = root_path + 'tracking/'
+#stats_outpath = root_path + 'stats/'
+#mcstracking_outpath = root_path + 'mcstracking/' + startdate + '_' + enddate + '/'
+
+tracking_outpath = clouddata_path + 'tracking/'
+stats_outpath = clouddata_path + 'stats/'
+mcstracking_outpath = clouddata_path + 'mcstracking/' + startdate + '_' + enddate + '/'
 
 ####################################################################
 # Execute tracking scripts
@@ -330,7 +341,7 @@ if run_tracksingle == 1:
     ################################################################
     # Process files
     # Load function
-    from tracksingle import trackclouds_wrf
+    from tracksingle import trackclouds
 
     # Generate input lists
     list_trackingoutpath = [tracking_outpath]*(cloudidfilestep-1)
@@ -353,12 +364,12 @@ if run_tracksingle == 1:
     if run_parallel == 0:
         # Serial version
         for ifile in range(0, cloudidfilestep-1):
-            trackclouds_wrf(trackclouds_input[ifile])
+            trackclouds(trackclouds_input[ifile])
     elif run_parallel == 1:
         # parallelize version
         if __name__ == '__main__':
             pool = Pool(nprocesses)
-            pool.map(trackclouds_wrf, trackclouds_input)
+            pool.map(trackclouds, trackclouds_input)
             pool.close()
             pool.join()
     else:
@@ -400,12 +411,12 @@ if run_gettracks == 0:
 # Call function
 if run_finalstats == 1:
     # Load function
-    from trackstats import trackstats_wrf
+    from trackstats import trackstats_tb
 
     # Call satellite version of function
     print('Calculating track statistics')
     print(time.ctime())
-    trackstats_wrf(irdatasource, datadescription, pixel_radius, geolimits, area_thresh, 
+    trackstats_tb(irdatasource, datadescription, pixel_radius, geolimits, area_thresh, 
                    cloudtb_threshs, absolutetb_threshs, startdate, enddate, timegap, cloudid_filebase,
                    tracking_outpath, stats_outpath, track_version, tracknumber_version,
                    tracknumbers_filebase, lengthrange=lengthrange)
@@ -423,11 +434,11 @@ if run_identifymcs == 1:
     print('Identifying MCSs')
 
     # Load function
-    from identifymcs import identifymcs_wrf_xarray
+    from identifymcs import identifymcs_tb
 
     # Call wrf version of function
     print((time.ctime()))
-    identifymcs_wrf_xarray(trackstats_filebase, stats_outpath, startdate, enddate,
+    identifymcs_tb(trackstats_filebase, stats_outpath, startdate, enddate,
                             geolimits, datatimeresolution, mcs_mergedir_areathresh, 
                             mcs_mergedir_durationthresh, mcs_mergedir_eccentricitythresh, 
                             mcs_mergedir_splitduration, mcs_mergedir_mergeduration, nmaxlinks, mcs_mergedir_timegap)
@@ -480,7 +491,7 @@ if run_matchtbpf == 1:
                         geolimits, nmaxpf, nmaxcore, nmaxclouds, rr_min, pixel_radius, 
                         irdatasource, precipdatasource, datadescription, datatimeresolution,
                         mcs_mergedir_areathresh, mcs_mergedir_durationthresh,
-                        mcs_mergedir_eccentricitythresh)
+                        mcs_mergedir_eccentricitythresh,pf_link_area_thresh)
 
     pfstats_filebase = 'mcs_tracks_' + precipdatasource + '_'
 ##############################################################
@@ -628,6 +639,7 @@ if run_robustmcspf == 1:
 if run_robustmcspf == 0:
     print('Robust MCSs already determined')
     robustmcs_filebase = 'robust_mcs_tracks_' + precipdatasource + '_'
+    print('robustmcs_filebase IS IS IS: ', robustmcs_filebase)
 
 if run_labelmcspf == 1:
     print('Identifying which pixel level maps to generate for the MCS tracks')

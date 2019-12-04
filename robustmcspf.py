@@ -66,6 +66,7 @@ def filtermcs_wrf_rain(stats_path, pfstats_filebase, startdate, enddate, timeres
     ######################################################
     # Load mergedir mcs and pf data
     mergedirpf_statistics_file = stats_path + pfstats_filebase + startdate + '_' + enddate + '.nc'
+    print('mergedirpf_statistics_file: ',mergedirpf_statistics_file)
 
     data = xr.open_dataset(mergedirpf_statistics_file, autoclose=True)
     ntracks = np.nanmax(data.coords['track'])
@@ -216,14 +217,14 @@ def filtermcs_wrf_rain(stats_path, pfstats_filebase, startdate, enddate, timeres
     nlongmcs = len(ilongmcs)
 
     if nlongmcs > 0:
-        print('ENTERED NLONGMCS IF STATEMENT LINES 214')
+        #print('ENTERED NLONGMCS IF STATEMENT LINES 214')
         # Initialize arrays
         cycle_complete = np.ones(nmcs, dtype=int)*-9999
         cycle_stage = np.ones((nmcs, ntimes), dtype=int)*-9999
         cycle_index = np.ones((nmcs, 5), dtype=int)*-9999
 
         mcs_basetime = np.empty((nmcs, ntimes), dtype='datetime64[s]')
-        print(mcs_basetime)
+        #print(mcs_basetime)
 
         # Loop through each mcs
         for ilm in range(0, nlongmcs):
