@@ -92,9 +92,9 @@ def gettracknumbers(datasource, datadescription, datainpath, dataoutpath, startd
 
     TEMP_endtime = calendar.timegm(datetime.datetime(int(enddate[0:4]), int(enddate[4:6]), int(enddate[6:8]), int(enddate[9:11]), int(enddate[11:13]), 0).timetuple())
     end_basetime = np.datetime64(np.array([pd.to_datetime(TEMP_endtime, unit='s')][0], dtype='datetime64[s]'))
-    
+
     # Identify files within the start-end date interval
-    acceptdates = np.array(np.where((basetime >= start_basetime) & (basetime <= end_basetime)))[0,:]    
+    acceptdates = np.array(np.where((basetime >= start_basetime) & (basetime <= end_basetime)))[0,:]
     # Isolate files and times with start-end date interval
     basetime = basetime[acceptdates]
 
@@ -109,7 +109,7 @@ def gettracknumbers(datasource, datadescription, datainpath, dataoutpath, startd
     filesminute = np.zeros(len(acceptdates), dtype=int)
 
     for filestep, ifiles in enumerate(acceptdates):
-        files[filestep] = singletrackfiles[ifiles] 
+        files[filestep] = singletrackfiles[ifiles]
         filedate[filestep] = str(year[ifiles]) + str(month[ifiles]).zfill(2) + str(day[ifiles]).zfill(2)
         filetime[filestep] = str(hour[ifiles]).zfill(2) + str(minute[ifiles]).zfill(2)
         filesyear[filestep] = int(year[ifiles])
@@ -117,7 +117,7 @@ def gettracknumbers(datasource, datadescription, datainpath, dataoutpath, startd
         filesday[filestep] = int(day[ifiles])
         fileshour[filestep] = int(hour[ifiles])
         filesminute[filestep] = int(minute[ifiles])
-    
+
     #########################################################################
     # Determine number of gaps in dataset
     gap = 0
@@ -134,7 +134,7 @@ def gettracknumbers(datasource, datadescription, datainpath, dataoutpath, startd
     # gap = 0
     ############################################################################
     # Initialize matrices
-    nfiles = int(len(files))+2*gap  #seems a bug, by Jianfeng Li, 2*gap may be not enough
+    nfiles = int(len(files))+2*gap
     
     tracknumber = np.ones((1, nfiles, maxnclouds), dtype=int)*-9999
     referencetrackstatus = np.ones((nfiles, maxnclouds), dtype=float)*np.nan
@@ -185,7 +185,7 @@ def gettracknumbers(datasource, datadescription, datainpath, dataoutpath, startd
     print(('Number of files: ' + str(nfiles)))
 #    print((time.ctime()))
     ifill = 0
-    for ifile in range(0,nfiles):  #use range(0, nfiles) by Jianfeng Li
+    for ifile in range(0,nfiles-1)
         print((files[ifile]))
         print((time.ctime()))
 
@@ -224,13 +224,12 @@ def gettracknumbers(datasource, datadescription, datainpath, dataoutpath, startd
         npix_reference = referencecloudid_data[npxname][:]
         print('npix_reference.shape: ',npix_reference.shape)
         referencecloudid_data.close()
-        
+
         # New cloudid file
         newcloudid_data = Dataset(new_file, 'r')
         npix_new = newcloudid_data[npxname][:]
         newcloudid_data.close()
 
-        # Old fix - Jan 2020
         # Remove possible extra time dimension to make sure npix is a 1D array
         # npix_reference = npix_reference.squeeze()
         # npix_new = npix_new.squeeze()
@@ -271,7 +270,7 @@ def gettracknumbers(datasource, datadescription, datainpath, dataoutpath, startd
                 for ncr in range(1, nclouds_reference+1):
                     tracknumber[0, ifill, ncr-1] = itrack
                     itrack = itrack + 1
-                    
+
         time_prev = time_new
         cloudidfiles[ifill + 1,:] = list(os.path.basename(new_file))
         basetime[ifill + 1] = np.array([pd.to_datetime(num2date(basetime_new, units=basetime_units, calendar=basetime_calendar))], dtype='datetime64[s]')[0, 0]
@@ -350,7 +349,7 @@ def gettracknumbers(datasource, datadescription, datainpath, dataoutpath, startd
                             for nnew in range(0,nnewclouds):
                                 # Find associated reference clouds
                                 referencecloudindex = np.array(np.where(refcloud_forward_index[0, :, :] == associated_newclouds[nnew])) 
-                                nassociatedreference = np.shape(referencecloudindex)[1]                                
+                                nassociatedreference = np.shape(referencecloudindex)[1]
                                 if nassociatedreference > 0:
                                     temp_referenceclouds = np.append(temp_referenceclouds,referencecloudindex[0]+1)
                                     temp_referenceclouds = np.unique(np.sort(temp_referenceclouds))
