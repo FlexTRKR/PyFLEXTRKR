@@ -55,8 +55,8 @@ def gettracknumbers(datasource, datadescription, datainpath, dataoutpath, startd
     # Get single track files sort
     print('Determining which files will be processed')
     print((time.ctime()))
+    print(singletrack_filebase)
     singletrackfiles = fnmatch.filter(os.listdir(datainpath), singletrack_filebase +'*')
-
     # Put in temporal order
     singletrackfiles = sorted(singletrackfiles)
 
@@ -91,7 +91,7 @@ def gettracknumbers(datasource, datadescription, datainpath, dataoutpath, startd
 
     TEMP_endtime = calendar.timegm(datetime.datetime(int(enddate[0:4]), int(enddate[4:6]), int(enddate[6:8]), int(enddate[9:11]), int(enddate[11:13]), 0).timetuple())
     end_basetime = np.datetime64(np.array([pd.to_datetime(TEMP_endtime, unit='s')][0], dtype='datetime64[s]'))
-
+    
     # Identify files within the start-end date interval
     acceptdates = np.array(np.where((basetime >= start_basetime) & (basetime <= end_basetime)))[0,:]
 
@@ -147,6 +147,8 @@ def gettracknumbers(datasource, datadescription, datainpath, dataoutpath, startd
     # Load first file
     print('Processing first file')
 #    print((time.ctime()))
+    print('datainpath: ', datainpath)
+    print('files[0]: ', files[0])
     singletracking_data = Dataset(datainpath + files[0], 'r')                      # Open file
     nclouds_reference = int(np.nanmax(singletracking_data['nclouds_ref'][:]) + 1)  # Number of clouds in reference file
     basetime_ref = singletracking_data['basetime_ref'][:]
@@ -351,19 +353,21 @@ def gettracknumbers(datasource, datadescription, datainpath, dataoutpath, startd
 
                 #################################################################
                 # Now get the track status
-                print('Determing status of clouds in track')
+                print('Determining status of clouds in track')
 #                print((time.ctime()))
                 if nnewclouds > 0:
                     ############################################################
                     # Find the largest reference and new clouds
 
                     # Largest reference cloud
-                    allreferencepix = npix_reference[0, associated_referenceclouds-1] # Need to subtract one since associated_referenceclouds gives core index and matrix starts at zero
+                    print('npix_reference.shape: ', npix_reference.shape)
+                    allreferencepix = npix_reference[associated_referenceclouds-1] # Need to subtract one since associated_referenceclouds gives core index and matrix starts at zero
                     largestreferenceindex = np.argmax(allreferencepix)
                     largest_referencecloud = associated_referenceclouds[largestreferenceindex] # Cloud number of the largest reference cloud
 
                     # Largest new cloud
-                    allnewpix = npix_new[0, associated_newclouds-1] # Need to subtract one since associated_newclouds gives cloud number and the matrix starts at zero
+                    print('npix_new.shape: ', npix_new.shape)
+                    allnewpix = npix_new[associated_newclouds-1] # Need to subtract one since associated_newclouds gives cloud number and the matrix starts at zero
                     largestnewindex = np.argmax(allnewpix)
                     largest_newcloud = associated_newclouds[largestnewindex] # Cloud numberof the largest new cloud
 
@@ -630,10 +634,5 @@ def gettracknumbers(datasource, datadescription, datainpath, dataoutpath, startd
                                     'track_mergenumbers': {'dtype': 'int', 'zlib':True, '_FillValue': -9999}, \
                                     'track_splitnumbers': {'dtype': 'int', 'zlib':True, '_FillValue': -9999}, \
                                     'track_reset': {'dtype': 'int', 'zlib':True, '_FillValue': -9999}})
-
-
-
-
-
 
 

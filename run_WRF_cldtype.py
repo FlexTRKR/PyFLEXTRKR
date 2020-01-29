@@ -28,7 +28,7 @@ print((time.ctime()))
 # Set variables describing data, file structure, and tracking thresholds
 
 # Specify which sets of code to run. (1 = run code, 0 = don't run code)
-run_idclouds = 1        # Segment and identify cloud systems
+run_idclouds = 0        # Segment and identify cloud systems
 run_tracksingle = 0     # Track single consecutive cloudid files
 run_gettracks = 0       # Run trackig for all files
 run_finalstats = 0      # Calculate final statistics
@@ -40,30 +40,31 @@ run_robustmcs = 0       # Filter potential mcs cases using nmq radar variables
 run_robustmcspf = 0     # Filter potential mcs cases using precipitation features (NOT REFLECTIVITY)
 run_labelmcs = 0        # Create pixel maps of MCSs
 run_labelmcspf = 0      # Create pixel maps of MCSs from WRF precipitation features (NOT REFLECTIVITY)
+run_labelct = 1         # Create pixel maps of cloud type objects that were tracked   
 
 file_rr_tb = 1          # Input brightness temperature and rainrate from WRF are in the same file (0- they are in separate files)
 
 # Set version ofcode
-cloudidmethod = 'futyan4'   # Option: futyan3 = identify cores and cold anvils and expand to get warm anvil, futyan4=identify core and expand for cold and warm anvils
+cloudidmethod = 'futyan3'   # Option: futyan3 = identify cores and cold anvils and expand to get warm anvil, futyan4=identify core and expand for cold and warm anvils
 keep_singlemergesplit = 1   # Options: 0=All short tracks are removed, 1=Only short tracks without mergers or splits are removed
 show_alltracks = 0          # Options: 0=Maps of all tracks are not created, 1=Maps of all tracks are created (much slower!)
-run_parallel = 0            # Options: 0-run serially, 1-run parallel (uses Pool from Multiprocessing)
+run_parallel = 1            # Options: 0-run serially, 1-run parallel (uses Pool from Multiprocessing)
 nprocesses = 32             # Number of processors to use if run_parallel is set to 1
 process_halfhours = 0       # 0 = No, 1 = Yes
 
 # Specify version of code using
-cloudid_version = 'v1.0'
-track_version = 'v1.0'
-tracknumber_version = 'v1.0'
+cloudid_version = 'ct.0'
+track_version = 'ct.0'
+tracknumber_version = 'ct.0'
 
 # Specify default code version
-curr_id_version = 'v1.0'
-curr_track_version = 'v1.0'
-curr_tracknumbers_version = 'v1.0'
+curr_id_version = 'ct.0'
+curr_track_version = 'ct.0'
+curr_tracknumbers_version = 'ct.0'
 
 # Specify days to run, (YYYYMMDD.hhmm)
-startdate = '20150301.2200'
-enddate = '20150303.1800'
+startdate = '20150304.0000'
+enddate = '20150306.0000'
 
 # Specify cloud tracking parameters
 geolimits = np.array([-90, -180, 90, 180])  # 4-element array with plotting boundaries [lat_min, lon_min, lat_max, lon_max]
@@ -81,7 +82,7 @@ nmaxlinks = 50                             # Maximum number of clouds that any s
 nmaxclouds = 3000                          # Maximum number of clouds allowed to be in one track
 absolutetb_threshs = np.array([160, 330])  # k A vector [min, max] brightness temperature allowed. Brightness temperatures outside this range are ignored.
 warmanvilexpansion = 0                     # If this is set to one, then the cold anvil is spread laterally until it exceeds the warm anvil threshold
-mincoldcorepix = 4                         # Minimum number of pixels for the cold core, needed for futyan version 4 cloud identification code. Not used if use futyan version 3.
+mincoldcorepix = 2                         # Minimum number of pixels for the cold core, needed for futyan version 4 cloud identification code. Not used if use futyan version 3.
 smoothwindowdimensions = 5                 # Dimension of the boxcar filter used for futyan version 4. Not used in futyan version 3
 
 # Specify MCS parameters
@@ -118,8 +119,8 @@ nmqdatasource = 'nmq'
 precipdatasource = 'WRF'
 datadescription = 'WRF_Output'
 if file_rr_tb == 1:
-    databasename = 'wrfout_rainrate_tb'
-    rainaccumulation_filebase = 'wrfout_rainrate_tb'
+    databasename = 'wrfout_rainrate_tb_testing'
+    rainaccumulation_filebase = 'wrfout_rainrate_tb_testing'
 else:
     databasename = 'wrfout_tb'
     rainaccumulation_filebase = 'wrfout_rainrate_'+ startdate[0:4]
@@ -134,18 +135,11 @@ pfdata_filebase = 'csa4km_'
 #rainaccumulation_path = '/global/cscratch1/sd/barb672/WRF381/AMAZON_CONTROL01/rr_tb/'
 #latlon_file = clouddata_path + databasename + '_' + startdate[0:4] + '-' + startdate[4:6] + '-' + startdate[6:8] + '_' + startdate[9:11] + ':' + startdate[11:13] + ':00.nc'
 
-#root_path = '/global/homes/b/barb672/Codes/Tracking/pyflextrkr/'
-#clouddata_path = '/global/cscratch1/sd/barb672/WRF4/AMAZON_EDMF/'
-#pfdata_path = '/global/cscratch1/sd/barb672/WRF4/AMAZON_EDMF/'
-#rainaccumulation_path = '/global/cscratch1/sd/barb672/WRF4/AMAZON_EDMF/'
-#scratchpath = '/global/cscratch1/sd/barb672/WRF4/AMAZON_EDMF/'
-
-
 root_path = '/global/homes/b/barb672/Codes/Tracking/pyflextrkr/'
-clouddata_path = '/global/cscratch1/sd/barb672/WRF4b/AMAZON_CONTROL01/'
-pfdata_path = '/global/cscratch1/sd/barb672/WRF4b/AMAZON_CONTROL01/'
-rainaccumulation_path = '/global/cscratch1/sd/barb672/WRF4b/AMAZON_CONTROL01/'
-scratchpath = '/global/cscratch1/sd/barb672/WRF4b/AMAZON_CONTROL01/'
+clouddata_path = '/global/cscratch1/sd/barb672/WRF4/AMAZON_EDMF/'
+pfdata_path = '/global/cscratch1/sd/barb672/WRF4/AMAZON_EDMF/'
+rainaccumulation_path = '/global/cscratch1/sd/barb672/WRF4/AMAZON_EDMF/'
+scratchpath = '/global/cscratch1/sd/barb672/WRF4/AMAZON_EDMF/'
 latlon_file = clouddata_path + databasename + '_' + startdate[0:4] + '-' + startdate[4:6] + '-' + startdate[6:8] + '_' + startdate[9:11] + ':' + startdate[11:13] + ':00.nc'
 
 ###############################################
@@ -175,9 +169,10 @@ cloudtb_threshs = np.hstack((cloudtb_core, cloudtb_cold, cloudtb_warm, cloudtb_c
 #stats_outpath = root_path + 'stats/'
 #mcstracking_outpath = root_path + 'mcstracking/' + startdate + '_' + enddate + '/'
 
-tracking_outpath = clouddata_path + 'tracking/'
-stats_outpath = clouddata_path + 'stats/'
+tracking_outpath = clouddata_path + 'cloudtype_tracking/tracking/'
+stats_outpath = clouddata_path + 'cloudtype_tracking/stats/'
 mcstracking_outpath = clouddata_path + 'mcstracking/' + startdate + '_' + enddate + '/'
+cttracking_outpath = clouddata_path + 'cttracking/' + startdate + '_' + enddate + '/'
 
 ####################################################################
 # Execute tracking scripts
@@ -236,7 +231,7 @@ if run_idclouds == 1:
     ##########################################################################
     # Process files
     # Load function
-    from idclouds import idclouds_wrf
+    from idclouds import idclouds_ct
 
     # Generate input lists
     list_irdatasource = [irdatasource]*(filestep)
@@ -279,14 +274,14 @@ if run_idclouds == 1:
     if run_parallel == 0:
         # Serial version
         for ifile in range(0, filestep):
-            idclouds_wrf(idclouds_input[ifile])        
+            idclouds_ct(idclouds_input[ifile])        
     elif run_parallel == 1:
         # Parallel version
         if __name__ == '__main__':
             print('Identifying clouds')
             print((time.ctime()))
             pool = Pool(nprocesses)
-            pool.map(idclouds_wrf, idclouds_input)
+            pool.map(idclouds_ct, idclouds_input)
             pool.close()
             pool.join()
             elapsed = time.time()-t
@@ -303,7 +298,7 @@ if run_idclouds == 1:
 if run_idclouds == 0:
     print('Cloud already identified in previous run')
     cloudid_filebase =  irdatasource + '_' + datadescription + '_cloudid' + curr_id_version + '_'
-
+    
 # Call function
 if run_tracksingle == 1:
     ################################################################
@@ -373,7 +368,7 @@ if run_tracksingle == 1:
     if run_parallel == 0:
         # Serial version
         for ifile in range(0, cloudidfilestep-1):
-             trackclouds(trackclouds_input[ifile])
+            trackclouds(trackclouds_input[ifile])
     elif run_parallel == 1:
         # parallelize version
         if __name__ == '__main__':
@@ -420,12 +415,12 @@ if run_gettracks == 0:
 # Call function
 if run_finalstats == 1:
     # Load function
-    from trackstats import trackstats_tb
+    from trackstats import trackstats_ct
 
     # Call satellite version of function
     print('Calculating track statistics')
     print(time.ctime())
-    trackstats_tb(irdatasource, datadescription, pixel_radius, geolimits, area_thresh, 
+    trackstats_ct(irdatasource, datadescription, pixel_radius, geolimits, area_thresh, 
                    cloudtb_threshs, absolutetb_threshs, startdate, enddate, timegap, cloudid_filebase,
                    tracking_outpath, stats_outpath, track_version, tracknumber_version,
                    tracknumbers_filebase, lengthrange=lengthrange)
@@ -648,7 +643,6 @@ if run_robustmcspf == 1:
 if run_robustmcspf == 0:
     print('Robust MCSs already determined')
     robustmcs_filebase = 'robust_mcs_tracks_' + precipdatasource + '_'
-    print('robustmcs_filebase IS IS IS: ', robustmcs_filebase)
 
 if run_labelmcspf == 1:
     print('Identifying which pixel level maps to generate for the MCS tracks')
@@ -726,6 +720,83 @@ if run_labelmcspf == 1:
             print((time.ctime()))
             pool = Pool(nprocesses)
             pool.map(mapmcs_wrf_pf, robustmcsmap_input)
+            pool.close()
+            pool.join()
+    else:
+        sys.ext('Valid parallelization flag not provided')
+
+############################################################    
+# Create pixel files with cloud type tracks 
+if run_labelct == 1:
+    print('Identifying which pixel level maps to generate for the cloud type tracks')    
+    ###########################################################
+    # Identify files to process
+    if run_tracksingle == 0:
+        ################################################################
+        # Identify files to process
+        print('Identifying cloudid files to process')
+
+        # Isolate all possible files
+        allcloudidfiles = fnmatch.filter(os.listdir(tracking_outpath), cloudid_filebase +'*')
+
+        # Put in temporal order
+        allcloudidfiles = sorted(allcloudidfiles)
+
+        # Loop through files, identifying files within the startdate - enddate interval
+        nleadingchar = np.array(len(cloudid_filebase)).astype(int)
+
+        cloudidfiles = [None]*len(allcloudidfiles)
+        cloudidfiles_basetime = [None]*len(allcloudidfiles)
+        cloudidfilestep = 0
+        for icloudidfile in allcloudidfiles:
+            TEMP_cloudidtime = datetime.datetime(int(icloudidfile[nleadingchar:nleadingchar+4]),
+            int(icloudidfile[nleadingchar+4:nleadingchar+6]), int(icloudidfile[nleadingchar+6:nleadingchar+8]),
+            int(icloudidfile[nleadingchar+9:nleadingchar+11]), int(icloudidfile[nleadingchar+11:nleadingchar+13]), 0, tzinfo=utc)
+            TEMP_cloudidbasetime = calendar.timegm(TEMP_cloudidtime.timetuple())
+
+            if TEMP_cloudidbasetime >= start_basetime and TEMP_cloudidbasetime <= end_basetime:
+                cloudidfiles[cloudidfilestep] = tracking_outpath + icloudidfile
+                cloudidfiles_basetime[cloudidfilestep] = np.copy(TEMP_cloudidbasetime)
+                cloudidfilestep = cloudidfilestep + 1
+
+        # Remove extra rows
+        cloudidfiles = cloudidfiles[0:cloudidfilestep]
+        cloudidfiles_basetime = cloudidfiles_basetime[:cloudidfilestep]
+
+    #############################################################
+    # Process files
+
+    # Load function 
+    from mapct import map_ct
+
+    # Generate input list
+    list_trackstat_filebase = [trackstats_filebase]*(cloudidfilestep-1)
+    list_rainaccumulation_filebase = [rainaccumulation_filebase]*(cloudidfilestep-1)
+    list_stats_path = [stats_outpath]*(cloudidfilestep-1)
+    list_tracking_path = [cttracking_outpath]*(cloudidfilestep-1)
+    list_rainaccumulation_path = [rainaccumulation_path]*(cloudidfilestep-1)
+    list_cloudid_filebase = [cloudid_filebase]*(cloudidfilestep-1)
+    list_startdate = [startdate]*(cloudidfilestep-1)
+    list_enddate = [enddate]*(cloudidfilestep-1)
+    list_showalltracks = [show_alltracks]*(cloudidfilestep-1)
+
+    map_input = list(zip(cloudidfiles, cloudidfiles_basetime,
+    list_trackstat_filebase, list_rainaccumulation_filebase, 
+    list_tracking_path, list_stats_path, list_rainaccumulation_path,
+    list_startdate, list_enddate, list_showalltracks))
+
+    if run_parallel == 0:
+        # Call function
+        for iunique in range(0, cloudidfilestep-1):
+            map_ct(map_input[iunique])
+
+        #cProfile.run('mapmcs_pf(robustmcsmap_input[200])')
+    elif run_parallel == 1:
+        if __name__ == '__main__':
+            print('Creating maps of tracked MCSs')
+            print((time.ctime()))
+            pool = Pool(nprocesses)
+            pool.map(map_ct, map_input)
             pool.close()
             pool.join()
     else:
