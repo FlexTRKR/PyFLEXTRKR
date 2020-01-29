@@ -108,6 +108,10 @@ def trackclouds(zipped_inputs):
         # Get size of data
         times, ny, nx = np.shape(new_convcold_cloudnumber)
 
+        # Add 1 to nclouds for both reference and new cloudid files to account for files that have 0 clouds
+        nreference = nreference + 1
+        nnew = nnew + 1
+
         #######################################################
         # Initialize matrices
         reference_forward_index = np.ones((1, int(nreference), int(nmaxlinks)), dtype=int)*-9999
@@ -248,14 +252,13 @@ def trackclouds(zipped_inputs):
         output_data.refcloud_forward_size.attrs['units'] = 'km^2'
 
         # Write netcdf files
-        output_data.to_netcdf(path=track_outfile, mode='w', format='NETCDF4_CLASSIC', unlimited_dims='times', \
+        output_data.to_netcdf(path=track_outfile, mode='w', format='NETCDF4_CLASSIC', unlimited_dims='time', \
                               encoding={'basetime_new': {'dtype':'int64', 'zlib':True, 'units': 'seconds since 1970-01-01'}, \
                                         'basetime_ref': {'dtype':'int64', 'zlib':True, 'units': 'seconds since 1970-01-01'}, \
                                         'newcloud_backward_index': {'dtype': 'int', 'zlib':True, '_FillValue': -9999}, \
                                         'newcloud_backward_size': {'dtype': 'int', 'zlib':True, '_FillValue': -9999}, \
                                         'refcloud_forward_index': {'dtype': 'int', 'zlib':True, '_FillValue': -9999}, \
                                         'refcloud_forward_size': {'dtype': 'int', 'zlib':True, '_FillValue': -9999}})
-
 
 
 

@@ -1018,6 +1018,267 @@ def idclouds_LES(zipped_inputs):
             print(datafilepath)
             print('data not within latitude, longitude range. check specified geographic range')
 
+################################################################################################            
+def idclouds_ct(zipped_inputs):
+    # inputs:
+    # datafilepath - path to raw data directory
+    # datasource - source of the raw data
+    # datadescription - description of data source, included in all output file names
+    # variablename - name of tb data in raw data file
+    # cloudid_version - version of cloud identification being run, set at the start of the beginning of run_test.py
+    # dataoutpath - path to destination of the output
+    # latlon_file - filename of the file that contains the latitude and longitude data
+    # latname - name of latitude variable in raw data file
+    # longname - name of longitude variable in raw data file
+    # geolimits - 4-element array with plotting boundaries [lat_min, lon_min, lat_max, lon_max]
+    # startdate - data to start processing in yyyymmdd format
+    # enddate - data to stop processing in yyyymmdd format
+    # pixel_radius - radius of pixels in km
+    # area_thresh - minimum area thershold to define a feature in km^2
+    # cloudtb_threshs - brightness temperature thresholds 
+    # miss_thresh - minimum amount of data required in order for the file to not to be considered corrupt. 
+    # cloudidmethod - flag indiciating which method of cloud classification will be used
+    # mincoldcorepix - minimum size threshold for a cloud
+    # smoothsize - how many pixels to dilate as growing the warm (and cold) anvil. only used for futyan4.
+    # warmanvilexpansion - flag indicating whether to grow the warm anvil or ignore this step. The warm anvil is not used in tracking.
+    # processhalfhour - flag for whether process hourly or half-hourly data (0=hourly, 1=halfhourly)
+
+    # output: (concatenated into netcdf file located in tracking subdirectory)
+    # basetime - seconds since 19070-01-01 of the file
+    # filedate - string of the year, month, and day of the file
+    # filetime - string of the hour and minute of the file
+    # longitude - longitudes used during identification process
+    # latitude - latitudes used during indentification process
+    # tb - brightness temperatures used during identification process
+    # cloudtype - map of cloud type at each pixel (1 = core, 2 = cold anvil, 3 = warm anvil, 4 = other cloud)
+    # cloudnumber - map of cloud number of each feature. includes core, cold anvil, and warm anvil area
+    # nclouds - number of features identified
+    # ncorepix - number of core pixels in each feature
+    # ncoldpix - number of cold anvil pixels in each feature
+    # ncorecoldpix - number of core and cold anvil pixels in each feature
+    # nwarmpix - number of warm anvil pixels in each feature
+
+    ##########################################################
+    # Load modules
+
+    from netCDF4 import Dataset, stringtochar, num2date
+    import os
+    import numpy as np
+    import sys
+    import datetime
+    import calendar
+    import time
+    import xarray as xr
+    import datetime
+    import pandas as pd
+    #from scipy import signal
+    #import scipy as sp
+    #import numpy.ma as ma
+    from scipy.ndimage import label, filters
+    import netcdf_io as net
+    np.set_printoptions(threshold=np.inf)
+
+    ########################################################
+    # Separate inputs
+
+    #datafilepath = zipped_inputs[0]
+    #datasource = zipped_inputs[1]
+    #datadescription = zipped_inputs[2]
+    #variablename = zipped_inputs[3]
+    #cloudid_version = zipped_inputs[4]
+    #dataoutpath = zipped_inputs[5]
+    #latlon_file = zipped_inputs[6]
+    #latname = zipped_inputs[7]
+    #longname = zipped_inputs[8]
+    #geolimits = zipped_inputs[9]
+    #startdate = zipped_inputs[10]
+    #enddate = zipped_inputs[11]
+    #pixel_radius = zipped_inputs[12]
+    #area_thresh = zipped_inputs[13]
+    #cloudtb_threshs = zipped_inputs[14]
+    #absolutetb_threshs = zipped_inputs[15]
+    #miss_thresh = zipped_inputs[16]
+    #cloudidmethod = zipped_inputs[17]
+    #mincoldcorepix = zipped_inputs[18]
+    #smoothsize = zipped_inputs[19]
+    #warmanvilexpansion = zipped_inputs[20]
+    #processhalfhour = zipped_inputs[21]
+    
+    datafilepath = zipped_inputs[0]
+    datasource = zipped_inputs[1]
+    datadescription = zipped_inputs[2]
+    variablename = zipped_inputs[3]
+    cloudid_version = zipped_inputs[4]
+    dataoutpath = zipped_inputs[5]
+    latlon_file = zipped_inputs[6]
+    geolimits = zipped_inputs[7]
+    startdate = zipped_inputs[8]
+    enddate = zipped_inputs[9]
+    pixel_radius = zipped_inputs[10]
+    area_thresh = zipped_inputs[11]
+    cloudtb_threshs = zipped_inputs[12]
+    absolutetb_threshs = zipped_inputs[13]
+    miss_thresh = zipped_inputs[14]
+    cloudidmethod = zipped_inputs[15]
+    mincoldcorepix = zipped_inputs[16]
+    smoothsize = zipped_inputs[17]
+    warmanvilexpansion = zipped_inputs[18]
+    processhalfhour = zipped_inputs[19]
+    linkpf = zipped_inputs[20]
+    pf_smooth_window = zipped_inputs[21]
+    pf_dbz_thresh = zipped_inputs[22]
+    pf_link_area_thresh = zipped_inputs[23]
+    pfvarname = zipped_inputs[24]
+    
+    # define constants:
+    # minimum and maximum brightness temperature thresholds. data outside of this range is filtered
+    mintb_thresh = absolutetb_threshs[0]    # k
+    maxtb_thresh = absolutetb_threshs[1]    # k
+
+    # Define processing flag
+    if processhalfhour == 0:
+        TimeIndices = 1 # Process hourly data
+    else:
+        TimeIndices = 2 # Process half-hourly data
+
+    ########################################################
+    # load data:
+    if datasource == 'WRF':
+        print(datafilepath)
+
+        # load brightness temperature data. automatically removes missing values
+        rawdata = Dataset(datafilepath, 'r')                            # open file
+        original_lat = rawdata['lat2d'][:]
+        original_lon = rawdata['lon2d'][:]
+        original_cloudtype = rawdata['cldtype'][:]
+        #original_precip = rawdata['rainrate'][:]
+        #print('original_precip shape: ', original_precip.shape)
+        original_basetime = rawdata['time'][:]
+        basetime_units = rawdata['time'].units
+        rawdata.close()
+        
+        # Area threshold for cloud type
+        area_thresh = 8 # km^2
+        
+        # Create latitude and longitude grids
+        in_lon, in_lat = [original_lon, original_lat]
+
+        for iTime in range(0, TimeIndices):
+            # Replace missing ir data with mean
+            datay, datax = np.array(np.ma.nonzero(original_cloudtype[iTime, :, :]))           
+            in_ct = np.empty(np.shape(original_cloudtype[iTime, :, :]), dtype=float)*np.nan
+            in_ct[datay, datax] = original_cloudtype[iTime, datay, datax]
+
+            missingdatay, missingdatax = np.array(np.where(np.isnan(in_ct)))
+            if len(missingdatay) > 0:
+                for imiss in np.arange(0,len(missingdatay)):
+                    if missingdatay[imiss] == 0:
+                        if missingdatax[imiss] == 0:
+                            subsetct = np.copy(in_ct[0:missingdatay[imiss]+2, 0:missingdatax[imiss]+2])
+                        else:
+                            subsetct = np.copy(in_ct[0:missingdatay[imiss]+2, missingdatax[imiss]-1:missingdatax[imiss]+2])
+                    elif missingdatax[imiss] == 0:
+                        subsetct = np.copy(in_ct[missingdatay[imiss]-1:missingdatay[imiss]+2, 0:missingdatax[imiss]+2])
+                    elif missingdatay[imiss] == np.shape(original_cloudtype)[0]:
+                        if missingdatax[imiss] == np.shape(original_cloudtype)[1]:
+                            subsetct = np.copy(in_ct[missingdatay[imiss]-1::, missingdatax[imiss]-1::])
+                        else:
+                            subsetct = np.copy(in_ct[missingdatay[imiss]-1::, missingdatax[imiss]-1::missingdatax[imiss]+2])
+                    elif missingdatax[imiss] == np.shape(original_cloudtype)[1]:
+                        subsetct = np.copy(in_ct[missingdatay[imiss]-1:missingdatay[imiss]+2, missingdatax[imiss]-1::])
+                    else:
+                        subsetct = np.copy(in_ct[missingdatay[imiss]-1:missingdatay[imiss]+2, missingdatax[imiss]-1:missingdatax[imiss]+2])
+                    subsetct = np.reshape(subsetct, np.shape(subsetct)[0]*np.shape(subsetct)[1] , 1)
+                    in_ct[missingdatay[imiss], missingdatax[imiss]] = np.nanmean(subsetct)          
             
 
-\
+#            # Deal with missing data 
+#            in_ir = np.squeeze(original_ir,axis=0)
+#            print('in_ir shape: ', in_ir.shape)
+#            df_tb = pd.DataFrame(in_ir)
+#            df_tb.fillna(method ='bfill', inplace = True)
+#            df_tb.fillna(method ='ffill', inplace = True)
+##           df_tb.fillna(df_tb.mean())       
+#            in_ir = df_tb.to_numpy()    
+
+#            # Deal with missing data using interpolation method
+#            in_ir = np.squeeze(original_ir,axis=0)
+#            mask = np.isnan(in_ir)
+#            in_ir[mask] = np.interp(np.flatnonzero(mask), np.flatnonzero(~mask), in_ir[~mask])
+
+            #####################################################
+            # mask cloud types lower than high congestus
+            in_ct[in_ct < 2] = np.nan
+           
+            #####################################################
+            # determine if geographic region of interest is within the data set. if it is proceed and limit the data to that geographic region. if not exit the code.
+
+            #isolate data within lat/lon range set by limit
+            indicesy, indicesx = np.array(np.where((in_lat >= geolimits[0]) & (in_lat <= geolimits[2]) & (in_lon >= geolimits[1]) & (in_lon <= geolimits[3])))
+
+            # proceed if file covers the geographic region in interest
+            if len(indicesx) > 0 and len(indicesy) > 0:
+                out_lat = np.copy(in_lat[np.nanmin(indicesy):np.nanmax(indicesy)+1, np.nanmin(indicesx):np.nanmax(indicesx)+1])
+                out_lon = np.copy(in_lon[np.nanmin(indicesy):np.nanmax(indicesy)+1, np.nanmin(indicesx):np.nanmax(indicesx)+1])
+                out_ct = np.copy(in_ct[np.nanmin(indicesy):np.nanmax(indicesy)+1, np.nanmin(indicesx):np.nanmax(indicesx)+1])   
+                
+                ######################################################
+                # proceed only if number of missing data does not exceed an accepable threshold
+                # determine number of missing data
+                missingcount = len(np.array(np.where(np.isnan(out_ct)))[0, :])
+                ny, nx = np.shape(out_ct)
+
+                ##if np.divide(missingcount, (ny*nx)) < miss_thresh: # KB REMOVED 01/09/2020
+                    ######################################################
+
+                file_basetime = np.array([pd.to_datetime(num2date(original_basetime[iTime], units=basetime_units))], dtype='datetime64[s]')
+                file_datestring = str(file_basetime)[2:6] + str(file_basetime)[7:9] + str(file_basetime)[10:12]
+                file_timestring = str(file_basetime)[13:15] + str(file_basetime)[16:18]
+
+                # call idcloud type subroutine
+                from subroutine_idclouds import cloud_type_tracking_NS
+                clouddata = cloud_type_tracking_NS(out_ct, pixel_radius, area_thresh, smoothsize, mincoldcorepix, warmanvilexpansion)
+
+                ######################################################
+                # separate output from futyan into the separate variables
+                final_nclouds = np.array([clouddata['final_nclouds']])
+                final_ncorepix = np.array([clouddata['final_ncorepix']])
+                final_ncorepix = np.squeeze(final_ncorepix, axis = 0)
+                print('ncorepix.shape: ', final_ncorepix.shape)
+                print('ncorepix type: ', type(final_ncorepix))
+                final_ncoldpix = np.array([clouddata['final_ncoldpix']])
+                final_ncoldpix = np.squeeze(final_ncoldpix, axis = 0)
+                final_ncorecoldpix = np.array([clouddata['final_ncorecoldpix']])
+                final_ncorecoldpix = np.squeeze(final_ncorecoldpix, axis = 0)
+                final_convcold_cloudnumber = np.array([clouddata['final_convcold_cloudnumber']])
+                final_cloudtype = np.array([clouddata['final_cloudtype']])
+                final_cloudnumber = np.array([clouddata['final_cloudnumber']])
+
+                pcp = np.full(final_convcold_cloudnumber.shape, np.inf)
+                final_pf_number = np.full(final_convcold_cloudnumber.shape, np.inf)
+                final_convcold_cloudnumber_orig = final_convcold_cloudnumber
+                final_cloudnumber_orig = final_convcold_cloudnumber_orig           
+                
+                #######################################################
+                # output data to netcdf file, only if clouds present
+                if final_nclouds >= 0:   # KB CHANGED 
+                    # create filename
+                    cloudid_outfile = dataoutpath + datasource + '_' + datadescription + '_cloudid' + cloudid_version + '_' + file_datestring + '_' + file_timestring + '.nc'
+                    print('outcloudfile: ', cloudid_outfile)
+
+                    # Check if file exists, if it does delete it
+                    if os.path.isfile(cloudid_outfile):
+                        os.remove(cloudid_outfile)
+
+                    # Write output to netCDF file
+                    net.write_cloudtype_wrf(cloudid_outfile, file_basetime, file_datestring, file_timestring, \
+                                            out_lat, out_lon, out_ct, original_cloudtype, \
+                                            final_convcold_cloudnumber, \
+                                            final_nclouds, final_ncorepix, final_ncoldpix, final_ncorecoldpix, final_cloudtype, \
+                                            cloudid_version, cloudtb_threshs, geolimits, mintb_thresh, maxtb_thresh, area_thresh, \
+                                            precipitation=pcp, pf_number=final_pf_number, convcold_cloudnumber_orig=final_convcold_cloudnumber_orig, cloudnumber_orig=final_cloudnumber_orig, \
+                                            linkpf=linkpf, pf_smooth_window=pf_smooth_window, pf_dbz_thresh=pf_dbz_thresh, pf_link_area_thresh=pf_link_area_thresh)
+  
+                else:
+                    print(datafilepath)
+                    print('No clouds')

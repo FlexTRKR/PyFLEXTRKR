@@ -22,7 +22,7 @@ def trackstats_tb(datasource, datadescription, pixel_radius, geolimits, areathre
     # tracknumbers_version - Verison of the complete track files
     # tracknumbers_filebase - header of the tracking matrix generated in the previous code. 
     # cloudid_filebase - 
-    # lengthrange - Optional. Set this keyword to a vector [minlength,maxlength] to specify the lifetime range for the tracks.
+    # lengthrange - Optional. Set this keyword to a vector [minlength,maxlength] to specify the lifetime range for the tracks.Fdef
 
     # Outputs: (One netcdf file with with each track represented as a row):
     # lifetime - duration of each track
@@ -2020,3 +2020,492 @@ def trackstats_WRF(datasource, datadescription, pixel_radius, latlon_file, geoli
                                     'ycenter': {'zlib':True, '_FillValue': -9999}, \
                                     'xcenter_weighted': {'zlib':True, '_FillValue': -9999}, \
                                     'ycenter_weighted': {'zlib':True, '_FillValue': -9999}})
+
+    
+# Purpose: This gets statistics about each track from the satellite data. 
+
+# Author: Orginial IDL version written by Sally A. McFarline (sally.mcfarlane@pnnl.gov) and modified for Zhe Feng (zhe.feng@pnnl.gov). Python version written by Hannah C. Barnes (hannah.barnes@pnnl.gov)
+
+# Define function that calculates track statistics for satellite data
+def trackstats_ct(datasource, datadescription, pixel_radius, geolimits, areathresh, cloudtb_threshs, absolutetb_threshs, startdate, enddate, timegap, cloudid_filebase, tracking_inpath, stats_path, track_version, tracknumbers_version, tracknumbers_filebase, lengthrange=[2,120]):
+    # Inputs:
+    # datasource - source of the data
+    # datadescription - description of data source, included in all output file names
+    # pixel_radius - radius of pixels in km
+    # latlon_file - filename of the file that contains the latitude and longitude data
+    # geolimits - 4-element array with plotting boundaries [lat_min, lon_min, lat_max, lon_max]
+    # areathresh - minimum core + cold anvil area of a tracked cloud
+    # cloudtb_threshs - brightness temperature thresholds for convective classification
+    # absolutetb_threshs - brightness temperature thresholds defining the valid data range
+    # startdate - starting date and time of the data
+    # enddate - ending date and time of the data
+    # cloudid_filebase - header of the cloudid data files
+    # tracking_inpath - location of the cloudid and single track data
+    # stats_path - location of the track data. also the location where the data from this code will be saved
+    # track_version - Version of track single cloud files
+    # tracknumbers_version - Verison of the complete track files
+    # tracknumbers_filebase - header of the tracking matrix generated in the previous code. 
+    # cloudid_filebase - 
+    # lengthrange - Optional. Set this keyword to a vector [minlength,maxlength] to specify the lifetime range for the tracks.Fdef
+
+    # Outputs: (One netcdf file with with each track represented as a row):
+    # lifetime - duration of each track
+    # basetime - seconds since 1970-01-01 for each cloud in a track
+    # cloudidfiles - cloudid filename associated with each cloud in a track
+    # meanlat - mean latitude of each cloud in a track of the core and cold anvil
+    # meanlon - mean longitude of each cloud in a track of the core and cold anvil
+    # minlat - minimum latitude of each cloud in a track of the core and cold anvil
+    # minlon - minimum longitude of each cloud in a track of the core and cold anvil
+    # maxlat - maximum latitude of each cloud in a track of the core and cold anvil
+    # maxlon - maximum longitude of each cloud in a track of the core and cold anvil
+    # radius - equivalent radius of each cloud in a track of the core and cold anvil
+    # radius_warmanvil - equivalent radius of core, cold anvil, and warm anvil
+    # npix - number of pixels in the core and cold anvil
+    # nconv - number of pixels in the core
+    # ncoldanvil - number of pixels in the cold anvil
+    # nwarmanvil - number of pixels in the warm anvil
+    # cloudnumber - number that corresponds to this cloud in the cloudid file
+    # status - flag indicating how a cloud evolves over time
+    # startstatus - flag indicating how this track started
+    # endstatus - flag indicating how this track ends
+    # mergenumbers - number indicating which track this cloud merges into
+    # splitnumbers - number indicating which track this cloud split from
+    # trackinterruptions - flag indicating if this track has incomplete data
+    # boundary - flag indicating whether the track intersects the edge of the data
+    # mintb - minimum brightness temperature of the core and cold anvil
+    # meantb - mean brightness temperature of the core and cold anvil
+    # meantb_conv - mean brightness temperature of the core
+    # histtb - histogram of the brightness temperatures in the core and cold anvil
+    # majoraxis - length of the major axis of the core and cold anvil
+    # orientation - angular position of the core and cold anvil
+    # eccentricity - eccentricity of the core and cold anvil
+    # perimeter - approximate size of the perimeter in the core and cold anvil
+    # xcenter - x-coordinate of the geometric center
+    # ycenter - y-coordinate of the geometric center
+    # xcenter_weighted - x-coordinate of the brightness temperature weighted center
+    # ycenter_weighted - y-coordinate of the brightness temperature weighted center
+
+    ###################################################################################
+    # Initialize modules
+    import numpy as np
+    from netCDF4 import Dataset, num2date, chartostring
+    import os, fnmatch
+    import sys
+    from math import pi
+    from skimage.measure import regionprops
+    import time
+    import gc
+    import datetime
+    import xarray as xr
+    import pandas as pd
+    np.set_printoptions(threshold=np.inf)
+
+    #############################################################################
+    # Set constants
+
+    # Set output filename
+    trackstats_outfile = stats_path + 'stats_' + tracknumbers_filebase + '_' + startdate + '_' + enddate + '.nc'
+
+    ###################################################################################
+    # # Load latitude and longitude grid. These were created in subroutine_idclouds and is saved in each file.
+    # print('Determining which files will be processed')
+    # print((time.ctime()))
+
+    # # Find filenames of idcloud files
+    # temp_cloudidfiles = fnmatch.filter(os.listdir(tracking_inpath), cloudid_filebase +'*')
+    # cloudidfiles_list = temp_cloudidfiles  # KB ADDED
+    
+    # # Sort the files by date and time   # KB added
+    # def fdatetime(x):
+    #     return(x[-11:])
+    # cloudidfiles_list = sorted(cloudidfiles_list, key = fdatetime)
+    
+    # # Select one file. Any file is fine since they all have the map of latitude and longitude saved.
+    # temp_cloudidfiles = temp_cloudidfiles[0]
+
+    # # Load latitude and longitude grid
+    # latlondata = Dataset(tracking_inpath + temp_cloudidfiles, 'r')
+    # longitude = latlondata.variables['longitude'][:]
+    # latitude = latlondata.variables['latitude'][:]
+    # latlondata.close()
+
+    #############################################################################
+    # Load track data
+    print('Loading gettracks data')
+    print((time.ctime()))
+    cloudtrack_file = stats_path + tracknumbers_filebase + '_' + startdate + '_' + enddate + '.nc'
+    
+    cloudtrackdata = Dataset(cloudtrack_file, 'r')
+    numtracks = cloudtrackdata['ntracks'][:]
+    cloudidfiles = cloudtrackdata['cloudid_files'][:]
+    nfiles = cloudtrackdata.dimensions['nfiles'].size
+    tracknumbers = cloudtrackdata['track_numbers'][:]
+    trackreset = cloudtrackdata['track_reset'][:]
+    tracksplit = cloudtrackdata['track_splitnumbers'][:]
+    trackmerge = cloudtrackdata['track_mergenumbers'][:]
+    trackstatus = cloudtrackdata['track_status'][:]
+    cloudtrackdata.close()
+
+    # Convert filenames and timegap to string
+    # numcharfilename = len(list(cloudidfiles_list[0]))
+    tmpfname = ''.join(chartostring(cloudidfiles[0]))
+    numcharfilename = len(list(tmpfname))
+
+    # Load latitude and longitude grid from any cloudidfile since they all have the map of latitude and longitude saved
+    latlondata = Dataset(tracking_inpath + tmpfname, 'r')
+    longitude = latlondata.variables['longitude'][:]
+    latitude = latlondata.variables['latitude'][:]
+    latlondata.close()
+
+    # Determine dimensions of data
+    # nfiles = len(cloudidfiles_list)
+    ny, nx = np.shape(latitude)
+    
+    ############################################################################
+    # Initialize grids
+    print('Initiailizinng matrices')
+    print((time.ctime()))
+
+    nmaxclouds = max(lengthrange)
+
+    finaltrack_tracklength = np.ones(int(numtracks), dtype=np.int32)*-9999
+    finaltrack_corecold_boundary = np.ones(int(numtracks), dtype=np.int32)*-9999
+    finaltrack_basetime = np.empty((int(numtracks),int(nmaxclouds)), dtype='datetime64[s]')
+
+    finaltrack_corecold_radius = np.ones((int(numtracks),int(nmaxclouds)), dtype=float)*np.nan
+
+    finaltrack_corecold_meanlat = np.ones((int(numtracks),int(nmaxclouds)), dtype=float)*np.nan
+    finaltrack_corecold_meanlon = np.ones((int(numtracks),int(nmaxclouds)), dtype=float)*np.nan
+    finaltrack_corecold_maxlon = np.ones((int(numtracks),int(nmaxclouds)), dtype=float)*np.nan
+    finaltrack_corecold_maxlat = np.ones((int(numtracks),int(nmaxclouds)), dtype=float)*np.nan
+    finaltrack_ncorecoldpix = np.ones((int(numtracks),int(nmaxclouds)), dtype=np.int32)*-9999
+    finaltrack_corecold_minlon = np.ones((int(numtracks),int(nmaxclouds)), dtype=float)*np.nan
+    finaltrack_corecold_minlat = np.ones((int(numtracks),int(nmaxclouds)), dtype=float)*np.nan
+    finaltrack_ncorepix = np.ones((int(numtracks),int(nmaxclouds)), dtype=np.int32)*-9999
+    finaltrack_ncoldpix = np.ones((int(numtracks),int(nmaxclouds)), dtype=np.int32)*-9999
+
+    finaltrack_corecold_status = np.ones((int(numtracks),int(nmaxclouds)), dtype=np.int32)*-9999
+    finaltrack_corecold_trackinterruptions = np.ones(int(numtracks), dtype=np.int32)*-9999
+    finaltrack_corecold_mergenumber = np.ones((int(numtracks),int(nmaxclouds)), dtype=np.int32)*-9999
+    finaltrack_corecold_splitnumber = np.ones((int(numtracks),int(nmaxclouds)), dtype=np.int32)*-9999
+    finaltrack_corecold_cloudnumber = np.ones((int(numtracks),int(nmaxclouds)), dtype=np.int32)*-9999
+    #finaltrack_cloudtype = np.ones((int(numtracks),int(nmaxclouds)), dtype=np.int32)*-9999
+    finaltrack_cloudtype_low = np.ones((int(numtracks),int(nmaxclouds)), dtype=np.int32)*-9999
+    finaltrack_cloudtype_conglow = np.ones((int(numtracks),int(nmaxclouds)), dtype=np.int32)*-9999
+    finaltrack_cloudtype_conghigh = np.ones((int(numtracks),int(nmaxclouds)), dtype=np.int32)*-9999
+    finaltrack_cloudtype_deep = np.ones((int(numtracks),int(nmaxclouds)), dtype=np.int32)*-9999
+    finaltrack_datetimestring = [[['' for x in range(13)] for y in range(int(nmaxclouds))] for z in range(int(numtracks))]
+    finaltrack_cloudidfile = np.chararray((int(numtracks), int(nmaxclouds), int(numcharfilename)))
+    finaltrack_corecold_majoraxis = np.ones((int(numtracks),int(nmaxclouds)), dtype=float)*np.nan
+    finaltrack_corecold_orientation = np.ones((int(numtracks),int(nmaxclouds)), dtype=float)*np.nan 
+    finaltrack_corecold_eccentricity = np.ones((int(numtracks),int(nmaxclouds)), dtype=float)*np.nan
+    finaltrack_corecold_perimeter = np.ones((int(numtracks),int(nmaxclouds)), dtype=float)*np.nan
+    finaltrack_corecold_xcenter = np.ones((int(numtracks),int(nmaxclouds)), dtype=float)*-9999
+    finaltrack_corecold_ycenter = np.ones((int(numtracks),int(nmaxclouds)), dtype=float)*-9999
+    finaltrack_corecold_xweightedcenter = np.ones((int(numtracks),int(nmaxclouds)), dtype=float)*-9999
+    finaltrack_corecold_yweightedcenter = np.ones((int(numtracks),int(nmaxclouds)), dtype=float)*-9999
+    
+    #########################################################################################
+    # loop over files. Calculate statistics and organize matrices by tracknumber and cloud
+    print('Looping over files and calculating statistics for each file')
+    print((time.ctime()))
+    for nf in range(0,nfiles-1):
+    # for nf in range(0, 2):
+        # print(('File #: ' + str(nf)))
+        # print((time.ctime()))
+
+        file_tracknumbers = tracknumbers[0, nf, :]
+
+        # Only process file if that file contains a track
+        if np.nanmax(file_tracknumbers) > 0:
+
+            fname = ''.join(chartostring(cloudidfiles[nf]))
+            print(nf, fname)
+            
+            # Load cloudid file
+            cloudid_file = tracking_inpath + fname
+            # print(cloudid_file)
+
+            file_cloudiddata = Dataset(cloudid_file, 'r')
+            file_ct = file_cloudiddata['ct'][:]
+            file_cloudtype = file_cloudiddata['original_cloudtype'][:]
+            file_corecold_cloudnumber = file_cloudiddata['convcold_cloudnumber'][:]
+            file_basetime = file_cloudiddata['basetime'][:]
+            basetime_units = file_cloudiddata['basetime'].units
+            basetime_calendar = file_cloudiddata['basetime'].calendar
+            file_cloudiddata.close()
+            
+            file_datetimestring = cloudid_file[len(tracking_inpath) + len(cloudid_filebase):-3]
+
+            # Find unique track numbers
+            uniquetracknumbers = np.unique(file_tracknumbers)
+            uniquetracknumbers = uniquetracknumbers[np.isfinite(uniquetracknumbers)]
+            uniquetracknumbers = uniquetracknumbers[uniquetracknumbers > 0].astype(int)
+            
+            # Loop over unique tracknumbers
+            # print('Loop over tracks in file')
+            for itrack in uniquetracknumbers:
+                # print(('Unique track number: ' + str(itrack)))
+                #print('itrack: ', itrack)     
+
+                # Find cloud number that belongs to the current track in this file
+                cloudnumber = np.array(np.where(file_tracknumbers == itrack))[0, :] + 1 # Finds cloud numbers associated with that track. Need to add one since tells index, which starts at 0, and we want the number, which starts at one
+                cloudindex = cloudnumber - 1 # Index within the matrice of this cloud.
+                
+                if len(cloudnumber) == 1: # Should only be one cloud number. In mergers and split, the associated clouds should be listed in the file_splittracknumbers and file_mergetracknumbers
+                    # Find cloud in cloudid file associated with this track
+                    corearea = np.array(np.where((file_corecold_cloudnumber[0,:,:] == cloudnumber) & (file_cloudtype[0,:,:] == 4)))
+                    ncorepix = np.shape(corearea)[1]
+
+                    coldarea = np.array(np.where((file_corecold_cloudnumber[0,:,:] == cloudnumber) & (file_cloudtype[0,:,:] == 3)))
+                    ncoldpix = np.shape(coldarea)[1]
+
+                    corecoldarea = np.array(np.where((file_corecold_cloudnumber[0,:,:] == cloudnumber) & ((file_cloudtype[0,:,:] == 4) | (file_cloudtype[0,:,:] == 3))))
+                    ncorecoldpix = np.shape(corecoldarea)[1]
+                    
+                    # Find cloud type that belongs to the current track in this file
+                    cn_wherej,cn_wherei = np.array(np.where(file_corecold_cloudnumber[0,:,:] == cloudnumber))
+                    cloudtype_track = file_cloudtype[:,cn_wherej,cn_wherei]
+                    n_lowpix = np.count_nonzero(cloudtype_track == 1)
+                    n_conglowpix = np.count_nonzero(cloudtype_track == 2)
+                    n_conghighpix = np.count_nonzero(cloudtype_track == 3)
+                    n_deeppix = np.count_nonzero(cloudtype_track == 4)
+
+                    # Find current length of the track. Use for indexing purposes. Also, record the current length the given track.
+                    lengthindex = np.array(np.where(finaltrack_corecold_cloudnumber[itrack-1,:] > 0))
+                    if np.shape(lengthindex)[1] > 0:
+                        nc = np.nanmax(lengthindex) + 1
+                    else:
+                        nc = 0
+                    finaltrack_tracklength[itrack-1] = nc+1 # Need to add one since array index starts at 0
+                    
+                    if nc < nmaxclouds:
+                        # Save information that links this cloud back to its raw pixel level data
+                        finaltrack_basetime[itrack-1, nc] = np.array([pd.to_datetime(num2date(file_basetime, units=basetime_units, calendar=basetime_calendar))], dtype='datetime64[s]')[0, 0]
+                        finaltrack_corecold_cloudnumber[itrack-1,nc] = cloudnumber
+                        # finaltrack_cloudidfile[itrack-1][nc][:] = list(cloudidfiles_list[nf])
+                        finaltrack_cloudidfile[itrack-1][nc][:] = fname
+                        finaltrack_datetimestring[int(itrack-1)][int(nc)][:] = file_datetimestring
+                        #finaltrack_cloudtype[itrack-1,nc] = cloudtype_track
+                        # if (nf == 6) & (itrack == 713):
+                        #     import pdb; pdb.set_trace()
+                        ###############################################################
+                        # Calculate statistics about this cloud system
+                        # 11/21/2019 - Make sure this cloud exists
+                        if (ncorecoldpix > 0):
+                            # Location statistics of core+cold anvil (aka the convective system)
+                            corecoldlat = latitude[corecoldarea[0], corecoldarea[1]]
+                            corecoldlon = longitude[corecoldarea[0], corecoldarea[1]]
+
+                            finaltrack_corecold_meanlat[itrack-1, nc] = np.nanmean(corecoldlat)
+                            finaltrack_corecold_meanlon[itrack-1, nc] = np.nanmean(corecoldlon)
+
+                            finaltrack_corecold_minlat[itrack-1, nc] = np.nanmin(corecoldlat)
+                            finaltrack_corecold_minlon[itrack-1, nc] = np.nanmin(corecoldlon)
+
+                            finaltrack_corecold_maxlat[itrack-1, nc] = np.nanmax(corecoldlat)
+                            finaltrack_corecold_maxlon[itrack-1, nc] = np.nanmax(corecoldlon)
+
+                            # Determine if core+cold touches of the boundaries of the domain
+                            if np.absolute(finaltrack_corecold_minlat[itrack-1, nc]-geolimits[0]) < 0.1 or np.absolute(finaltrack_corecold_maxlat[itrack-1, nc]-geolimits[2]) < 0.1 or np.absolute(finaltrack_corecold_minlon[itrack-1, nc]-geolimits[1]) < 0.1 or np.absolute(finaltrack_corecold_maxlon[itrack-1, nc]-geolimits[3]) < 0.1:
+                                finaltrack_corecold_boundary[itrack-1] = 1
+
+                            # Save number of pixels (metric for size)
+                            finaltrack_ncorecoldpix[itrack-1, nc] = ncorecoldpix
+                            finaltrack_ncorepix[itrack-1, nc] = ncorepix
+                            finaltrack_ncoldpix[itrack-1, nc] = ncoldpix
+                            finaltrack_cloudtype_low[itrack-1, nc] = n_lowpix
+                            finaltrack_cloudtype_conglow[itrack-1, nc] = n_conglowpix
+                            finaltrack_cloudtype_conghigh[itrack-1, nc] = n_conghighpix
+                            finaltrack_cloudtype_deep[itrack-1, nc] = n_deeppix
+
+                            # Calculate physical characteristics associated with cloud system
+                            # Create a padded region around the cloud.
+                            pad = 5
+
+                            if np.nanmin(corecoldarea[0]) - pad > 0:
+                                minyindex = np.nanmin(corecoldarea[0]) - pad
+                            else:
+                                minyindex = 0
+
+                            if np.nanmax(corecoldarea[0]) + pad < ny - 1:
+                                maxyindex = np.nanmax(corecoldarea[0]) + pad + 1
+                            else:
+                                maxyindex = ny
+
+                            if np.nanmin(corecoldarea[1]) - pad > 0:
+                                minxindex = np.nanmin(corecoldarea[1]) - pad
+                            else:
+                                minxindex = 0
+
+                            if np.nanmax(corecoldarea[1]) + pad < nx - 1:
+                                maxxindex = np.nanmax(corecoldarea[1]) + pad + 1
+                            else:
+                                maxxindex = nx
+
+                            # Isolate the region around the cloud using the padded region
+                            isolatedcloudnumber = np.copy(file_corecold_cloudnumber[0, minyindex:maxyindex, minxindex:maxxindex]).astype(int)
+                            isolatedtb = np.copy(file_ct[0, minyindex:maxyindex, minxindex:maxxindex])
+
+                            # Remove brightness temperatures outside core + cold anvil
+                            isolatedtb[isolatedcloudnumber != cloudnumber] = 0
+
+                            # Turn cloud map to binary
+                            isolatedcloudnumber[isolatedcloudnumber != cloudnumber] = 0
+                            isolatedcloudnumber[isolatedcloudnumber == cloudnumber] = 1
+
+                            # Calculate major axis, orientation, eccentricity
+                            cloudproperities = regionprops(isolatedcloudnumber, intensity_image=isolatedtb)
+                        
+                            finaltrack_corecold_eccentricity[itrack-1, nc] = cloudproperities[0].eccentricity
+                            finaltrack_corecold_majoraxis[itrack-1, nc] = cloudproperities[0].major_axis_length*pixel_radius
+                            finaltrack_corecold_orientation[itrack-1, nc] = (cloudproperities[0].orientation)*(180/float(pi))
+                            finaltrack_corecold_perimeter[itrack-1, nc] = cloudproperities[0].perimeter*pixel_radius
+                            [temp_ycenter, temp_xcenter] = cloudproperities[0].centroid
+                            [finaltrack_corecold_ycenter[itrack-1, nc], finaltrack_corecold_xcenter[itrack-1,nc]] = np.add([temp_ycenter,temp_xcenter], [minyindex, minxindex]).astype(int)
+                            [temp_yweightedcenter, temp_xweightedcenter] = cloudproperities[0].weighted_centroid
+                            [finaltrack_corecold_yweightedcenter[itrack-1, nc], finaltrack_corecold_xweightedcenter[itrack-1, nc]] = np.add([temp_yweightedcenter, temp_xweightedcenter], [minyindex, minxindex]).astype(int)
+
+                            # Determine equivalent radius of core+cold. Assuming circular area = (number pixels)*(pixel radius)^2, equivalent radius = sqrt(Area / pi)
+                            finaltrack_corecold_radius[itrack-1, nc] = np.sqrt(np.divide(ncorecoldpix*(np.square(pixel_radius)), pi))
+
+                            ################################################################
+                            # Save track information. Need to subtract one since cloudnumber gives the number of the cloud (which starts at one), but we are looking for its index (which starts at zero)
+                            finaltrack_corecold_status[itrack-1, nc] = np.copy(trackstatus[0, nf, cloudindex])
+                            finaltrack_corecold_mergenumber[itrack-1, nc] = np.copy(trackmerge[0, nf, cloudindex])
+                            finaltrack_corecold_splitnumber[itrack-1, nc] = np.copy(tracksplit[0, nf, cloudindex])
+                            finaltrack_corecold_trackinterruptions[itrack-1] = np.copy(trackreset[0, nf, cloudindex])
+
+                            #print('shape of finaltrack_corecold_status: ', finaltrack_corecold_status.shape)
+
+                    else:
+                        sys.exit(str(nc) + ' greater than maximum allowed number clouds, ' + str(nmaxclouds))
+
+                elif len(cloudnumber) > 1:
+                    sys.exit(str(cloudnumber) + ' clouds linked to one track. Each track should only be linked to one cloud in each file in the track_number array. The track_number variable only tracks the largest cell in mergers and splits. The small clouds in tracks and mergers should only be listed in the track_splitnumbers and track_mergenumbers arrays.')
+
+    ###############################################################
+    ## Remove tracks that have no cells. These tracks are short.
+    print('Removing tracks with no cells')
+    print((time.ctime()))
+    gc.collect()
+
+    #print('finaltrack_tracklength shape at line 385: ', finaltrack_tracklength.shape)
+    #print('finaltrack_tracklength(4771): ', finaltrack_tracklength[4770])
+    cloudindexpresent = np.array(np.where(finaltrack_tracklength != -9999))[0, :]
+    numtracks = len(cloudindexpresent)
+    #print('length of cloudindex present: ', len(cloudindexpresent))
+
+    maxtracklength = np.nanmax(finaltrack_tracklength)
+    #print('maxtracklength: ', maxtracklength)
+
+    finaltrack_tracklength = finaltrack_tracklength[cloudindexpresent]
+    finaltrack_corecold_boundary = finaltrack_corecold_boundary[cloudindexpresent]
+    finaltrack_basetime = finaltrack_basetime[cloudindexpresent, 0:maxtracklength]
+    finaltrack_corecold_radius = finaltrack_corecold_radius[cloudindexpresent, 0:maxtracklength]
+    finaltrack_corecold_meanlat = finaltrack_corecold_meanlat[cloudindexpresent, 0:maxtracklength]
+    finaltrack_corecold_meanlon = finaltrack_corecold_meanlon[cloudindexpresent, 0:maxtracklength]
+    finaltrack_corecold_maxlon = finaltrack_corecold_maxlon[cloudindexpresent, 0:maxtracklength]
+    finaltrack_corecold_maxlat = finaltrack_corecold_maxlat[cloudindexpresent, 0:maxtracklength]
+    finaltrack_corecold_minlon = finaltrack_corecold_minlon[cloudindexpresent, 0:maxtracklength]
+    finaltrack_corecold_minlat = finaltrack_corecold_minlat[cloudindexpresent, 0:maxtracklength]
+    finaltrack_ncorecoldpix = finaltrack_ncorecoldpix[cloudindexpresent, 0:maxtracklength]
+    finaltrack_ncorepix = finaltrack_ncorepix[cloudindexpresent, 0:maxtracklength]
+    finaltrack_ncoldpix = finaltrack_ncoldpix[cloudindexpresent, 0:maxtracklength]
+    finaltrack_corecold_status = finaltrack_corecold_status[cloudindexpresent, 0:maxtracklength]
+    finaltrack_corecold_trackinterruptions = finaltrack_corecold_trackinterruptions[cloudindexpresent]
+    finaltrack_corecold_mergenumber = finaltrack_corecold_mergenumber[cloudindexpresent, 0:maxtracklength]
+    finaltrack_corecold_splitnumber = finaltrack_corecold_splitnumber[cloudindexpresent, 0:maxtracklength]
+    finaltrack_corecold_cloudnumber = finaltrack_corecold_cloudnumber[cloudindexpresent, 0:maxtracklength]
+    finaltrack_datetimestring = list(finaltrack_datetimestring[i][0:maxtracklength][:] for i in cloudindexpresent)
+    finaltrack_cloudidfile = finaltrack_cloudidfile[cloudindexpresent, 0:maxtracklength, :]
+    finaltrack_corecold_majoraxis = finaltrack_corecold_majoraxis[cloudindexpresent, 0:maxtracklength]
+    finaltrack_corecold_orientation = finaltrack_corecold_orientation[cloudindexpresent, 0:maxtracklength] 
+    finaltrack_corecold_eccentricity = finaltrack_corecold_eccentricity[cloudindexpresent, 0:maxtracklength]
+    finaltrack_corecold_perimeter = finaltrack_corecold_perimeter[cloudindexpresent, 0:maxtracklength]
+    finaltrack_corecold_xcenter = finaltrack_corecold_xcenter[cloudindexpresent, 0:maxtracklength]
+    finaltrack_corecold_ycenter = finaltrack_corecold_ycenter[cloudindexpresent, 0:maxtracklength]
+    finaltrack_corecold_xweightedcenter = finaltrack_corecold_xweightedcenter[cloudindexpresent, 0:maxtracklength]
+    finaltrack_corecold_yweightedcenter = finaltrack_corecold_yweightedcenter[cloudindexpresent, 0:maxtracklength]
+    finaltrack_cloudtype_low =  finaltrack_cloudtype_low[cloudindexpresent, 0:maxtracklength]
+    finaltrack_cloudtype_conglow =  finaltrack_cloudtype_conglow[cloudindexpresent, 0:maxtracklength]
+    finaltrack_cloudtype_conghigh =  finaltrack_cloudtype_conghigh[cloudindexpresent, 0:maxtracklength]
+    finaltrack_cloudtype_deep =  finaltrack_cloudtype_deep[cloudindexpresent, 0:maxtracklength]
+
+    gc.collect()
+    
+    ########################################################
+    # Correct merger and split cloud numbers
+
+    # Initialize adjusted matrices
+    adjusted_finaltrack_corecold_mergenumber = np.ones(np.shape(finaltrack_corecold_mergenumber))*-9999
+    adjusted_finaltrack_corecold_splitnumber = np.ones(np.shape(finaltrack_corecold_mergenumber))*-9999
+    print(('total tracks: ' + str(numtracks)))
+    print('Correcting mergers and splits')
+    print((time.ctime()))
+
+    # Create adjustor
+    indexcloudnumber = np.copy(cloudindexpresent) + 1
+    adjustor = np.arange(0, np.max(cloudindexpresent)+2)
+    for it in range(0, numtracks):
+        adjustor[indexcloudnumber[it]] = it+1
+    adjustor = np.append(adjustor, -9999)
+
+    # Adjust mergers
+    temp_finaltrack_corecold_mergenumber = finaltrack_corecold_mergenumber.astype(int).ravel()
+    temp_finaltrack_corecold_mergenumber[temp_finaltrack_corecold_mergenumber == -9999] = np.max(cloudindexpresent)+2
+    adjusted_finaltrack_corecold_mergenumber = adjustor[temp_finaltrack_corecold_mergenumber]
+    adjusted_finaltrack_corecold_mergenumber = np.reshape(adjusted_finaltrack_corecold_mergenumber, np.shape(finaltrack_corecold_mergenumber))
+
+    # Adjust splitters
+    temp_finaltrack_corecold_splitnumber = finaltrack_corecold_splitnumber.astype(int).ravel()
+    temp_finaltrack_corecold_splitnumber[temp_finaltrack_corecold_splitnumber == -9999] = np.max(cloudindexpresent)+2
+    adjusted_finaltrack_corecold_splitnumber = adjustor[temp_finaltrack_corecold_splitnumber]
+    adjusted_finaltrack_corecold_splitnumber = np.reshape(adjusted_finaltrack_corecold_splitnumber, np.shape(finaltrack_corecold_splitnumber))
+            
+    #########################################################################
+    # Record starting and ending status
+    print('Determine starting and ending status')
+    print((time.ctime()))
+
+    # Starting status
+    finaltrack_corecold_startstatus = finaltrack_corecold_status[:,0]
+
+    # Ending status
+    finaltrack_corecold_endstatus = np.ones(len(finaltrack_corecold_startstatus))*-9999
+    for trackstep in range(0,numtracks):
+        if finaltrack_tracklength[trackstep] > 0:
+            finaltrack_corecold_endstatus[trackstep] = finaltrack_corecold_status[trackstep,finaltrack_tracklength[trackstep] - 1]
+
+    #######################################################################
+    # Write to netcdf
+    print('Writing trackstat netcdf')
+    print((time.ctime()))
+    print(trackstats_outfile)
+    print('')
+
+    # Check if file already exists. If exists, delete
+    if os.path.isfile(trackstats_outfile):
+        os.remove(trackstats_outfile)
+
+    import netcdf_io as net 
+    net.write_trackstats_ct(trackstats_outfile, numtracks, maxtracklength, numcharfilename, \
+                            datasource, datadescription, startdate, enddate, \
+                            track_version, tracknumbers_version, timegap, \
+                            pixel_radius, geolimits, areathresh, \
+                            basetime_units, basetime_calendar, \
+                            finaltrack_tracklength, finaltrack_basetime, finaltrack_cloudidfile, finaltrack_datetimestring, \
+                            finaltrack_corecold_meanlat, finaltrack_corecold_meanlon, \
+                            finaltrack_corecold_minlat, finaltrack_corecold_minlon, \
+                            finaltrack_corecold_maxlat, finaltrack_corecold_maxlon, \
+                            finaltrack_corecold_radius, \
+                            finaltrack_ncorecoldpix, finaltrack_ncorepix, finaltrack_ncoldpix, \
+                            finaltrack_corecold_cloudnumber, finaltrack_corecold_status, \
+                            finaltrack_corecold_startstatus, finaltrack_corecold_endstatus, \
+                            adjusted_finaltrack_corecold_mergenumber, adjusted_finaltrack_corecold_splitnumber, \
+                            finaltrack_corecold_trackinterruptions, finaltrack_corecold_boundary, \
+                            finaltrack_corecold_majoraxis, finaltrack_corecold_orientation, finaltrack_corecold_eccentricity, \
+                            finaltrack_corecold_perimeter, finaltrack_corecold_xcenter, finaltrack_corecold_ycenter, \
+                            finaltrack_corecold_xweightedcenter, finaltrack_corecold_yweightedcenter, \
+                            finaltrack_cloudtype_low, finaltrack_cloudtype_conglow, finaltrack_cloudtype_conghigh, finaltrack_cloudtype_deep, \
+                            )

@@ -29,7 +29,7 @@ def sort_renumber(labelcell_number2d, min_cellpix):
         labelcell_npix = np.full(nlabelcells, -999, dtype=int)
 
         # Loop over each labeled cell
-        for ilabelcell in range(1, nlabelcells):
+        for ilabelcell in range(1, nlabelcells+1):
             # Count number of pixels for the cell
             ilabelcell_npix = np.count_nonzero(labelcell_number2d == ilabelcell)
             # Check if cell satisfies size threshold
@@ -112,7 +112,7 @@ def sort_renumber2vars(labelcell_number2d, labelcell2_number2d, min_cellpix):
         labelcell_npix = np.full(nlabelcells, -999, dtype=int)
 
         # Loop over each labeled cell
-        for ilabelcell in range(1, nlabelcells):
+        for ilabelcell in range(1, nlabelcells+1):
             # Count number of pixels for the cell
             ilabelcell_npix = np.count_nonzero(labelcell_number2d == ilabelcell)
             # Check if cell satisfies size threshold
@@ -151,7 +151,7 @@ def sort_renumber2vars(labelcell_number2d, labelcell2_number2d, min_cellpix):
                     # Renumber the cell in 2D
                     cellstep += 1
                     sortedlabelcell_number2d[sortedcell_indices] = np.copy(cellstep)
-                    sortedlabelcell2_number2d[sortedcell_indices] = np.copy(cellstep)
+                    sortedlabelcell2_number2d[sortedcell2_indices] = np.copy(cellstep)
 
         else:
             # Return an empty array
