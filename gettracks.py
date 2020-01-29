@@ -93,8 +93,7 @@ def gettracknumbers(datasource, datadescription, datainpath, dataoutpath, startd
     end_basetime = np.datetime64(np.array([pd.to_datetime(TEMP_endtime, unit='s')][0], dtype='datetime64[s]'))
     
     # Identify files within the start-end date interval
-    acceptdates = np.array(np.where((basetime >= start_basetime) & (basetime <= end_basetime)))[0,:]
-
+    acceptdates = np.array(np.where((basetime >= start_basetime) & (basetime <= end_basetime)))[0,:]    
     # Isolate files and times with start-end date interval
     basetime = basetime[acceptdates]
 
@@ -116,7 +115,7 @@ def gettracknumbers(datasource, datadescription, datainpath, dataoutpath, startd
         filesday[filestep] = int(day[ifiles])
         fileshour[filestep] = int(hour[ifiles])
         filesminute[filestep] = int(minute[ifiles])
-
+    
     #########################################################################
     # Determine number of gaps in dataset
     gap = 0
@@ -125,10 +124,10 @@ def gettracknumbers(datasource, datadescription, datainpath, dataoutpath, startd
         referencetime = datetime.datetime(filesyear[ifiles-1], filesmonth[ifiles-1], filesday[ifiles-1], fileshour[ifiles-1], filesminute[ifiles-1], 0, 0, tzinfo=utc)
 
         cutofftime = newtime - datetime.timedelta(minutes=timegap*60)
-
         if cutofftime > referencetime:
             gap = gap + 1
 
+    # import pdb; pdb.set_trace()
     # KB HARDCODED GAP
     # gap = 0
     ############################################################################
@@ -168,7 +167,7 @@ def gettracknumbers(datasource, datadescription, datainpath, dataoutpath, startd
     strlength = len(temp_referencefile)
     cloudidfiles =  np.chararray((nfiles, int(strlength)))
     cloudidfiles[0, :] = list(os.path.basename(ref_file))
-#    import pdb; pdb.set_trace()
+
     # Initate track numbers
     tracknumber[0, 0, 0:int(nclouds_reference)] = np.arange(0, int(nclouds_reference))+1
     itrack = nclouds_reference + 1
@@ -225,6 +224,10 @@ def gettracknumbers(datasource, datadescription, datainpath, dataoutpath, startd
         newcloudid_data = Dataset(new_file, 'r')
         npix_new = newcloudid_data[npxname][:]
         newcloudid_data.close()
+
+        # Remove possible extra time dimension to make sure npix is a 1D array
+        # npix_reference = npix_reference.squeeze()
+        # npix_new = npix_new.squeeze()
 
         ########################################################################
         # Check time gap between consecutive track files
@@ -326,7 +329,7 @@ def gettracknumbers(datasource, datadescription, datainpath, dataoutpath, startd
                                 trackpresent = trackpresent + 1
                             else:
                                 associated_newclouds = np.append(associated_newclouds, core_newbackward.astype(int))
-                            
+
                         if nnewbackward == 0 and nnewforward == 0:
                             associated_newclouds = []
 
@@ -341,8 +344,7 @@ def gettracknumbers(datasource, datadescription, datainpath, dataoutpath, startd
                             for nnew in range(0,nnewclouds):
                                 # Find associated reference clouds
                                 referencecloudindex = np.array(np.where(refcloud_forward_index[0, :, :] == associated_newclouds[nnew])) 
-                                nassociatedreference = np.shape(referencecloudindex)[1]
-
+                                nassociatedreference = np.shape(referencecloudindex)[1]                                
                                 if nassociatedreference > 0:
                                     temp_referenceclouds = np.append(temp_referenceclouds,referencecloudindex[0]+1)
                                     temp_referenceclouds = np.unique(np.sort(temp_referenceclouds))
@@ -351,6 +353,7 @@ def gettracknumbers(datasource, datadescription, datainpath, dataoutpath, startd
                         else:
                             nnewclouds = 0
 
+
                 #################################################################
                 # Now get the track status
                 print('Determining status of clouds in track')
@@ -358,15 +361,14 @@ def gettracknumbers(datasource, datadescription, datainpath, dataoutpath, startd
                 if nnewclouds > 0:
                     ############################################################
                     # Find the largest reference and new clouds
-
                     # Largest reference cloud
-                    print('npix_reference.shape: ', npix_reference.shape)
+                    # allreferencepix = npix_reference[0, associated_referenceclouds-1] # Need to subtract one since associated_referenceclouds gives core index and matrix starts at zero
                     allreferencepix = npix_reference[associated_referenceclouds-1] # Need to subtract one since associated_referenceclouds gives core index and matrix starts at zero
                     largestreferenceindex = np.argmax(allreferencepix)
                     largest_referencecloud = associated_referenceclouds[largestreferenceindex] # Cloud number of the largest reference cloud
 
                     # Largest new cloud
-                    print('npix_new.shape: ', npix_new.shape)
+                    # allnewpix = npix_new[0, associated_newclouds-1] # Need to subtract one since associated_newclouds gives cloud number and the matrix starts at zero
                     allnewpix = npix_new[associated_newclouds-1] # Need to subtract one since associated_newclouds gives cloud number and the matrix starts at zero
                     largestnewindex = np.argmax(allnewpix)
                     largest_newcloud = associated_newclouds[largestnewindex] # Cloud numberof the largest new cloud
