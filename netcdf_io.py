@@ -268,7 +268,7 @@ def write_cloudtype_wrf(cloudid_outfile, file_basetime, file_datestring, file_ti
                         'ct': (['time','lat', 'lon'], np.expand_dims(out_ct, axis=0)), \
                         'original_cloudtype': (['time', 'lat', 'lon'], original_cloudtype), \
                         'convcold_cloudnumber': (['time', 'lat', 'lon'], convcold_cloudnumber), \
-                        'nclouds': (['time'], nclouds), \
+                        'nclouds': (['clouds'], nclouds), \
                         'ncorepix': (['clouds'], ncorepix), \
                         'ncoldpix': (['clouds'], ncoldpix), \
                         'ncorecoldpix': (['clouds'], ncorecoldpix), \
@@ -291,7 +291,7 @@ def write_cloudtype_wrf(cloudid_outfile, file_basetime, file_datestring, file_ti
         coordlist = {'time': (['time'], file_basetime), \
                         'lat': (['lat'], np.squeeze(out_lat[:, 0])), \
                         'lon': (['lon'], np.squeeze(out_lon[0, :])), \
-                        'clouds': (['clouds'],  np.arange(1, nclouds+1)), \
+                        'clouds': (['clouds'],  np.arange(1, len(nclouds)+1)), \
                         'ndatechar': (['ndatechar'], np.arange(0, 32)), \
                         'ntimechar': (['ntimechar'], np.arange(0, 16))}
 
@@ -375,7 +375,7 @@ def write_cloudtype_wrf(cloudid_outfile, file_basetime, file_datestring, file_ti
         ds_out.convcold_cloudnumber.attrs['long_name'] = 'grid with each classified cloud given a number'
         ds_out.convcold_cloudnumber.attrs['units'] = 'unitless'
         ds_out.convcold_cloudnumber.attrs['valid_min'] = 0
-        ds_out.convcold_cloudnumber.attrs['valid_max'] = nclouds+1
+        #ds_out.convcold_cloudnumber.attrs['valid_max'] = np.int(nclouds)+1
         ds_out.convcold_cloudnumber.attrs['comment'] = 'extend of each cloud defined using cold anvil threshold'
         ds_out.convcold_cloudnumber.attrs['_FillValue'] = 0
 

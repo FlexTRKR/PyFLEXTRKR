@@ -28,7 +28,7 @@ print((time.ctime()))
 # Set variables describing data, file structure, and tracking thresholds
 
 # Specify which sets of code to run. (1 = run code, 0 = don't run code)
-run_idclouds = 0        # Segment and identify cloud systems
+run_idclouds = 1        # Segment and identify cloud systems
 run_tracksingle = 0     # Track single consecutive cloudid files
 run_gettracks = 0       # Run trackig for all files
 run_finalstats = 0      # Calculate final statistics
@@ -40,7 +40,7 @@ run_robustmcs = 0       # Filter potential mcs cases using nmq radar variables
 run_robustmcspf = 0     # Filter potential mcs cases using precipitation features (NOT REFLECTIVITY)
 run_labelmcs = 0        # Create pixel maps of MCSs
 run_labelmcspf = 0      # Create pixel maps of MCSs from WRF precipitation features (NOT REFLECTIVITY)
-run_labelct = 1         # Create pixel maps of cloud type objects that were tracked   
+run_labelct = 0         # Create pixel maps of cloud type objects that were tracked   
 
 file_rr_tb = 1          # Input brightness temperature and rainrate from WRF are in the same file (0- they are in separate files)
 
@@ -48,7 +48,7 @@ file_rr_tb = 1          # Input brightness temperature and rainrate from WRF are
 cloudidmethod = 'futyan3'   # Option: futyan3 = identify cores and cold anvils and expand to get warm anvil, futyan4=identify core and expand for cold and warm anvils
 keep_singlemergesplit = 1   # Options: 0=All short tracks are removed, 1=Only short tracks without mergers or splits are removed
 show_alltracks = 0          # Options: 0=Maps of all tracks are not created, 1=Maps of all tracks are created (much slower!)
-run_parallel = 1            # Options: 0-run serially, 1-run parallel (uses Pool from Multiprocessing)
+run_parallel = 0            # Options: 0-run serially, 1-run parallel (uses Pool from Multiprocessing)
 nprocesses = 32             # Number of processors to use if run_parallel is set to 1
 process_halfhours = 0       # 0 = No, 1 = Yes
 
@@ -63,7 +63,7 @@ curr_track_version = 'ct.0'
 curr_tracknumbers_version = 'ct.0'
 
 # Specify days to run, (YYYYMMDD.hhmm)
-startdate = '20150304.0000'
+startdate = '20150305.0000'
 enddate = '20150306.0000'
 
 # Specify cloud tracking parameters
@@ -81,7 +81,7 @@ lengthrange = np.array([2,200])            # A vector [minlength,maxlength] to s
 nmaxlinks = 50                             # Maximum number of clouds that any single cloud can be linked to
 nmaxclouds = 3000                          # Maximum number of clouds allowed to be in one track
 absolutetb_threshs = np.array([160, 330])  # k A vector [min, max] brightness temperature allowed. Brightness temperatures outside this range are ignored.
-warmanvilexpansion = 0                     # If this is set to one, then the cold anvil is spread laterally until it exceeds the warm anvil threshold
+warmanvilexpansion = 1                     # If this is set to one, then the cold anvil is spread laterally until it exceeds the warm anvil threshold
 mincoldcorepix = 2                         # Minimum number of pixels for the cold core, needed for futyan version 4 cloud identification code. Not used if use futyan version 3.
 smoothwindowdimensions = 5                 # Dimension of the boxcar filter used for futyan version 4. Not used in futyan version 3
 
@@ -119,8 +119,8 @@ nmqdatasource = 'nmq'
 precipdatasource = 'WRF'
 datadescription = 'WRF_Output'
 if file_rr_tb == 1:
-    databasename = 'wrfout_rainrate_tb_testing'
-    rainaccumulation_filebase = 'wrfout_rainrate_tb_testing'
+    databasename = 'wrfout_rainrate_tb'
+    rainaccumulation_filebase = 'wrfout_rainrate_tb'
 else:
     databasename = 'wrfout_tb'
     rainaccumulation_filebase = 'wrfout_rainrate_'+ startdate[0:4]
