@@ -27,8 +27,8 @@ print((time.ctime()))
 run_idclouds = 0        # Segment and identify cloud systems
 run_tracksingle = 0     # Track single consecutive cloudid files
 run_gettracks = 0       # Run trackig for all files
-run_finalstats = 0      # Calculate final statistics
-run_identifymcs = 1     # Isolate MCSs
+run_finalstats = 1      # Calculate final statistics
+run_identifymcs = 0     # Isolate MCSs
 run_matchpf = 0         # Identify precipitation features with MCSs
 run_robustmcs = 0       # Filter potential mcs cases using nmq radar variables
 run_labelmcs = 0        # Create maps of MCSs
@@ -38,7 +38,7 @@ cloudidmethod = 'futyan4'   # Option: futyan3 = identify cores and cold anvils a
 keep_singlemergesplit = 1   # Options: 0=All short tracks are removed, 1=Only short tracks without mergers or splits are removed
 show_alltracks = 0          # Options: 0=Maps of all tracks are not created, 1=Maps of all tracks are created (much slower!)
 run_parallel = 1            # Options: 0-run serially, 1-run parallel (uses Pool from Multiprocessing)
-nprocesses = 32             # Number of processors to use if run_parallel is set to 1
+nprocesses = 7             # Number of processors to use if run_parallel is set to 1
 idclouds_hourly = 1         # 0 = No, 1 = Yes
 idclouds_minute = 0         # 00 = 00min, 30 = 30min
 
@@ -110,14 +110,14 @@ datadescription = 'EUS'
 databasename = 'merg_'
 label_filebase = 'cloudtrack_'
 pfdata_filebase = 'IMERG_'
-rainaccumulation_filebase = 'regrid_q2_'
+rainaccumulation_filebase = 'merg_'
 
-root_path = '/global/cscratch1/sd/feng045/waccem/mcs_global/test/'
+root_path = '/global/cscratch1/sd/jli628/MCS_python/'
 # clouddata_path = '/global/cscratch1/sd/feng045/waccem/Subsets/IR_eus/2014/'
 # pfdata_path = '/global/cscratch1/sd/feng045/waccem/Subsets/PCP_eus/2014/'
 clouddata_path = '/global/cscratch1/sd/feng045/waccem/Subsets_IMERG/eus/2017/'
 pfdata_path = '/global/cscratch1/sd/feng045/waccem/Subsets_IMERG/eus/2017/'
-rainaccumulation_path = './'
+rainaccumulation_path = pfdata_path
 latlon_file = clouddata_path + databasename + startdate[0:8]+startdate[9:11]+'_4km-pixel.nc'
 
 # Specify data structure
@@ -136,7 +136,7 @@ pcpvarname = 'precipitation'
 # Generate additional settings
 
 # Isolate year
-year = startdate[0:5]
+year = startdate[0:4]  #change 0:5 to 0:4
 
 # Concatonate thresholds into one variable
 cloudtb_threshs = np.hstack((cloudtb_core, cloudtb_cold, cloudtb_warm, cloudtb_cloud))
@@ -390,7 +390,7 @@ if run_gettracks == 0:
 # Call function
 if run_finalstats == 1:
     # Load function
-    from trackstats import trackstats_tb
+    from trackstats_parallel import trackstats_tb
 
     # Call satellite version of function
     print('Calculating track statistics')
@@ -398,7 +398,7 @@ if run_finalstats == 1:
     trackstats_tb(irdatasource, datadescription, pixel_radius, geolimits, area_thresh, \
                     cloudtb_threshs, absolutetb_threshs, startdate, enddate, timegap, cloudid_filebase, \
                     tracking_outpath, stats_outpath, track_version, tracknumber_version, tracknumbers_filebase, \
-                    lengthrange=lengthrange)
+                    nprocesses, lengthrange=lengthrange)
     trackstats_filebase = 'stats_tracknumbers' + tracknumber_version
 
 ##############################################################
@@ -435,11 +435,11 @@ if run_matchpf == 1:
     print('Identifying Precipitation Features in MCSs')
 
     # Load function
-    from matchpf import identifypf_mergedir_nmq
+    from matchtbpf_parallel import identifypf_wrf_rain
 
     # Call function
     print((time.ctime()))
-    identifypf_mergedir_nmq(mcsstats_filebase, cloudid_filebase, pfdata_filebase, rainaccumulation_filebase, stats_outpath, tracking_outpath, pfdata_path, rainaccumulation_path, startdate, enddate, geolimits, nmaxpf, nmaxcore, nmaxclouds, rr_min, pixel_radius, irdatasource, nmqdatasource, datadescription, datatimeresolution, mcs_mergedir_areathresh, mcs_mergedir_durationthresh, mcs_mergedir_eccentricitythresh)
+    identifypf_wrf_rain(mcsstats_filebase, cloudid_filebase, rainaccumulation_filebase, stats_outpath, tracking_outpath, rainaccumulation_path, startdate, enddate, geolimits, nmaxpf, nmaxcore, nmaxclouds, rr_min, pixel_radius, irdatasource, nmqdatasource, datadescription, datatimeresolution, mcs_mergedir_areathresh, mcs_mergedir_durationthresh, mcs_mergedir_eccentricitythresh, pf_link_area_thresh, nprocesses)
     pfstats_filebase = 'mcs_tracks_'  + nmqdatasource + '_' 
 
 ##############################################################

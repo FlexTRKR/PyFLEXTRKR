@@ -472,8 +472,7 @@ def write_trackstats_tb(trackstats_outfile, numtracks, maxtracklength, nbintb, n
                         finaltrack_corecold_mintb, finaltrack_corecold_meantb, finaltrack_core_meantb, finaltrack_corecold_histtb, \
                         finaltrack_corecold_majoraxis, finaltrack_corecold_orientation, finaltrack_corecold_eccentricity, \
                         finaltrack_corecold_perimeter, finaltrack_corecold_xcenter, finaltrack_corecold_ycenter, \
-                        finaltrack_corecold_xweightedcenter, finaltrack_corecold_yweightedcenter, \
-                        ):
+                        finaltrack_corecold_xweightedcenter, finaltrack_corecold_yweightedcenter):
         """
         Writes Tb trackstats variables to netCDF file.
         """
@@ -502,7 +501,7 @@ def write_trackstats_tb(trackstats_outfile, numtracks, maxtracklength, nbintb, n
                         'mergenumbers': (['ntracks', 'nmaxlength'], adjusted_finaltrack_corecold_mergenumber), \
                         'splitnumbers': (['ntracks', 'nmaxlength'], adjusted_finaltrack_corecold_splitnumber), \
                         'trackinterruptions': (['ntracks'], finaltrack_corecold_trackinterruptions), \
-                        'boundary': (['ntracks'], finaltrack_corecold_boundary), \
+                        'boundary': (['ntracks', 'nmaxlength'], finaltrack_corecold_boundary), \
                         'mintb': (['ntracks', 'nmaxlength'], finaltrack_corecold_mintb), \
                         'meantb': (['ntracks', 'nmaxlength'], finaltrack_corecold_meantb), \
                         'meantb_conv': (['ntracks', 'nmaxlength'], finaltrack_core_meantb), \
