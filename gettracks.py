@@ -132,7 +132,7 @@ def gettracknumbers(datasource, datadescription, datainpath, dataoutpath, startd
     # gap = 0
     ############################################################################
     # Initialize matrices
-    nfiles = int(len(files))+2*gap
+    nfiles = int(len(files))+2*gap  #seems a bug, by Jianfeng Li, 2*gap may be not enough
     tracknumber = np.ones((1, nfiles, maxnclouds), dtype=int)*-9999
     referencetrackstatus = np.ones((nfiles, maxnclouds), dtype=float)*np.nan
     newtrackstatus = np.ones((nfiles, maxnclouds), dtype=float)*np.nan
@@ -181,7 +181,7 @@ def gettracknumbers(datasource, datadescription, datainpath, dataoutpath, startd
     print(('Number of files: ' + str(nfiles)))
 #    print((time.ctime()))
     ifill = 0
-    for ifile in range(0,nfiles-1):
+    for ifile in range(0,nfiles-1):  #use range(0, nfiles) by Jianfeng Li
         print((files[ifile]))
         print((time.ctime()))
 

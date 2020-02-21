@@ -213,7 +213,8 @@ def link_pf_tb(convcold_cloudnumber, cloudnumber, pf_number, tb, tb_thresh):
 
             if (npix_pf > 0):
                 # Get unique cloud number defined within this PF
-                cn_uniq = np.unique(convcold_cloudnumber[pfidx])
+                #cn_uniq = np.unique(convcold_cloudnumber[pfidx])
+                cn_uniq = np.unique(pf_convcold_cloudnumber[pfidx])
 
                 # Find actual clouds (cloudnumber > 0)
                 cn_uniq = cn_uniq[np.where(cn_uniq > 0)]
@@ -225,7 +226,8 @@ def link_pf_tb(convcold_cloudnumber, cloudnumber, pf_number, tb, tb_thresh):
                     npix_uniq = np.zeros(nclouds_uniq, dtype=np.int64)
                     for ic in range(0, nclouds_uniq):
                         # Find pixels for each cloud, save the size
-                        npix_uniq[ic] = len(np.where(convcold_cloudnumber == cn_uniq[ic])[0])
+                        #npix_uniq[ic] = len(np.where(convcold_cloudnumber == cn_uniq[ic])[0])
+                        npix_uniq[ic] = len(np.where(pf_convcold_cloudnumber == cn_uniq[ic])[0])
 
                     # Find cloud number that has maximum size
                     cn_max = cn_uniq[np.argmax(npix_uniq)]
@@ -234,8 +236,10 @@ def link_pf_tb(convcold_cloudnumber, cloudnumber, pf_number, tb, tb_thresh):
                     for ic in range(0, nclouds_uniq):
 
                         # Find pixel locations within each cloud, and mask = 0 (cloud has not been renumbered)
-                        idx_convcold = np.where((convcold_cloudnumber == cn_uniq[ic]) & (pf_convcold_mask == 0))
-                        idx_cloud = np.where((cloudnumber == cn_uniq[ic]) & (pf_cloud_mask == 0))
+                        #idx_convcold = np.where((convcold_cloudnumber == cn_uniq[ic]) & (pf_convcold_mask == 0))
+                        idx_convcold = np.where((pf_convcold_cloudnumber == cn_uniq[ic]) & (pf_convcold_mask == 0))
+                        #idx_cloud = np.where((cloudnumber == cn_uniq[ic]) & (pf_cloud_mask == 0))
+                        idx_cloud = np.where((pf_cloudnumber == cn_uniq[ic]) & (pf_cloud_mask == 0))
                         if (len(idx_convcold[0]) > 0):
                             # Renumber the cloud to the largest cloud number (that overlaps with this PF)
                             pf_convcold_cloudnumber[idx_convcold] = cn_max
