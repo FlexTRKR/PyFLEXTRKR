@@ -413,7 +413,7 @@ if run_gettracks == 0:
     tracknumbers_filebase = 'tracknumbers' + curr_tracknumbers_version
 
 # Call function
-if run_finalstats == 1:
+if run_finalstats == 1 and run_parallel == 0:
     # Load function
     from trackstats import trackstats_ct
 
@@ -425,6 +425,20 @@ if run_finalstats == 1:
                    tracking_outpath, stats_outpath, track_version, tracknumber_version,
                    tracknumbers_filebase, lengthrange=lengthrange)
     trackstats_filebase = 'stats_tracknumbers' + tracknumber_version
+
+if run_finalstats == 1 and run_parallel == 1:
+   # Load function
+    from trackstats_parallel import trackstats_ct
+
+    # Call satellite version of function
+    print('Calculating track statistics')
+    print(time.ctime())
+    trackstats_ct(irdatasource, datadescription, pixel_radius, geolimits, area_thresh,
+                   cloudtb_threshs, absolutetb_threshs, startdate, enddate, timegap, cloudid_filebase,
+                   tracking_outpath, stats_outpath, track_version, tracknumber_version,
+                   tracknumbers_filebase, nprocesses,lengthrange=lengthrange)
+    trackstats_filebase = 'stats_tracknumbers' + tracknumber_version
+
     
 ##############################################################
 # Identify MCS candidates

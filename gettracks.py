@@ -181,7 +181,8 @@ def gettracknumbers(datasource, datadescription, datainpath, dataoutpath, startd
     print(('Number of files: ' + str(nfiles)))
 #    print((time.ctime()))
     ifill = 0
-    for ifile in range(0,nfiles-1):  #use range(0, nfiles) by Jianfeng Li
+    #for ifile in range(0,nfiles-1):  #use range(0, nfiles) by Jianfeng Li
+    for ifile in range(0,nfiles):  #use range(0, nfiles) by Jianfeng Li
         print((files[ifile]))
         print((time.ctime()))
 

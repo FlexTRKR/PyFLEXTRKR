@@ -62,8 +62,8 @@ curr_track_version = 'v1.0'
 curr_tracknumbers_version = 'v1.0'
 
 # Specify days to run, (YYYYMMDD.hhmm)
-startdate = '20150301.2200'
-enddate = '20150303.1800'
+startdate = '20150302.0000'
+enddate = '20150303.0000'
 
 # Specify cloud tracking parameters
 geolimits = np.array([-90, -180, 90, 180])  # 4-element array with plotting boundaries [lat_min, lon_min, lat_max, lon_max]
@@ -141,11 +141,11 @@ pfdata_filebase = 'csa4km_'
 #scratchpath = '/global/cscratch1/sd/barb672/WRF4/AMAZON_EDMF/'
 
 
-root_path = '/global/homes/b/barb672/Codes/Tracking/pyflextrkr/'
-clouddata_path = '/global/cscratch1/sd/barb672/WRF4b/AMAZON_CONTROL01/'
-pfdata_path = '/global/cscratch1/sd/barb672/WRF4b/AMAZON_CONTROL01/'
-rainaccumulation_path = '/global/cscratch1/sd/barb672/WRF4b/AMAZON_CONTROL01/'
-scratchpath = '/global/cscratch1/sd/barb672/WRF4b/AMAZON_CONTROL01/'
+root_path = '/people/barb672/Codes/pyflextrkr/'
+clouddata_path = '/pic/projects/sooty2/barb672/wrfout/'
+pfdata_path = '/pic/projects/sooty2/barb672/wrfout/'
+rainaccumulation_path = '/pic/projects/sooty2/barb672/wrfout/'
+scratchpath = '/pic/projects/sooty2/barb672/wrfout/'
 latlon_file = clouddata_path + databasename + '_' + startdate[0:4] + '-' + startdate[4:6] + '-' + startdate[6:8] + '_' + startdate[9:11] + ':' + startdate[11:13] + ':00.nc'
 
 ###############################################
@@ -418,7 +418,7 @@ if run_gettracks == 0:
     tracknumbers_filebase = 'tracknumbers' + curr_tracknumbers_version
 
 # Call function
-if run_finalstats == 1:
+if run_finalstats == 1 and run_parallel == 0:
     # Load function
     from trackstats import trackstats_tb
 
@@ -431,6 +431,18 @@ if run_finalstats == 1:
                    tracknumbers_filebase, lengthrange=lengthrange)
     trackstats_filebase = 'stats_tracknumbers' + tracknumber_version
     
+if run_finalstats == 1 and run_parallel == 1:
+    # Load function
+    from trackstats_parallel import trackstats_tb
+
+    # Call function
+    print(time.ctime())
+    trackstats_tb(irdatasource, datadescription, pixel_radius, geolimits, area_thresh,
+                   cloudtb_threshs, absolutetb_threshs, startdate, enddate, timegap, cloudid_filebase,
+                   tracking_outpath, stats_outpath, track_version, tracknumber_version,
+                   tracknumbers_filebase, lengthrange=lengthrange)
+    trackstats_filebase = 'stats_tracknumbers' + tracknumber_version
+
 ##############################################################
 # Identify MCS candidates
 
@@ -486,12 +498,30 @@ if run_identifymcs == 0:
     print('MCSs already identified')
     mcsstats_filebase = 'mcs_tracks_'
     
-if run_matchtbpf == 1:
-    print('Identifying precipitation features in MCSs')
+if run_matchtbpf == 1 and run_parallel == 1:
+    print('Identifying precipitation features in MCSs PARALLEL')
     
     # Load function
-    from matchtbpf import identifypf_wrf_rain
+    from matchtbpf_parallel import identifypf_wrf_rain
     
+    # Call function
+    print((time.ctime()))
+    identifypf_wrf_rain(mcsstats_filebase, cloudid_filebase,
+                        rainaccumulation_filebase, stats_outpath, tracking_outpath, 
+                        rainaccumulation_path, startdate, enddate, 
+                        geolimits, nmaxpf, nmaxcore, nmaxclouds, rr_min, pixel_radius, 
+                        irdatasource, precipdatasource, datadescription, datatimeresolution,
+                        mcs_mergedir_areathresh, mcs_mergedir_durationthresh,
+                        mcs_mergedir_eccentricitythresh,pf_link_area_thresh,nprocesses)
+
+    pfstats_filebase = 'mcs_tracks_' + precipdatasource + '_'
+
+if run_matchtbpf == 1 and run_parallel == 0:
+    print('Identifying precipitation features in MCSs serial')
+
+    # Load function
+    from matchtbpf import identifypf_wrf_rain    
+
     # Call function
     print((time.ctime()))
     identifypf_wrf_rain(mcsstats_filebase, cloudid_filebase,
@@ -503,6 +533,8 @@ if run_matchtbpf == 1:
                         mcs_mergedir_eccentricitythresh,pf_link_area_thresh)
 
     pfstats_filebase = 'mcs_tracks_' + precipdatasource + '_'
+
+	
 ##############################################################
 ## Identify robust MCS using precipitation feature statistics (NMQ with reflectivity)
 
