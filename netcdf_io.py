@@ -239,8 +239,6 @@ def write_cloudtype_wrf(cloudid_outfile, file_basetime, file_datestring, file_ti
                         convcold_cloudnumber, \
                         nclouds, ncorepix, ncoldpix, ncorecoldpix, final_cloudtype, \
                         cloudid_version, cloudtb_threshs, geolimits, mintb_thresh, maxtb_thresh, area_thresh, **kwargs):
-
-
         """
         Writes cloudid variables to netCDF file.
 
@@ -266,26 +264,28 @@ def write_cloudtype_wrf(cloudid_outfile, file_basetime, file_datestring, file_ti
                         'latitude': (['lat', 'lon'], out_lat), \
                         'longitude': (['lat', 'lon'], out_lon), \
                         'ct': (['time','lat', 'lon'], np.expand_dims(out_ct, axis=0)), \
-                        'original_cloudtype': (['time', 'lat', 'lon'], original_cloudtype), \
-                        'convcold_cloudnumber': (['time', 'lat', 'lon'], convcold_cloudnumber), \
+                        'original_cloudtype': (['lat', 'lon'], original_cloudtype), \
+                        'convcold_cloudnumber': (['lat', 'lon'], convcold_cloudnumber), \
                         'nclouds': (['clouds'], nclouds), \
                         'ncorepix': (['clouds'], ncorepix), \
                         'ncoldpix': (['clouds'], ncoldpix), \
                         'ncorecoldpix': (['clouds'], ncorecoldpix), \
                         # 'nwarmpix': (['time', 'clouds'], nwarmpix), \
-                        'final_cloudtype': (['time', 'lat', 'lon'], final_cloudtype), \
+                        'final_cloudtype': (['lat', 'lon'], final_cloudtype), \
                         }
         # Now check for optional arguments, add them to varlist if provided
         if 'precipitation' in kwargs:
-                varlist['precipitation'] = (['time', 'lat', 'lon'], kwargs['precipitation'])
+                varlist['precipitation'] = (['lat', 'lon'], kwargs['precipitation'])
         if 'reflectivity' in kwargs:
-                varlist['reflectivity'] = (['time', 'lat', 'lon'], kwargs['reflectivity'])
+                varlist['reflectivity'] = (['lat', 'lon'], kwargs['reflectivity'])
         if 'pf_number' in kwargs:
-                varlist['pf_number'] = (['time', 'lat', 'lon'], kwargs['pf_number'])
+                varlist['pf_number'] = (['lat', 'lon'], kwargs['pf_number'])
         if 'convcold_cloudnumber_orig' in kwargs:
-                varlist['convcold_cloudnumber_orig'] = (['time', 'lat', 'lon'], kwargs['convcold_cloudnumber_orig'])
+                varlist['convcold_cloudnumber_orig'] = (['lat', 'lon'], kwargs['convcold_cloudnumber_orig'])
+                #print('final_convcold_cloudnumber_orig shape: ',convcold_cloudnumber_orig.shape)
         if 'cloudnumber_orig' in kwargs:
-                varlist['cloudnumber_orig'] = (['time', 'lat', 'lon'], kwargs['cloudnumber_orig'])
+                varlist['cloudnumber_orig'] = (['lat', 'lon'], kwargs['cloudnumber_orig'])
+                #print('cloudnumber_orig shape: ',cloudnumber_orig.shape)
 
         # Define coordinate list
         coordlist = {'time': (['time'], file_basetime), \
@@ -363,8 +363,8 @@ def write_cloudtype_wrf(cloudid_outfile, file_basetime, file_datestring, file_ti
         ds_out.longitude.attrs['valid_min'] = geolimits[1]
         ds_out.longitude.attrs['valid_max'] = geolimits[3]
 
-        ds_out.ct.attrs['long_name'] = 'ct'
-        ds_out.ct.attrs['units'] = '1-deep, 2-high congestus'    
+        #ds_out.ct.attrs['long_name'] = 'ct'
+        #ds_out.ct.attrs['units'] = '1-deep, 2-high congestus'    
         
         ds_out.original_cloudtype.attrs['long_name'] = 'original cloudtype'
         ds_out.original_cloudtype.attrs['units'] = '4-deep, 3-high congestus, 2-low congestus, 1-shallow'   
@@ -774,12 +774,12 @@ def write_trackstats_ct(trackstats_outfile, numtracks, maxtracklength, numcharfi
                         finaltrack_corecold_startstatus, finaltrack_corecold_endstatus, \
                         adjusted_finaltrack_corecold_mergenumber, adjusted_finaltrack_corecold_splitnumber, \
                         finaltrack_corecold_trackinterruptions, finaltrack_corecold_boundary, \
-                        finaltrack_corecold_majoraxis, finaltrack_corecold_orientation, finaltrack_corecold_eccentricity, \
-                        finaltrack_corecold_perimeter, finaltrack_corecold_xcenter, finaltrack_corecold_ycenter, \
-                        finaltrack_corecold_xweightedcenter, finaltrack_corecold_yweightedcenter, \
+                        #finaltrack_corecold_majoraxis, finaltrack_corecold_orientation, finaltrack_corecold_eccentricity, \
+                        #finaltrack_corecold_perimeter, finaltrack_corecold_xcenter, finaltrack_corecold_ycenter, \
+                        #finaltrack_corecold_xweightedcenter, finaltrack_corecold_yweightedcenter, \
                         finaltrack_cloudtype_low, finaltrack_cloudtype_conglow, finaltrack_cloudtype_conghigh, finaltrack_cloudtype_deep, \
-                        ):
-
+                        ):    
+        
         """
         Writes Tb cloudtype trackstats variables to netCDF file.
         """
@@ -806,15 +806,15 @@ def write_trackstats_ct(trackstats_outfile, numtracks, maxtracklength, numcharfi
                         'mergenumbers': (['ntracks', 'nmaxlength'], adjusted_finaltrack_corecold_mergenumber), \
                         'splitnumbers': (['ntracks', 'nmaxlength'], adjusted_finaltrack_corecold_splitnumber), \
                         'trackinterruptions': (['ntracks'], finaltrack_corecold_trackinterruptions), \
-                        'boundary': (['ntracks'], finaltrack_corecold_boundary), \
-                        'majoraxis': (['ntracks', 'nmaxlength'], finaltrack_corecold_majoraxis), \
-                        'orientation': (['ntracks', 'nmaxlength'], finaltrack_corecold_orientation), \
-                        'eccentricity': (['ntracks', 'nmaxlength'], finaltrack_corecold_eccentricity), \
-                        'perimeter': (['ntracks', 'nmaxlength'], finaltrack_corecold_perimeter), \
-                        'xcenter': (['ntracks', 'nmaxlength'], finaltrack_corecold_xcenter), \
-                        'ycenter': (['ntracks', 'nmaxlength'], finaltrack_corecold_ycenter), \
-                        'xcenter_weighted': (['ntracks', 'nmaxlength'], finaltrack_corecold_xweightedcenter), \
-                        'ycenter_weighted': (['ntracks', 'nmaxlength'], finaltrack_corecold_yweightedcenter), \
+                        'boundary': (['ntracks', 'nmaxlength'], finaltrack_corecold_boundary), \
+                        #'majoraxis': (['ntracks', 'nmaxlength'], finaltrack_corecold_majoraxis), \
+                        #'orientation': (['ntracks', 'nmaxlength'], finaltrack_corecold_orientation), \
+                        #'eccentricity': (['ntracks', 'nmaxlength'], finaltrack_corecold_eccentricity), \
+                        #'perimeter': (['ntracks', 'nmaxlength'], finaltrack_corecold_perimeter), \
+                        #'xcenter': (['ntracks', 'nmaxlength'], finaltrack_corecold_xcenter), \
+                        #'ycenter': (['ntracks', 'nmaxlength'], finaltrack_corecold_ycenter), \
+                        #'xcenter_weighted': (['ntracks', 'nmaxlength'], finaltrack_corecold_xweightedcenter), \
+                        #'ycenter_weighted': (['ntracks', 'nmaxlength'], finaltrack_corecold_yweightedcenter), \
                         'cloudtype_npix_low': (['ntracks', 'nmaxlength'], finaltrack_cloudtype_low), \
                         'cloudtype_npix_conglow': (['ntracks', 'nmaxlength'], finaltrack_cloudtype_conglow), \
                         'cloudtype_npix_conghigh': (['ntracks', 'nmaxlength'], finaltrack_cloudtype_conghigh) , \
@@ -958,33 +958,33 @@ def write_trackstats_ct(trackstats_outfile, numtracks, maxtracklength, numcharfi
         output_data.boundary.attrs['valid_min'] = 0
         output_data.boundary.attrs['valid_max'] = 1
 
-        output_data.orientation.attrs['long_name'] = 'Orientation of the major axis of the core + cold anvil for each cloud in a track'
-        output_data.orientation.attrs['units'] = 'Degrees clockwise from vertical'
-        output_data.orientation.attrs['valid_min'] = 0
-        output_data.orientation.attrs['valid_max'] = 360
+        #output_data.orientation.attrs['long_name'] = 'Orientation of the major axis of the core + cold anvil for each cloud in a track'
+        #output_data.orientation.attrs['units'] = 'Degrees clockwise from vertical'
+        #output_data.orientation.attrs['valid_min'] = 0
+        #output_data.orientation.attrs['valid_max'] = 360
 
-        output_data.eccentricity.attrs['long_name'] = 'Eccentricity of the major axis of the core + cold anvil for each cloud in a track'
-        output_data.eccentricity.attrs['units'] = 'unitless'
-        output_data.eccentricity.attrs['valid_min'] = 0
-        output_data.eccentricity.attrs['valid_max'] = 1
+        #output_data.eccentricity.attrs['long_name'] = 'Eccentricity of the major axis of the core + cold anvil for each cloud in a track'
+        #output_data.eccentricity.attrs['units'] = 'unitless'
+        #output_data.eccentricity.attrs['valid_min'] = 0
+        #output_data.eccentricity.attrs['valid_max'] = 1
 
-        output_data.majoraxis.attrs['long_name'] =  'Length of the major axis of the core + cold anvil for each cloud in a track'
-        output_data.majoraxis.attrs['units'] = 'km'
+        #output_data.majoraxis.attrs['long_name'] =  'Length of the major axis of the core + cold anvil for each cloud in a track'
+        #output_data.majoraxis.attrs['units'] = 'km'
 
-        output_data.perimeter.attrs['long_name'] = 'Approximnate circumference of the core + cold anvil for each cloud in a track'
-        output_data.perimeter.attrs['units'] = 'km'
+        #output_data.perimeter.attrs['long_name'] = 'Approximnate circumference of the core + cold anvil for each cloud in a track'
+        #output_data.perimeter.attrs['units'] = 'km'
 
-        output_data.xcenter.attrs['long_name'] = 'X index of the geometric center of the cloud feature for each cloud in a track'
-        output_data.xcenter.attrs['units'] = 'unitless'
+        #output_data.xcenter.attrs['long_name'] = 'X index of the geometric center of the cloud feature for each cloud in a track'
+        #output_data.xcenter.attrs['units'] = 'unitless'
 
-        output_data.ycenter.attrs['long_name'] = 'Y index of the geometric center of the cloud feature for each cloud in a track'
-        output_data.ycenter.attrs['units'] = 'unitless'
+        #output_data.ycenter.attrs['long_name'] = 'Y index of the geometric center of the cloud feature for each cloud in a track'
+        #output_data.ycenter.attrs['units'] = 'unitless'
 
-        output_data.xcenter_weighted.attrs['long_name'] = 'X index of the brightness temperature weighted center of the cloud feature for each cloud in a track'
-        output_data.xcenter_weighted.attrs['units'] = 'unitless'
+        #output_data.xcenter_weighted.attrs['long_name'] = 'X index of the brightness temperature weighted center of the cloud feature for each cloud in a track'
+        #output_data.xcenter_weighted.attrs['units'] = 'unitless'
 
-        output_data.ycenter_weighted.attrs['long_name'] = 'Y index of the brightness temperature weighted center of the cloud feature for each cloud in a track'
-        output_data.ycenter_weighted.attrs['units'] = 'unitless'
+        #output_data.ycenter_weighted.attrs['long_name'] = 'Y index of the brightness temperature weighted center of the cloud feature for each cloud in a track'
+        #output_data.ycenter_weighted.attrs['units'] = 'unitless'
 
         output_data.cloudtype_npix_low.attrs['long_name'] = 'Number of pixels labeled as low cloud in a track'
         output_data.cloudtype_npix_low.attrs['units'] = 'unitless'
@@ -1023,14 +1023,14 @@ def write_trackstats_ct(trackstats_outfile, numtracks, maxtracklength, numcharfi
                         'startstatus': {'dtype': 'int', 'zlib':True, '_FillValue': -9999}, \
                         'endstatus': {'dtype': 'int', 'zlib':True, '_FillValue': -9999}, \
                         'trackinterruptions': {'dtype': 'int', 'zlib':True, '_FillValue': -9999}, \
-                        'majoraxis': {'zlib':True, '_FillValue': np.nan}, \
-                        'orientation': {'zlib':True, '_FillValue': np.nan}, \
-                        'eccentricity': {'zlib':True, '_FillValue': np.nan}, \
-                        'perimeter': {'zlib':True, '_FillValue': np.nan}, \
-                        'xcenter': {'zlib':True, '_FillValue': -9999}, \
-                        'ycenter': {'zlib':True, '_FillValue': -9999}, \
-                        'xcenter_weighted': {'zlib':True, '_FillValue': -9999}, \
-                        'ycenter_weighted': {'zlib':True, '_FillValue': -9999}, \
+                        #'majoraxis': {'zlib':True, '_FillValue': np.nan}, \
+                        #'orientation': {'zlib':True, '_FillValue': np.nan}, \
+                        #'eccentricity': {'zlib':True, '_FillValue': np.nan}, \
+                        #'perimeter': {'zlib':True, '_FillValue': np.nan}, \
+                        #'xcenter': {'zlib':True, '_FillValue': -9999}, \
+                        #'ycenter': {'zlib':True, '_FillValue': -9999}, \
+                        #'xcenter_weighted': {'zlib':True, '_FillValue': -9999}, \
+                        #'ycenter_weighted': {'zlib':True, '_FillValue': -9999}, \
                         'cloudtype_npix_low': {'dtype': 'int', 'zlib':True, '_FillValue': -9999}, \
                         'cloudtype_npix_conglow': {'dtype': 'int', 'zlib':True, '_FillValue': -9999}, \
                         'cloudtype_npix_conghigh': {'dtype': 'int', 'zlib':True, '_FillValue': -9999}, \

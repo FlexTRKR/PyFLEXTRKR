@@ -1717,7 +1717,7 @@ def cloud_type_tracking_NS(ct, pixel_radius, area_thresh, smoothsize, mincorecol
 
     #####################################################################
     # Label features 
-    for i in range(0,5): 
+    for i in range(0,3): 
         s = generate_binary_structure(2,2) # allows diagonal to be included
         convective_label, convective_number = label(convective_flag,s)
 
@@ -1777,7 +1777,7 @@ def cloud_type_tracking_NS(ct, pixel_radius, area_thresh, smoothsize, mincorecol
 
             final_convcold_cloudnumber = np.copy(labelcorecold_number2d)
 
-            print('Entered dilating loop')
+            #print('Entered dilating loop')
             keepspreading = 1
             counter = 0
             # Keep looping through dilating code as long as at least one feature is growing. At this point limit it to 20 dilations (KB-IT IS NOT LIMITED TO 20 ANYMORE). Remove this once use real data.

@@ -1194,29 +1194,27 @@ def idclouds_ct(zipped_inputs):
 
             ######################################################
             # separate output from futyan into the separate variables
-            final_nclouds = np.array([clouddata['final_nclouds']])
-            print('final_nclouds.shape: ', final_nclouds.shape)
-            final_ncorepix = np.array([clouddata['final_ncorepix']])
-            final_ncorepix = np.squeeze(final_ncorepix, axis = 0)
-            print('ncorepix.shape: ', final_ncorepix.shape)
-            print('ncorepix type: ', type(final_ncorepix))
-            final_ncoldpix = np.array([clouddata['final_ncoldpix']])
-            final_ncoldpix = np.squeeze(final_ncoldpix, axis = 0)
-            final_ncorecoldpix = np.array([clouddata['final_ncorecoldpix']])
-            final_ncorecoldpix = np.squeeze(final_ncorecoldpix, axis = 0)
-            final_convcold_cloudnumber = np.array([clouddata['final_convcold_cloudnumber']])
-            final_cloudtype = np.array([clouddata['final_cloudtype']])
-            final_cloudnumber = np.array([clouddata['final_cloudnumber']])
+            final_nclouds = np.array(clouddata['final_nclouds'])
+            final_ncorepix = np.array(clouddata['final_ncorepix'])
+            #final_ncorepix = np.squeeze(final_ncorepix, axis = 0)
+            final_ncoldpix = np.array(clouddata['final_ncoldpix'])
+            #final_ncoldpix = np.squeeze(final_ncoldpix, axis = 0)
+            final_ncorecoldpix = np.array(clouddata['final_ncorecoldpix'])
+            #final_ncorecoldpix = np.squeeze(final_ncorecoldpix, axis = 0)
+            final_convcold_cloudnumber = np.array(clouddata['final_convcold_cloudnumber'])
+            final_cloudtype = np.array(clouddata['final_cloudtype'])
+            final_cloudnumber = np.array(clouddata['final_cloudnumber'])
 
             pcp = np.full(final_convcold_cloudnumber.shape, np.inf)
             final_pf_number = np.full(final_convcold_cloudnumber.shape, np.inf)
             final_convcold_cloudnumber_orig = final_convcold_cloudnumber
             final_cloudnumber_orig = final_convcold_cloudnumber_orig           
-                
+            original_cloudtype = np.squeeze(original_cloudtype,axis=0)
+            
             #######################################################
             # output data to netcdf file, only if clouds present
             if len(final_nclouds) >= 0:   # KB CHANGED 
-                final_nclouds = np.squeeze(final_nclouds,axis=0)
+                #final_nclouds = np.squeeze(final_nclouds,axis=0)
                 # create filename
                 cloudid_outfile = dataoutpath + datasource + '_' + datadescription + '_cloudid' + cloudid_version + '_' + file_datestring + '_' + file_timestring + '.nc'
                 print('outcloudfile: ', cloudid_outfile)

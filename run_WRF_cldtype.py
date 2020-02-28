@@ -29,9 +29,9 @@ print((time.ctime()))
 
 # Specify which sets of code to run. (1 = run code, 0 = don't run code)
 run_idclouds = 1        # Segment and identify cloud systems
-run_tracksingle = 0     # Track single consecutive cloudid files
-run_gettracks = 0       # Run trackig for all files
-run_finalstats = 0      # Calculate final statistics
+run_tracksingle = 1     # Track single consecutive cloudid files
+run_gettracks = 1       # Run trackig for all files
+run_finalstats = 1      # Calculate final statistics
 run_identifymcs = 0     # Isolate MCSs
 run_matchpf = 0         # Identify precipitation features with MCSs
 run_matchtbpf = 0       # Match brightness temperature tracking defined MCSs with precipitation files from WRF
@@ -40,7 +40,7 @@ run_robustmcs = 0       # Filter potential mcs cases using nmq radar variables
 run_robustmcspf = 0     # Filter potential mcs cases using precipitation features (NOT REFLECTIVITY)
 run_labelmcs = 0        # Create pixel maps of MCSs
 run_labelmcspf = 0      # Create pixel maps of MCSs from WRF precipitation features (NOT REFLECTIVITY)
-run_labelct = 0         # Create pixel maps of cloud type objects that were tracked   
+run_labelct = 1         # Create pixel maps of cloud type objects that were tracked   
 
 file_rr_tb = 1          # Input brightness temperature and rainrate from WRF are in the same file (0- they are in separate files)
 
@@ -48,7 +48,7 @@ file_rr_tb = 1          # Input brightness temperature and rainrate from WRF are
 cloudidmethod = 'futyan3'   # Option: futyan3 = identify cores and cold anvils and expand to get warm anvil, futyan4=identify core and expand for cold and warm anvils
 keep_singlemergesplit = 1   # Options: 0=All short tracks are removed, 1=Only short tracks without mergers or splits are removed
 show_alltracks = 0          # Options: 0=Maps of all tracks are not created, 1=Maps of all tracks are created (much slower!)
-run_parallel = 0            # Options: 0-run serially, 1-run parallel (uses Pool from Multiprocessing)
+run_parallel = 1            # Options: 0-run serially, 1-run parallel (uses Pool from Multiprocessing)
 nprocesses = 32             # Number of processors to use if run_parallel is set to 1
 process_halfhours = 0       # 0 = No, 1 = Yes
 
@@ -63,8 +63,8 @@ curr_track_version = 'ct.0'
 curr_tracknumbers_version = 'ct.0'
 
 # Specify days to run, (YYYYMMDD.hhmm)
-startdate = '20150305.0000'
-enddate = '20150306.0000'
+startdate = '20150302.0000'
+enddate = '20150303.0000'
 
 # Specify cloud tracking parameters
 geolimits = np.array([-90, -180, 90, 180])  # 4-element array with plotting boundaries [lat_min, lon_min, lat_max, lon_max]
@@ -76,7 +76,7 @@ cloudtb_core = 220.  #220                      # K # Vant-Hull et al. 2016 (220)
 cloudtb_cold = 245.  #245                      # K # Vant-Hull et al. 2016
 cloudtb_warm = 261.                        # K
 cloudtb_cloud = 261.                       # K
-othresh = 0.5                              # overlap percentage threshold
+othresh = 0.5                             # overlap percentage threshold
 lengthrange = np.array([2,200])            # A vector [minlength,maxlength] to specify the lifetime range for the tracks
 nmaxlinks = 50                             # Maximum number of clouds that any single cloud can be linked to
 nmaxclouds = 3000                          # Maximum number of clouds allowed to be in one track
@@ -345,7 +345,7 @@ if run_tracksingle == 1:
     # Process files
     # Load function
 
-    from tracksingle import trackclouds
+    from tracksingle_ct import trackclouds
 
     # Generate input lists
     list_trackingoutpath = [tracking_outpath]*(cloudidfilestep-1)
@@ -393,7 +393,7 @@ if run_tracksingle == 0:
 # Call function
 if run_gettracks == 1:
     # Load function
-    from gettracks import gettracknumbers
+    from gettracks_ct import gettracknumbers
 
     # Call function
     print('Getting track numbers')
@@ -428,7 +428,7 @@ if run_finalstats == 1 and run_parallel == 0:
 
 if run_finalstats == 1 and run_parallel == 1:
    # Load function
-    from trackstats_parallel import trackstats_ct
+    from trackstats_ct_parallel import trackstats_ct
 
     # Call satellite version of function
     print('Calculating track statistics')

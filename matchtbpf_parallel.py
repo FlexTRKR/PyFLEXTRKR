@@ -216,7 +216,7 @@ def identifypf_wrf_rain(mcsstats_filebase, cloudid_filebase, rainaccumulation_fi
                               'startstatus': (['track'], ir_startstatus), \
                               'endstatus': (['track'], ir_endstatus), \
                               'interruptions': (['track'], ir_trackinterruptions), \
-                              'boundary': (['track'], ir_boundary), \
+                              'boundary': (['track', 'time'], ir_boundary), \
                               'basetime': (['track', 'time'], precip_basetime), \
                               'datetimestring': (['track', 'time', 'characters'], ir_datetimestring), \
                               'meanlat': (['track', 'time'], ir_meanlat), \

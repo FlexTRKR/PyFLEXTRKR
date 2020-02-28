@@ -42,6 +42,7 @@ def calc_stats_single(tracknumbers, cloudidfiles, tracking_inpath, cloudid_fileb
         uniquetracknumbers = uniquetracknumbers[uniquetracknumbers > 0].astype(int)
 
         numtracks=len(uniquetracknumbers)
+        #finaltrack_corecold_boundary = np.zeros(int(numtracks), dtype=np.int32) # Kb messing around
         finaltrack_corecold_boundary = np.ones(int(numtracks), dtype=np.int32)*-9999
         finaltrack_basetime = np.empty(int(numtracks), dtype='datetime64[s]')
         finaltrack_corecold_mintb = np.ones(int(numtracks), dtype=float)*np.nan

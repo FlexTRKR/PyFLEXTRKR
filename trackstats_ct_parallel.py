@@ -111,6 +111,7 @@ def trackstats_ct(datasource, datadescription, pixel_radius, geolimits, areathre
     print('Loading gettracks data')
     print((time.ctime()))
     cloudtrack_file = stats_path + tracknumbers_filebase + '_' + startdate + '_' + enddate + '.nc'
+    print(cloudtrack_file)
     
     cloudtrackdata = Dataset(cloudtrack_file, 'r')
     numtracks = cloudtrackdata['ntracks'][:]
@@ -189,7 +190,7 @@ def trackstats_ct(datasource, datadescription, pixel_radius, geolimits, areathre
                 numcharfilename, latitude, longitude, geolimits, nx, ny, pixel_radius, trackstatus[0, nf, :], \
                 trackmerge[0, nf, :], tracksplit[0, nf, :], trackreset[0, nf, :]) for nf in range(0,nfiles)])
         pool.close()
-
+        
     #collect pool results
     for nf in range(0, nfiles):
         tmp=Results[nf]
@@ -213,21 +214,25 @@ def trackstats_ct(datasource, datadescription, pixel_radius, geolimits, areathre
                     finaltrack_ncorecoldpix[tracknumbertmp[iitrack],finaltrack_tracklength[tracknumbertmp[iitrack]]-1]=tmp[13][iitrack]
                     finaltrack_ncorepix[tracknumbertmp[iitrack],finaltrack_tracklength[tracknumbertmp[iitrack]]-1]=tmp[14][iitrack]
                     finaltrack_ncoldpix[tracknumbertmp[iitrack],finaltrack_tracklength[tracknumbertmp[iitrack]]-1]=tmp[15][iitrack]
-                    finaltrack_corecold_eccentricity[tracknumbertmp[iitrack],finaltrack_tracklength[tracknumbertmp[iitrack]]-1]=tmp[16][iitrack]
-                    finaltrack_corecold_majoraxis[tracknumbertmp[iitrack],finaltrack_tracklength[tracknumbertmp[iitrack]]-1]=tmp[17][iitrack]
-                    finaltrack_corecold_orientation[tracknumbertmp[iitrack],finaltrack_tracklength[tracknumbertmp[iitrack]]-1]=tmp[18][iitrack]
-                    finaltrack_corecold_perimeter[tracknumbertmp[iitrack],finaltrack_tracklength[tracknumbertmp[iitrack]]-1]=tmp[19][iitrack]
-                    finaltrack_corecold_ycenter[tracknumbertmp[iitrack],finaltrack_tracklength[tracknumbertmp[iitrack]]-1]=tmp[20][iitrack]
-                    finaltrack_corecold_xcenter[tracknumbertmp[iitrack],finaltrack_tracklength[tracknumbertmp[iitrack]]-1]=tmp[21][iitrack]
-                    finaltrack_corecold_yweightedcenter[tracknumbertmp[iitrack],finaltrack_tracklength[tracknumbertmp[iitrack]]-1]=tmp[22][iitrack]
-                    finaltrack_corecold_xweightedcenter[tracknumbertmp[iitrack],finaltrack_tracklength[tracknumbertmp[iitrack]]-1]=tmp[23][iitrack]
-                    finaltrack_corecold_radius[tracknumbertmp[iitrack],finaltrack_tracklength[tracknumbertmp[iitrack]]-1]=tmp[24][iitrack]
-                    finaltrack_corecold_status[tracknumbertmp[iitrack],finaltrack_tracklength[tracknumbertmp[iitrack]]-1]=tmp[25][iitrack]
-                    finaltrack_corecold_mergenumber[tracknumbertmp[iitrack],finaltrack_tracklength[tracknumbertmp[iitrack]]-1]=tmp[26][iitrack]
-                    finaltrack_corecold_splitnumber[tracknumbertmp[iitrack],finaltrack_tracklength[tracknumbertmp[iitrack]]-1]=tmp[27][iitrack]
-                    finaltrack_corecold_trackinterruptions[tracknumbertmp[iitrack]]=tmp[28][iitrack]
-                    basetime_units=tmp[29]
-                    basetime_calendar=tmp[30]
+                    finaltrack_cloudtype_low[tracknumbertmp[iitrack],finaltrack_tracklength[tracknumbertmp[iitrack]]-1]=tmp[16][iitrack]
+                    finaltrack_cloudtype_conglow[tracknumbertmp[iitrack],finaltrack_tracklength[tracknumbertmp[iitrack]]-1]=tmp[17][iitrack]
+                    finaltrack_cloudtype_conghigh[tracknumbertmp[iitrack],finaltrack_tracklength[tracknumbertmp[iitrack]]-1]=tmp[18][iitrack]
+                    finaltrack_cloudtype_deep[tracknumbertmp[iitrack],finaltrack_tracklength[tracknumbertmp[iitrack]]-1]=tmp[19][iitrack]
+                    #finaltrack_corecold_eccentricity[tracknumbertmp[iitrack],finaltrack_tracklength[tracknumbertmp[iitrack]]-1]=tmp[16][iitrack]
+                    #finaltrack_corecold_majoraxis[tracknumbertmp[iitrack],finaltrack_tracklength[tracknumbertmp[iitrack]]-1]=tmp[17][iitrack]
+                    #finaltrack_corecold_orientation[tracknumbertmp[iitrack],finaltrack_tracklength[tracknumbertmp[iitrack]]-1]=tmp[18][iitrack]
+                    #finaltrack_corecold_perimeter[tracknumbertmp[iitrack],finaltrack_tracklength[tracknumbertmp[iitrack]]-1]=tmp[19][iitrack]
+                    #finaltrack_corecold_ycenter[tracknumbertmp[iitrack],finaltrack_tracklength[tracknumbertmp[iitrack]]-1]=tmp[20][iitrack]
+                    #finaltrack_corecold_xcenter[tracknumbertmp[iitrack],finaltrack_tracklength[tracknumbertmp[iitrack]]-1]=tmp[21][iitrack]
+                    #finaltrack_corecold_yweightedcenter[tracknumbertmp[iitrack],finaltrack_tracklength[tracknumbertmp[iitrack]]-1]=tmp[22][iitrack]
+                    #finaltrack_corecold_xweightedcenter[tracknumbertmp[iitrack],finaltrack_tracklength[tracknumbertmp[iitrack]]-1]=tmp[23][iitrack]
+                    finaltrack_corecold_radius[tracknumbertmp[iitrack],finaltrack_tracklength[tracknumbertmp[iitrack]]-1]=tmp[20][iitrack]
+                    finaltrack_corecold_status[tracknumbertmp[iitrack],finaltrack_tracklength[tracknumbertmp[iitrack]]-1]=tmp[21][iitrack]
+                    finaltrack_corecold_mergenumber[tracknumbertmp[iitrack],finaltrack_tracklength[tracknumbertmp[iitrack]]-1]=tmp[22][iitrack]
+                    finaltrack_corecold_splitnumber[tracknumbertmp[iitrack],finaltrack_tracklength[tracknumbertmp[iitrack]]-1]=tmp[23][iitrack]
+                    finaltrack_corecold_trackinterruptions[tracknumbertmp[iitrack]]=tmp[24][iitrack]
+                    basetime_units=tmp[25]
+                    basetime_calendar=tmp[26]
                 
     ###############################################################
     ## Remove tracks that have no cells. These tracks are short.
@@ -235,14 +240,12 @@ def trackstats_ct(datasource, datadescription, pixel_radius, geolimits, areathre
     print((time.ctime()))
     gc.collect()
 
-    #print('finaltrack_tracklength shape at line 385: ', finaltrack_tracklength.shape)
-    #print('finaltrack_tracklength(4771): ', finaltrack_tracklength[4770])
     cloudindexpresent = np.array(np.where(finaltrack_tracklength != 0))[0, :]
+    
     numtracks = len(cloudindexpresent)
-    #print('length of cloudindex present: ', len(cloudindexpresent))
 
     maxtracklength = np.nanmax(finaltrack_tracklength)
-    #print('maxtracklength: ', maxtracklength)
+
 
     finaltrack_tracklength = finaltrack_tracklength[cloudindexpresent]
     finaltrack_corecold_boundary = finaltrack_corecold_boundary[cloudindexpresent, 0:maxtracklength]
@@ -264,17 +267,18 @@ def trackstats_ct(datasource, datadescription, pixel_radius, geolimits, areathre
     finaltrack_corecold_cloudnumber = finaltrack_corecold_cloudnumber[cloudindexpresent, 0:maxtracklength]
     finaltrack_datetimestring = list(finaltrack_datetimestring[i][0:maxtracklength][:] for i in cloudindexpresent)
     finaltrack_cloudidfile = finaltrack_cloudidfile[cloudindexpresent, 0:maxtracklength, :]
-    finaltrack_corecold_majoraxis = finaltrack_corecold_majoraxis[cloudindexpresent, 0:maxtracklength]
-    finaltrack_corecold_orientation = finaltrack_corecold_orientation[cloudindexpresent, 0:maxtracklength] 
-    finaltrack_corecold_eccentricity = finaltrack_corecold_eccentricity[cloudindexpresent, 0:maxtracklength]
-    finaltrack_corecold_perimeter = finaltrack_corecold_perimeter[cloudindexpresent, 0:maxtracklength]
-    finaltrack_corecold_xcenter = finaltrack_corecold_xcenter[cloudindexpresent, 0:maxtracklength]
-    finaltrack_corecold_ycenter = finaltrack_corecold_ycenter[cloudindexpresent, 0:maxtracklength]
-    finaltrack_corecold_xweightedcenter = finaltrack_corecold_xweightedcenter[cloudindexpresent, 0:maxtracklength]
-    finaltrack_corecold_yweightedcenter = finaltrack_corecold_yweightedcenter[cloudindexpresent, 0:maxtracklength]
+    #finaltrack_corecold_majoraxis = finaltrack_corecold_majoraxis[cloudindexpresent, 0:maxtracklength]
+    #finaltrack_corecold_orientation = finaltrack_corecold_orientation[cloudindexpresent, 0:maxtracklength] 
+    #finaltrack_corecold_eccentricity = finaltrack_corecold_eccentricity[cloudindexpresent, 0:maxtracklength]
+    #finaltrack_corecold_perimeter = finaltrack_corecold_perimeter[cloudindexpresent, 0:maxtracklength]
+    #finaltrack_corecold_xcenter = finaltrack_corecold_xcenter[cloudindexpresent, 0:maxtracklength]
+    #finaltrack_corecold_ycenter = finaltrack_corecold_ycenter[cloudindexpresent, 0:maxtracklength]
+    #finaltrack_corecold_xweightedcenter = finaltrack_corecold_xweightedcenter[cloudindexpresent, 0:maxtracklength]
+    #finaltrack_corecold_yweightedcenter = finaltrack_corecold_yweightedcenter[cloudindexpresent, 0:maxtracklength]
     finaltrack_cloudtype_low =  finaltrack_cloudtype_low[cloudindexpresent, 0:maxtracklength]
     finaltrack_cloudtype_conglow =  finaltrack_cloudtype_conglow[cloudindexpresent, 0:maxtracklength]
     finaltrack_cloudtype_conghigh =  finaltrack_cloudtype_conghigh[cloudindexpresent, 0:maxtracklength]
+    print('finaltrack_cloudtype_conghigh.shape: ', finaltrack_cloudtype_conghigh.shape)
     finaltrack_cloudtype_deep =  finaltrack_cloudtype_deep[cloudindexpresent, 0:maxtracklength]
 
     gc.collect()
@@ -329,11 +333,11 @@ def trackstats_ct(datasource, datadescription, pixel_radius, geolimits, areathre
     print((time.ctime()))
     print(trackstats_outfile)
     print('')
-
+    
     # Check if file already exists. If exists, delete
     if os.path.isfile(trackstats_outfile):
-        os.remove(trackstats_outfile)
-
+        os.remove(trackstats_outfile) 
+        
     import netcdf_io as net 
     net.write_trackstats_ct(trackstats_outfile, numtracks, maxtracklength, numcharfilename, \
                             datasource, datadescription, startdate, enddate, \
@@ -350,8 +354,7 @@ def trackstats_ct(datasource, datadescription, pixel_radius, geolimits, areathre
                             finaltrack_corecold_startstatus, finaltrack_corecold_endstatus, \
                             adjusted_finaltrack_corecold_mergenumber, adjusted_finaltrack_corecold_splitnumber, \
                             finaltrack_corecold_trackinterruptions, finaltrack_corecold_boundary, \
-                            finaltrack_corecold_majoraxis, finaltrack_corecold_orientation, finaltrack_corecold_eccentricity, \
-                            finaltrack_corecold_perimeter, finaltrack_corecold_xcenter, finaltrack_corecold_ycenter, \
-                            finaltrack_corecold_xweightedcenter, finaltrack_corecold_yweightedcenter)
-
-
+                            finaltrack_cloudtype_low, finaltrack_cloudtype_conglow, finaltrack_cloudtype_conghigh, finaltrack_cloudtype_deep)
+                            #finaltrack_corecold_majoraxis, finaltrack_corecold_orientation, finaltrack_corecold_eccentricity, \
+                            #finaltrack_corecold_perimeter, finaltrack_corecold_xcenter, finaltrack_corecold_ycenter, \
+                            #finaltrack_corecold_xweightedcenter, finaltrack_corecold_yweightedcenter)

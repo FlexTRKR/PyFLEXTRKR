@@ -29,13 +29,13 @@ print((time.ctime()))
 
 # Specify which sets of code to run. (1 = run code, 0 = don't run code)
 run_idclouds = 1        # Segment and identify cloud systems
-run_tracksingle = 0     # Track single consecutive cloudid files
-run_gettracks = 0       # Run trackig for all files
+run_tracksingle = 1     # Track single consecutive cloudid files
+run_gettracks = 0       # Run tracking for all files
 run_finalstats = 0      # Calculate final statistics
 run_identifymcs = 0     # Isolate MCSs
 run_matchpf = 0         # Identify precipitation features with MCSs
-run_matchtbpf = 0       # Match brightness temperature tracking defined MCSs with precipitation files from WRF
-use_wrf_rainrate = 0    # Using wrf rainrate- pfstats file will have 'WRF' identification
+run_matchtbpf = 1       # Match brightness temperature tracking defined MCSs with precipitation files from WRF
+use_wrf_rainrate = 1    # Using wrf rainrate- pfstats file will have 'WRF' identification
 run_robustmcs = 0       # Filter potential mcs cases using nmq radar variables
 run_robustmcspf = 0     # Filter potential mcs cases using precipitation features (NOT REFLECTIVITY)
 run_labelmcs = 0        # Create pixel maps of MCSs
@@ -47,7 +47,7 @@ file_rr_tb = 1          # Input brightness temperature and rainrate from WRF are
 cloudidmethod = 'futyan4'   # Option: futyan3 = identify cores and cold anvils and expand to get warm anvil, futyan4=identify core and expand for cold and warm anvils
 keep_singlemergesplit = 1   # Options: 0=All short tracks are removed, 1=Only short tracks without mergers or splits are removed
 show_alltracks = 0          # Options: 0=Maps of all tracks are not created, 1=Maps of all tracks are created (much slower!)
-run_parallel = 0            # Options: 0-run serially, 1-run parallel (uses Pool from Multiprocessing)
+run_parallel = 1            # Options: 0-run serially, 1-run parallel (uses Pool from Multiprocessing)
 nprocesses = 32             # Number of processors to use if run_parallel is set to 1
 process_halfhours = 0       # 0 = No, 1 = Yes
 
@@ -141,11 +141,16 @@ pfdata_filebase = 'csa4km_'
 #scratchpath = '/global/cscratch1/sd/barb672/WRF4/AMAZON_EDMF/'
 
 
-root_path = '/people/barb672/Codes/pyflextrkr/'
-clouddata_path = '/pic/projects/sooty2/barb672/wrfout/'
-pfdata_path = '/pic/projects/sooty2/barb672/wrfout/'
-rainaccumulation_path = '/pic/projects/sooty2/barb672/wrfout/'
-scratchpath = '/pic/projects/sooty2/barb672/wrfout/'
+#root_path = '/people/barb672/Codes/pyflextrkr/'
+#clouddata_path = '/pic/projects/sooty2/barb672/wrfout/'
+#pfdata_path = '/pic/projects/sooty2/barb672/wrfout/'
+#rainaccumulation_path = '/pic/projects/sooty2/barb672/wrfout/'
+#scratchpath = '/pic/projects/sooty2/barb672/wrfout/'
+root_path = '/global/homes/b/barb672/Codes/Tracking/pyflextrkr/'
+clouddata_path = '/global/cscratch1/sd/barb672/WRF4/AMAZON_EDMF/'
+pfdata_path = '/global/cscratch1/sd/barb672/WRF4/AMAZON_EDMF/'
+rainaccumulation_path = '/global/cscratch1/sd/barb672/WRF4/AMAZON_EDMF/'
+scratchpath = '/global/cscratch1/sd/barb672/WRF4/AMAZON_EDMF/'
 latlon_file = clouddata_path + databasename + '_' + startdate[0:4] + '-' + startdate[4:6] + '-' + startdate[6:8] + '_' + startdate[9:11] + ':' + startdate[11:13] + ':00.nc'
 
 ###############################################
@@ -432,6 +437,7 @@ if run_finalstats == 1 and run_parallel == 0:
     trackstats_filebase = 'stats_tracknumbers' + tracknumber_version
     
 if run_finalstats == 1 and run_parallel == 1:
+    print('USING THIS SETUP')
     # Load function
     from trackstats_parallel import trackstats_tb
 
@@ -440,7 +446,7 @@ if run_finalstats == 1 and run_parallel == 1:
     trackstats_tb(irdatasource, datadescription, pixel_radius, geolimits, area_thresh,
                    cloudtb_threshs, absolutetb_threshs, startdate, enddate, timegap, cloudid_filebase,
                    tracking_outpath, stats_outpath, track_version, tracknumber_version,
-                   tracknumbers_filebase, lengthrange=lengthrange)
+                   tracknumbers_filebase, nprocesses, lengthrange=lengthrange)
     trackstats_filebase = 'stats_tracknumbers' + tracknumber_version
 
 ##############################################################
@@ -534,7 +540,6 @@ if run_matchtbpf == 1 and run_parallel == 0:
 
     pfstats_filebase = 'mcs_tracks_' + precipdatasource + '_'
 
-	
 ##############################################################
 ## Identify robust MCS using precipitation feature statistics (NMQ with reflectivity)
 

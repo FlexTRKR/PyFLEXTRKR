@@ -157,6 +157,7 @@ def trackstats_tb(datasource, datadescription, pixel_radius, geolimits, areathre
 
     finaltrack_tracklength = np.zeros(int(numtracks), dtype=np.int32)
     finaltrack_corecold_boundary = np.ones((int(numtracks), int(nmaxclouds)), dtype=np.int32)*-9999
+    #finaltrack_corecold_boundary = np.zeros((int(numtracks), int(nmaxclouds)), dtype=np.int32) # kb playing with field
     finaltrack_basetime = np.empty((int(numtracks),int(nmaxclouds)), dtype='datetime64[s]')
     finaltrack_corecold_mintb = np.ones((int(numtracks),int(nmaxclouds)), dtype=float)*np.nan
     finaltrack_corecold_meantb = np.ones((int(numtracks),int(nmaxclouds)), dtype=float)*np.nan
@@ -301,6 +302,9 @@ def trackstats_tb(datasource, datadescription, pixel_radius, geolimits, areathre
 
     ########################################################
     # Correct merger and split cloud numbers
+    
+    print('PRINTING FINALTRACK_CORECOLD_BOUNDARY2')
+    print(finaltrack_corecold_boundary)
 
     # Initialize adjusted matrices
     adjusted_finaltrack_corecold_mergenumber = np.ones(np.shape(finaltrack_corecold_mergenumber))*-9999
@@ -354,7 +358,7 @@ def trackstats_tb(datasource, datadescription, pixel_radius, geolimits, areathre
     if os.path.isfile(trackstats_outfile):
         os.remove(trackstats_outfile)
 
-    import netcdf_io as net 
+    import netcdf_io_trackstats as net 
     net.write_trackstats_tb(trackstats_outfile, numtracks, maxtracklength, nbintb, numcharfilename, \
                             datasource, datadescription, startdate, enddate, \
                             track_version, tracknumbers_version, timegap, \
