@@ -9,5 +9,5 @@
     "run_parallel": 1,
     "nprocesses": 10,
     "root_path": "/global/cscratch1/sd/feng045/iclass/cacti/arm/csapr/",
-    "clouddata_path": "/global/cscratch1/sd/feng045/iclass/cacti/arm/csapr/data/"
+    "clouddata_path": "/global/cscratch1/sd/feng045/iclass/cacti/arm/csapr/conv_mask/"
 }

@@ -109,8 +109,8 @@ def trackstats_radar(datasource, datadescription, pixel_radius, geolimits, areat
             # file_cloudtype = file_cloudiddata['cloudtype'][:]
             file_all_cloudnumber = file_cloudiddata['cloudnumber'][:]
             file_corecold_cloudnumber = file_cloudiddata['convcold_cloudnumber'][:]
-            conv_mask1 = file_cloudiddata['conv_mask1'][:]
-            conv_mask2 = file_cloudiddata['conv_mask2'][:]
+            conv_core = file_cloudiddata['conv_core'][:]
+            conv_mask = file_cloudiddata['conv_mask'][:]
             file_basetime = file_cloudiddata['basetime'][:]
             basetime_units = file_cloudiddata['basetime'].units
             # basetime_calendar = file_cloudiddata['basetime'].calendar
@@ -139,12 +139,12 @@ def trackstats_radar(datasource, datadescription, pixel_radius, geolimits, areat
                 # In mergers and split, the associated clouds should be listed in 
                 # the file_splittracknumbers and file_mergetracknumbers
                 if len(cloudnumber) == 1: 
-                    # Find cloud in cloudid file associated with this track, and convective core (conv_mask1 == 1)
-                    corearea = np.array(np.where((file_corecold_cloudnumber[0,:,:] == cloudnumber) & (conv_mask1[0,:,:] == 1)))
+                    # Find cloud in cloudid file associated with this track, and convective core (conv_core == 1)
+                    corearea = np.array(np.where((file_corecold_cloudnumber[0,:,:] == cloudnumber) & (conv_core[0,:,:] == 1)))
                     ncorepix = np.shape(corearea)[1]
 
-                    # Convective cell (conv_mask2 == 1)
-                    cellarea = np.array(np.where((file_corecold_cloudnumber[0,:,:] == cloudnumber) & (conv_mask2[0,:,:] == 1)))
+                    # Convective cell (conv_mask >= 1). conv_mask is sorted and numbered.
+                    cellarea = np.array(np.where((file_corecold_cloudnumber[0,:,:] == cloudnumber) & (conv_mask[0,:,:] >= 1)))
                     ncellpix = np.shape(cellarea)[1]
 
                     # Record previous length of the track (initially all track lengths start at 0)
