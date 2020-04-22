@@ -32,7 +32,10 @@ run_parallel = config['run_parallel']
 nprocesses = config['nprocesses']
 root_path = config['root_path']
 clouddata_path = config['clouddata_path']
-# driftfile = '/global/cscratch1/sd/feng045/iclass/cacti/arm/csapr/11_10to12Drifts.txt'
+if "driftfile" in config:
+    driftfile = config['driftfile']
+
+
 
 ################################################################################################
 # Set variables describing data, file structure, and tracking thresholds
@@ -70,9 +73,9 @@ pixel_radius = 1                         # km
 timegap = 30/float(60)                    # hour
 area_thresh = 4                              # km^2
 miss_thresh = 0.2                          # Missing data threshold. (0.1 = 10%)
-othresh = 0.3                              # overlap percentage threshold
-lengthrange = np.array([2, 50])            # A vector [minlength,maxlength] to specify the lifetime range for the tracks
-maxnclouds = 6000                          # Maximum clouds in one file
+othresh = 0.5                              # overlap percentage threshold
+lengthrange = np.array([2, 60])            # A vector [minlength,maxlength] to specify the lifetime range for the tracks
+maxnclouds = 1000                          # Maximum clouds in one file
 nmaxlinks = 10                             # Maximum number of clouds that any single cloud can be linked to
 mincellpix = 4                             # Minimum number of pixels for a cell.
 
@@ -478,7 +481,8 @@ if run_labelcell == 1:
     ## Call function
     if run_parallel == 0:
         # Call function
-        for iunique in range(0, cloudidfilestep-1):
+        # for iunique in range(0, cloudidfilestep-1):
+        for iunique in range(0, cloudidfilestep):
             # mapcell_radar(cellmap_input[iunique])
             mapcell_radar(cloudidfiles[iunique], cloudidfiles_basetime[iunique], stats_outpath, trackstats_filebase, \
                         startdate, enddate, celltracking_outpath, celltracking_filebase)

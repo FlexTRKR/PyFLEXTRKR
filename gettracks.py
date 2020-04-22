@@ -179,6 +179,9 @@ def gettracknumbers(datasource, datadescription, datainpath, dataoutpath, startd
     # Rocord that the tracks are being reset / initialized
     trackreset[0, 0, :] = 1
 
+    # for ifile in range(0,nfiles):
+    #     print(ifile, (files[ifile]))
+    # import pdb; pdb.set_trace()
     ###########################################################################
     # Loop over files and generate tracks
     print('Loop through the rest of the files')
@@ -191,7 +194,7 @@ def gettracknumbers(datasource, datadescription, datainpath, dataoutpath, startd
 
         ######################################################################
         # Load single track file
-        print('Load track data')
+        # print('Load track data')
 #        print((time.ctime()))
         singletracking_data = Dataset(datainpath + files[ifile], 'r')                  # Open file
         nclouds_reference = int(np.nanmax(singletracking_data['nclouds_ref'][:]) + 1)                               # Number of clouds in reference file
@@ -217,7 +220,7 @@ def gettracknumbers(datasource, datadescription, datainpath, dataoutpath, startd
 
         ########################################################################
         # Load cloudid files
-        print('Load cloudid files')
+        # print('Load cloudid files')
 #        print((time.ctime()))
         # Reference cloudid file
         referencecloudid_data = Dataset(ref_file, 'r')
@@ -236,7 +239,7 @@ def gettracknumbers(datasource, datadescription, datainpath, dataoutpath, startd
 
         ########################################################################
         # Check time gap between consecutive track files
-        print('Checking if time gap between files satisfactory')
+        # print('Checking if time gap between files satisfactory')
 #        print((time.ctime()))
 
         # Set previous and new times
@@ -278,16 +281,16 @@ def gettracknumbers(datasource, datadescription, datainpath, dataoutpath, startd
         ########################################################################################
         # Compare forward and backward single track matirces to link new and reference clouds
         # Intiailize matrix for this time period
-        print('Generating tracks')
-        print((time.ctime()))
+        # print('Generating tracks')
+        # print((time.ctime()))
         trackfound = np.ones(nclouds_reference+1, dtype=int)*-9999
 
         # Loop over all reference clouds
-        print('Looping over all clouds in the reference file')
+        # print('Looping over all clouds in the reference file')
         print(('Number of clouds to process: ' + str(nclouds_reference)))
 #        print((time.ctime()))
         for ncr in np.arange(1,nclouds_reference+1): # Looping over each reference cloud. Start at 1 since clouds numbered starting at 1.
-            print(('Reference cloud #: ' + str(ncr)))
+            # print(('Reference cloud #: ' + str(ncr)))
 #            print((time.ctime()))
             if trackfound[ncr-1] < 1:
 
@@ -297,14 +300,14 @@ def gettracknumbers(datasource, datadescription, datainpath, dataoutpath, startd
                 temp_referenceclouds = [ncr]
 
                 trackpresent = 0
-                print('Finding all associated clouds')
+                # print('Finding all associated clouds')
 #                print((time.ctime()))
                 while ntemp_referenceclouds > nreferenceclouds:
                     associated_referenceclouds = np.copy(temp_referenceclouds).astype(int)
                     nreferenceclouds = ntemp_referenceclouds
 
                     for nr in range(0, nreferenceclouds):
-                        print(('Processing cloud #: ' + str(nr)))
+                        # print(('Processing cloud #: ' + str(nr)))
 #                        print((time.ctime()))
                         tempncr = associated_referenceclouds[nr]
 
@@ -385,7 +388,7 @@ def gettracknumbers(datasource, datadescription, datainpath, dataoutpath, startd
                     if nnewclouds == 1 and nreferenceclouds == 1:
                         ############################################################
                         # Simple continuation
-                        print('Simple continuation')
+                        # print('Simple continuation')
 #                        print((time.ctime()))
 
                         # Check trackstatus already has a valid value. This will prtrack splits from a previous step being overwritten
@@ -401,7 +404,7 @@ def gettracknumbers(datasource, datadescription, datainpath, dataoutpath, startd
 
                         # Loop through the reference clouds and assign th track to the largestst one, the rest just go away
                         if nnewclouds == 1:
-                            print('Merge only')
+                            # print('Merge only')
 #                            print((time.ctime()))
                             for tempreferencecloud in associated_referenceclouds:
                                 trackfound[tempreferencecloud-1] = 1
@@ -420,7 +423,7 @@ def gettracknumbers(datasource, datadescription, datainpath, dataoutpath, startd
                         #################################################################
                         # Merging and spliting
                         else:
-                            print('Merging and splitting')
+                            # print('Merging and splitting')
 #                            print((time.ctime()))
                            
                             # Loop over the reference clouds and assign the track the largest one
@@ -457,7 +460,7 @@ def gettracknumbers(datasource, datadescription, datainpath, dataoutpath, startd
                     #####################################################################
                     # Splitting only
                     elif nnewclouds > 1:
-                        print('Splitting only')
+                        # print('Splitting only')
 #                        print((time.ctime()))
                         # Label reference cloud as a pure split
                         referencetrackstatus[ifill, ncr-1] = 13
@@ -486,7 +489,7 @@ def gettracknumbers(datasource, datadescription, datainpath, dataoutpath, startd
                 ######################################################################################
                 # No new clouds. Track dissipated
                 else:
-                    print('Track ending')
+                    # print('Track ending')
 #                    print((time.ctime()))
 
                     trackfound[ncr-1] = 1
@@ -495,7 +498,7 @@ def gettracknumbers(datasource, datadescription, datainpath, dataoutpath, startd
 
         ##############################################################################
         # Find any clouds in the new track that don't have a track number. These are new clouds this file
-        print('Identifying new tracks')
+        # print('Identifying new tracks')
 #        print((time.ctime()))
         for ncn in range(1, int(nclouds_new)+1):
             if tracknumber[0, ifill+1, ncn-1] < 0:
@@ -538,12 +541,12 @@ def gettracknumbers(datasource, datadescription, datainpath, dataoutpath, startd
     # Loop over single cloudtracks
     nsingleremove = 0
     for strack in singletracks:
-        print(('single track: ' + str(strack+1)))
-        print('Getting track index')
+        # print(('single track: ' + str(strack+1)))
+        # print('Getting track index')
         # Indentify clouds in this track
         cloudindex = np.array(np.where(tracknumber[0, :, :] == int(strack+1))) # Need to add one since singletracks lists the index in the matrix, which starts at zero. Track number starts at one.
 
-        print('Filtering data')
+        # print('Filtering data')
         # Only remove single track if it is not small merger or small split. This is only done if keepsingletrack == 1. This is the default.
         if keepsingletrack == 1:
             if tracksplitnumber[0, cloudindex[0], cloudindex[1]] < 0 and trackmergenumber[0, cloudindex[0], cloudindex[1]] < 0:
