@@ -224,13 +224,13 @@ def gettracknumbers(datasource, datadescription, datainpath, dataoutpath, startd
         npix_reference = referencecloudid_data[npxname][:]
         print('npix_reference.shape: ',npix_reference.shape)
         referencecloudid_data.close()
-        npix_reference = np.squeeze(npix_reference,axis=0)   # kb added 02/25/2020
+        ##npix_reference = np.squeeze(npix_reference,axis=0)   # kb added 02/25/2020
         
         # New cloudid file
         newcloudid_data = Dataset(new_file, 'r')
         npix_new = newcloudid_data[npxname][:]
         newcloudid_data.close()
-        npix_new = np.squeeze(npix_new,axis=0)   # kb added 02/25/2020
+        ##npix_new = np.squeeze(npix_new,axis=0)   # kb added 02/25/2020
 
         # Remove possible extra time dimension to make sure npix is a 1D array
         # npix_reference = npix_reference.squeeze()

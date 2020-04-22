@@ -280,6 +280,8 @@ def idclouds_wrf(zipped_inputs):
 
                             # Sort and renumber the linkpf clouds (removes small clouds after renumbering)
                             pf_convcold_cloudnumber_sorted, pf_cloudnumber_sorted, npix_convcold_linkpf = sort_renumber2vars(pf_convcold_cloudnumber, pf_cloudnumber, area_thresh/pixel_radius**2)
+                            
+                            print('npix_convcold_linkpf:',npix_convcold_linkpf.shape)
                             # Get number of clouds from the sorted linkpf clouds
                             nclouds_linkpf = np.nanmax(pf_convcold_cloudnumber_sorted)
 
@@ -292,7 +294,8 @@ def idclouds_wrf(zipped_inputs):
                             final_convcold_cloudnumber = np.expand_dims(pf_convcold_cloudnumber_sorted, axis=0)
                             final_nclouds = np.array([nclouds_linkpf], dtype=int)
                             final_pf_number = np.expand_dims(pf_number, axis=0)
-                            final_ncorecoldpix = np.array([npix_convcold_linkpf], dtype=int)
+                            #final_ncorecoldpix = np.array([npix_convcold_linkpf], dtype=int)  ### KB COMMENTED OUT 04/21/2020
+                            final_ncorecoldpix = npix_convcold_linkpf
 
                         else:
                             # Create default arrays

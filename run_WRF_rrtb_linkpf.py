@@ -29,12 +29,12 @@ print((time.ctime()))
 
 # Specify which sets of code to run. (1 = run code, 0 = don't run code)
 run_idclouds = 1        # Segment and identify cloud systems
-run_tracksingle = 1     # Track single consecutive cloudid files
+run_tracksingle = 0     # Track single consecutive cloudid files
 run_gettracks = 0       # Run tracking for all files
 run_finalstats = 0      # Calculate final statistics
 run_identifymcs = 0     # Isolate MCSs
 run_matchpf = 0         # Identify precipitation features with MCSs
-run_matchtbpf = 1       # Match brightness temperature tracking defined MCSs with precipitation files from WRF
+run_matchtbpf = 0       # Match brightness temperature tracking defined MCSs with precipitation files from WRF
 use_wrf_rainrate = 1    # Using wrf rainrate- pfstats file will have 'WRF' identification
 run_robustmcs = 0       # Filter potential mcs cases using nmq radar variables
 run_robustmcspf = 0     # Filter potential mcs cases using precipitation features (NOT REFLECTIVITY)

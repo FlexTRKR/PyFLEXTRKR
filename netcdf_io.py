@@ -26,7 +26,7 @@ def write_cloudid_wrf(cloudid_outfile, file_basetime, file_datestring, file_time
 
         """
         #         missing_value_int = -9999
-
+        
         # Define variable list
         varlist = {'basetime': (['time'], file_basetime), \
                         'filedate': (['time', 'ndatechar'], np.array([stringtochar(np.array(file_datestring))])), \
@@ -40,7 +40,8 @@ def write_cloudid_wrf(cloudid_outfile, file_basetime, file_datestring, file_time
                         'nclouds': (['time'], nclouds), \
                         # 'ncorepix': (['time', 'clouds'], ncorepix), \
                         # 'ncoldpix': (['time', 'clouds'], ncoldpix), \
-                        'ncorecoldpix': (['time', 'clouds'], ncorecoldpix), \
+                        ##'ncorecoldpix': (['time', 'clouds'], ncorecoldpix), \ # KB COMMENTED OUT 04/21/2020
+                        'ncorecoldpix': (['clouds'], ncorecoldpix), \
                         # 'nwarmpix': (['time', 'clouds'], nwarmpix), \
                         }
         # Now check for optional arguments, add them to varlist if provided
@@ -59,7 +60,7 @@ def write_cloudid_wrf(cloudid_outfile, file_basetime, file_datestring, file_time
         coordlist = {'time': (['time'], file_basetime), \
                         'lat': (['lat'], np.squeeze(out_lat[:, 0])), \
                         'lon': (['lon'], np.squeeze(out_lon[0, :])), \
-                        'clouds': (['clouds'],  np.arange(1, nclouds+1)), \
+                        'clouds': (['clouds'], np.arange(1, nclouds+1)), \
                         'ndatechar': (['ndatechar'], np.arange(0, 32)), \
                         'ntimechar': (['ntimechar'], np.arange(0, 16))}
 
@@ -215,7 +216,8 @@ def write_cloudid_wrf(cloudid_outfile, file_basetime, file_datestring, file_time
                         'nclouds': {'dtype':'int', 'zlib':True},  \
                         #                         'ncorepix': {'dtype': 'int', 'zlib':True, '_FillValue': -9999},  \
                         #                         'ncoldpix': {'dtype': 'int', 'zlib':True, '_FillValue': -9999}, \
-                        'ncorecoldpix': {'dtype':'int', 'zlib':True}, \
+                        #'ncorecoldpix': {'dtype':'int', 'zlib':True}, \
+                        'ncorecoldpix': {'zlib':True}, \
                         #                         'nwarmpix': {'dtype': 'int', 'zlib':True, '_FillValue': -9999}, \
                         }
         # Now check for optional arguments, add them to encodelist if provided
