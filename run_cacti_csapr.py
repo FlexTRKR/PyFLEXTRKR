@@ -73,7 +73,7 @@ pixel_radius = 1                         # km
 timegap = 30/float(60)                    # hour
 area_thresh = 4                              # km^2
 miss_thresh = 0.2                          # Missing data threshold. (0.1 = 10%)
-othresh = 0.5                              # overlap percentage threshold
+othresh = 0.3                              # overlap percentage threshold
 lengthrange = np.array([2, 60])            # A vector [minlength,maxlength] to specify the lifetime range for the tracks
 maxnclouds = 1000                          # Maximum clouds in one file
 nmaxlinks = 10                             # Maximum number of clouds that any single cloud can be linked to
