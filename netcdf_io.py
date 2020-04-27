@@ -27,6 +27,12 @@ def write_cloudid_wrf(cloudid_outfile, file_basetime, file_datestring, file_time
         """
         #         missing_value_int = -9999
         
+        #print('final_ncoldpix shape io: ', ncoldpix.shape)
+        #print('final_ncorecoldpix shape io: ', ncorecoldpix.shape)
+        #print('final_nwarmpix shape io: ', nwarmpix.shape)
+        #print('final_ncorepix shape io: ', ncorepix.shape)
+        #print('final nclouds shape io: ', nclouds)
+        
         # Define variable list
         varlist = {'basetime': (['time'], file_basetime), \
                         'filedate': (['time', 'ndatechar'], np.array([stringtochar(np.array(file_datestring))])), \
@@ -38,11 +44,10 @@ def write_cloudid_wrf(cloudid_outfile, file_basetime, file_datestring, file_time
                         'convcold_cloudnumber': (['time', 'lat', 'lon'], convcold_cloudnumber), \
                         'cloudnumber': (['time', 'lat', 'lon'], cloudnumber), \
                         'nclouds': (['time'], nclouds), \
-                        # 'ncorepix': (['time', 'clouds'], ncorepix), \
-                        # 'ncoldpix': (['time', 'clouds'], ncoldpix), \
-                        ##'ncorecoldpix': (['time', 'clouds'], ncorecoldpix), \ # KB COMMENTED OUT 04/21/2020
+                        #'ncorepix': (['clouds'], ncorepix), \
+                        #'ncoldpix': (['clouds'], ncoldpix), \
                         'ncorecoldpix': (['clouds'], ncorecoldpix), \
-                        # 'nwarmpix': (['time', 'clouds'], nwarmpix), \
+                        #'nwarmpix': (['clouds'], nwarmpix), \
                         }
         # Now check for optional arguments, add them to varlist if provided
         if 'precipitation' in kwargs:
@@ -165,17 +170,17 @@ def write_cloudid_wrf(cloudid_outfile, file_basetime, file_datestring, file_time
         ds_out.nclouds.attrs['long_name'] = 'number of distict convective cores identified in file'
         ds_out.nclouds.attrs['units'] = 'unitless'
 
-        #     ds_out.ncorepix.attrs['long_name'] = 'number of convective core pixels in each cloud feature'
-        #     ds_out.ncorepix.attrs['units'] = 'unitless'
+        #ds_out.ncorepix.attrs['long_name'] = 'number of convective core pixels in each cloud feature'
+        #ds_out.ncorepix.attrs['units'] = 'unitless'
 
-        #     ds_out.ncoldpix.attrs['long_name'] = 'number of cold anvil pixels in each cloud feature'
-        #     ds_out.ncoldpix.attrs['units'] = 'unitless'
+        #ds_out.ncoldpix.attrs['long_name'] = 'number of cold anvil pixels in each cloud feature'
+        #ds_out.ncoldpix.attrs['units'] = 'unitless'
 
         ds_out.ncorecoldpix.attrs['long_name'] = 'number of convective core and cold anvil pixels in each cloud feature'
         ds_out.ncorecoldpix.attrs['units'] = 'unitless'
 
-        #     ds_out.nwarmpix.attrs['long_name'] = 'number of warm anvil pixels in each cloud feature'
-        #     ds_out.nwarmpix.attrs['units'] = 'unitless'
+        #ds_out.nwarmpix.attrs['long_name'] = 'number of warm anvil pixels in each cloud feature'
+        #ds_out.nwarmpix.attrs['units'] = 'unitless'
 
         # Now check for optional arguments, define attributes if provided
         if 'precipitation' in kwargs:
@@ -214,11 +219,10 @@ def write_cloudid_wrf(cloudid_outfile, file_basetime, file_datestring, file_time
                         'convcold_cloudnumber': {'dtype':'int', 'zlib':True}, \
                         'cloudnumber': {'dtype':'int', 'zlib':True}, \
                         'nclouds': {'dtype':'int', 'zlib':True},  \
-                        #                         'ncorepix': {'dtype': 'int', 'zlib':True, '_FillValue': -9999},  \
-                        #                         'ncoldpix': {'dtype': 'int', 'zlib':True, '_FillValue': -9999}, \
-                        #'ncorecoldpix': {'dtype':'int', 'zlib':True}, \
-                        'ncorecoldpix': {'zlib':True}, \
-                        #                         'nwarmpix': {'dtype': 'int', 'zlib':True, '_FillValue': -9999}, \
+                        #'ncorepix': {'dtype': 'int', 'zlib':True, '_FillValue': -9999},  \
+                        #'ncoldpix': {'dtype': 'int', 'zlib':True, '_FillValue': -9999}, \
+                        'ncorecoldpix': {'dtype': 'int','zlib':True, '_FillValue': -9999}, \
+                        #'nwarmpix': {'dtype': 'int', 'zlib':True, '_FillValue': -9999}, \
                         }
         # Now check for optional arguments, add them to encodelist if provided
         if 'precipitation' in kwargs:

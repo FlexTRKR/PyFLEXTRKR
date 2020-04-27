@@ -237,7 +237,7 @@ def idclouds_wrf(zipped_inputs):
                         clouddata = futyan4(out_ir, pixel_radius, cloudtb_threshs, area_thresh, mincoldcorepix, smoothsize, warmanvilexpansion)
 
                     ######################################################
-                    # separate output from futyan into the separate variables
+                    # separate output from futyan into the separate variables              
                     final_nclouds = np.array([clouddata['final_nclouds']])
                     final_ncorepix = np.array([clouddata['final_ncorepix']])
                     final_ncoldpix = np.array([clouddata['final_ncoldpix']])
@@ -246,7 +246,19 @@ def idclouds_wrf(zipped_inputs):
                     final_cloudtype = np.array([clouddata['final_cloudtype']])
                     final_cloudnumber = np.array([clouddata['final_cloudnumber']])
                     final_convcold_cloudnumber = np.array([clouddata['final_convcold_cloudnumber']])
+        
+#                    final_nclouds = clouddata['final_nclouds']
+#                    final_ncorepix = clouddata['final_ncorepix']
+#                    final_ncoldpix = clouddata['final_ncoldpix']
+#                    final_ncorecoldpix = clouddata['final_ncorecoldpix']
+#                    final_nwarmpix = clouddata['final_nwarmpix']
+#                    final_cloudtype = clouddata['final_cloudtype']
 
+#                    print('final_ncoldpix shape: ', final_ncoldpix.shape)
+#                    print('final_ncorecoldpix shape: ', final_ncorecoldpix.shape)
+#                    print('final_nwarmpix shape: ', final_nwarmpix.shape)
+#                    print('final_ncorepix shape: ', final_ncorepix.shape)
+        
                     # if (final_nclouds == 0):
                         
 

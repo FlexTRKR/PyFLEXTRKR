@@ -29,8 +29,8 @@ print((time.ctime()))
 
 # Specify which sets of code to run. (1 = run code, 0 = don't run code)
 run_idclouds = 1        # Segment and identify cloud systems
-run_tracksingle = 0     # Track single consecutive cloudid files
-run_gettracks = 0       # Run tracking for all files
+run_tracksingle = 1     # Track single consecutive cloudid files
+run_gettracks = 1       # Run tracking for all files
 run_finalstats = 0      # Calculate final statistics
 run_identifymcs = 0     # Isolate MCSs
 run_matchpf = 0         # Identify precipitation features with MCSs
@@ -147,10 +147,10 @@ pfdata_filebase = 'csa4km_'
 #rainaccumulation_path = '/pic/projects/sooty2/barb672/wrfout/'
 #scratchpath = '/pic/projects/sooty2/barb672/wrfout/'
 root_path = '/global/homes/b/barb672/Codes/Tracking/pyflextrkr/'
-clouddata_path = '/global/cscratch1/sd/barb672/WRF4/AMAZON_EDMF/'
-pfdata_path = '/global/cscratch1/sd/barb672/WRF4/AMAZON_EDMF/'
-rainaccumulation_path = '/global/cscratch1/sd/barb672/WRF4/AMAZON_EDMF/'
-scratchpath = '/global/cscratch1/sd/barb672/WRF4/AMAZON_EDMF/'
+clouddata_path = '/global/cscratch1/sd/barb672/WRF39/AMAZON_EDMF/'
+pfdata_path = '/global/cscratch1/sd/barb672/WRF39/AMAZON_EDMF/'
+rainaccumulation_path = '/global/cscratch1/sd/barb672/WRF39/AMAZON_EDMF/'
+scratchpath = '/global/cscratch1/sd/barb672/WRF39/AMAZON_EDMF/'
 latlon_file = clouddata_path + databasename + '_' + startdate[0:4] + '-' + startdate[4:6] + '-' + startdate[6:8] + '_' + startdate[9:11] + ':' + startdate[11:13] + ':00.nc'
 
 ###############################################
@@ -196,6 +196,7 @@ if not os.path.exists(stats_outpath):
 
 ########################################################################
 # Calculate basetime of start and end date
+
 TEMP_starttime = datetime.datetime(int(startdate[0:4]), int(startdate[4:6]), int(startdate[6:8]), 
 int(startdate[9:11]), int(startdate[11:13]), 0, tzinfo=utc)
 start_basetime = calendar.timegm(TEMP_starttime.timetuple())
@@ -223,17 +224,29 @@ if run_idclouds == 1:
     # Loop through files, identifying files within the startdate - enddate interval
     nleadingchar = np.array(len(databasename)).astype(int)
     rawdatafiles = [None]*len(allrawdatafiles)
-    
+       
+    # KB changed to make minute string defined (otherwise 10 minute files were going past enddate)
     filestep = 0
     for ifile in allrawdatafiles:
         TEMP_filetime = datetime.datetime(int(ifile[nleadingchar+1:nleadingchar+5]),        
         int(ifile[nleadingchar+7:nleadingchar+8]), int(ifile[nleadingchar+9:nleadingchar+11]),
-        int(ifile[nleadingchar+12:nleadingchar+14]), 0, 0, tzinfo=utc)
+        int(ifile[nleadingchar+12:nleadingchar+14]), int(ifile[nleadingchar+15:nleadingchar+17]), 0, tzinfo=utc)
         TEMP_filebasetime = calendar.timegm(TEMP_filetime.timetuple())
 
         if TEMP_filebasetime >= start_basetime and TEMP_filebasetime <= end_basetime:
             rawdatafiles[filestep] = clouddata_path + ifile
-            filestep = filestep + 1
+            filestep = filestep + 1    
+
+#    filestep = 0
+#    for ifile in allrawdatafiles:
+#        TEMP_filetime = datetime.datetime(int(ifile[nleadingchar+1:nleadingchar+5]),        
+#        int(ifile[nleadingchar+7:nleadingchar+8]), int(ifile[nleadingchar+9:nleadingchar+11]),
+#        int(ifile[nleadingchar+12:nleadingchar+14]), 0, 0, tzinfo=utc)
+#        TEMP_filebasetime = calendar.timegm(TEMP_filetime.timetuple())
+
+#        if TEMP_filebasetime >= start_basetime and TEMP_filebasetime <= end_basetime:
+#            rawdatafiles[filestep] = clouddata_path + ifile
+#            filestep = filestep + 1
             
     # Remove extra rows
     rawdatafiles = rawdatafiles[0:filestep]

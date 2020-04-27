@@ -214,20 +214,32 @@ if run_idclouds == 1:
     nleadingchar = np.array(len(databasename)).astype(int)
     rawdatafiles = [None]*len(allrawdatafiles)
     
+    # KB changed to make minute string defined (otherwise 10 minute files were going past enddate)
     filestep = 0
     for ifile in allrawdatafiles:
         TEMP_filetime = datetime.datetime(int(ifile[nleadingchar+1:nleadingchar+5]),        
         int(ifile[nleadingchar+7:nleadingchar+8]), int(ifile[nleadingchar+9:nleadingchar+11]),
-        int(ifile[nleadingchar+12:nleadingchar+14]), 0, 0, tzinfo=utc)
+        int(ifile[nleadingchar+12:nleadingchar+14]), int(ifile[nleadingchar+15:nleadingchar+17]), 0, tzinfo=utc)
         TEMP_filebasetime = calendar.timegm(TEMP_filetime.timetuple())
 
         if TEMP_filebasetime >= start_basetime and TEMP_filebasetime <= end_basetime:
             rawdatafiles[filestep] = clouddata_path + ifile
-            filestep = filestep + 1
+            filestep = filestep + 1    
+
+#    filestep = 0
+#    for ifile in allrawdatafiles:
+#        TEMP_filetime = datetime.datetime(int(ifile[nleadingchar+1:nleadingchar+5]),        
+#        int(ifile[nleadingchar+7:nleadingchar+8]), int(ifile[nleadingchar+9:nleadingchar+11]),
+#        int(ifile[nleadingchar+12:nleadingchar+14]), 0, 0, tzinfo=utc)
+#        TEMP_filebasetime = calendar.timegm(TEMP_filetime.timetuple())
+
+#        if TEMP_filebasetime >= start_basetime and TEMP_filebasetime <= end_basetime:
+#            rawdatafiles[filestep] = clouddata_path + ifile
+#            filestep = filestep + 1
             
     # Remove extra rows
     rawdatafiles = rawdatafiles[0:filestep]
-  
+    
     ##########################################################################
     # Process files
     # Load function
@@ -393,7 +405,7 @@ if run_tracksingle == 0:
 # Call function
 if run_gettracks == 1:
     # Load function
-    from gettracks_ct import gettracknumbers
+    from gettracks import gettracknumbers
 
     # Call function
     print('Getting track numbers')
