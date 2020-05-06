@@ -52,7 +52,7 @@ def write_trackstats_tb(trackstats_outfile, numtracks, maxtracklength, nbintb, n
                         'mergenumbers': (['ntracks', 'nmaxlength'], adjusted_finaltrack_corecold_mergenumber), \
                         'splitnumbers': (['ntracks', 'nmaxlength'], adjusted_finaltrack_corecold_splitnumber), \
                         'trackinterruptions': (['ntracks'], finaltrack_corecold_trackinterruptions), \
-                        'boundary': (['ntracks'], finaltrack_corecold_boundary), \
+                        'boundary': (['ntracks', 'nmaxlength'], finaltrack_corecold_boundary), \
                         'mintb': (['ntracks', 'nmaxlength'], finaltrack_corecold_mintb), \
                         'meantb': (['ntracks', 'nmaxlength'], finaltrack_corecold_meantb), \
                         'meantb_conv': (['ntracks', 'nmaxlength'], finaltrack_core_meantb), \
