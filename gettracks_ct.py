@@ -230,7 +230,6 @@ def gettracknumbers(datasource, datadescription, datainpath, dataoutpath, startd
         npix_new = newcloudid_data[npxname][:]
         newcloudid_data.close()
 
-        # Old fix - Jan 2020
         # Remove possible extra time dimension to make sure npix is a 1D array
         # npix_reference = npix_reference.squeeze()
         # npix_new = npix_new.squeeze()

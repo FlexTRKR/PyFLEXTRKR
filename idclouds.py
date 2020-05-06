@@ -237,7 +237,7 @@ def idclouds_wrf(zipped_inputs):
                         clouddata = futyan4(out_ir, pixel_radius, cloudtb_threshs, area_thresh, mincoldcorepix, smoothsize, warmanvilexpansion)
 
                     ######################################################
-                    # separate output from futyan into the separate variables
+                    # separate output from futyan into the separate variables              
                     final_nclouds = np.array([clouddata['final_nclouds']])
                     final_ncorepix = np.array([clouddata['final_ncorepix']])
                     final_ncoldpix = np.array([clouddata['final_ncoldpix']])
@@ -246,7 +246,19 @@ def idclouds_wrf(zipped_inputs):
                     final_cloudtype = np.array([clouddata['final_cloudtype']])
                     final_cloudnumber = np.array([clouddata['final_cloudnumber']])
                     final_convcold_cloudnumber = np.array([clouddata['final_convcold_cloudnumber']])
+        
+#                    final_nclouds = clouddata['final_nclouds']
+#                    final_ncorepix = clouddata['final_ncorepix']
+#                    final_ncoldpix = clouddata['final_ncoldpix']
+#                    final_ncorecoldpix = clouddata['final_ncorecoldpix']
+#                    final_nwarmpix = clouddata['final_nwarmpix']
+#                    final_cloudtype = clouddata['final_cloudtype']
 
+#                    print('final_ncoldpix shape: ', final_ncoldpix.shape)
+#                    print('final_ncorecoldpix shape: ', final_ncorecoldpix.shape)
+#                    print('final_nwarmpix shape: ', final_nwarmpix.shape)
+#                    print('final_ncorepix shape: ', final_ncorepix.shape)
+        
                     # if (final_nclouds == 0):
                         
 
@@ -280,6 +292,8 @@ def idclouds_wrf(zipped_inputs):
 
                             # Sort and renumber the linkpf clouds (removes small clouds after renumbering)
                             pf_convcold_cloudnumber_sorted, pf_cloudnumber_sorted, npix_convcold_linkpf = sort_renumber2vars(pf_convcold_cloudnumber, pf_cloudnumber, area_thresh/pixel_radius**2)
+                            
+                            print('npix_convcold_linkpf:',npix_convcold_linkpf.shape)
                             # Get number of clouds from the sorted linkpf clouds
                             nclouds_linkpf = np.nanmax(pf_convcold_cloudnumber_sorted)
 
@@ -292,7 +306,8 @@ def idclouds_wrf(zipped_inputs):
                             final_convcold_cloudnumber = np.expand_dims(pf_convcold_cloudnumber_sorted, axis=0)
                             final_nclouds = np.array([nclouds_linkpf], dtype=int)
                             final_pf_number = np.expand_dims(pf_number, axis=0)
-                            final_ncorecoldpix = np.array([npix_convcold_linkpf], dtype=int)
+                            #final_ncorecoldpix = np.array([npix_convcold_linkpf], dtype=int)  ### KB COMMENTED OUT 04/21/2020
+                            final_ncorecoldpix = npix_convcold_linkpf
 
                         else:
                             # Create default arrays
@@ -1138,6 +1153,7 @@ def idclouds_ct(zipped_inputs):
     # Define processing flag
     if processhalfhour == 0:
         TimeIndices = 1 # Process hourly data
+        iTime = 0
     else:
         TimeIndices = 2 # Process half-hourly data
 
@@ -1163,122 +1179,74 @@ def idclouds_ct(zipped_inputs):
         # Create latitude and longitude grids
         in_lon, in_lat = [original_lon, original_lat]
 
-        for iTime in range(0, TimeIndices):
-            # Replace missing ir data with mean
-            datay, datax = np.array(np.ma.nonzero(original_cloudtype[iTime, :, :]))           
-            in_ct = np.empty(np.shape(original_cloudtype[iTime, :, :]), dtype=float)*np.nan
-            in_ct[datay, datax] = original_cloudtype[iTime, datay, datax]
-
-            missingdatay, missingdatax = np.array(np.where(np.isnan(in_ct)))
-            if len(missingdatay) > 0:
-                for imiss in np.arange(0,len(missingdatay)):
-                    if missingdatay[imiss] == 0:
-                        if missingdatax[imiss] == 0:
-                            subsetct = np.copy(in_ct[0:missingdatay[imiss]+2, 0:missingdatax[imiss]+2])
-                        else:
-                            subsetct = np.copy(in_ct[0:missingdatay[imiss]+2, missingdatax[imiss]-1:missingdatax[imiss]+2])
-                    elif missingdatax[imiss] == 0:
-                        subsetct = np.copy(in_ct[missingdatay[imiss]-1:missingdatay[imiss]+2, 0:missingdatax[imiss]+2])
-                    elif missingdatay[imiss] == np.shape(original_cloudtype)[0]:
-                        if missingdatax[imiss] == np.shape(original_cloudtype)[1]:
-                            subsetct = np.copy(in_ct[missingdatay[imiss]-1::, missingdatax[imiss]-1::])
-                        else:
-                            subsetct = np.copy(in_ct[missingdatay[imiss]-1::, missingdatax[imiss]-1::missingdatax[imiss]+2])
-                    elif missingdatax[imiss] == np.shape(original_cloudtype)[1]:
-                        subsetct = np.copy(in_ct[missingdatay[imiss]-1:missingdatay[imiss]+2, missingdatax[imiss]-1::])
-                    else:
-                        subsetct = np.copy(in_ct[missingdatay[imiss]-1:missingdatay[imiss]+2, missingdatax[imiss]-1:missingdatax[imiss]+2])
-                    subsetct = np.reshape(subsetct, np.shape(subsetct)[0]*np.shape(subsetct)[1] , 1)
-                    in_ct[missingdatay[imiss], missingdatax[imiss]] = np.nanmean(subsetct)          
-            
-
-#            # Deal with missing data 
-#            in_ir = np.squeeze(original_ir,axis=0)
-#            print('in_ir shape: ', in_ir.shape)
-#            df_tb = pd.DataFrame(in_ir)
-#            df_tb.fillna(method ='bfill', inplace = True)
-#            df_tb.fillna(method ='ffill', inplace = True)
-##           df_tb.fillna(df_tb.mean())       
-#            in_ir = df_tb.to_numpy()    
-
-#            # Deal with missing data using interpolation method
-#            in_ir = np.squeeze(original_ir,axis=0)
-#            mask = np.isnan(in_ir)
-#            in_ir[mask] = np.interp(np.flatnonzero(mask), np.flatnonzero(~mask), in_ir[~mask])
-
-            #####################################################
-            # mask cloud types lower than high congestus
-            in_ct[in_ct < 2] = np.nan
+        #in_ct = np.empty(np.shape(original_cloudtype[iTime, :, :]), dtype=float)*np.nan
+        in_ct = original_cloudtype
+        in_ct = np.squeeze(in_ct,axis=0)
            
-            #####################################################
-            # determine if geographic region of interest is within the data set. if it is proceed and limit the data to that geographic region. if not exit the code.
+        #####################################################
+        # determine if geographic region of interest is within the data set. if it is proceed and limit the data to that geographic region. if not exit the code.
 
-            #isolate data within lat/lon range set by limit
-            indicesy, indicesx = np.array(np.where((in_lat >= geolimits[0]) & (in_lat <= geolimits[2]) & (in_lon >= geolimits[1]) & (in_lon <= geolimits[3])))
+        #isolate data within lat/lon range set by limit
+        indicesy, indicesx = np.array(np.where((in_lat >= geolimits[0]) & (in_lat <= geolimits[2]) & (in_lon >= geolimits[1]) & (in_lon <= geolimits[3])))
 
-            # proceed if file covers the geographic region in interest
-            if len(indicesx) > 0 and len(indicesy) > 0:
-                out_lat = np.copy(in_lat[np.nanmin(indicesy):np.nanmax(indicesy)+1, np.nanmin(indicesx):np.nanmax(indicesx)+1])
-                out_lon = np.copy(in_lon[np.nanmin(indicesy):np.nanmax(indicesy)+1, np.nanmin(indicesx):np.nanmax(indicesx)+1])
-                out_ct = np.copy(in_ct[np.nanmin(indicesy):np.nanmax(indicesy)+1, np.nanmin(indicesx):np.nanmax(indicesx)+1])   
-                
-                ######################################################
-                # proceed only if number of missing data does not exceed an accepable threshold
-                # determine number of missing data
-                missingcount = len(np.array(np.where(np.isnan(out_ct)))[0, :])
-                ny, nx = np.shape(out_ct)
+        # proceed if file covers the geographic region in interest
+        if len(indicesx) > 0 and len(indicesy) > 0:
+            out_lat = np.copy(in_lat[np.nanmin(indicesy):np.nanmax(indicesy)+1, np.nanmin(indicesx):np.nanmax(indicesx)+1])
+            out_lon = np.copy(in_lon[np.nanmin(indicesy):np.nanmax(indicesy)+1, np.nanmin(indicesx):np.nanmax(indicesx)+1])
+            out_ct = np.copy(in_ct[np.nanmin(indicesy):np.nanmax(indicesy)+1, np.nanmin(indicesx):np.nanmax(indicesx)+1])   
+            
+            ny, nx = np.shape(out_ct)
 
-                ##if np.divide(missingcount, (ny*nx)) < miss_thresh: # KB REMOVED 01/09/2020
-                    ######################################################
+            ######################################################
 
-                file_basetime = np.array([pd.to_datetime(num2date(original_basetime[iTime], units=basetime_units))], dtype='datetime64[s]')
-                file_datestring = str(file_basetime)[2:6] + str(file_basetime)[7:9] + str(file_basetime)[10:12]
-                file_timestring = str(file_basetime)[13:15] + str(file_basetime)[16:18]
+            file_basetime = np.array([pd.to_datetime(num2date(original_basetime[iTime], units=basetime_units))], dtype='datetime64[s]')
+            file_datestring = str(file_basetime)[2:6] + str(file_basetime)[7:9] + str(file_basetime)[10:12]
+            file_timestring = str(file_basetime)[13:15] + str(file_basetime)[16:18]
 
-                # call idcloud type subroutine
-                from subroutine_idclouds import cloud_type_tracking_NS
-                clouddata = cloud_type_tracking_NS(out_ct, pixel_radius, area_thresh, smoothsize, mincoldcorepix, warmanvilexpansion)
+            # call idcloud type subroutine
+            from subroutine_idclouds import cloud_type_tracking_NS
+            clouddata = cloud_type_tracking_NS(out_ct, pixel_radius, area_thresh, smoothsize, mincoldcorepix, warmanvilexpansion)
 
-                ######################################################
-                # separate output from futyan into the separate variables
-                final_nclouds = np.array([clouddata['final_nclouds']])
-                final_ncorepix = np.array([clouddata['final_ncorepix']])
-                final_ncorepix = np.squeeze(final_ncorepix, axis = 0)
-                print('ncorepix.shape: ', final_ncorepix.shape)
-                print('ncorepix type: ', type(final_ncorepix))
-                final_ncoldpix = np.array([clouddata['final_ncoldpix']])
-                final_ncoldpix = np.squeeze(final_ncoldpix, axis = 0)
-                final_ncorecoldpix = np.array([clouddata['final_ncorecoldpix']])
-                final_ncorecoldpix = np.squeeze(final_ncorecoldpix, axis = 0)
-                final_convcold_cloudnumber = np.array([clouddata['final_convcold_cloudnumber']])
-                final_cloudtype = np.array([clouddata['final_cloudtype']])
-                final_cloudnumber = np.array([clouddata['final_cloudnumber']])
+            ######################################################
+            # separate output from futyan into the separate variables
+            final_nclouds = np.array(clouddata['final_nclouds'])
+            final_ncorepix = np.array(clouddata['final_ncorepix'])
+            #final_ncorepix = np.squeeze(final_ncorepix, axis = 0)
+            final_ncoldpix = np.array(clouddata['final_ncoldpix'])
+            #final_ncoldpix = np.squeeze(final_ncoldpix, axis = 0)
+            final_ncorecoldpix = np.array(clouddata['final_ncorecoldpix'])
+            #final_ncorecoldpix = np.squeeze(final_ncorecoldpix, axis = 0)
+            final_convcold_cloudnumber = np.array(clouddata['final_convcold_cloudnumber'])
+            final_cloudtype = np.array(clouddata['final_cloudtype'])
+            final_cloudnumber = np.array(clouddata['final_cloudnumber'])
 
-                pcp = np.full(final_convcold_cloudnumber.shape, np.inf)
-                final_pf_number = np.full(final_convcold_cloudnumber.shape, np.inf)
-                final_convcold_cloudnumber_orig = final_convcold_cloudnumber
-                final_cloudnumber_orig = final_convcold_cloudnumber_orig           
-                
-                #######################################################
-                # output data to netcdf file, only if clouds present
-                if final_nclouds >= 0:   # KB CHANGED 
-                    # create filename
-                    cloudid_outfile = dataoutpath + datasource + '_' + datadescription + '_cloudid' + cloudid_version + '_' + file_datestring + '_' + file_timestring + '.nc'
-                    print('outcloudfile: ', cloudid_outfile)
+            pcp = np.full(final_convcold_cloudnumber.shape, np.inf)
+            final_pf_number = np.full(final_convcold_cloudnumber.shape, np.inf)
+            final_convcold_cloudnumber_orig = final_convcold_cloudnumber
+            final_cloudnumber_orig = final_convcold_cloudnumber_orig           
+            original_cloudtype = np.squeeze(original_cloudtype,axis=0)
+            
+            #######################################################
+            # output data to netcdf file, only if clouds present
+            if len(final_nclouds) >= 0:   # KB CHANGED 
+                #final_nclouds = np.squeeze(final_nclouds,axis=0)
+                # create filename
+                cloudid_outfile = dataoutpath + datasource + '_' + datadescription + '_cloudid' + cloudid_version + '_' + file_datestring + '_' + file_timestring + '.nc'
+                print('outcloudfile: ', cloudid_outfile)
 
-                    # Check if file exists, if it does delete it
-                    if os.path.isfile(cloudid_outfile):
-                        os.remove(cloudid_outfile)
+                # Check if file exists, if it does delete it
+                if os.path.isfile(cloudid_outfile):
+                    os.remove(cloudid_outfile)
 
-                    # Write output to netCDF file
-                    net.write_cloudtype_wrf(cloudid_outfile, file_basetime, file_datestring, file_timestring, \
-                                            out_lat, out_lon, out_ct, original_cloudtype, \
-                                            final_convcold_cloudnumber, \
-                                            final_nclouds, final_ncorepix, final_ncoldpix, final_ncorecoldpix, final_cloudtype, \
-                                            cloudid_version, cloudtb_threshs, geolimits, mintb_thresh, maxtb_thresh, area_thresh, \
-                                            precipitation=pcp, pf_number=final_pf_number, convcold_cloudnumber_orig=final_convcold_cloudnumber_orig, cloudnumber_orig=final_cloudnumber_orig, \
-                                            linkpf=linkpf, pf_smooth_window=pf_smooth_window, pf_dbz_thresh=pf_dbz_thresh, pf_link_area_thresh=pf_link_area_thresh)
+                # Write output to netCDF file
+                net.write_cloudtype_wrf(cloudid_outfile, file_basetime, file_datestring, file_timestring, \
+                                        out_lat, out_lon, out_ct, original_cloudtype, \
+                                        final_convcold_cloudnumber, \
+                                        final_nclouds, final_ncorepix, final_ncoldpix, final_ncorecoldpix, final_cloudtype, \
+                                        cloudid_version, cloudtb_threshs, geolimits, mintb_thresh, maxtb_thresh, area_thresh, \
+                                        precipitation=pcp, pf_number=final_pf_number, convcold_cloudnumber_orig=final_convcold_cloudnumber_orig,cloudnumber_orig=final_cloudnumber_orig, \
+                                        linkpf=linkpf, pf_smooth_window=pf_smooth_window, pf_dbz_thresh=pf_dbz_thresh, pf_link_area_thresh=pf_link_area_thresh)
   
-                else:
-                    print(datafilepath)
-                    print('No clouds')
+            else:
+                print(datafilepath)
+                print('No clouds')

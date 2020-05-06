@@ -28,10 +28,10 @@ print((time.ctime()))
 # Set variables describing data, file structure, and tracking thresholds
 
 # Specify which sets of code to run. (1 = run code, 0 = don't run code)
-run_idclouds = 0        # Segment and identify cloud systems
-run_tracksingle = 0     # Track single consecutive cloudid files
-run_gettracks = 0       # Run trackig for all files
-run_finalstats = 0      # Calculate final statistics
+run_idclouds = 1        # Segment and identify cloud systems
+run_tracksingle = 1     # Track single consecutive cloudid files
+run_gettracks = 1       # Run trackig for all files
+run_finalstats = 1      # Calculate final statistics
 run_identifymcs = 0     # Isolate MCSs
 run_matchpf = 0         # Identify precipitation features with MCSs
 run_matchtbpf = 0       # Match brightness temperature tracking defined MCSs with precipitation files from WRF
@@ -63,8 +63,8 @@ curr_track_version = 'ct.0'
 curr_tracknumbers_version = 'ct.0'
 
 # Specify days to run, (YYYYMMDD.hhmm)
-startdate = '20150304.0000'
-enddate = '20150306.0000'
+startdate = '20150302.0000'
+enddate = '20150303.0000'
 
 # Specify cloud tracking parameters
 geolimits = np.array([-90, -180, 90, 180])  # 4-element array with plotting boundaries [lat_min, lon_min, lat_max, lon_max]
@@ -76,12 +76,12 @@ cloudtb_core = 220.  #220                      # K # Vant-Hull et al. 2016 (220)
 cloudtb_cold = 245.  #245                      # K # Vant-Hull et al. 2016
 cloudtb_warm = 261.                        # K
 cloudtb_cloud = 261.                       # K
-othresh = 0.5                              # overlap percentage threshold
+othresh = 0.5                             # overlap percentage threshold
 lengthrange = np.array([2,200])            # A vector [minlength,maxlength] to specify the lifetime range for the tracks
 nmaxlinks = 50                             # Maximum number of clouds that any single cloud can be linked to
 nmaxclouds = 3000                          # Maximum number of clouds allowed to be in one track
 absolutetb_threshs = np.array([160, 330])  # k A vector [min, max] brightness temperature allowed. Brightness temperatures outside this range are ignored.
-warmanvilexpansion = 0                     # If this is set to one, then the cold anvil is spread laterally until it exceeds the warm anvil threshold
+warmanvilexpansion = 1                     # If this is set to one, then the cold anvil is spread laterally until it exceeds the warm anvil threshold
 mincoldcorepix = 2                         # Minimum number of pixels for the cold core, needed for futyan version 4 cloud identification code. Not used if use futyan version 3.
 smoothwindowdimensions = 5                 # Dimension of the boxcar filter used for futyan version 4. Not used in futyan version 3
 
@@ -119,8 +119,8 @@ nmqdatasource = 'nmq'
 precipdatasource = 'WRF'
 datadescription = 'WRF_Output'
 if file_rr_tb == 1:
-    databasename = 'wrfout_rainrate_tb_testing'
-    rainaccumulation_filebase = 'wrfout_rainrate_tb_testing'
+    databasename = 'wrfout_rainrate_tb'
+    rainaccumulation_filebase = 'wrfout_rainrate_tb'
 else:
     databasename = 'wrfout_tb'
     rainaccumulation_filebase = 'wrfout_rainrate_'+ startdate[0:4]
@@ -214,20 +214,32 @@ if run_idclouds == 1:
     nleadingchar = np.array(len(databasename)).astype(int)
     rawdatafiles = [None]*len(allrawdatafiles)
     
+    # KB changed to make minute string defined (otherwise 10 minute files were going past enddate)
     filestep = 0
     for ifile in allrawdatafiles:
         TEMP_filetime = datetime.datetime(int(ifile[nleadingchar+1:nleadingchar+5]),        
         int(ifile[nleadingchar+7:nleadingchar+8]), int(ifile[nleadingchar+9:nleadingchar+11]),
-        int(ifile[nleadingchar+12:nleadingchar+14]), 0, 0, tzinfo=utc)
+        int(ifile[nleadingchar+12:nleadingchar+14]), int(ifile[nleadingchar+15:nleadingchar+17]), 0, tzinfo=utc)
         TEMP_filebasetime = calendar.timegm(TEMP_filetime.timetuple())
 
         if TEMP_filebasetime >= start_basetime and TEMP_filebasetime <= end_basetime:
             rawdatafiles[filestep] = clouddata_path + ifile
-            filestep = filestep + 1
+            filestep = filestep + 1    
+
+#    filestep = 0
+#    for ifile in allrawdatafiles:
+#        TEMP_filetime = datetime.datetime(int(ifile[nleadingchar+1:nleadingchar+5]),        
+#        int(ifile[nleadingchar+7:nleadingchar+8]), int(ifile[nleadingchar+9:nleadingchar+11]),
+#        int(ifile[nleadingchar+12:nleadingchar+14]), 0, 0, tzinfo=utc)
+#        TEMP_filebasetime = calendar.timegm(TEMP_filetime.timetuple())
+
+#        if TEMP_filebasetime >= start_basetime and TEMP_filebasetime <= end_basetime:
+#            rawdatafiles[filestep] = clouddata_path + ifile
+#            filestep = filestep + 1
             
     # Remove extra rows
     rawdatafiles = rawdatafiles[0:filestep]
-  
+    
     ##########################################################################
     # Process files
     # Load function
@@ -345,7 +357,7 @@ if run_tracksingle == 1:
     # Process files
     # Load function
 
-    from tracksingle import trackclouds
+    from tracksingle_ct import trackclouds
 
     # Generate input lists
     list_trackingoutpath = [tracking_outpath]*(cloudidfilestep-1)
@@ -413,7 +425,7 @@ if run_gettracks == 0:
     tracknumbers_filebase = 'tracknumbers' + curr_tracknumbers_version
 
 # Call function
-if run_finalstats == 1:
+if run_finalstats == 1 and run_parallel == 0:
     # Load function
     from trackstats import trackstats_ct
 
@@ -425,6 +437,20 @@ if run_finalstats == 1:
                    tracking_outpath, stats_outpath, track_version, tracknumber_version,
                    tracknumbers_filebase, lengthrange=lengthrange)
     trackstats_filebase = 'stats_tracknumbers' + tracknumber_version
+
+if run_finalstats == 1 and run_parallel == 1:
+   # Load function
+    from trackstats_ct_parallel import trackstats_ct
+
+    # Call satellite version of function
+    print('Calculating track statistics')
+    print(time.ctime())
+    trackstats_ct(irdatasource, datadescription, pixel_radius, geolimits, area_thresh,
+                   cloudtb_threshs, absolutetb_threshs, startdate, enddate, timegap, cloudid_filebase,
+                   tracking_outpath, stats_outpath, track_version, tracknumber_version,
+                   tracknumbers_filebase, nprocesses,lengthrange=lengthrange)
+    trackstats_filebase = 'stats_tracknumbers' + tracknumber_version
+
     
 ##############################################################
 # Identify MCS candidates

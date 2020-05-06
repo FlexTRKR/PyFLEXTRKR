@@ -331,6 +331,7 @@ def identifymcs_tb(statistics_filebase, stats_path, startdate, enddate, \
     if os.path.isfile(mcstrackstatistics_outfile):
         os.remove(mcstrackstatistics_outfile)
 
+
     # Defie xarray dataset
     output_data = xr.Dataset({'mcs_basetime': (['ntracks', 'ntimes'], mcsbasetime), \
                               'mcs_datetimestring': (['ntracks', 'ntimes', 'ndatetimechars'], datetimestrings[trackid, :, :]), \
@@ -340,7 +341,7 @@ def identifymcs_tb(statistics_filebase, stats_path, startdate, enddate, \
                               'mcs_status': (['ntracks', 'ntimes'], status[trackid, :]), \
                               'mcs_startstatus': (['ntracks'], startstatus[trackid]), \
                               'mcs_endstatus': (['ntracks'], endstatus[trackid]), \
-                              'mcs_boundary': (['ntracks'], boundary[trackid]), \
+                              'mcs_boundary': (['ntracks', 'ntimes'], boundary[trackid]), \
                               'mcs_trackinterruptions': (['ntracks'], trackinterruptions[trackid]), \
                               'mcs_meanlat': (['ntracks', 'ntimes'], meanlat[trackid, :]), \
                               'mcs_meanlon': (['ntracks', 'ntimes'], meanlon[trackid, :]), \
@@ -462,7 +463,7 @@ def identifymcs_tb(statistics_filebase, stats_path, startdate, enddate, \
                                     'mcs_status': {'dtype':'int', 'zlib':True, '_FillValue': -9999}, \
                                     'mcs_startstatus': {'dtype':'int','zlib':True, '_FillValue': -9999}, \
                                     'mcs_endstatus': {'dtype':'int', 'zlib':True, '_FillValue': -9999}, \
-                                    'mcs_boundary': {'dtype':'int', 'zlib':True, '_FillValue': -9999}, \
+                                    'mcs_boundary': {'dtype':'int','zlib':True, '_FillValue': -9999}, \
                                     'mcs_trackinterruptions': {'dtype':'int', 'zlib':True, '_FillValue': -9999}, \
                                     'mcs_meanlat': {'zlib':True, '_FillValue': np.nan}, \
                                     'mcs_meanlon': {'zlib':True, '_FillValue': np.nan}, \
@@ -471,3 +472,4 @@ def identifymcs_tb(statistics_filebase, stats_path, startdate, enddate, \
                                     'mcs_cloudnumber': {'zlib':True, '_FillValue': -9999}, \
                                     'mcs_mergecloudnumber': {'dtype':'int', 'zlib':True, '_FillValue': -9999}, \
                                     'mcs_splitcloudnumber': {'dtype':'int', 'zlib':True, '_FillValue': -9999}})
+                                      
