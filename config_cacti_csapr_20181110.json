@@ -1,7 +1,7 @@
 {
-    "run_idclouds": 1,
-    "run_tracksingle": 1,
-    "run_gettracks": 1,
+    "run_idclouds": 0,
+    "run_tracksingle": 0,
+    "run_gettracks": 0,
     "run_finalstats": 1,
     "run_labelcell": 1,
     "startdate": "20181110.1800",
@@ -10,5 +10,5 @@
     "nprocesses": 10,
     "root_path": "/global/cscratch1/sd/feng045/iclass/cacti/arm/csapr/",
     "clouddata_path": "/global/cscratch1/sd/feng045/iclass/cacti/arm/csapr/conv_mask/",
-    "driftfile": "/global/cscratch1/sd/feng045/iclass/cacti/arm/csapr/csapr_advection_data/11_10to12Drifts.txt"
+    "driftfile": "/global/cscratch1/sd/feng045/iclass/cacti/arm/csapr/csapr_advection_data/csapr2_nov10_to_12_2018.nc"
 }

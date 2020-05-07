@@ -274,35 +274,44 @@ if run_tracksingle == 1:
         print(f"Drift file used: {driftfile}")
 
         # Read the drift file
-        drift_data = np.loadtxt(driftfile, usecols=(0, 1, 2, 3), dtype=str, delimiter=' ')
-        datestr = drift_data[:,0]
-        timestr = drift_data[:,1]
-        xdrifts_str = drift_data[:,2]
-        ydrifts_str = drift_data[:,3]
+        ds_drift = xr.open_dataset(driftfile)
+        bt_drift = ds_drift.basetime
+        xdrifts = ds_drift.x.values
+        ydrifts = ds_drift.y.values
 
-        nt_drift = len(datestr)
-        bt_drift = np.full(nt_drift, -999, dtype=float)
-        xdrifts = np.full(nt_drift, -999, dtype=int)
-        ydrifts = np.full(nt_drift, -999, dtype=int)
-        datetime_drift = []
+        # Convert dateime64 objects to string array
+        datetime_drift = bt_drift.dt.strftime("%Y%m%d_%H%M").values
 
-        # Loop over each time/line
-        for itime in range(0, nt_drift):
-            iyear = datestr[itime].split('-')[0]
-            imonth = datestr[itime].split('-')[1]
-            iday = datestr[itime].split('-')[2]
-            ihour = timestr[itime].split('+')[0].split(':')[0]
-            iminute = timestr[itime].split('+')[0].split(':')[1]
-            isecond = timestr[itime].split('+')[0].split(':')[2]
-            datetime_drift.append(f'{iyear}{imonth}{iday}_{ihour}{iminute}')
-            # Calculate basetime
-            bt_drift[itime] = calendar.timegm(datetime.datetime(int(iyear), int(imonth), int(iday), int(ihour), int(iminute), int(isecond), tzinfo=pytz.UTC).timetuple())
-            # Convert string to int
-            xdrifts[itime] = int(float(xdrifts_str[itime][:-1]))  # Remove the , after the number
-            ydrifts[itime] = int(float(ydrifts_str[itime][:]))
-
-        # Convert list to array    
-        datetime_drift = np.array(datetime_drift)
+#        # Read the drift file
+#        drift_data = np.loadtxt(driftfile, usecols=(0, 1, 2, 3), dtype=str, delimiter=' ')
+#        datestr = drift_data[:,0]
+#        timestr = drift_data[:,1]
+#        xdrifts_str = drift_data[:,2]
+#        ydrifts_str = drift_data[:,3]
+#
+#        nt_drift = len(datestr)
+#        bt_drift = np.full(nt_drift, -999, dtype=float)
+#        xdrifts = np.full(nt_drift, -999, dtype=int)
+#        ydrifts = np.full(nt_drift, -999, dtype=int)
+#        datetime_drift = []
+#
+#        # Loop over each time/line
+#        for itime in range(0, nt_drift):
+#            iyear = datestr[itime].split('-')[0]
+#            imonth = datestr[itime].split('-')[1]
+#            iday = datestr[itime].split('-')[2]
+#            ihour = timestr[itime].split('+')[0].split(':')[0]
+#            iminute = timestr[itime].split('+')[0].split(':')[1]
+#            isecond = timestr[itime].split('+')[0].split(':')[2]
+#            datetime_drift.append(f'{iyear}{imonth}{iday}_{ihour}{iminute}')
+#            # Calculate basetime
+#            bt_drift[itime] = calendar.timegm(datetime.datetime(int(iyear), int(imonth), int(iday), int(ihour), int(iminute), int(isecond), tzinfo=pytz.UTC).timetuple())
+#            # Convert string to int
+#            xdrifts[itime] = int(float(xdrifts_str[itime][:-1]))  # Remove the , after the number
+#            ydrifts[itime] = int(float(ydrifts_str[itime][:]))
+#
+#        # Convert list to array    
+#        datetime_drift = np.array(datetime_drift)
 
         # Loop over each cloudid file time to find matching drfit data
         for itime in range(0, len(cloudidfiles_timestring)-1):

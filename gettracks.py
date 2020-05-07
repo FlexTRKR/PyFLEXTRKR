@@ -166,6 +166,7 @@ def gettracknumbers(datasource, datadescription, datainpath, dataoutpath, startd
 
     # Isolate file name and add it to the filelist
     basetime[0] = np.array([pd.to_datetime(num2date(basetime_ref, units=basetime_units, calendar=basetime_calendar))], dtype='datetime64[s]')[0, 0]
+    # import pdb; pdb.set_trace()
 
     temp_referencefile = os.path.basename(ref_file)
     strlength = len(temp_referencefile)
@@ -188,9 +189,9 @@ def gettracknumbers(datasource, datadescription, datainpath, dataoutpath, startd
     print(('Number of files: ' + str(nfiles)))
     print((time.ctime()))
     ifill = 0
-    for ifile in range(0,nfiles-1)
+    for ifile in range(0,nfiles):
         print((files[ifile]))
-        print((time.ctime()))
+        # print((time.ctime()))
 
         ######################################################################
         # Load single track file
@@ -225,7 +226,6 @@ def gettracknumbers(datasource, datadescription, datainpath, dataoutpath, startd
         # Reference cloudid file
         referencecloudid_data = Dataset(ref_file, 'r')
         npix_reference = referencecloudid_data[npxname][:]
-        print('npix_reference.shape: ',npix_reference.shape)
         referencecloudid_data.close()
 
         # New cloudid file
@@ -364,7 +364,7 @@ def gettracknumbers(datasource, datadescription, datainpath, dataoutpath, startd
 
                 #################################################################
                 # Now get the track status
-                print('Determining status of clouds in track')
+                # print('Determining status of clouds in track')
                 # print((time.ctime()))
                 if nnewclouds > 0:
                     ############################################################
