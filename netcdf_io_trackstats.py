@@ -313,6 +313,7 @@ def write_trackstats_tb(trackstats_outfile, numtracks, maxtracklength, nbintb, n
 
 
 def write_trackstats_radar(trackstats_outfile, numtracks, maxtracklength, numcharfilename, \
+                            trackdimname, timedimname, \
                             datasource, datadescription, startdate, enddate, \
                             track_version, tracknumbers_version, timegap, basetime_units, \
                             pixel_radius, areathresh, fillval, \
@@ -333,42 +334,42 @@ def write_trackstats_radar(trackstats_outfile, numtracks, maxtracklength, numcha
     """
 
     # Define variable list
-    varlist = {'lifetime': (['ntracks'], finaltrack_tracklength), \
-                'basetime': (['ntracks', 'nmaxlength'], finaltrack_basetime), \
-                'cloudidfiles': (['ntracks', 'nmaxlength', 'nfilenamechars'], finaltrack_cloudidfile), \
-                # 'datetimestrings': (['ntracks', 'nmaxlength', 'ndatetimechars'], finaltrack_datetimestring), \
-                'meanlat': (['ntracks', 'nmaxlength'], finaltrack_core_meanlat), \
-                'meanlon': (['ntracks', 'nmaxlength'], finaltrack_core_meanlon), \
-                'minlat': (['ntracks', 'nmaxlength'], finaltrack_cell_minlat), \
-                'minlon': (['ntracks', 'nmaxlength'], finaltrack_cell_minlon), \
-                'maxlat': (['ntracks', 'nmaxlength'], finaltrack_cell_maxlat), \
-                'maxlon': (['ntracks', 'nmaxlength'], finaltrack_cell_maxlon), \
-                'radius_core': (['ntracks', 'nmaxlength'], finaltrack_core_radius), \
-                'radius_cell': (['ntracks', 'nmaxlength'], finaltrack_cell_radius), \
-                'npix_core': (['ntracks', 'nmaxlength'], finaltrack_core_npix), \
-                'npix_cell': (['ntracks', 'nmaxlength'], finaltrack_cell_npix), \
-                'maxdbz': (['ntracks', 'nmaxlength'], finaltrack_cell_maxdbz), \
-                'cloudnumber': (['ntracks', 'nmaxlength'], finaltrack_cloudnumber), \
-                'status': (['ntracks', 'nmaxlength'], finaltrack_status), \
-                'startstatus': (['ntracks'], finaltrack_startstatus), \
-                'endstatus': (['ntracks'], finaltrack_endstatus), \
-                'mergenumbers': (['ntracks', 'nmaxlength'], finaltrack_mergenumber), \
-                'splitnumbers': (['ntracks', 'nmaxlength'], finaltrack_splitnumber), \
-                'trackinterruptions': (['ntracks'], finaltrack_trackinterruptions), \
-                # 'boundary': (['ntracks'], finaltrack_boundary), \
-                # 'majoraxis': (['ntracks', 'nmaxlength'], finaltrack_corecold_majoraxis), \
-                # 'orientation': (['ntracks', 'nmaxlength'], finaltrack_corecold_orientation), \
-                # 'eccentricity': (['ntracks', 'nmaxlength'], finaltrack_corecold_eccentricity), \
-                # 'perimeter': (['ntracks', 'nmaxlength'], finaltrack_corecold_perimeter), \
-                # 'xcenter': (['ntracks', 'nmaxlength'], finaltrack_corecold_xcenter), \
-                # 'ycenter': (['ntracks', 'nmaxlength'], finaltrack_corecold_ycenter), \
-                # 'xcenter_weighted': (['ntracks', 'nmaxlength'], finaltrack_corecold_xweightedcenter), \
-                # 'ycenter_weighted': (['ntracks', 'nmaxlength'], finaltrack_corecold_yweightedcenter),\
+    varlist = {'lifetime': ([trackdimname], finaltrack_tracklength), \
+                'basetime': ([trackdimname, timedimname], finaltrack_basetime), \
+                'cloudidfiles': ([trackdimname, timedimname, 'nfilenamechars'], finaltrack_cloudidfile), \
+                # 'datetimestrings': ([trackdimname, timedimname, 'ndatetimechars'], finaltrack_datetimestring), \
+                'meanlat': ([trackdimname, timedimname], finaltrack_core_meanlat), \
+                'meanlon': ([trackdimname, timedimname], finaltrack_core_meanlon), \
+                'minlat': ([trackdimname, timedimname], finaltrack_cell_minlat), \
+                'minlon': ([trackdimname, timedimname], finaltrack_cell_minlon), \
+                'maxlat': ([trackdimname, timedimname], finaltrack_cell_maxlat), \
+                'maxlon': ([trackdimname, timedimname], finaltrack_cell_maxlon), \
+                'radius_core': ([trackdimname, timedimname], finaltrack_core_radius), \
+                'radius_cell': ([trackdimname, timedimname], finaltrack_cell_radius), \
+                'npix_core': ([trackdimname, timedimname], finaltrack_core_npix), \
+                'npix_cell': ([trackdimname, timedimname], finaltrack_cell_npix), \
+                'maxdbz': ([trackdimname, timedimname], finaltrack_cell_maxdbz), \
+                'cloudnumber': ([trackdimname, timedimname], finaltrack_cloudnumber), \
+                'status': ([trackdimname, timedimname], finaltrack_status), \
+                'startstatus': ([trackdimname], finaltrack_startstatus), \
+                'endstatus': ([trackdimname], finaltrack_endstatus), \
+                'mergenumbers': ([trackdimname, timedimname], finaltrack_mergenumber), \
+                'splitnumbers': ([trackdimname, timedimname], finaltrack_splitnumber), \
+                'trackinterruptions': ([trackdimname], finaltrack_trackinterruptions), \
+                # 'boundary': ([trackdimname], finaltrack_boundary), \
+                # 'majoraxis': ([trackdimname, timedimname], finaltrack_corecold_majoraxis), \
+                # 'orientation': ([trackdimname, timedimname], finaltrack_corecold_orientation), \
+                # 'eccentricity': ([trackdimname, timedimname], finaltrack_corecold_eccentricity), \
+                # 'perimeter': ([trackdimname, timedimname], finaltrack_corecold_perimeter), \
+                # 'xcenter': ([trackdimname, timedimname], finaltrack_corecold_xcenter), \
+                # 'ycenter': ([trackdimname, timedimname], finaltrack_corecold_ycenter), \
+                # 'xcenter_weighted': ([trackdimname, timedimname], finaltrack_corecold_xweightedcenter), \
+                # 'ycenter_weighted': ([trackdimname, timedimname], finaltrack_corecold_yweightedcenter),\
                 }
 
     # Define coordinate list
-    coordlist = {'ntracks': (['ntracks'], np.arange(0,numtracks)), \
-                    'nmaxlength': (['nmaxlength'], np.arange(0, maxtracklength)), \
+    coordlist = {trackdimname: ([trackdimname], np.arange(0,numtracks)), \
+                    timedimname: ([timedimname], np.arange(0, maxtracklength)), \
                     'nfilenamechars': (['nfilenamechars'], np.arange(0, numcharfilename)), \
                     # 'ndatetimechars': (['ndatetimechars'], np.arange(0, 13)),\
                 }
@@ -392,11 +393,11 @@ def write_trackstats_radar(trackstats_outfile, numtracks, maxtracklength, numcha
     output_data = xr.Dataset(varlist, coords=coordlist, attrs=gattrlist)
 
     # Specify variable attributes
-    output_data.ntracks.attrs['long_name'] = 'Total number of cloud tracks'
-    output_data.ntracks.attrs['units'] = 'unitless'
+    output_data[trackdimname].attrs['long_name'] = 'Total number of cloud tracks'
+    output_data[trackdimname].attrs['units'] = 'unitless'
 
-    output_data.nmaxlength.attrs['long_name'] = 'Maximum length of a cloud track'
-    output_data.nmaxlength.attrs['units'] = 'unitless'
+    output_data[timedimname].attrs['long_name'] = 'Maximum length of a cloud track'
+    output_data[timedimname].attrs['units'] = 'unitless'
 
     output_data.lifetime.attrs['long_name'] = 'duration of each track'
     output_data.lifetime.attrs['units'] = 'Temporal resolution of data'
@@ -527,8 +528,8 @@ def write_trackstats_radar(trackstats_outfile, numtracks, maxtracklength, numcha
     encodelist = {'lifetime': {'dtype': 'int', 'zlib':True, '_FillValue': fillval}, \
                 #     'basetime': {'zlib':True, 'units': basetime_units}, \
                     'basetime': {'zlib':True}, \
-                    'ntracks': {'dtype': 'int', 'zlib':True}, \
-                    'nmaxlength': {'dtype': 'int', 'zlib':True}, \
+                    trackdimname: {'dtype': 'int', 'zlib':True}, \
+                    timedimname: {'dtype': 'int', 'zlib':True}, \
                     'cloudidfiles': {'zlib':True}, \
                     # 'datetimestrings': {'zlib':True}, \
                     'meanlat': {'zlib':True, '_FillValue': np.nan}, \
@@ -561,4 +562,4 @@ def write_trackstats_radar(trackstats_outfile, numtracks, maxtracklength, numcha
                 }
 
     # Write netcdf file
-    output_data.to_netcdf(path=trackstats_outfile, mode='w', format='NETCDF4_CLASSIC', unlimited_dims='ntracks', encoding=encodelist)
+    output_data.to_netcdf(path=trackstats_outfile, mode='w', format='NETCDF4_CLASSIC', unlimited_dims=trackdimname, encoding=encodelist)

@@ -281,25 +281,29 @@ def mapcell_radar(cloudid_filename, filebasetime, stats_path, statistics_filebas
     print('Output celltracking file: ', celltrackmaps_outfile)
     # print('')
 
-    # Specify encoding list
-    encodelist = {'basetime': {'dtype':'float', 'zlib':True}, \
-                    'time': {'zlib':True}, \
-                    'lon': {'zlib':True, '_FillValue': np.nan}, \
-                    'lat': {'zlib':True, '_FillValue': np.nan}, \
-                    'longitude': {'zlib':True, '_FillValue': np.nan}, \
-                    'latitude': {'zlib':True, '_FillValue': np.nan}, \
-                    'nclouds': {'dtype': 'int64', 'zlib':True, '_FillValue': fillval}, \
-                    'comp_ref': {'zlib':True, '_FillValue': np.nan}, \
-                    'conv_core': {'zlib':True}, \
-                    'conv_mask': {'zlib':True}, \
-                    'tracknumber': {'zlib':True, 'dtype':'int32'}, \
-                    'tracknumber_cmask2': {'zlib':True, 'dtype':'int32'}, \
-                    'cloudstatus': {'zlib':True}, \
-                    'cloudnumber': {'dtype':'int32', 'zlib':True}, \
-                    # 'cloudnumber_noinflate': {'dtype':'int32', 'zlib':True}, \
-                    'mergecloudnumber': {'zlib':True,}, \
-                    'splitcloudnumber': {'zlib':True}, \
-                }
+    # Set encoding/compression for all variables
+    comp = dict(zlib=True)
+    encodelist = {var: comp for var in ds_out.data_vars}
+
+#    # Specify encoding list
+#    encodelist = {'basetime': {'dtype':'float', 'zlib':True}, \
+#                    'time': {'zlib':True}, \
+#                    'lon': {'zlib':True, '_FillValue': np.nan}, \
+#                    'lat': {'zlib':True, '_FillValue': np.nan}, \
+#                    'longitude': {'zlib':True, '_FillValue': np.nan}, \
+#                    'latitude': {'zlib':True, '_FillValue': np.nan}, \
+#                    'nclouds': {'dtype': 'int64', 'zlib':True, '_FillValue': fillval}, \
+#                    'comp_ref': {'zlib':True, '_FillValue': np.nan}, \
+#                    'conv_core': {'zlib':True}, \
+#                    'conv_mask': {'zlib':True}, \
+#                    'tracknumber': {'zlib':True, 'dtype':'int32'}, \
+#                    'tracknumber_cmask2': {'zlib':True, 'dtype':'int32'}, \
+#                    'cloudstatus': {'zlib':True}, \
+#                    'cloudnumber': {'dtype':'int32', 'zlib':True}, \
+#                    # 'cloudnumber_noinflate': {'dtype':'int32', 'zlib':True}, \
+#                    'mergecloudnumber': {'zlib':True,}, \
+#                    'splitcloudnumber': {'zlib':True}, \
+#                }
 
     # Write to netCDF file
     ds_out.to_netcdf(path=celltrackmaps_outfile, mode='w', format='NETCDF4_CLASSIC', unlimited_dims='time', encoding=encodelist)

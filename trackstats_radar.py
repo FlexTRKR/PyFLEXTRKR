@@ -290,7 +290,11 @@ def trackstats_radar(datasource, datadescription, pixel_radius, geolimits, areat
         os.remove(trackstats_outfile)
 
     import netcdf_io_trackstats as net
+    # Define output file dimension names
+    trackdimname='tracks'
+    timedimname='times'
     net.write_trackstats_radar(trackstats_outfile, numtracks, maxtracklength, numcharfilename, \
+                               trackdimname, timedimname, \
                                datasource, datadescription, startdate, enddate, \
                                track_version, tracknumbers_version, timegap, basetime_units, \
                                pixel_radius, areathresh, fillval, \
