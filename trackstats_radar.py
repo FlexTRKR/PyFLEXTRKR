@@ -1,7 +1,7 @@
 # Purpose: This gets statistics about each track from the radar data. 
 
 # Define function that calculates track statistics for satellite data
-def trackstats_radar(datasource, datadescription, pixel_radius, geolimits, areathresh, \
+def trackstats_radar(datasource, datadescription, pixel_radius, datatimeresolution, geolimits, areathresh, \
                     startdate, enddate, timegap, cloudid_filebase, tracking_inpath, stats_path, \
                     track_version, tracknumbers_version, tracknumbers_filebase, lengthrange=[2,120]):
 
@@ -16,6 +16,7 @@ def trackstats_radar(datasource, datadescription, pixel_radius, geolimits, areat
     import datetime
     import xarray as xr
     import pandas as pd
+    import netcdf_io_trackstats as net
     np.set_printoptions(threshold=np.inf)
 
     # Set output filename
@@ -44,11 +45,15 @@ def trackstats_radar(datasource, datadescription, pixel_radius, geolimits, areat
     latlondata = Dataset(tracking_inpath + tmpfname, 'r')
     longitude = latlondata.variables['longitude'][:]
     latitude = latlondata.variables['latitude'][:]
+    x_coord = latlondata['x'][:]/1000.  # convert unit to [km]
+    y_coord = latlondata['y'][:]/1000.  # convert unit to [km]
     latlondata.close()
 
     # Determine dimensions of data
     # nfiles = len(cloudidfiles_list)
     ny, nx = np.shape(latitude)
+
+    # xcoord2d, ycoord2d = np.meshgrid(x_coord, y_coord)
 
     ############################################################################
     # Initialize grids
@@ -62,16 +67,42 @@ def trackstats_radar(datasource, datadescription, pixel_radius, geolimits, areat
     finaltrack_tracklength = np.zeros(int(numtracks), dtype=np.int32)
     # finaltrack_cell_boundary = np.full(int(numtracks), fillval, dtype=np.int32)
     # finaltrack_basetime = np.empty((int(numtracks),int(maxtracklength)), dtype='datetime64[s]')
-    finaltrack_basetime = np.full((int(numtracks),int(maxtracklength)), fillval, dtype=np.int32)
+    finaltrack_basetime = np.full((int(numtracks),int(maxtracklength)), fillval, dtype=np.float)
     finaltrack_core_meanlat = np.full((int(numtracks),int(maxtracklength)), np.nan, dtype=np.float)
     finaltrack_core_meanlon = np.full((int(numtracks),int(maxtracklength)), np.nan, dtype=np.float)
+    finaltrack_core_mean_x = np.full((int(numtracks),int(maxtracklength)), np.nan, dtype=np.float)
+    finaltrack_core_mean_y = np.full((int(numtracks),int(maxtracklength)), np.nan, dtype=np.float)
+
+    finaltrack_cell_meanlat = np.full((int(numtracks),int(maxtracklength)), np.nan, dtype=np.float)
+    finaltrack_cell_meanlon = np.full((int(numtracks),int(maxtracklength)), np.nan, dtype=np.float)
+    finaltrack_cell_mean_x = np.full((int(numtracks),int(maxtracklength)), np.nan, dtype=np.float)
+    finaltrack_cell_mean_y = np.full((int(numtracks),int(maxtracklength)), np.nan, dtype=np.float)
+
     finaltrack_cell_minlat = np.full((int(numtracks),int(maxtracklength)), np.nan, dtype=np.float)
     finaltrack_cell_maxlat = np.full((int(numtracks),int(maxtracklength)), np.nan, dtype=np.float)
     finaltrack_cell_minlon = np.full((int(numtracks),int(maxtracklength)), np.nan, dtype=np.float)
     finaltrack_cell_maxlon = np.full((int(numtracks),int(maxtracklength)), np.nan, dtype=np.float)
+    finaltrack_cell_min_y = np.full((int(numtracks),int(maxtracklength)), np.nan, dtype=np.float)
+    finaltrack_cell_max_y = np.full((int(numtracks),int(maxtracklength)), np.nan, dtype=np.float)
+    finaltrack_cell_min_x = np.full((int(numtracks),int(maxtracklength)), np.nan, dtype=np.float)
+    finaltrack_cell_max_x = np.full((int(numtracks),int(maxtracklength)), np.nan, dtype=np.float)
+    
+    finaltrack_dilatecell_meanlat = np.full((int(numtracks),int(maxtracklength)), np.nan, dtype=np.float)
+    finaltrack_dilatecell_meanlon = np.full((int(numtracks),int(maxtracklength)), np.nan, dtype=np.float)
+    finaltrack_dilatecell_mean_x = np.full((int(numtracks),int(maxtracklength)), np.nan, dtype=np.float)
+    finaltrack_dilatecell_mean_y = np.full((int(numtracks),int(maxtracklength)), np.nan, dtype=np.float)
+
     finaltrack_cell_maxdbz = np.full((int(numtracks),int(maxtracklength)), np.nan, dtype=float)
-    finaltrack_core_npix = np.full((int(numtracks),int(maxtracklength)), fillval, dtype=np.int32)
-    finaltrack_cell_npix = np.full((int(numtracks),int(maxtracklength)), fillval, dtype=np.int32)
+
+    finaltrack_cell_maxETH10dbz = np.full((int(numtracks),int(maxtracklength)), np.nan, dtype=np.float)
+    finaltrack_cell_maxETH20dbz = np.full((int(numtracks),int(maxtracklength)), np.nan, dtype=np.float)
+    finaltrack_cell_maxETH30dbz = np.full((int(numtracks),int(maxtracklength)), np.nan, dtype=np.float)
+    finaltrack_cell_maxETH40dbz = np.full((int(numtracks),int(maxtracklength)), np.nan, dtype=np.float)
+    finaltrack_cell_maxETH50dbz = np.full((int(numtracks),int(maxtracklength)), np.nan, dtype=np.float)
+
+    finaltrack_core_area = np.full((int(numtracks),int(maxtracklength)), np.nan, dtype=float)
+    finaltrack_cell_area = np.full((int(numtracks),int(maxtracklength)), np.nan, dtype=float)
+    
     finaltrack_status = np.full((int(numtracks),int(maxtracklength)), fillval, dtype=np.int32)
     finaltrack_trackinterruptions = np.full(int(numtracks), fillval, dtype=np.int32)
     finaltrack_mergenumber = np.full((int(numtracks),int(maxtracklength)), fillval, dtype=np.int32)
@@ -106,14 +137,19 @@ def trackstats_radar(datasource, datadescription, pixel_radius, geolimits, areat
 
             file_cloudiddata = Dataset(cloudid_file, 'r')
             file_dbz = file_cloudiddata['comp_ref'][:]
-            # file_cloudtype = file_cloudiddata['cloudtype'][:]
             file_all_cloudnumber = file_cloudiddata['cloudnumber'][:]
             file_corecold_cloudnumber = file_cloudiddata['convcold_cloudnumber'][:]
             conv_core = file_cloudiddata['conv_core'][:]
             conv_mask = file_cloudiddata['conv_mask'][:]
+            echotop10 = file_cloudiddata['echotop10'][:] / 1000.    # convert unit to [km]
+            echotop20 = file_cloudiddata['echotop20'][:] / 1000.    # convert unit to [km]
+            echotop30 = file_cloudiddata['echotop30'][:] / 1000.    # convert unit to [km]
+            echotop40 = file_cloudiddata['echotop40'][:] / 1000.    # convert unit to [km]
+            echotop50 = file_cloudiddata['echotop50'][:] / 1000.    # convert unit to [km]
             file_basetime = file_cloudiddata['basetime'][:]
             basetime_units = file_cloudiddata['basetime'].units
             # basetime_calendar = file_cloudiddata['basetime'].calendar
+
             file_cloudiddata.close()
 
             file_datetimestring = cloudid_file[len(tracking_inpath) + len(cloudid_filebase):-3]
@@ -139,13 +175,17 @@ def trackstats_radar(datasource, datadescription, pixel_radius, geolimits, areat
                 # In mergers and split, the associated clouds should be listed in 
                 # the file_splittracknumbers and file_mergetracknumbers
                 if len(cloudnumber) == 1: 
-                    # Find cloud in cloudid file associated with this track, and convective core (conv_core == 1)
+                    # Find core in cloudid file associated with this track, and is a convective core (conv_core == 1)
                     corearea = np.array(np.where((file_corecold_cloudnumber[0,:,:] == cloudnumber) & (conv_core[0,:,:] == 1)))
                     ncorepix = np.shape(corearea)[1]
 
                     # Convective cell (conv_mask >= 1). conv_mask is sorted and numbered.
                     cellarea = np.array(np.where((file_corecold_cloudnumber[0,:,:] == cloudnumber) & (conv_mask[0,:,:] >= 1)))
                     ncellpix = np.shape(cellarea)[1]
+
+                    # Dilated convective cell
+                    dilatecellarea = np.array(np.where(file_corecold_cloudnumber[0,:,:] == cloudnumber))
+                    ndilatecellpix = np.shape(dilatecellarea)[1]
 
                     # Record previous length of the track (initially all track lengths start at 0)
                     nc = finaltrack_tracklength[itrack-1]
@@ -162,29 +202,65 @@ def trackstats_radar(datasource, datadescription, pixel_radius, geolimits, areat
                         ###############################################################
                         # Calculate statistics for this cell
                         if (ncellpix > 0):
-                            # Location statistics of core+cold anvil (aka the convective system)
+                            # Location of core
                             corelat = latitude[corearea[0], corearea[1]]
                             corelon = longitude[corearea[0], corearea[1]]
+                            core_y = y_coord[corearea[0]]
+                            core_x = x_coord[corearea[1]]
 
+                            # Location of convective cell
                             celllat = latitude[cellarea[0], cellarea[1]]
                             celllon = longitude[cellarea[0], cellarea[1]]
+                            cell_y = y_coord[cellarea[0]]
+                            cell_x = x_coord[cellarea[1]]
 
-                            # Core lat/lon (center location)
+                            # Location of dilated convective cell
+                            dilatecelllat = latitude[dilatecellarea[0], dilatecellarea[1]]
+                            dilatecelllon = longitude[dilatecellarea[0], dilatecellarea[1]]
+                            dilatecell_y = y_coord[dilatecellarea[0]]
+                            dilatecell_x = x_coord[dilatecellarea[1]]
+
+                            # Core center location
                             finaltrack_core_meanlat[itrack-1, nc] = np.nanmean(corelat)
                             finaltrack_core_meanlon[itrack-1, nc] = np.nanmean(corelon)
+                            finaltrack_core_mean_y[itrack-1, nc] = np.nanmean(core_y)
+                            finaltrack_core_mean_x[itrack-1, nc] = np.nanmean(core_x)
 
-                            # Cell min/max lat/lon (for its maximum spatial extent)
+                            # Cell center location
+                            finaltrack_cell_meanlat[itrack-1, nc] = np.nanmean(celllat)
+                            finaltrack_cell_meanlon[itrack-1, nc] = np.nanmean(celllon)
+                            finaltrack_cell_mean_y[itrack-1, nc] = np.nanmean(cell_y)
+                            finaltrack_cell_mean_x[itrack-1, nc] = np.nanmean(cell_x)
+
+                            # Dilated cell center location
+                            finaltrack_dilatecell_meanlat[itrack-1, nc] = np.nanmean(dilatecelllat)
+                            finaltrack_dilatecell_meanlon[itrack-1, nc] = np.nanmean(dilatecelllon)
+                            finaltrack_dilatecell_mean_y[itrack-1, nc] = np.nanmean(dilatecell_y)
+                            finaltrack_dilatecell_mean_x[itrack-1, nc] = np.nanmean(dilatecell_x)
+                            
+                            # Cell min/max location (for its maximum spatial extent)
                             finaltrack_cell_minlat[itrack-1, nc] = np.nanmin(celllat)
                             finaltrack_cell_maxlat[itrack-1, nc] = np.nanmax(celllat)
                             finaltrack_cell_minlon[itrack-1, nc] = np.nanmin(celllon)
                             finaltrack_cell_maxlon[itrack-1, nc] = np.nanmax(celllon)
+                            finaltrack_cell_min_y[itrack-1, nc] = np.nanmin(cell_y)
+                            finaltrack_cell_max_y[itrack-1, nc] = np.nanmax(cell_y)
+                            finaltrack_cell_min_x[itrack-1, nc] = np.nanmin(cell_x)
+                            finaltrack_cell_max_x[itrack-1, nc] = np.nanmax(cell_x)
 
-                            # Save number of pixels (metric for size)
-                            finaltrack_core_npix[itrack-1, nc] = ncorepix
-                            finaltrack_cell_npix[itrack-1, nc] = ncellpix
+                            # Area of the cell
+                            finaltrack_core_area[itrack-1, nc] = ncorepix * pixel_radius**2
+                            finaltrack_cell_area[itrack-1, nc] = ncellpix * pixel_radius**2
 
                             # Reflectivity maximum
                             finaltrack_cell_maxdbz[itrack-1, nc] = np.nanmean(file_dbz[0,cellarea[0],cellarea[1]])
+
+                            # Echo-top heights
+                            finaltrack_cell_maxETH10dbz[itrack-1, nc] = np.nanmax(echotop10[0,cellarea[0],cellarea[1]])
+                            finaltrack_cell_maxETH20dbz[itrack-1, nc] = np.nanmax(echotop20[0,cellarea[0],cellarea[1]])
+                            finaltrack_cell_maxETH30dbz[itrack-1, nc] = np.nanmax(echotop30[0,cellarea[0],cellarea[1]])
+                            finaltrack_cell_maxETH40dbz[itrack-1, nc] = np.nanmax(echotop40[0,cellarea[0],cellarea[1]])
+                            finaltrack_cell_maxETH50dbz[itrack-1, nc] = np.nanmax(echotop50[0,cellarea[0],cellarea[1]])
 
                             # Save track information. Need to subtract one since cloudnumber gives the number of the cloud (which starts at one), but we are looking for its index (which starts at zero)
                             finaltrack_status[itrack-1, nc] = np.copy(trackstatus[0, nf, cloudindex])
@@ -214,13 +290,37 @@ def trackstats_radar(datasource, datadescription, pixel_radius, geolimits, areat
     finaltrack_basetime = finaltrack_basetime[cloudindexpresent, :]
     finaltrack_core_meanlat = finaltrack_core_meanlat[cloudindexpresent, :]
     finaltrack_core_meanlon = finaltrack_core_meanlon[cloudindexpresent, :]
+    finaltrack_core_mean_y = finaltrack_core_mean_y[cloudindexpresent, :]
+    finaltrack_core_mean_x = finaltrack_core_mean_x[cloudindexpresent, :]
+
+    finaltrack_cell_meanlat = finaltrack_cell_meanlat[cloudindexpresent, :]
+    finaltrack_cell_meanlon = finaltrack_cell_meanlon[cloudindexpresent, :]
+    finaltrack_cell_mean_y = finaltrack_cell_mean_y[cloudindexpresent, :]
+    finaltrack_cell_mean_x = finaltrack_cell_mean_x[cloudindexpresent, :]
+
+    finaltrack_dilatecell_meanlat = finaltrack_dilatecell_meanlat[cloudindexpresent, :]
+    finaltrack_dilatecell_meanlon = finaltrack_dilatecell_meanlon[cloudindexpresent, :]
+    finaltrack_dilatecell_mean_y = finaltrack_dilatecell_mean_y[cloudindexpresent, :]
+    finaltrack_dilatecell_mean_x = finaltrack_dilatecell_mean_x[cloudindexpresent, :]
+
     finaltrack_cell_minlat = finaltrack_cell_minlat[cloudindexpresent, :]
     finaltrack_cell_maxlat = finaltrack_cell_maxlat[cloudindexpresent, :]
     finaltrack_cell_minlon = finaltrack_cell_minlon[cloudindexpresent, :]
     finaltrack_cell_maxlon = finaltrack_cell_maxlon[cloudindexpresent, :]
+    finaltrack_cell_min_y = finaltrack_cell_min_y[cloudindexpresent, :]
+    finaltrack_cell_max_y = finaltrack_cell_max_y[cloudindexpresent, :]
+    finaltrack_cell_min_x = finaltrack_cell_min_x[cloudindexpresent, :]
+    finaltrack_cell_max_x = finaltrack_cell_max_x[cloudindexpresent, :]
+
     finaltrack_cell_maxdbz = finaltrack_cell_maxdbz[cloudindexpresent, :]
-    finaltrack_core_npix = finaltrack_core_npix[cloudindexpresent, :]
-    finaltrack_cell_npix = finaltrack_cell_npix[cloudindexpresent, :]
+    finaltrack_cell_maxETH10dbz = finaltrack_cell_maxETH10dbz[cloudindexpresent, :]
+    finaltrack_cell_maxETH20dbz = finaltrack_cell_maxETH20dbz[cloudindexpresent, :]
+    finaltrack_cell_maxETH30dbz = finaltrack_cell_maxETH30dbz[cloudindexpresent, :]
+    finaltrack_cell_maxETH40dbz = finaltrack_cell_maxETH40dbz[cloudindexpresent, :]
+    finaltrack_cell_maxETH50dbz = finaltrack_cell_maxETH50dbz[cloudindexpresent, :]
+
+    finaltrack_core_area = finaltrack_core_area[cloudindexpresent, :]
+    finaltrack_cell_area = finaltrack_cell_area[cloudindexpresent, :]
     finaltrack_status = finaltrack_status[cloudindexpresent, :]
     finaltrack_trackinterruptions = finaltrack_trackinterruptions[cloudindexpresent]
     finaltrack_mergenumber = finaltrack_mergenumber[cloudindexpresent, :]
@@ -229,10 +329,12 @@ def trackstats_radar(datasource, datadescription, pixel_radius, geolimits, areat
     finaltrack_cloudidfile = finaltrack_cloudidfile[cloudindexpresent, :, :]
 
     # Calculate equivalent radius
-    finaltrack_core_radius = np.sqrt(np.divide(finaltrack_core_npix * pixel_radius**2, pi))
-    finaltrack_cell_radius = np.sqrt(np.divide(finaltrack_cell_npix * pixel_radius**2, pi))
+    finaltrack_core_radius = np.sqrt(np.divide(finaltrack_core_area, pi))
+    finaltrack_cell_radius = np.sqrt(np.divide(finaltrack_cell_area, pi))
 
     gc.collect()
+
+    # import pdb; pdb.set_trace()
 
     ########################################################
     # # Correct merger and split cloud numbers
@@ -289,7 +391,7 @@ def trackstats_radar(datasource, datadescription, pixel_radius, geolimits, areat
     if os.path.isfile(trackstats_outfile):
         os.remove(trackstats_outfile)
 
-    import netcdf_io_trackstats as net
+    
     # Define output file dimension names
     trackdimname='tracks'
     timedimname='times'
@@ -297,16 +399,25 @@ def trackstats_radar(datasource, datadescription, pixel_radius, geolimits, areat
                                trackdimname, timedimname, \
                                datasource, datadescription, startdate, enddate, \
                                track_version, tracknumbers_version, timegap, basetime_units, \
-                               pixel_radius, areathresh, fillval, \
+                               pixel_radius, areathresh, datatimeresolution, fillval, \
                                finaltrack_tracklength, finaltrack_basetime, \
                                finaltrack_cloudidfile, finaltrack_cloudnumber, \
                                finaltrack_core_meanlat, finaltrack_core_meanlon, \
+                               finaltrack_core_mean_y, finaltrack_core_mean_x, \
+                               finaltrack_cell_meanlat, finaltrack_cell_meanlon, \
+                               finaltrack_cell_mean_y, finaltrack_cell_mean_x, \
                                finaltrack_cell_minlat, finaltrack_cell_maxlat, \
                                finaltrack_cell_minlon, finaltrack_cell_maxlon, \
-                               finaltrack_core_npix, finaltrack_cell_npix, \
+                               finaltrack_cell_min_y, finaltrack_cell_max_y, \
+                               finaltrack_cell_min_x, finaltrack_cell_max_x, \
+                               finaltrack_dilatecell_meanlat, finaltrack_dilatecell_meanlon, \
+                               finaltrack_dilatecell_mean_y, finaltrack_dilatecell_mean_x, \
+                               finaltrack_core_area, finaltrack_cell_area, \
                                finaltrack_core_radius, finaltrack_cell_radius, \
-                               finaltrack_cell_maxdbz, finaltrack_status, \
-                               finaltrack_startstatus, finaltrack_endstatus, \
+                               finaltrack_cell_maxdbz, \
+                               finaltrack_cell_maxETH10dbz, finaltrack_cell_maxETH20dbz, finaltrack_cell_maxETH30dbz, \
+                               finaltrack_cell_maxETH40dbz, finaltrack_cell_maxETH50dbz, \
+                               finaltrack_status, finaltrack_startstatus, finaltrack_endstatus, \
                                finaltrack_trackinterruptions, \
                                finaltrack_mergenumber, finaltrack_splitnumber, \
                             #    adjusted_finaltrack_mergenumber, adjusted_finaltrack_splitnumber, \
