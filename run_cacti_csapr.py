@@ -2,11 +2,14 @@ import numpy as np
 import os, fnmatch, sys, glob
 import time, datetime, calendar, pytz
 from pytz import timezone, utc
-from multiprocessing import Pool
-from itertools import repeat
-from netCDF4 import Dataset
 import xarray as xr
 import json
+from multiprocessing import Pool
+from itertools import repeat
+from idcells_radar import idcell_csapr
+from tracksingle_drift import trackclouds
+from gettracks import gettracknumbers
+from mapcell_radar import mapcell_radar
 
 # Name: run_cacti_csapr.py
 
@@ -85,7 +88,7 @@ merge_duration = 30/float(60)                          # Track shorter than this
 split_duration = 30/float(60)                         # Track shorter than this will be labeled as merger
 
 # Specify filenames and locations
-datasource = 'CSAPR'
+datasource = 'CSAPR2'
 datadescription = 'COR'
 # databasename = 'CSAPR2_Taranis_Gridded_1000m.Conv_Mask.'
 databasename = 'csa_csapr2_'
@@ -174,9 +177,7 @@ if run_idclouds == 1:
     files_basetime = files_basetime[:filestep]
     
     ##########################################################################
-    # Process files
-    # Load function
-    from idcells_radar import idcell_csapr
+    # Process files    
 
     # Generate input lists
     idclouds_input = zip(rawdatafiles, files_datestring, files_timestring, files_basetime, \
@@ -255,8 +256,6 @@ if run_tracksingle == 1:
     
     ################################################################
     # Process files
-    # Load function
-    from tracksingle_drift import trackclouds
 
     # Create draft variables that match number of reference cloudid files
     # Number of reference cloudid files (1 less than total cloudid files)
@@ -281,37 +280,6 @@ if run_tracksingle == 1:
 
         # Convert dateime64 objects to string array
         datetime_drift = bt_drift.dt.strftime("%Y%m%d_%H%M").values
-
-#        # Read the drift file
-#        drift_data = np.loadtxt(driftfile, usecols=(0, 1, 2, 3), dtype=str, delimiter=' ')
-#        datestr = drift_data[:,0]
-#        timestr = drift_data[:,1]
-#        xdrifts_str = drift_data[:,2]
-#        ydrifts_str = drift_data[:,3]
-#
-#        nt_drift = len(datestr)
-#        bt_drift = np.full(nt_drift, -999, dtype=float)
-#        xdrifts = np.full(nt_drift, -999, dtype=int)
-#        ydrifts = np.full(nt_drift, -999, dtype=int)
-#        datetime_drift = []
-#
-#        # Loop over each time/line
-#        for itime in range(0, nt_drift):
-#            iyear = datestr[itime].split('-')[0]
-#            imonth = datestr[itime].split('-')[1]
-#            iday = datestr[itime].split('-')[2]
-#            ihour = timestr[itime].split('+')[0].split(':')[0]
-#            iminute = timestr[itime].split('+')[0].split(':')[1]
-#            isecond = timestr[itime].split('+')[0].split(':')[2]
-#            datetime_drift.append(f'{iyear}{imonth}{iday}_{ihour}{iminute}')
-#            # Calculate basetime
-#            bt_drift[itime] = calendar.timegm(datetime.datetime(int(iyear), int(imonth), int(iday), int(ihour), int(iminute), int(isecond), tzinfo=pytz.UTC).timetuple())
-#            # Convert string to int
-#            xdrifts[itime] = int(float(xdrifts_str[itime][:-1]))  # Remove the , after the number
-#            ydrifts[itime] = int(float(ydrifts_str[itime][:]))
-#
-#        # Convert list to array    
-#        datetime_drift = np.array(datetime_drift)
 
         # Loop over each cloudid file time to find matching drfit data
         for itime in range(0, len(cloudidfiles_timestring)-1):
@@ -369,8 +337,6 @@ if run_tracksingle == 0:
 
 # Call function
 if run_gettracks == 1:
-    # Load function
-    from gettracks import gettracknumbers
 
     # Call function
     print('Getting track numbers')
@@ -390,14 +356,27 @@ if run_gettracks == 0:
 
 # Call function
 if run_finalstats == 1:
-    # Load function
-    from trackstats_radar import trackstats_radar
-
-    # Call satellite version of function
     print('Calculating cell statistics')
-    trackstats_radar(datasource, datadescription, pixel_radius, geolimits, area_thresh, \
-                    startdate, enddate, timegap, cloudid_filebase, tracking_outpath, stats_outpath, \
-                    track_version, tracknumber_version, tracknumbers_filebase, lengthrange=lengthrange)
+
+    # 
+    if run_parallel == 0:
+        from trackstats_radar import trackstats_radar
+        # Call serial version of trackstats
+        trackstats_radar(datasource, datadescription, pixel_radius, datatimeresolution, geolimits, area_thresh, \
+                        startdate, enddate, timegap, cloudid_filebase, tracking_outpath, stats_outpath, \
+                        track_version, tracknumber_version, tracknumbers_filebase, lengthrange=lengthrange)
+
+    elif run_parallel == 1:
+        from trackstats_radar_parallel import trackstats_radar
+        # Call parallel version of trackstats
+        trackstats_radar(datasource, datadescription, pixel_radius, datatimeresolution, geolimits, area_thresh, \
+                        startdate, enddate, timegap, cloudid_filebase, tracking_outpath, stats_outpath, \
+                        track_version, tracknumber_version, tracknumbers_filebase, lengthrange, \
+                        nprocesses=nprocesses)
+                        
+    else:
+        sys.ext('Valid parallelization flag not provided')
+
     trackstats_filebase = 'stats_tracknumbers' + tracknumber_version + '_'
 
 ##############################################################
@@ -467,9 +446,6 @@ if run_labelcell == 1:
         
     #############################################################
     # Process files
-
-    # Load function 
-    from mapcell_radar import mapcell_radar
 
     # Generate input list
     # list_cellstat_filebase = [cellstats_filebase]*(cloudidfilestep-1)
