@@ -49,6 +49,8 @@ def idcell_csapr(input_filename, file_datestring, file_timestring, file_basetime
     
     # Read input data
     rawdata = Dataset(input_filename, 'r')
+    out_x = rawdata['x'][:]
+    out_y = rawdata['y'][:]
     out_lat = rawdata['latitude'][:]
     out_lon = rawdata['longitude'][:]
     # original_time = rawdata['time'][:]
@@ -61,6 +63,13 @@ def idcell_csapr(input_filename, file_datestring, file_timestring, file_basetime
     conv_mask_inflated = rawdata['conv_mask_inflated'][:].squeeze()
     conv_core = rawdata['conv_core'][:].squeeze()
     conv_mask = rawdata['conv_mask'][:].squeeze()
+    echotop10 = rawdata['echotop10'][:].squeeze()
+    echotop20 = rawdata['echotop20'][:].squeeze()
+    echotop30 = rawdata['echotop30'][:].squeeze()
+    echotop40 = rawdata['echotop40'][:].squeeze()
+    echotop50 = rawdata['echotop50'][:].squeeze()
+    dx = rawdata.getncattr('dx')
+    dy = rawdata.getncattr('dy')
     rawdata.close()
 
     # Replace very small reflectivity values with nan
@@ -76,7 +85,6 @@ def idcell_csapr(input_filename, file_datestring, file_timestring, file_basetime
     # nclouds = np.nanmax(conv_mask_sorted)
 
     nclouds = np.nanmax(conv_mask_inflated)
-    # import pdb; pdb.set_trace()
 
     # # Multiply the inflated cell number with conv_mask2 to get the actual cell size without inflation
     # conv_mask_noinflate = (conv_mask_inflated * conv_mask2).astype(int)
@@ -113,6 +121,8 @@ def idcell_csapr(input_filename, file_datestring, file_timestring, file_basetime
     varlist = {'basetime': (['time'], out_basetime), \
                     # 'filedate': (['time', 'ndatechar'], np.array([stringtochar(np.array(file_datestring))])), \
                     # 'filetime': (['time', 'ntimechar'], np.array([stringtochar(np.array(file_timestring))])), \
+                    'x': (['lon'], out_x), \
+                    'y': (['lat'], out_y), \
                     'latitude': (['lat', 'lon'], out_lat), \
                     'longitude': (['lat', 'lon'], out_lon), \
                     'comp_ref': (['time', 'lat', 'lon'], np.expand_dims(comp_ref, axis=0)), \
@@ -120,7 +130,11 @@ def idcell_csapr(input_filename, file_datestring, file_timestring, file_basetime
                     'conv_mask': (['time', 'lat', 'lon'], np.expand_dims(conv_mask, axis=0)), \
                     'convcold_cloudnumber': (['time', 'lat', 'lon'], np.expand_dims(conv_mask_inflated, axis=0)), \
                     'cloudnumber': (['time', 'lat', 'lon'], np.expand_dims(conv_mask_inflated, axis=0)), \
-                    # 'cloudnumber_noinflate': (['time', 'lat', 'lon'], np.expand_dims(conv_mask, axis=0)), \
+                    'echotop10': (['time', 'lat', 'lon'], np.expand_dims(echotop10, axis=0)), \
+                    'echotop20': (['time', 'lat', 'lon'], np.expand_dims(echotop20, axis=0)), \
+                    'echotop30': (['time', 'lat', 'lon'], np.expand_dims(echotop30, axis=0)), \
+                    'echotop40': (['time', 'lat', 'lon'], np.expand_dims(echotop40, axis=0)), \
+                    'echotop50': (['time', 'lat', 'lon'], np.expand_dims(echotop50, axis=0)), \
                     'nclouds': (['time'], out_nclouds), \
                     # 'nclouds': (out_nclouds), \
                     # 'ncorecoldpix': (['time', 'nclouds'], np.expand_dims(conv_npix, axis=0)), \
@@ -141,21 +155,29 @@ def idcell_csapr(input_filename, file_datestring, file_timestring, file_basetime
                     file_datestring[0:4] + '/' + file_datestring[4:6] + '/' + file_datestring[6:8] + ' ' + \
                     file_timestring[0:2] + ':' + file_timestring[2:4] + ' UTC', \
                     'institution': 'Pacific Northwest National Laboratory', \
-                    'convections': 'CF-1.6', \
+                    # 'conventions': 'CF-1.6', \
                     'contact': 'Zhe Feng, zhe.feng@pnnl.gov', \
                     'created_on': time.ctime(time.time()), \
+                    'dx': dx, \
+                    'dy': dy, \
                     'cloudid_cloud_version': cloudid_version, \
                     'minimum_cloud_area': area_thresh}
     
     # Define xarray dataset
     ds_out = xr.Dataset(varlist, coords=coordlist, attrs=gattrlist)
-    # import pdb; pdb.set_trace()
+
     # Specify variable attributes
     ds_out.time.attrs['long_name'] = 'Base time in Epoch'
     ds_out.time.attrs['units'] = 'Seconds since 1970-1-1 0:00:00 0:00'
 
     ds_out.basetime.attrs['long_name'] = 'Base time in Epoch'
     ds_out.basetime.attrs['units'] = 'Seconds since 1970-1-1 0:00:00 0:00'
+
+    ds_out.x.attrs['long_name'] = 'X distance on the projection plane from the origin'
+    ds_out.x.attrs['units'] = 'm'
+
+    ds_out.y.attrs['long_name'] = 'Y distance on the projection plane from the origin'
+    ds_out.y.attrs['units'] = 'm'
 
     ds_out.lat.attrs['long_name'] = 'Vector of latitudes, y-coordinate in Cartesian system'
     ds_out.lat.attrs['standard_name'] = 'latitude'
@@ -197,9 +219,21 @@ def idcell_csapr(input_filename, file_datestring, file_timestring, file_basetime
     ds_out.cloudnumber.attrs['units'] = 'unitless'
     ds_out.cloudnumber.attrs['_FillValue'] = 0
     
-    # ds_out.cloudnumber_noinflate.attrs['long_name'] = 'Grid with each classified cell given a number without inflation'
-    # ds_out.cloudnumber_noinflate.attrs['units'] = 'unitless'
-    # ds_out.cloudnumber_noinflate.attrs['_FillValue'] = 0
+    ds_out.echotop10.attrs['long_name'] = '10dBZ echo-top height'
+    ds_out.echotop10.attrs['units'] = 'm'
+    
+    ds_out.echotop20.attrs['long_name'] = '20dBZ echo-top height'
+    ds_out.echotop20.attrs['units'] = 'm'
+    
+    ds_out.echotop30.attrs['long_name'] = '30dBZ echo-top height'
+    ds_out.echotop30.attrs['units'] = 'm'
+    
+    ds_out.echotop40.attrs['long_name'] = '40dBZ echo-top height'
+    ds_out.echotop40.attrs['units'] = 'm'
+    
+    ds_out.echotop50.attrs['long_name'] = '50dBZ echo-top height'
+    ds_out.echotop50.attrs['units'] = 'm'
+    
 
     # Specify encoding list
     encodelist = { \
@@ -207,6 +241,8 @@ def idcell_csapr(input_filename, file_datestring, file_timestring, file_basetime
                     # 'basetime': {'dtype':'float', 'zlib':True, 'units': 'seconds since 1970-01-01'}, \
                     'time': {'zlib':True}, \
                     'basetime': {'zlib':True, 'dtype':'float'}, \
+                    'x': {'zlib':True}, \
+                    'y': {'zlib':True}, \
                     'lon': {'zlib':True}, \
                     'lon': {'zlib':True}, \
                     # 'nclouds': {'zlib':True}, \
@@ -219,7 +255,11 @@ def idcell_csapr(input_filename, file_datestring, file_timestring, file_basetime
                     'conv_mask': {'zlib':True}, \
                     'convcold_cloudnumber': {'zlib':True, 'dtype':'int', }, \
                     'cloudnumber': {'zlib':True, 'dtype':'int'}, \
-                    # 'cloudnumber_noinflate': {'zlib':True, 'dtype':'int'}, \
+                    'echotop10': {'zlib':True}, \
+                    'echotop20': {'zlib':True}, \
+                    'echotop30': {'zlib':True}, \
+                    'echotop40': {'zlib':True}, \
+                    'echotop50': {'zlib':True}, \
                     'nclouds': {'dtype':'int', 'zlib':True},  \
                     'ncorecoldpix': {'dtype':'int', 'zlib':True}, \
                     }
