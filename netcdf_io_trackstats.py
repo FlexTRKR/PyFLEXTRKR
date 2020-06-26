@@ -333,6 +333,11 @@ def write_trackstats_radar(trackstats_outfile, numtracks, maxtracklength, numcha
                             finaltrack_cell_maxETH10dbz, finaltrack_cell_maxETH20dbz, finaltrack_cell_maxETH30dbz, \
                             finaltrack_cell_maxETH40dbz, finaltrack_cell_maxETH50dbz, \
                             finaltrack_status, finaltrack_startstatus, finaltrack_endstatus, \
+                            # finaltrack_endmergenumber, finaltrack_endcloudnumber, \
+                            # finaltrack_startsplitnumber, finaltrack_startcloudnumber, \
+                            finaltrack_startbasetime, finaltrack_endbasetime, \
+                            finaltrack_startsplit_tracknumber, finaltrack_startsplit_timeindex, finaltrack_startsplit_cloudnumber, \
+                            finaltrack_endmerge_tracknumber, finaltrack_endmerge_timeindex, finaltrack_endmerge_cloudnumber, \
                             finaltrack_trackinterruptions, \
                             finaltrack_mergenumber, finaltrack_splitnumber, \
                             
@@ -394,10 +399,21 @@ def write_trackstats_radar(trackstats_outfile, numtracks, maxtracklength, numcha
 
                 'cloudnumber': ([trackdimname, timedimname], finaltrack_cloudnumber), \
                 'status': ([trackdimname, timedimname], finaltrack_status), \
-                'startstatus': ([trackdimname], finaltrack_startstatus), \
-                'endstatus': ([trackdimname], finaltrack_endstatus), \
-                'mergenumbers': ([trackdimname, timedimname], finaltrack_mergenumber), \
-                'splitnumbers': ([trackdimname, timedimname], finaltrack_splitnumber), \
+                'start_status': ([trackdimname], finaltrack_startstatus), \
+                'end_status': ([trackdimname], finaltrack_endstatus), \
+
+                'start_basetime': ([trackdimname], finaltrack_startbasetime), \
+                'end_basetime': ([trackdimname], finaltrack_endbasetime), \
+
+                'start_split_tracknumber': ([trackdimname], finaltrack_startsplit_tracknumber), \
+                'start_split_timeindex': ([trackdimname], finaltrack_startsplit_timeindex), \
+                'start_split_cloudnumber': ([trackdimname], finaltrack_startsplit_cloudnumber), \
+                'end_merge_tracknumber': ([trackdimname], finaltrack_endmerge_tracknumber), \
+                'end_merge_timeindex': ([trackdimname], finaltrack_endmerge_timeindex), \
+                'end_merge_cloudnumber': ([trackdimname], finaltrack_endmerge_cloudnumber), \
+                
+                'merge_tracknumbers': ([trackdimname, timedimname], finaltrack_mergenumber), \
+                'split_tracknumbers': ([trackdimname, timedimname], finaltrack_splitnumber), \
                 'trackinterruptions': ([trackdimname], finaltrack_trackinterruptions), \
                 # 'boundary': ([trackdimname], finaltrack_boundary), \
                 # 'majoraxis': ([trackdimname, timedimname], finaltrack_corecold_majoraxis), \
@@ -557,33 +573,67 @@ def write_trackstats_radar(trackstats_outfile, numtracks, maxtracklength, numcha
     output_data.status.attrs['valid_min'] = 0
     output_data.status.attrs['valid_max'] = 65
 
-    output_data.startstatus.attrs['long_name'] = 'Flag indicating how the first cloud in a track starts'
-    output_data.startstatus.attrs['units'] = 'unitless'
-    output_data.startstatus.attrs['valid_min'] = 0
-    output_data.startstatus.attrs['valid_max'] = 65
+    output_data.start_status.attrs['long_name'] = 'Flag indicating how the first cloud in a track starts'
+    output_data.start_status.attrs['units'] = 'unitless'
+    output_data.start_status.attrs['valid_min'] = 0
+    output_data.start_status.attrs['valid_max'] = 65
 
-    output_data.endstatus.attrs['long_name'] = 'Flag indicating how the last cloud in a track ends'
-    output_data.endstatus.attrs['units'] = 'unitless'
-    output_data.endstatus.attrs['valid_min'] = 0
-    output_data.endstatus.attrs['valid_max'] = 65
+    output_data.end_status.attrs['long_name'] = 'Flag indicating how the last cloud in a track ends'
+    output_data.end_status.attrs['units'] = 'unitless'
+    output_data.end_status.attrs['valid_min'] = 0
+    output_data.end_status.attrs['valid_max'] = 65
+
+    output_data.start_basetime.attrs['long_name'] = 'Start Epoch time of each track'
+    output_data.start_basetime.attrs['standard_name'] = 'time'
+    output_data.start_basetime.attrs['units'] = basetime_units
+
+    output_data.end_basetime.attrs['long_name'] = 'End Epoch time of each track'
+    output_data.end_basetime.attrs['standard_name'] = 'time'
+    output_data.end_basetime.attrs['units'] = basetime_units
+
+    output_data.start_split_tracknumber.attrs['long_name'] = 'Tracknumber where this track splits from'
+    output_data.start_split_tracknumber.attrs['comments'] = 'track_index = tracknumber - 1'
+    output_data.start_split_tracknumber.attrs['valid_min'] = 1
+    output_data.start_split_tracknumber.attrs['valid_max'] = numtracks
+
+    output_data.start_split_timeindex.attrs['long_name'] = 'Time index when split occurs'
+    output_data.start_split_timeindex.attrs['comments'] = 'To connect with the split track, use start_split_tracknumber, start_split_timeindex together'
+    output_data.start_split_timeindex.attrs['valid_min'] = 0
+    output_data.start_split_timeindex.attrs['valid_max'] = maxtracklength
+
+    output_data.start_split_cloudnumber.attrs['long_name'] = 'Cloud number where this track splits from'
+    output_data.start_split_cloudnumber.attrs['units'] = 'unitless'
+
+    output_data.end_merge_tracknumber.attrs['long_name'] = 'Tracknumber where this track merges with'
+    output_data.end_merge_tracknumber.attrs['comments'] = 'track_index = tracknumber - 1'
+    output_data.end_merge_tracknumber.attrs['valid_min'] = 1
+    output_data.end_merge_tracknumber.attrs['valid_max'] = numtracks
+
+    output_data.end_merge_timeindex.attrs['long_name'] = 'Time index when merge occurs'
+    output_data.end_merge_timeindex.attrs['comments'] = 'To connect with the merge track, use end_merge_tracknumber, end_merge_timeindex together'
+    output_data.end_merge_timeindex.attrs['valid_min'] = 0
+    output_data.end_merge_timeindex.attrs['valid_max'] = maxtracklength
+
+    output_data.end_merge_cloudnumber.attrs['long_name'] = 'Cloud number where this track merges with'
+    output_data.end_merge_cloudnumber.attrs['units'] = 'unitless'
+
+    output_data.merge_tracknumbers.attrs['long_name'] = 'Number of the track that this small cloud merges into'
+    output_data.merge_tracknumbers.attrs['usuage'] = 'Each row represents a track. Each column represets a cloud in that track. Numbers give the track number that this small cloud merged into.'
+    output_data.merge_tracknumbers.attrs['units'] = 'unitless'
+    output_data.merge_tracknumbers.attrs['valid_min'] = 1
+    output_data.merge_tracknumbers.attrs['valid_max'] = numtracks
+
+    output_data.split_tracknumbers.attrs['long_name'] = 'Number of the track that this small cloud splits from'
+    output_data.split_tracknumbers.attrs['usuage'] = 'Each row represents a track. Each column represets a cloud in that track. Numbers give the track number that his msallcloud splits from.'
+    output_data.split_tracknumbers.attrs['units'] = 'unitless'
+    output_data.split_tracknumbers.attrs['valid_min'] = 1
+    output_data.split_tracknumbers.attrs['valid_max'] = numtracks
 
     output_data.trackinterruptions.attrs['long_name'] = 'Flag indicating if track started or ended naturally or artifically due to data availability'
     output_data.trackinterruptions.attrs['values'] = '0 = full track available, good data. 1 = track starts at first file, track cut short by data availability. 2 = track ends at last file, track cut short by data availability'
     output_data.trackinterruptions.attrs['valid_min'] = 0
     output_data.trackinterruptions.attrs['valid_max'] = 2
     output_data.trackinterruptions.attrs['units'] = 'unitless'
-    
-    output_data.mergenumbers.attrs['long_name'] = 'Number of the track that this small cloud merges into'
-    output_data.mergenumbers.attrs['usuage'] = 'Each row represents a track. Each column represets a cloud in that track. Numbers give the track number that this small cloud merged into.'
-    output_data.mergenumbers.attrs['units'] = 'unitless'
-    output_data.mergenumbers.attrs['valid_min'] = 1
-    output_data.mergenumbers.attrs['valid_max'] = numtracks
-
-    output_data.splitnumbers.attrs['long_name'] = 'Number of the track that this small cloud splits from'
-    output_data.splitnumbers.attrs['usuage'] = 'Each row represents a track. Each column represets a cloud in that track. Numbers give the track number that his msallcloud splits from.'
-    output_data.splitnumbers.attrs['units'] = 'unitless'
-    output_data.splitnumbers.attrs['valid_min'] = 1
-    output_data.splitnumbers.attrs['valid_max'] = numtracks
 
     # output_data.boundary.attrs['long_name'] = 'Flag indicating whether the core + cold anvil touches one of the domain edges.'
     # output_data.boundary.attrs['usuage'] = ' 0 = away from edge. 1= touches edge.'
@@ -663,11 +713,19 @@ def write_trackstats_radar(trackstats_outfile, numtracks, maxtracklength, numcha
                     'maxETH_50dbz': var_float_encode, \
 
                     'cloudnumber': var_int_encode, \
-                    'mergenumbers': var_int_encode, \
-                    'splitnumbers': var_int_encode, \
                     'status': var_int_encode, \
-                    'startstatus': var_int_encode, \
-                    'endstatus': var_int_encode, \
+                    'start_status': var_int_encode, \
+                    'end_status': var_int_encode, \
+                    'start_basetime': {'zlib':True}, \
+                    'end_basetime': {'zlib':True}, \
+                    'start_split_tracknumber': var_int_encode, \
+                    'start_split_timeindex': var_int_encode, \
+                    'start_split_cloudnumber': var_int_encode, \
+                    'end_merge_tracknumber': var_int_encode, \
+                    'end_merge_timeindex': var_int_encode, \
+                    'end_merge_cloudnumber': var_int_encode, \
+                    'merge_tracknumbers': var_int_encode, \
+                    'split_tracknumbers': var_int_encode, \
                     'trackinterruptions': var_int_encode, \
 
                     # 'boundary':  {'dtype': 'int', 'zlib':True, '_FillValue': fillval}, \

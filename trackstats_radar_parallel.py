@@ -23,12 +23,14 @@ def trackstats_radar(datasource, datadescription, pixel_radius, datatimeresoluti
     from trackstats_radar_func import calc_stats_radar
     np.set_printoptions(threshold=np.inf)
 
+    t0_step4 = time.time()
+
     # Set output filename
     trackstats_outfile = stats_path + 'stats_' + tracknumbers_filebase + '_' + startdate + '_' + enddate + '.nc'
 
     # Load track data
     print('Loading gettracks data')
-    print((time.ctime()))
+    # print((time.ctime()))
     cloudtrack_file = stats_path + tracknumbers_filebase + '_' + startdate + '_' + enddate + '.nc'
     
     cloudtrackdata = Dataset(cloudtrack_file, 'r')
@@ -60,63 +62,63 @@ def trackstats_radar(datasource, datadescription, pixel_radius, datatimeresoluti
     ############################################################################
     # Initialize grids
     print('Initiailizinng matrices')
-    print((time.ctime()))
+    # print((time.ctime()))
 
     fillval = -9999
     # nmaxclouds = max(lengthrange)
-    maxtracklength = max(lengthrange)
-    # finaltrack_tracklength = np.full(int(numtracks), fillval, dtype=np.int32)
-    finaltrack_tracklength = np.zeros(int(numtracks), dtype=np.int32)
-    # finaltrack_cell_boundary = np.full(int(numtracks), fillval, dtype=np.int32)
-    # finaltrack_basetime = np.empty((int(numtracks),int(maxtracklength)), dtype='datetime64[s]')
-    finaltrack_basetime = np.full((int(numtracks),int(maxtracklength)), fillval, dtype=np.float)
-    finaltrack_core_meanlat = np.full((int(numtracks),int(maxtracklength)), np.nan, dtype=np.float)
-    finaltrack_core_meanlon = np.full((int(numtracks),int(maxtracklength)), np.nan, dtype=np.float)
-    finaltrack_core_mean_x = np.full((int(numtracks),int(maxtracklength)), np.nan, dtype=np.float)
-    finaltrack_core_mean_y = np.full((int(numtracks),int(maxtracklength)), np.nan, dtype=np.float)
+    maxtracklength = int(max(lengthrange))
+    numtracks = int(numtracks)
 
-    finaltrack_cell_meanlat = np.full((int(numtracks),int(maxtracklength)), np.nan, dtype=np.float)
-    finaltrack_cell_meanlon = np.full((int(numtracks),int(maxtracklength)), np.nan, dtype=np.float)
-    finaltrack_cell_mean_x = np.full((int(numtracks),int(maxtracklength)), np.nan, dtype=np.float)
-    finaltrack_cell_mean_y = np.full((int(numtracks),int(maxtracklength)), np.nan, dtype=np.float)
+    finaltrack_tracklength = np.zeros(numtracks, dtype=np.int32)
+    # finaltrack_cell_boundary = np.full(numtracks, fillval, dtype=np.int32)
+    finaltrack_basetime = np.full((numtracks, maxtracklength), fillval, dtype=np.float)
+    finaltrack_core_meanlat = np.full((numtracks, maxtracklength), np.nan, dtype=np.float)
+    finaltrack_core_meanlon = np.full((numtracks, maxtracklength), np.nan, dtype=np.float)
+    finaltrack_core_mean_x = np.full((numtracks, maxtracklength), np.nan, dtype=np.float)
+    finaltrack_core_mean_y = np.full((numtracks, maxtracklength), np.nan, dtype=np.float)
 
-    finaltrack_cell_minlat = np.full((int(numtracks),int(maxtracklength)), np.nan, dtype=np.float)
-    finaltrack_cell_maxlat = np.full((int(numtracks),int(maxtracklength)), np.nan, dtype=np.float)
-    finaltrack_cell_minlon = np.full((int(numtracks),int(maxtracklength)), np.nan, dtype=np.float)
-    finaltrack_cell_maxlon = np.full((int(numtracks),int(maxtracklength)), np.nan, dtype=np.float)
-    finaltrack_cell_min_y = np.full((int(numtracks),int(maxtracklength)), np.nan, dtype=np.float)
-    finaltrack_cell_max_y = np.full((int(numtracks),int(maxtracklength)), np.nan, dtype=np.float)
-    finaltrack_cell_min_x = np.full((int(numtracks),int(maxtracklength)), np.nan, dtype=np.float)
-    finaltrack_cell_max_x = np.full((int(numtracks),int(maxtracklength)), np.nan, dtype=np.float)
+    finaltrack_cell_meanlat = np.full((numtracks, maxtracklength), np.nan, dtype=np.float)
+    finaltrack_cell_meanlon = np.full((numtracks, maxtracklength), np.nan, dtype=np.float)
+    finaltrack_cell_mean_x = np.full((numtracks, maxtracklength), np.nan, dtype=np.float)
+    finaltrack_cell_mean_y = np.full((numtracks, maxtracklength), np.nan, dtype=np.float)
+
+    finaltrack_cell_minlat = np.full((numtracks, maxtracklength), np.nan, dtype=np.float)
+    finaltrack_cell_maxlat = np.full((numtracks, maxtracklength), np.nan, dtype=np.float)
+    finaltrack_cell_minlon = np.full((numtracks, maxtracklength), np.nan, dtype=np.float)
+    finaltrack_cell_maxlon = np.full((numtracks, maxtracklength), np.nan, dtype=np.float)
+    finaltrack_cell_min_y = np.full((numtracks, maxtracklength), np.nan, dtype=np.float)
+    finaltrack_cell_max_y = np.full((numtracks, maxtracklength), np.nan, dtype=np.float)
+    finaltrack_cell_min_x = np.full((numtracks, maxtracklength), np.nan, dtype=np.float)
+    finaltrack_cell_max_x = np.full((numtracks, maxtracklength), np.nan, dtype=np.float)
     
-    finaltrack_dilatecell_meanlat = np.full((int(numtracks),int(maxtracklength)), np.nan, dtype=np.float)
-    finaltrack_dilatecell_meanlon = np.full((int(numtracks),int(maxtracklength)), np.nan, dtype=np.float)
-    finaltrack_dilatecell_mean_x = np.full((int(numtracks),int(maxtracklength)), np.nan, dtype=np.float)
-    finaltrack_dilatecell_mean_y = np.full((int(numtracks),int(maxtracklength)), np.nan, dtype=np.float)
+    finaltrack_dilatecell_meanlat = np.full((numtracks, maxtracklength), np.nan, dtype=np.float)
+    finaltrack_dilatecell_meanlon = np.full((numtracks, maxtracklength), np.nan, dtype=np.float)
+    finaltrack_dilatecell_mean_x = np.full((numtracks, maxtracklength), np.nan, dtype=np.float)
+    finaltrack_dilatecell_mean_y = np.full((numtracks, maxtracklength), np.nan, dtype=np.float)
 
-    finaltrack_cell_maxdbz = np.full((int(numtracks),int(maxtracklength)), np.nan, dtype=float)
+    finaltrack_cell_maxdbz = np.full((numtracks, maxtracklength), np.nan, dtype=float)
 
-    finaltrack_cell_maxETH10dbz = np.full((int(numtracks),int(maxtracklength)), np.nan, dtype=np.float)
-    finaltrack_cell_maxETH20dbz = np.full((int(numtracks),int(maxtracklength)), np.nan, dtype=np.float)
-    finaltrack_cell_maxETH30dbz = np.full((int(numtracks),int(maxtracklength)), np.nan, dtype=np.float)
-    finaltrack_cell_maxETH40dbz = np.full((int(numtracks),int(maxtracklength)), np.nan, dtype=np.float)
-    finaltrack_cell_maxETH50dbz = np.full((int(numtracks),int(maxtracklength)), np.nan, dtype=np.float)
+    finaltrack_cell_maxETH10dbz = np.full((numtracks, maxtracklength), np.nan, dtype=np.float)
+    finaltrack_cell_maxETH20dbz = np.full((numtracks, maxtracklength), np.nan, dtype=np.float)
+    finaltrack_cell_maxETH30dbz = np.full((numtracks, maxtracklength), np.nan, dtype=np.float)
+    finaltrack_cell_maxETH40dbz = np.full((numtracks, maxtracklength), np.nan, dtype=np.float)
+    finaltrack_cell_maxETH50dbz = np.full((numtracks, maxtracklength), np.nan, dtype=np.float)
 
-    finaltrack_core_area = np.full((int(numtracks),int(maxtracklength)), np.nan, dtype=float)
-    finaltrack_cell_area = np.full((int(numtracks),int(maxtracklength)), np.nan, dtype=float)
+    finaltrack_core_area = np.full((numtracks, maxtracklength), np.nan, dtype=float)
+    finaltrack_cell_area = np.full((numtracks, maxtracklength), np.nan, dtype=float)
     
-    finaltrack_trackinterruptions = np.full(int(numtracks), fillval, dtype=np.int32)
-    finaltrack_status = np.full((int(numtracks),int(maxtracklength)), fillval, dtype=np.int32)
-    finaltrack_mergenumber = np.full((int(numtracks),int(maxtracklength)), fillval, dtype=np.int32)
-    finaltrack_splitnumber = np.full((int(numtracks),int(maxtracklength)), fillval, dtype=np.int32)
-    finaltrack_cloudnumber = np.full((int(numtracks),int(maxtracklength)), fillval, dtype=np.int32)
-    # finaltrack_datetimestring = [[['' for x in range(13)] for y in range(int(maxtracklength))] for z in range(int(numtracks))]
-    finaltrack_cloudidfile = np.chararray((int(numtracks), int(maxtracklength), int(numcharfilename)))
+    finaltrack_trackinterruptions = np.full(numtracks, fillval, dtype=np.int32)
+    finaltrack_status = np.full((numtracks, maxtracklength), fillval, dtype=np.int32)
+    finaltrack_mergenumber = np.full((numtracks, maxtracklength), fillval, dtype=np.int32)
+    finaltrack_splitnumber = np.full((numtracks, maxtracklength), fillval, dtype=np.int32)
+    finaltrack_cloudnumber = np.full((numtracks, maxtracklength), fillval, dtype=np.int32)
+    # finaltrack_datetimestring = [[['' for x in range(13)] for y in range(int(maxtracklength))] for z in range(numtracks)]
+    finaltrack_cloudidfile = np.chararray((numtracks, maxtracklength, int(numcharfilename)))
 
     #########################################################################################
     # loop over files. Calculate statistics and organize matrices by tracknumber and cloud
     print('Looping over files and calculating statistics for each file')
-    print((time.ctime()))
+    t0_files = time.time()
 
     # for nf in range(0, nfiles):
     #     Results = calc_stats_radar(tracknumbers[0, nf, :], cloudidfiles[nf], tracking_inpath, cloudid_filebase, \
@@ -185,17 +187,17 @@ def trackstats_radar(datasource, datadescription, pixel_radius, datatimeresoluti
                     finaltrack_mergenumber[tracknumbertmp[iitrack], finaltrack_tracklength[tracknumbertmp[iitrack]]-1] = tmp[35][iitrack]
                     finaltrack_splitnumber[tracknumbertmp[iitrack], finaltrack_tracklength[tracknumbertmp[iitrack]]-1] = tmp[36][iitrack]
 
-            
+    t1_files = (time.time() - t0_files) / 60.
+    print('Files processing time (min): ', t1_files)
+    print('Finish collecting track statistics')
+
     ###############################################################
     ## Remove tracks that have no cells. These tracks are short.
     print('Removing tracks with no cells')
-    print((time.ctime()))
     gc.collect()
 
     cloudindexpresent = np.array(np.where(finaltrack_tracklength > 0))[0, :]
     numtracks = len(cloudindexpresent)
-
-    # maxtracklength = np.nanmax(finaltrack_tracklength)
 
     finaltrack_tracklength = finaltrack_tracklength[cloudindexpresent]
     finaltrack_basetime = finaltrack_basetime[cloudindexpresent, :]
@@ -248,55 +250,118 @@ def trackstats_radar(datasource, datadescription, pixel_radius, datatimeresoluti
     # import pdb; pdb.set_trace()
 
     ########################################################
-    # # Correct merger and split cloud numbers
-    # print('Correcting mergers and splits')
+    # Correct merger and split cloud numbers
+    print('Correcting mergers and splits')
+    t0_ms = time.time()
 
-    # # Initialize adjusted matrices
-    # adjusted_finaltrack_mergenumber = np.ones(np.shape(finaltrack_mergenumber))*fillval
-    # adjusted_finaltrack_splitnumber = np.ones(np.shape(finaltrack_mergenumber))*fillval
-    # print(('total tracks: ' + str(numtracks)))
+    # Initialize adjusted matrices
+    adjusted_finaltrack_mergenumber = np.ones(np.shape(finaltrack_mergenumber))*fillval
+    adjusted_finaltrack_splitnumber = np.ones(np.shape(finaltrack_mergenumber))*fillval
+    print(('total tracks: ' + str(numtracks)))
 
-    # # Create adjustor
-    # indexcloudnumber = np.copy(cloudindexpresent) + 1
-    # adjustor = np.arange(0, np.max(cloudindexpresent)+2)
-    # for it in range(0, numtracks):
-    #     adjustor[indexcloudnumber[it]] = it+1
-    # adjustor = np.append(adjustor, fillval)
+    # Create adjustor
+    indexcloudnumber = np.copy(cloudindexpresent) + 1
+    adjustor = np.arange(0, np.max(cloudindexpresent)+2)
+    for it in range(0, numtracks):
+        adjustor[indexcloudnumber[it]] = it+1
+    adjustor = np.append(adjustor, fillval)
 
-    # # Adjust mergers
-    # temp_finaltrack_mergenumber = finaltrack_mergenumber.astype(int).ravel()
-    # temp_finaltrack_mergenumber[temp_finaltrack_mergenumber == fillval] = np.max(cloudindexpresent)+2
-    # adjusted_finaltrack_mergenumber = adjustor[temp_finaltrack_mergenumber]
-    # adjusted_finaltrack_mergenumber = np.reshape(adjusted_finaltrack_mergenumber, np.shape(finaltrack_mergenumber))
+    # Adjust mergers
+    temp_finaltrack_mergenumber = finaltrack_mergenumber.astype(int).ravel()
+    temp_finaltrack_mergenumber[temp_finaltrack_mergenumber == fillval] = np.max(cloudindexpresent)+2
+    adjusted_finaltrack_mergenumber = adjustor[temp_finaltrack_mergenumber]
+    adjusted_finaltrack_mergenumber = np.reshape(adjusted_finaltrack_mergenumber, np.shape(finaltrack_mergenumber))
 
-    # # Adjust splitters
-    # temp_finaltrack_splitnumber = finaltrack_splitnumber.astype(int).ravel()
-    # temp_finaltrack_splitnumber[temp_finaltrack_splitnumber == fillval] = np.max(cloudindexpresent)+2
-    # adjusted_finaltrack_splitnumber = adjustor[temp_finaltrack_splitnumber]
-    # adjusted_finaltrack_splitnumber = np.reshape(adjusted_finaltrack_splitnumber, np.shape(finaltrack_splitnumber))
+    # Adjust splitters
+    temp_finaltrack_splitnumber = finaltrack_splitnumber.astype(int).ravel()
+    temp_finaltrack_splitnumber[temp_finaltrack_splitnumber == fillval] = np.max(cloudindexpresent)+2
+    adjusted_finaltrack_splitnumber = adjustor[temp_finaltrack_splitnumber]
+    adjusted_finaltrack_splitnumber = np.reshape(adjusted_finaltrack_splitnumber, np.shape(finaltrack_splitnumber))
 
-    # print('Adjustment done')
+    t1_ms = (time.time() - t0_ms) / 60.
+    print('Correct merge/split processing time (min): ', t1_ms)
+    print('Merge and split adjustments done')
+    
 
     #########################################################################
     # Record starting and ending status
     print('Isolating starting and ending status')
+    t0_status = time.time()
 
-    # Starting status
+   # Starting status
     finaltrack_startstatus = np.copy(finaltrack_status[:,0])
+    finaltrack_startbasetime = np.copy(finaltrack_basetime[:,0])
+    finaltrack_startsplit_tracknumber = np.copy(adjusted_finaltrack_splitnumber[:,0])
+
+    finaltrack_startsplit_timeindex = np.full(numtracks, fillval, dtype=np.int32)
+    finaltrack_startsplit_cloudnumber = np.full(numtracks, fillval, dtype=np.int32)
 
     # Ending status
-    finaltrack_endstatus = np.ones(len(finaltrack_startstatus))*fillval
+    finaltrack_endstatus = np.full(numtracks, fillval, dtype=np.int32)
+    finaltrack_endbasetime = np.full(numtracks, fillval, dtype=type(finaltrack_basetime))
+    finaltrack_endmerge_tracknumber = np.full(numtracks, fillval, dtype=np.int32)
+    finaltrack_endmerge_timeindex = np.full(numtracks, fillval, dtype=np.int32)
+    finaltrack_endmerge_cloudnumber = np.full(numtracks, fillval, dtype=np.int32)
 
-    for trackstep in range(0, numtracks):
-        if ((finaltrack_tracklength[trackstep] > 0) & (finaltrack_tracklength[trackstep] < maxtracklength)):
-            finaltrack_endstatus[trackstep] = np.copy(finaltrack_status[trackstep,finaltrack_tracklength[trackstep] - 1])
+    # Loop over each track
+    for itrack in range(0, numtracks):
+
+        # Make sure the track length is < maxtracklength so array access would not be out of bounds
+        if ((finaltrack_tracklength[itrack] > 0) & (finaltrack_tracklength[itrack] < maxtracklength)):
+
+            # Get the end basetime
+            finaltrack_endbasetime[itrack] = finaltrack_basetime[itrack, finaltrack_tracklength[itrack]-1]
+            # Get the status at the last time step of the track
+            finaltrack_endstatus[itrack] = np.copy(finaltrack_status[itrack, finaltrack_tracklength[itrack]-1])
+            finaltrack_endmerge_tracknumber[itrack] = np.copy(adjusted_finaltrack_mergenumber[itrack, finaltrack_tracklength[itrack]-1])
+
+            # If end merge tracknumber exists, this track ends by merge
+            if (finaltrack_endmerge_tracknumber[itrack] >= 0):
+                # Get the track number if merges with, -1 convert to track index
+                imerge_idx = finaltrack_endmerge_tracknumber[itrack]-1
+                # Get all the basetime for the track it merges with
+                ibasetime = finaltrack_basetime[imerge_idx, 0:finaltrack_tracklength[imerge_idx]]
+                # Find the time index matching the time when merging occurs
+                match_timeidx = np.where(ibasetime == finaltrack_endbasetime[itrack])[0]
+                if (len(match_timeidx) == 1):
+                    #  The time to connect to the track it merges with should be 1 time step after
+                    if ((match_timeidx + 1) >= 0) & ((match_timeidx + 1) < maxtracklength):
+                        finaltrack_endmerge_timeindex[itrack] = match_timeidx + 1
+                        finaltrack_endmerge_cloudnumber[itrack] = finaltrack_cloudnumber[imerge_idx, match_timeidx+1]
+                    else:
+                        print(f'Merge time occur after track ends??')
+                else:
+                    print(f'Error: track {itrack} has no matching time in the track it merges with!')
+                    # import pdb; pdb.set_trace()
+                    sys.exit(itrack)
+
+            # If start split tracknumber exists, this track starts from a split
+            if (finaltrack_startsplit_tracknumber[itrack] >= 0):
+                # Get the tracknumber it splits from, -1 to convert to track index
+                isplit_idx = finaltrack_startsplit_tracknumber[itrack]-1
+                # Get all the basetime for the track it splits from
+                ibasetime = finaltrack_basetime[isplit_idx, 0:finaltrack_tracklength[isplit_idx]]
+                # Find the time index matching the time when splitting occurs
+                match_timeidx = np.where(ibasetime == finaltrack_startbasetime[itrack])[0]
+                if (len(match_timeidx) == 1):
+                    # The time to connect to the track it splits from should be 1 time step prior
+                    if (match_timeidx - 1) >= 0:
+                        finaltrack_startsplit_timeindex[itrack] = match_timeidx - 1
+                        finaltrack_startsplit_cloudnumber[itrack] = finaltrack_cloudnumber[isplit_idx, match_timeidx-1]
+                    else:
+                        print(f'Split time occur before track starts??')
+                else:
+                    print(f'Error: track {itrack} has no matching time in the track it splits from!')
+                    sys.exit(itrack)
+
+    t1_status = (time.time() - t0_status) / 60.
+    print('Start/end status processing time (min): ', t1_status)
+    print('Starting and ending status done')
 
     #######################################################################
     # Write to netcdf
-    print('Writing trackstats netcdf')
-    print((time.ctime()))
-    print(trackstats_outfile)
-    print('')
+    print('Writing trackstats netcdf ... ')
+    t0_write = time.time()
 
     # Check if file already exists. If exists, delete
     if os.path.isfile(trackstats_outfile):
@@ -329,9 +394,16 @@ def trackstats_radar(datasource, datadescription, pixel_radius, datatimeresoluti
                                finaltrack_cell_maxETH10dbz, finaltrack_cell_maxETH20dbz, finaltrack_cell_maxETH30dbz, \
                                finaltrack_cell_maxETH40dbz, finaltrack_cell_maxETH50dbz, \
                                finaltrack_status, finaltrack_startstatus, finaltrack_endstatus, \
+                               finaltrack_startbasetime, finaltrack_endbasetime, \
+                               finaltrack_startsplit_tracknumber, finaltrack_startsplit_timeindex, finaltrack_startsplit_cloudnumber, \
+                               finaltrack_endmerge_tracknumber, finaltrack_endmerge_timeindex, finaltrack_endmerge_cloudnumber, \
                                finaltrack_trackinterruptions, \
-                               finaltrack_mergenumber, finaltrack_splitnumber, \
-                            #    adjusted_finaltrack_mergenumber, adjusted_finaltrack_splitnumber, \
+                               adjusted_finaltrack_mergenumber, adjusted_finaltrack_splitnumber, \
                               )
 
-    # import pdb; pdb.set_trace()
+    t1_write = (time.time() - t0_write) / 60.
+    print('Writing file time (min): ', t1_write)
+    print((time.ctime()))
+    print('Output saved as: ', trackstats_outfile)
+    t1_step4 = (time.time() - t0_step4) / 60.
+    print('Step 4 processing time (min): ', t1_step4)
