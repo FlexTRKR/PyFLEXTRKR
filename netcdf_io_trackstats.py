@@ -451,6 +451,29 @@ def write_trackstats_radar(trackstats_outfile, numtracks, maxtracklength, numcha
     # Define xarray dataset
     output_data = xr.Dataset(varlist, coords=coordlist, attrs=gattrlist)
 
+    # Track status explanation
+    track_status_explanation = '0: Track stops;  ' + \
+                '1: Simple track continuation;  ' + \
+                '2: This is the bigger cloud in simple merger;  ' + \
+                '3: This is the bigger cloud from a simple split that stops at this time;  ' + \
+                '4: This is the bigger cloud from a split and this cloud continues to the next time;  ' + \
+                '5: This is the bigger cloud from a split that subsequently is the big cloud in a merger;  ' + \
+                '13: This cloud splits at the next time step;  ' + \
+                '15: This cloud is the bigger cloud in a merge that then splits at the next time step;  ' + \
+                '16: This is the bigger cloud in a split that then splits at the next time step;  ' + \
+                '18: Merge-split at same time (big merge, splitter, and big split);  ' + \
+                '21: This is the smaller cloud in a simple merger;  ' + \
+                '24: This is the bigger cloud of a split that is then the small cloud in a merger;  ' + \
+                '31: This is the smaller cloud in a simple split that stops;  ' + \
+                '32: This is a small split that continues onto the next time step;  ' + \
+                '33: This is a small split that then is the bigger cloud in a merger;  ' + \
+                '34: This is the small cloud in a merger that then splits at the next time step;  ' + \
+                '37: Merge-split at same time (small merge, splitter, big split);  ' + \
+                '44: This is the smaller cloud in a split that is smaller cloud in a merger at the next time step;  ' + \
+                '46: Merge-split at same time (big merge, splitter, small split);  ' + \
+                '52: This is the smaller cloud in a split that is smaller cloud in a merger at the next time step;  ' + \
+                '65: Merge-split at same time (smaller merge, splitter, small split)'
+
     # Specify variable attributes
     output_data[trackdimname].attrs['long_name'] = 'Track number'
     output_data[trackdimname].attrs['units'] = 'unitless'
@@ -572,6 +595,7 @@ def write_trackstats_radar(trackstats_outfile, numtracks, maxtracklength, numcha
     output_data.status.attrs['units'] = 'unitless'
     output_data.status.attrs['valid_min'] = 0
     output_data.status.attrs['valid_max'] = 65
+    output_data.status.attrs['comments'] = track_status_explanation
 
     output_data.start_status.attrs['long_name'] = 'Flag indicating how the first cloud in a track starts'
     output_data.start_status.attrs['units'] = 'unitless'

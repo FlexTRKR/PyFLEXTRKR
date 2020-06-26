@@ -373,7 +373,7 @@ if run_finalstats == 1:
                         startdate, enddate, timegap, cloudid_filebase, tracking_outpath, stats_outpath, \
                         track_version, tracknumber_version, tracknumbers_filebase, lengthrange, \
                         nprocesses=nprocesses)
-                        
+
     else:
         sys.ext('Valid parallelization flag not provided')
 
@@ -443,7 +443,7 @@ if run_labelcell == 1:
     # Remove extra rows
     cloudidfiles = cloudidfiles[0:cloudidfilestep]
     cloudidfiles_basetime = cloudidfiles_basetime[:cloudidfilestep]
-        
+    
     #############################################################
     # Process files
 

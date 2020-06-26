@@ -36,8 +36,8 @@ def mapcell_radar(cloudid_filename, filebasetime, stats_path, statistics_filebas
     trackstat_basetime = allstatdata['basetime'][:] # Time of cloud in seconds since 01/01/1970 00:00
     trackstat_cloudnumber = allstatdata['cloudnumber'][:] # Number of the corresponding cloudid file
     trackstat_status = allstatdata['status'][:] # Flag indicating the status of the cloud
-    trackstat_mergenumbers = allstatdata['mergenumbers'][:] # Track number that it merges into
-    trackstat_splitnumbers = allstatdata['splitnumbers'][:]
+    trackstat_mergenumbers = allstatdata['merge_tracknumbers'][:] # Track number that it merges into
+    trackstat_splitnumbers = allstatdata['split_tracknumbers'][:]
     datasource = allstatdata.getncattr('source')
     datadescription = allstatdata.getncattr('description')
     allstatdata.close()
@@ -62,6 +62,11 @@ def mapcell_radar(cloudid_filename, filebasetime, stats_path, statistics_filebas
     comp_ref = cloudiddata['comp_ref'][:]
     conv_core = cloudiddata['conv_core'][:]
     conv_mask = cloudiddata['conv_mask'][:]
+    echotop10 = cloudiddata['echotop10'][:] / 1000.
+    echotop20 = cloudiddata['echotop20'][:] / 1000.
+    echotop30 = cloudiddata['echotop30'][:] / 1000.
+    echotop40 = cloudiddata['echotop40'][:] / 1000.
+    echotop50 = cloudiddata['echotop50'][:] / 1000.
     # convcold_cloudnumber = cloudiddata['convcold_cloudnumber'][:]
     cloudiddata.close()
     
@@ -186,11 +191,16 @@ def mapcell_radar(cloudid_filename, filebasetime, stats_path, statistics_filebas
                 'conv_mask': (['time', 'lat', 'lon'], conv_mask), \
                 'tracknumber': (['time', 'lat', 'lon'], trackmap), \
                 'tracknumber_cmask2': (['time', 'lat', 'lon'], trackmap_cmask2), \
-                'cloudstatus': (['time', 'lat', 'lon'], statusmap), \
+                'track_status': (['time', 'lat', 'lon'], statusmap), \
                 'cloudnumber': (['time', 'lat', 'lon'], cloudid_cloudnumber), \
                 # 'cloudnumber_noinflate': (['time', 'lat', 'lon'], cloudid_cloudnumber_noinflate), \
-                'mergecloudnumber': (['time', 'lat', 'lon'], allmergemap), \
-                'splitcloudnumber': (['time', 'lat', 'lon'], allsplitmap), \
+                'merge_tracknumber': (['time', 'lat', 'lon'], allmergemap), \
+                'split_tracknumber': (['time', 'lat', 'lon'], allsplitmap), \
+                'echotop10': (['time', 'lat', 'lon'], echotop10), \
+                'echotop20': (['time', 'lat', 'lon'], echotop20), \
+                'echotop30': (['time', 'lat', 'lon'], echotop30), \
+                'echotop40': (['time', 'lat', 'lon'], echotop40), \
+                'echotop50': (['time', 'lat', 'lon'], echotop50), \
                 # 'tracknumber': (['time', 'lat', 'lon'], trackmap_mergesplit), \
                 # 'cellsplittracknumbers': (['time', 'lat', 'lon'], cellsplitmap), \
                 # 'cellmergetracknumbers': (['time', 'lat', 'lon'], cellmergemap), \
@@ -213,6 +223,29 @@ def mapcell_radar(cloudid_filename, filebasetime, stats_path, statistics_filebas
     
     # Define xarray dataset
     ds_out = xr.Dataset(varlist, coords=coordlist, attrs=gattrlist)
+
+    # Track status explanation
+    track_status_explanation = '0: Track stops;  ' + \
+                '1: Simple track continuation;  ' + \
+                '2: This is the bigger cloud in simple merger;  ' + \
+                '3: This is the bigger cloud from a simple split that stops at this time;  ' + \
+                '4: This is the bigger cloud from a split and this cloud continues to the next time;  ' + \
+                '5: This is the bigger cloud from a split that subsequently is the big cloud in a merger;  ' + \
+                '13: This cloud splits at the next time step;  ' + \
+                '15: This cloud is the bigger cloud in a merge that then splits at the next time step;  ' + \
+                '16: This is the bigger cloud in a split that then splits at the next time step;  ' + \
+                '18: Merge-split at same time (big merge, splitter, and big split);  ' + \
+                '21: This is the smaller cloud in a simple merger;  ' + \
+                '24: This is the bigger cloud of a split that is then the small cloud in a merger;  ' + \
+                '31: This is the smaller cloud in a simple split that stops;  ' + \
+                '32: This is a small split that continues onto the next time step;  ' + \
+                '33: This is a small split that then is the bigger cloud in a merger;  ' + \
+                '34: This is the small cloud in a merger that then splits at the next time step;  ' + \
+                '37: Merge-split at same time (small merge, splitter, big split);  ' + \
+                '44: This is the smaller cloud in a split that is smaller cloud in a merger at the next time step;  ' + \
+                '46: Merge-split at same time (big merge, splitter, small split);  ' + \
+                '52: This is the smaller cloud in a split that is smaller cloud in a merger at the next time step;  ' + \
+                '65: Merge-split at same time (smaller merge, splitter, small split)'
     
     # Specify variable attributes
     ds_out.time.attrs['long_name'] = 'epoch time (seconds since 01/01/1970 00:00) in epoch of file'
@@ -249,11 +282,12 @@ def mapcell_radar(cloudid_filename, filebasetime, stats_path, statistics_filebas
     ds_out.tracknumber_cmask2.attrs['units'] = 'unitless'
     ds_out.tracknumber_cmask2.attrs['_FillValue'] = 0
 
-    ds_out.cloudstatus.attrs['long_name'] = 'Flag indicating history of cloud'
-    ds_out.cloudstatus.attrs['units'] = 'unitless'
-    ds_out.cloudstatus.attrs['valid_min'] = 0
-    ds_out.cloudstatus.attrs['valid_max'] = 65
-    ds_out.cloudstatus.attrs['_FillValue'] = fillval
+    ds_out.track_status.attrs['long_name'] = 'Flag indicating history of cloud'
+    ds_out.track_status.attrs['units'] = 'unitless'
+    ds_out.track_status.attrs['valid_min'] = 0
+    ds_out.track_status.attrs['valid_max'] = 65
+    ds_out.track_status.attrs['_FillValue'] = fillval
+    ds_out.track_status.attrs['comments'] = track_status_explanation
 
     ds_out.cloudnumber.attrs['long_name'] = 'Number associated with the cloud at a given pixel'
     ds_out.cloudnumber.attrs['units'] = 'unitless'
@@ -265,17 +299,32 @@ def mapcell_radar(cloudid_filename, filebasetime, stats_path, statistics_filebas
     # ds_out.cloudnumber_noinflate.attrs['units'] = 'unitless'
     # ds_out.cloudnumber_noinflate.attrs['_FillValue'] = 0
     
-    ds_out.mergecloudnumber.attrs['long_name'] = 'Cloud number that this cloud merges into'
-    ds_out.mergecloudnumber.attrs['units'] = 'unitless'
-    ds_out.mergecloudnumber.attrs['_FillValue'] = 0
-    # ds_out.mergecloudnumber.attrs['valid_min'] = 0
-    # ds_out.mergecloudnumber.attrs['valid_max'] = np.nanmax(celltrackmap_mergesplit)
+    ds_out.merge_tracknumber.attrs['long_name'] = 'Tracknumber where this track merges with'
+    ds_out.merge_tracknumber.attrs['units'] = 'unitless'
+    ds_out.merge_tracknumber.attrs['_FillValue'] = 0
+    # ds_out.merge_tracknumber.attrs['valid_min'] = 0
+    # ds_out.merge_tracknumber.attrs['valid_max'] = np.nanmax(celltrackmap_mergesplit)
 
-    ds_out.splitcloudnumber.attrs['long_name'] = 'Cloud number that this cloud splits from'
-    ds_out.splitcloudnumber.attrs['units'] = 'unitless'
-    ds_out.splitcloudnumber.attrs['_FillValue'] = 0
-    # ds_out.splitcloudnumber.attrs['valid_min'] = 0
-    # ds_out.splitcloudnumber.attrs['valid_max'] = np.nanmax(celltrackmap_mergesplit)
+    ds_out.split_tracknumber.attrs['long_name'] = 'Tracknumber where this track splits from'
+    ds_out.split_tracknumber.attrs['units'] = 'unitless'
+    ds_out.split_tracknumber.attrs['_FillValue'] = 0
+    # ds_out.split_tracknumber.attrs['valid_min'] = 0
+    # ds_out.split_tracknumber.attrs['valid_max'] = np.nanmax(celltrackmap_mergesplit)
+
+    ds_out.echotop10.attrs['long_name'] = '10dBZ echo-top height'
+    ds_out.echotop10.attrs['units'] = 'km'
+    
+    ds_out.echotop20.attrs['long_name'] = '20dBZ echo-top height'
+    ds_out.echotop20.attrs['units'] = 'km'
+    
+    ds_out.echotop30.attrs['long_name'] = '30dBZ echo-top height'
+    ds_out.echotop30.attrs['units'] = 'km'
+    
+    ds_out.echotop40.attrs['long_name'] = '40dBZ echo-top height'
+    ds_out.echotop40.attrs['units'] = 'km'
+    
+    ds_out.echotop50.attrs['long_name'] = '50dBZ echo-top height'
+    ds_out.echotop50.attrs['units'] = 'km'
     
     # Write netcdf file
     print('Output celltracking file: ', celltrackmaps_outfile)
@@ -298,11 +347,11 @@ def mapcell_radar(cloudid_filename, filebasetime, stats_path, statistics_filebas
 #                    'conv_mask': {'zlib':True}, \
 #                    'tracknumber': {'zlib':True, 'dtype':'int32'}, \
 #                    'tracknumber_cmask2': {'zlib':True, 'dtype':'int32'}, \
-#                    'cloudstatus': {'zlib':True}, \
+#                    'track_status': {'zlib':True}, \
 #                    'cloudnumber': {'dtype':'int32', 'zlib':True}, \
 #                    # 'cloudnumber_noinflate': {'dtype':'int32', 'zlib':True}, \
-#                    'mergecloudnumber': {'zlib':True,}, \
-#                    'splitcloudnumber': {'zlib':True}, \
+#                    'merge_tracknumber': {'zlib':True,}, \
+#                    'split_tracknumber': {'zlib':True}, \
 #                }
 
     # Write to netCDF file
