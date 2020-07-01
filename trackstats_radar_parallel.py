@@ -4,7 +4,7 @@
 
 def trackstats_radar(datasource, datadescription, pixel_radius, datatimeresolution, geolimits, areathresh, \
                     startdate, enddate, timegap, cloudid_filebase, tracking_inpath, stats_path, \
-                    track_version, tracknumbers_version, tracknumbers_filebase, lengthrange, \
+                    track_version, tracknumbers_version, tracknumbers_filebase, terrain_file, lengthrange, \
                     nprocesses):
 
     import numpy as np
@@ -27,6 +27,11 @@ def trackstats_radar(datasource, datadescription, pixel_radius, datatimeresoluti
 
     # Set output filename
     trackstats_outfile = stats_path + 'stats_' + tracknumbers_filebase + '_' + startdate + '_' + enddate + '.nc'
+
+    # Read terrain file to get range mask
+    dster = Dataset(terrain_file, 'r')
+    rangemask = dster['mask110'][:]
+    dster.close()
 
     # Load track data
     print('Loading gettracks data')
@@ -115,6 +120,9 @@ def trackstats_radar(datasource, datadescription, pixel_radius, datatimeresoluti
     # finaltrack_datetimestring = [[['' for x in range(13)] for y in range(int(maxtracklength))] for z in range(numtracks)]
     finaltrack_cloudidfile = np.chararray((numtracks, maxtracklength, int(numcharfilename)))
 
+    finaltrack_cell_rangeflag = np.full((numtracks, maxtracklength), fillval, dtype=np.int)
+
+
     #########################################################################################
     # loop over files. Calculate statistics and organize matrices by tracknumber and cloud
     print('Looping over files and calculating statistics for each file')
@@ -131,7 +139,7 @@ def trackstats_radar(datasource, datadescription, pixel_radius, datatimeresoluti
     with Pool(nprocesses) as pool:
         Results = pool.starmap(calc_stats_radar, [(tracknumbers[0, nf, :], cloudidfiles[nf], tracking_inpath, cloudid_filebase, \
                                 numcharfilename, latitude, longitude, x_coord, y_coord, \
-                                nx, ny, pixel_radius, trackstatus[0, nf, :], \
+                                nx, ny, pixel_radius, rangemask, trackstatus[0, nf, :], \
                                 trackmerge[0, nf, :], tracksplit[0, nf, :], trackreset[0, nf, :]) for nf in range(0,nfiles)])
         pool.close()
 
@@ -186,6 +194,7 @@ def trackstats_radar(datasource, datadescription, pixel_radius, datatimeresoluti
                     finaltrack_trackinterruptions[tracknumbertmp[iitrack]] = tmp[34][iitrack]
                     finaltrack_mergenumber[tracknumbertmp[iitrack], finaltrack_tracklength[tracknumbertmp[iitrack]]-1] = tmp[35][iitrack]
                     finaltrack_splitnumber[tracknumbertmp[iitrack], finaltrack_tracklength[tracknumbertmp[iitrack]]-1] = tmp[36][iitrack]
+                    finaltrack_cell_rangeflag[tracknumbertmp[iitrack], finaltrack_tracklength[tracknumbertmp[iitrack]]-1] = tmp[37][iitrack]
 
     t1_files = (time.time() - t0_files) / 60.
     print('Files processing time (min): ', t1_files)
@@ -240,6 +249,8 @@ def trackstats_radar(datasource, datadescription, pixel_radius, datatimeresoluti
     finaltrack_splitnumber = finaltrack_splitnumber[cloudindexpresent, :]
     finaltrack_cloudnumber = finaltrack_cloudnumber[cloudindexpresent, :]
     finaltrack_cloudidfile = finaltrack_cloudidfile[cloudindexpresent, :, :]
+
+    finaltrack_cell_rangeflag = finaltrack_cell_rangeflag[cloudindexpresent, :]
 
     # Calculate equivalent radius
     finaltrack_core_radius = np.sqrt(np.divide(finaltrack_core_area, pi))
@@ -399,6 +410,7 @@ def trackstats_radar(datasource, datadescription, pixel_radius, datatimeresoluti
                                finaltrack_endmerge_tracknumber, finaltrack_endmerge_timeindex, finaltrack_endmerge_cloudnumber, \
                                finaltrack_trackinterruptions, \
                                adjusted_finaltrack_mergenumber, adjusted_finaltrack_splitnumber, \
+                               finaltrack_cell_rangeflag, \
                               )
 
     t1_write = (time.time() - t0_write) / 60.

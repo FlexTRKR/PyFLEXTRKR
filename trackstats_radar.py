@@ -3,7 +3,7 @@
 # Define function that calculates track statistics for satellite data
 def trackstats_radar(datasource, datadescription, pixel_radius, datatimeresolution, geolimits, areathresh, \
                     startdate, enddate, timegap, cloudid_filebase, tracking_inpath, stats_path, \
-                    track_version, tracknumbers_version, tracknumbers_filebase, lengthrange=[2,120]):
+                    track_version, tracknumbers_version, tracknumbers_filebase, terrain_file, lengthrange=[2,120]):
 
     import numpy as np
     from netCDF4 import Dataset, num2date, chartostring
@@ -21,6 +21,11 @@ def trackstats_radar(datasource, datadescription, pixel_radius, datatimeresoluti
 
     # Set output filename
     trackstats_outfile = stats_path + 'stats_' + tracknumbers_filebase + '_' + startdate + '_' + enddate + '.nc'
+
+    # Read terrain file to get range mask
+    dster = Dataset(terrain_file, 'r')
+    rangemask = dster['mask110'][:]
+    dster.close()
 
     # Load track data
     print('Loading gettracks data')
@@ -110,6 +115,8 @@ def trackstats_radar(datasource, datadescription, pixel_radius, datatimeresoluti
     finaltrack_mergenumber = np.full((numtracks, maxtracklength), fillval, dtype=np.int32)
     finaltrack_splitnumber = np.full((numtracks, maxtracklength), fillval, dtype=np.int32)
     finaltrack_cloudidfile = np.chararray((numtracks, maxtracklength, int(numcharfilename)))
+
+    finaltrack_cell_rangeflag = np.full((numtracks, maxtracklength), fillval, dtype=np.int)
 
     #########################################################################################
     # loop over files. Calculate statistics and organize matrices by tracknumber and cloud
@@ -260,6 +267,8 @@ def trackstats_radar(datasource, datadescription, pixel_radius, datatimeresoluti
                             finaltrack_splitnumber[itrack-1, nc] = np.copy(tracksplit[0, nf, cloudindex])
                             finaltrack_trackinterruptions[itrack-1] = np.copy(trackreset[0, nf, cloudindex])
 
+                            # The min range mask value within the dilatecellarea (1: cell completely within range mask, 0: some portion of the cell outside range mask)
+                            finaltrack_cell_rangeflag[itrack-1, nc] = np.min(rangemask[dilatecellarea[0],dilatecellarea[1]])
                     else:
                         print(itrack, ' greater than max track length')
                 else:
@@ -317,6 +326,8 @@ def trackstats_radar(datasource, datadescription, pixel_radius, datatimeresoluti
     finaltrack_splitnumber = finaltrack_splitnumber[cloudindexpresent, :]
     finaltrack_cloudnumber = finaltrack_cloudnumber[cloudindexpresent, :]
     finaltrack_cloudidfile = finaltrack_cloudidfile[cloudindexpresent, :, :]
+
+    finaltrack_cell_rangeflag = finaltrack_cell_rangeflag[cloudindexpresent, :]
 
     # Calculate equivalent radius
     finaltrack_core_radius = np.sqrt(np.divide(finaltrack_core_area, pi))
@@ -468,6 +479,7 @@ def trackstats_radar(datasource, datadescription, pixel_radius, datatimeresoluti
                                finaltrack_endmerge_tracknumber, finaltrack_endmerge_timeindex, finaltrack_endmerge_cloudnumber, \
                                finaltrack_trackinterruptions, \
                                adjusted_finaltrack_mergenumber, adjusted_finaltrack_splitnumber, \
+                               finaltrack_cell_rangeflag, \
                               )
 
     # import pdb; pdb.set_trace()

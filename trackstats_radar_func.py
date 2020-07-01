@@ -3,7 +3,7 @@
 
 def calc_stats_radar(tracknumbers, cloudidfiles, tracking_inpath, cloudid_filebase, 
                     numcharfilename, latitude, longitude, x_coord, y_coord, \
-                    nx, ny, pixel_radius, trackstatus, trackmerge, tracksplit, trackreset):
+                    nx, ny, pixel_radius, rangemask, trackstatus, trackmerge, tracksplit, trackreset):
     import numpy as np
     from netCDF4 import Dataset, num2date, chartostring
     import os
@@ -95,6 +95,8 @@ def calc_stats_radar(tracknumbers, cloudidfiles, tracking_inpath, cloudid_fileba
         finaltrack_splitnumber = np.full(numtracks, fillval, dtype=np.int32)
         finaltrack_cloudnumber = np.full(numtracks, fillval, dtype=np.int32)
         finaltrack_cloudidfile = np.chararray((numtracks, int(numcharfilename)))
+
+        finaltrack_cell_rangeflag = np.full(numtracks, fillval, dtype=np.int)
 
         # Loop over unique tracknumbers
         # print('Loop over tracks in file')
@@ -196,6 +198,9 @@ def calc_stats_radar(tracknumbers, cloudidfiles, tracking_inpath, cloudid_fileba
                     finaltrack_splitnumber[itrack] = np.copy(tracksplit[cloudindex])
                     finaltrack_trackinterruptions[itrack] = np.copy(trackreset[cloudindex])
 
+                    # The min range mask value within the dilatecellarea (1: cell completely within range mask, 0: some portion of the cell outside range mask)
+                    finaltrack_cell_rangeflag[itrack] = np.min(rangemask[dilatecellarea[0],dilatecellarea[1]])
+
             elif len(cloudnumber) > 1:
                 print('Error: cloudnumber ' + str(cloudnumber) + ' clouds linked to more than one track!')
                 print('Each track should only be linked to one cloud in each file in the track_number array. ' + \
@@ -213,4 +218,5 @@ def calc_stats_radar(tracknumbers, cloudidfiles, tracking_inpath, cloudid_fileba
                 finaltrack_cell_maxdbz, finaltrack_cell_maxETH10dbz, finaltrack_cell_maxETH20dbz, \
                 finaltrack_cell_maxETH30dbz, finaltrack_cell_maxETH40dbz, finaltrack_cell_maxETH50dbz, \
                 finaltrack_core_area, finaltrack_cell_area, \
-                finaltrack_status, finaltrack_trackinterruptions, finaltrack_mergenumber, finaltrack_splitnumber
+                finaltrack_status, finaltrack_trackinterruptions, finaltrack_mergenumber, finaltrack_splitnumber, \
+                finaltrack_cell_rangeflag
