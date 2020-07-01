@@ -33,8 +33,12 @@ startdate = config['startdate']
 enddate = config['enddate']
 run_parallel = config['run_parallel']
 nprocesses = config['nprocesses']
+databasename = config['databasename']
+datasource = config['datasource']
+datadescription = config['datadescription']
 root_path = config['root_path']
 clouddata_path = config['clouddata_path']
+terrain_file = config['terrain_file']
 if "driftfile" in config:
     driftfile = config['driftfile']
 
@@ -72,7 +76,7 @@ curr_tracknumbers_version = 'v1.0'
 
 # Specify cloud tracking parameters
 geolimits = np.array([-90., -180., 90., 180.])  # 4-element array with plotting boundaries [lat_min, lon_min, lat_max, lon_max]
-pixel_radius = 1                         # km
+pixel_radius = 0.5                         # km
 timegap = 30/float(60)                    # hour
 area_thresh = 4                              # km^2
 miss_thresh = 0.2                          # Missing data threshold. (0.1 = 10%)
@@ -80,7 +84,6 @@ othresh = 0.3                              # overlap percentage threshold
 lengthrange = np.array([2, 60])            # A vector [minlength,maxlength] to specify the lifetime range for the tracks
 maxnclouds = 1000                          # Maximum clouds in one file
 nmaxlinks = 10                             # Maximum number of clouds that any single cloud can be linked to
-mincellpix = 4                             # Minimum number of pixels for a cell.
 
 ## Specify cell track parameters
 maincloud_duration = 30/float(60)                      # Natural time resolution of data
@@ -88,10 +91,10 @@ merge_duration = 30/float(60)                          # Track shorter than this
 split_duration = 30/float(60)                         # Track shorter than this will be labeled as merger
 
 # Specify filenames and locations
-datasource = 'CSAPR2'
-datadescription = 'COR'
+# datasource = 'CSAPR2'
+# datadescription = 'COR'
 # databasename = 'CSAPR2_Taranis_Gridded_1000m.Conv_Mask.'
-databasename = 'csa_csapr2_'
+# databasename = 'csa_csapr2_'
 label_filebase = 'cloudtrack_'
 
 # latlon_file = clouddata_path + 'coordinates_d02_big.dat'
@@ -183,7 +186,7 @@ if run_idclouds == 1:
     idclouds_input = zip(rawdatafiles, files_datestring, files_timestring, files_basetime, \
                         repeat(datasource), repeat(datadescription), repeat(cloudid_version), \
                         repeat(tracking_outpath), repeat(startdate), repeat(enddate), \
-                        repeat(pixel_radius), repeat(area_thresh), repeat(miss_thresh), repeat(mincellpix))
+                        repeat(pixel_radius), repeat(area_thresh), repeat(miss_thresh))
     
     ## Call function
     if run_parallel == 0:
@@ -192,7 +195,7 @@ if run_idclouds == 1:
             idcell_csapr(rawdatafiles[ifile], files_datestring[ifile], files_timestring[ifile], files_basetime[ifile], \
                             datasource, datadescription, cloudid_version, \
                             tracking_outpath, startdate, enddate, \
-                            pixel_radius, area_thresh, miss_thresh, mincellpix)
+                            pixel_radius, area_thresh, miss_thresh)
     elif run_parallel == 1:
         # Parallel version
         if __name__ == '__main__':
@@ -364,14 +367,14 @@ if run_finalstats == 1:
         # Call serial version of trackstats
         trackstats_radar(datasource, datadescription, pixel_radius, datatimeresolution, geolimits, area_thresh, \
                         startdate, enddate, timegap, cloudid_filebase, tracking_outpath, stats_outpath, \
-                        track_version, tracknumber_version, tracknumbers_filebase, lengthrange=lengthrange)
+                        track_version, tracknumber_version, tracknumbers_filebase, terrain_file, lengthrange=lengthrange)
 
     elif run_parallel == 1:
         from trackstats_radar_parallel import trackstats_radar
         # Call parallel version of trackstats
         trackstats_radar(datasource, datadescription, pixel_radius, datatimeresolution, geolimits, area_thresh, \
                         startdate, enddate, timegap, cloudid_filebase, tracking_outpath, stats_outpath, \
-                        track_version, tracknumber_version, tracknumbers_filebase, lengthrange, \
+                        track_version, tracknumber_version, tracknumbers_filebase, terrain_file, lengthrange, \
                         nprocesses=nprocesses)
 
     else:

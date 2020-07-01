@@ -60,6 +60,7 @@ def mapcell_radar(cloudid_filename, filebasetime, stats_path, statistics_filebas
     latitude = cloudiddata['latitude'][:]
     nclouds = cloudiddata['nclouds'][:]
     comp_ref = cloudiddata['comp_ref'][:]
+    dbz_lowlevel = cloudiddata['dbz_lowlevel'][:]
     conv_core = cloudiddata['conv_core'][:]
     conv_mask = cloudiddata['conv_mask'][:]
     echotop10 = cloudiddata['echotop10'][:] / 1000.
@@ -187,6 +188,7 @@ def mapcell_radar(cloudid_filename, filebasetime, stats_path, statistics_filebas
                 'latitude': (['lat', 'lon'], latitude), \
                 'nclouds': (['time'], nclouds), \
                 'comp_ref': (['time', 'lat', 'lon'], comp_ref), \
+                'dbz_lowlevel': (['time', 'lat', 'lon'], dbz_lowlevel), \
                 'conv_core': (['time', 'lat', 'lon'], conv_core), \
                 'conv_mask': (['time', 'lat', 'lon'], conv_mask), \
                 'tracknumber': (['time', 'lat', 'lon'], trackmap), \
@@ -265,6 +267,9 @@ def mapcell_radar(cloudid_filename, filebasetime, stats_path, statistics_filebas
     
     ds_out.comp_ref.attrs['long_name'] = 'Composite reflectivity'
     ds_out.comp_ref.attrs['units'] = 'dBZ'
+
+    ds_out.dbz_lowlevel.attrs['long_name'] = 'Composite Low-level Reflectivity'
+    ds_out.dbz_lowlevel.attrs['units'] = 'dBZ'
     
     ds_out.conv_core.attrs['long_name'] = 'Convective Core Mask After Reflectivity Threshold and Peakedness Steps'
     ds_out.conv_core.attrs['units'] = 'unitless'

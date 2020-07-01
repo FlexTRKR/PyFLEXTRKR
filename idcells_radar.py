@@ -1,7 +1,7 @@
 def idcell_csapr(input_filename, file_datestring, file_timestring, file_basetime, \
                 datasource, datadescription, cloudid_version, \
                 dataoutpath, startdate, enddate, \
-                pixel_radius, area_thresh, miss_thresh, mincellpix, \
+                pixel_radius, area_thresh, miss_thresh, \
                 **kwargs):
     """
     Identifies convective cells from CSAPR data.
@@ -24,7 +24,6 @@ def idcell_csapr(input_filename, file_datestring, file_timestring, file_basetime
     pixel_radius - radius of pixels in km
     area_thresh - minimum area thershold to define a feature in km^2
     miss_thresh - minimum amount of data required in order for the file to not to be considered corrupt. 
-    mincellpix - minimum size threshold for a cell
     """
     ##########################################################
     # Load modules
@@ -60,6 +59,7 @@ def idcell_csapr(input_filename, file_datestring, file_timestring, file_basetime
     # conv_mask1 = rawdata['conv_mask1'][:]
     # conv_mask2 = rawdata['conv_mask2'][:]
     comp_ref = rawdata['dbz_comp'][:].squeeze()
+    dbz_lowlevel = rawdata['dbz_lowlevel'][:].squeeze()
     conv_mask_inflated = rawdata['conv_mask_inflated'][:].squeeze()
     conv_core = rawdata['conv_core'][:].squeeze()
     conv_mask = rawdata['conv_mask'][:].squeeze()
@@ -126,6 +126,7 @@ def idcell_csapr(input_filename, file_datestring, file_timestring, file_basetime
                     'latitude': (['lat', 'lon'], out_lat), \
                     'longitude': (['lat', 'lon'], out_lon), \
                     'comp_ref': (['time', 'lat', 'lon'], np.expand_dims(comp_ref, axis=0)), \
+                    'dbz_lowlevel': (['time', 'lat', 'lon'], np.expand_dims(dbz_lowlevel, axis=0)), \
                     'conv_core': (['time', 'lat', 'lon'], np.expand_dims(conv_core, axis=0)), \
                     'conv_mask': (['time', 'lat', 'lon'], np.expand_dims(conv_mask, axis=0)), \
                     'convcold_cloudnumber': (['time', 'lat', 'lon'], np.expand_dims(conv_mask_inflated, axis=0)), \
@@ -203,9 +204,12 @@ def idcell_csapr(input_filename, file_datestring, file_timestring, file_basetime
     ds_out.comp_ref.attrs['units'] = 'dBZ'
     ds_out.comp_ref.attrs['_FillValue'] = np.nan
 
-    ds_out.conv_core.attrs['long_name'] = 'Convective Core Mask After Reflectivity Threshold and Peakedness Steps'
+    ds_out.dbz_lowlevel.attrs['long_name'] = 'Composite Low-level Reflectivity'
+    ds_out.dbz_lowlevel.attrs['units'] = 'dBZ'
+    ds_out.dbz_lowlevel.attrs['_FillValue'] = np.nan
+
+    ds_out.conv_core.attrs['long_name'] = 'Convective Core Mask After Reflectivity Threshold and Peakedness Steps (1 = convective, 0 = not convective)'
     ds_out.conv_core.attrs['units'] = 'unitless'
-    ds_out.conv_core.attrs['_FillValue'] = 0
 
     ds_out.conv_mask.attrs['long_name'] = 'Convective Region Mask After Reflectivity Threshold, Peakedness, and Expansion Steps'
     ds_out.conv_mask.attrs['units'] = 'unitless'
@@ -251,6 +255,7 @@ def idcell_csapr(input_filename, file_datestring, file_timestring, file_basetime
                     'longitude': {'zlib':True, '_FillValue':np.nan}, \
                     'latitude': {'zlib':True, '_FillValue':np.nan}, \
                     'comp_ref': {'zlib':True}, \
+                    'dbz_lowlevel': {'zlib':True}, \
                     'conv_core': {'zlib':True}, \
                     'conv_mask': {'zlib':True}, \
                     'convcold_cloudnumber': {'zlib':True, 'dtype':'int', }, \

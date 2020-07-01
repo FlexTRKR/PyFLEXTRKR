@@ -340,7 +340,7 @@ def write_trackstats_radar(trackstats_outfile, numtracks, maxtracklength, numcha
                             finaltrack_endmerge_tracknumber, finaltrack_endmerge_timeindex, finaltrack_endmerge_cloudnumber, \
                             finaltrack_trackinterruptions, \
                             finaltrack_mergenumber, finaltrack_splitnumber, \
-                            
+                            finaltrack_cell_rangeflag, \
                             # finaltrack_tracklength, finaltrack_basetime, \
                             # finaltrack_cloudidfile, finaltrack_cloudnumber, \
                             # finaltrack_core_meanlat, finaltrack_core_meanlon, \
@@ -415,6 +415,7 @@ def write_trackstats_radar(trackstats_outfile, numtracks, maxtracklength, numcha
                 'merge_tracknumbers': ([trackdimname, timedimname], finaltrack_mergenumber), \
                 'split_tracknumbers': ([trackdimname, timedimname], finaltrack_splitnumber), \
                 'trackinterruptions': ([trackdimname], finaltrack_trackinterruptions), \
+                'maxrange_flag': ([trackdimname, timedimname], finaltrack_cell_rangeflag), \
                 # 'boundary': ([trackdimname], finaltrack_boundary), \
                 # 'majoraxis': ([trackdimname, timedimname], finaltrack_corecold_majoraxis), \
                 # 'orientation': ([trackdimname, timedimname], finaltrack_corecold_orientation), \
@@ -659,6 +660,12 @@ def write_trackstats_radar(trackstats_outfile, numtracks, maxtracklength, numcha
     output_data.trackinterruptions.attrs['valid_max'] = 2
     output_data.trackinterruptions.attrs['units'] = 'unitless'
 
+    output_data.maxrange_flag.attrs['long_name'] = 'Flag indicating if tracked cell is at the maximum range of the radar'
+    output_data.maxrange_flag.attrs['values'] = '0 = cell outside range mask; 1 = cell within range mask'
+    output_data.maxrange_flag.attrs['valid_min'] = 0
+    output_data.maxrange_flag.attrs['valid_max'] = 1
+    output_data.maxrange_flag.attrs['units'] = 'unitless'
+
     # output_data.boundary.attrs['long_name'] = 'Flag indicating whether the core + cold anvil touches one of the domain edges.'
     # output_data.boundary.attrs['usuage'] = ' 0 = away from edge. 1= touches edge.'
     # output_data.boundary.attrs['units'] = 'unitless'
@@ -751,7 +758,7 @@ def write_trackstats_radar(trackstats_outfile, numtracks, maxtracklength, numcha
                     'merge_tracknumbers': var_int_encode, \
                     'split_tracknumbers': var_int_encode, \
                     'trackinterruptions': var_int_encode, \
-
+                    'maxrange_flag': var_int_encode, \
                     # 'boundary':  {'dtype': 'int', 'zlib':True, '_FillValue': fillval}, \
                     # 'majoraxis': {'zlib':True, '_FillValue': np.nan}, \
                     # 'orientation': {'zlib':True, '_FillValue': np.nan}, \
