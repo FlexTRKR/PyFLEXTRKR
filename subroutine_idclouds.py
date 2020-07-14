@@ -1686,6 +1686,7 @@ def cloud_type_tracking_NS(ct, pixel_radius, area_thresh, smoothsize, mincorecol
     # Import modules
     import numpy as np
     from scipy.ndimage import label, binary_dilation, generate_binary_structure
+    from skimage.morphology import (square, rectangle, diamond, disk, cube,octahedron, ball, octagon, star)
 
     ######################################################################
     # Determine dimensions
@@ -1717,7 +1718,7 @@ def cloud_type_tracking_NS(ct, pixel_radius, area_thresh, smoothsize, mincorecol
 
     #####################################################################
     # Label features 
-    for i in range(0,3): 
+    for i in range(0,2): 
         s = generate_binary_structure(2,2) # allows diagonal to be included
         convective_label, convective_number = label(convective_flag,s)
 
@@ -1779,7 +1780,6 @@ def cloud_type_tracking_NS(ct, pixel_radius, area_thresh, smoothsize, mincorecol
 
             #print('Entered dilating loop')
             keepspreading = 1
-            counter = 0
             # Keep looping through dilating code as long as at least one feature is growing. At this point limit it to 20 dilations (KB-IT IS NOT LIMITED TO 20 ANYMORE). Remove this once use real data.
             while keepspreading > 0 and keepspreading < 2000:
                 keepspreading = 0
@@ -1829,7 +1829,10 @@ def cloud_type_tracking_NS(ct, pixel_radius, area_thresh, smoothsize, mincorecol
                     featuresubset = np.copy(featuremap[miny:maxy, minx:maxx])
 
                     # Dilate cloud region
-                    dilationstructure = generate_binary_structure(2,1)  # Defines shape of growth. This grows one pixel as a cross
+                    #dilationstructure = generate_binary_structure(2,1)  # Defines shape of growth. This grows one pixel as a cross
+                    #dilationstructure = generate_binary_structure(2,2)  # Defines shape of growth. This grows one pixel as rectangle
+                    dilationstructure = octagon(3,2)
+                    #dilationstructure = octagon(4,2)
 
                     dilatedsubset = binary_dilation(featuresubset,structure=dilationstructure, iterations=1).astype(featuremap.dtype)
 
