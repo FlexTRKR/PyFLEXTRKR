@@ -240,7 +240,8 @@ def trackstats_ct(datasource, datadescription, pixel_radius, geolimits, areathre
     print((time.ctime()))
     gc.collect()
 
-    cloudindexpresent = np.array(np.where(finaltrack_tracklength != 0))[0, :]
+    #cloudindexpresent = np.array(np.where(finaltrack_tracklength != 0))[0, :]
+    cloudindexpresent = np.array(np.where(finaltrack_tracklength >= 6))[0, :]
     
     numtracks = len(cloudindexpresent)
 
