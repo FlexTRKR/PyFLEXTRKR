@@ -124,7 +124,8 @@ def mapcell_radar(cloudid_filename, filebasetime, stats_path, statistics_filebas
                 statusmap[0, jjcloudypixels, jjcloudxpixels] = jjstatus                
                 # import pdb; pdb.set_trace()
             else:
-                sys.exit('Error: No matching cloud pixel found?!')
+                print('Error: No matching cloud pixel found?! itrack: ', itrack[jj], ', itime: ', itime[jj])
+                # sys.exit('Error: No matching cloud pixel found?!')
 
         # Get cloudnumbers and split cloudnumbers within this time
         jjcloudnumber = trackstat_cloudnumber[itrack, itime]

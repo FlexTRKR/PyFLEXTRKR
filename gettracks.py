@@ -131,7 +131,7 @@ def gettracknumbers(datasource, datadescription, datainpath, dataoutpath, startd
 
     # import pdb; pdb.set_trace()
     # KB HARDCODED GAP
-    # gap = 0
+    gap = 0
     ############################################################################
     # Initialize matrices
     nfiles = int(len(files))+2*gap
