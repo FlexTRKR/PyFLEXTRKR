@@ -176,7 +176,7 @@ def plot_map_2panels(xx, yy, comp_ref, tn_perim, notn_perim, xx_tn, yy_tn, track
 
     # Plot range circles around radar
     for ii in range(0, len(radii)):
-        ax1.tissot(rad_km=radii[ii], lons=radar_lon, lats=radar_lat, n_samples=100, facecolor='none', color='k', lw=0.6, zorder=5)
+        ax1.tissot(rad_km=radii[ii], lons=radar_lon, lats=radar_lat, n_samples=100, facecolor='None', edgecolor='k', lw=0.6, zorder=5)
     # Plot azimuth lines
     for ii in range(0, len(azimuths)):
         lon2, lat2 = calc_latlon(radar_lon, radar_lat, 200, azimuths[ii])
@@ -214,7 +214,7 @@ def plot_map_2panels(xx, yy, comp_ref, tn_perim, notn_perim, xx_tn, yy_tn, track
     
     # Plot range circles around radar
     for ii in range(0, len(radii)):
-        ax2.tissot(rad_km=radii[ii], lons=radar_lon, lats=radar_lat, n_samples=100, facecolor='none', color='k', lw=0.6, zorder=5)
+        ax2.tissot(rad_km=radii[ii], lons=radar_lon, lats=radar_lat, n_samples=100, facecolor='None', edgecolor='k', lw=0.6, zorder=5)
     # Plot azimuth lines
     for ii in range(0, len(azimuths)):
         lon2, lat2 = calc_latlon(radar_lon, radar_lat, 200, azimuths[ii])
@@ -295,8 +295,8 @@ if __name__ == "__main__":
     
     # Get start/end date/time from input
     startdate = sys.argv[1]
-    enddate = sys.argv[2]
-    run_parallel = int(sys.argv[3])
+    # enddate = sys.argv[2]
+    run_parallel = int(sys.argv[2])
 
     # Set parallel option - 0:serial, 1:parallal
     # run_parallel = 1
@@ -313,17 +313,21 @@ if __name__ == "__main__":
     #         exit()
 
     # Input data files
-    datadir = f'/global/cscratch1/sd/feng045/iclass/cacti/arm/csapr/celltracking/{startdate}_{enddate}/'
-    datafiles = sorted(glob.glob(f'{datadir}celltracks_*.nc'))
+    # datadir = f'/global/cscratch1/sd/feng045/iclass/cacti/arm/csapr/celltracking/{startdate}_{enddate}/'
+    # datadir = os.path.expandvars('$ICLASS') + f'/cacti/radar_processing/taranis_corcsapr2cfrppiqcM1_celltracking.c1/celltracking/{startdate}_{enddate}/'
+    datadir = os.path.expandvars('$ICLASS') + f'cacti/radar_processing/taranis_corcsapr2cfrppiqcM1_celltracking.c1/celltracking/20181015.0000_20190303.0000/'
+    datafiles = sorted(glob.glob(f'{datadir}celltracks_{startdate}*.nc'))
     # datadir = '/global/cscratch1/sd/feng045/iclass/cacti/arm/csapr/celltracking/20181110.1800_20181112.2359/'
     # datafiles = sorted(glob.glob(f'{datadir}celltracks_2018111[0-2]_????.nc'))
     # datadir = '/global/cscratch1/sd/feng045/iclass/cacti/arm/csapr/celltracking/20181125.2200_20181127.2359/'
     # datafiles = sorted(glob.glob(f'{datadir}celltracks_2018112[5-7]_????*.nc'))
     print(f'Number of files: {len(datafiles)}')
+    print(f'{datadir}celltracks_{startdate}*.nc')
 
     # Output figure directory  
-    figdir = f'{datadir}quicklooks/'
-    os.makedirs(figdir, exist_ok=True)
+    figdir = f'{datadir}/quicklooks/'
+    print(f'Output dir: {figdir}')
+    # os.makedirs(figdir, exist_ok=True)
 
     # Serial option
     if run_parallel == 0:
@@ -338,7 +342,7 @@ if __name__ == "__main__":
     elif run_parallel == 1:
 
         # Set up dask workers and threads
-        n_workers = 20
+        n_workers = 32
 
         # Initialize dask
         cluster = LocalCluster(n_workers=n_workers, threads_per_worker=1)
