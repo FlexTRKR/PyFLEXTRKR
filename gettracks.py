@@ -606,7 +606,7 @@ def gettracknumbers(datasource, datadescription, datainpath, dataoutpath, startd
     output_data.cloudid_files.attrs['units'] = 'unitless'
 
     output_data.track_numbers.attrs['long_name'] = 'cloud track number'
-    output_data.track_numbers.attrs['usage'] = 'Each row represents a cloudid file. Each row represents a cloud in that file. The number indicates the track associate with that cloud. This follows the largest cloud in mergers and splits.'
+    output_data.track_numbers.attrs['usage'] = 'size: 1 by time by number of clouds. Each column represents a cloudid file (time dimension). Each row represents a cloud in that file (ex. row 0=cloud 1, row 1000=cloud 1001) through time. The values indicate the track that cloud is in. This follows the largest cloud in mergers and splits.'
     output_data.track_numbers.attrs['units'] = 'unitless'
     output_data.track_numbers.attrs['valid_min'] = 1
     output_data.track_numbers.attrs['valid_max'] = itrack-1
@@ -617,13 +617,13 @@ def gettracknumbers(datasource, datadescription, datainpath, dataoutpath, startd
     output_data.track_status.attrs['valid_max'] = 65
 
     output_data.track_mergenumbers.attrs['long_name'] = 'Number of the track that this small cloud merges into'
-    output_data.track_mergenumbers.attrs['usage'] = 'Each row represents a cloudid file. Each column represets a cloud in that file. Numbers give the track number associated with the small clouds in mergers.'
+    output_data.track_mergenumbers.attrs['usage'] = 'size: 1 by time by number of clouds. Each column represents a cloudid file (time dimension). Each row represets a cloud in that file through time. Values give the track number associated with the small clouds in mergers.'
     output_data.track_mergenumbers.attrs['units'] = 'unitless'
     output_data.track_mergenumbers.attrs['valid_min'] = 1
     output_data.track_mergenumbers.attrs['valid_max'] = itrack-1
 
     output_data.track_splitnumbers.attrs['long_name'] = 'Number of the track that this small cloud splits from'
-    output_data.track_splitnumbers.attrs['usage'] = 'Each row represents a cloudid file. Each column represets a cloud in that file. Numbers give the track number associated with the small clouds in the split'
+    output_data.track_splitnumbers.attrs['usage'] = 'size: 1 by time by number of clouds. Each column represents a cloudid file (time). Each row represets a cloud in that file through time. Values give the track number associated with the small clouds in the split'
     output_data.track_splitnumbers.attrs['units'] = 'unitless'
     output_data.track_splitnumbers.attrs['valid_min'] = 1
     output_data.track_splitnumbers.attrs['valid_max'] = itrack-1

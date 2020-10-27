@@ -133,6 +133,7 @@ def trackstats_ct(datasource, datadescription, pixel_radius, geolimits, areathre
     latlondata = Dataset(tracking_inpath + tmpfname, 'r')
     longitude = latlondata.variables['longitude'][:]
     latitude = latlondata.variables['latitude'][:]
+
     latlondata.close()
 
     # Determine dimensions of data
@@ -241,7 +242,7 @@ def trackstats_ct(datasource, datadescription, pixel_radius, geolimits, areathre
     gc.collect()
 
     cloudindexpresent = np.array(np.where(finaltrack_tracklength != 0))[0, :]
-    
+        
     numtracks = len(cloudindexpresent)
 
     maxtracklength = np.nanmax(finaltrack_tracklength)
@@ -263,6 +264,7 @@ def trackstats_ct(datasource, datadescription, pixel_radius, geolimits, areathre
     finaltrack_corecold_status = finaltrack_corecold_status[cloudindexpresent, 0:maxtracklength]
     finaltrack_corecold_trackinterruptions = finaltrack_corecold_trackinterruptions[cloudindexpresent]
     finaltrack_corecold_mergenumber = finaltrack_corecold_mergenumber[cloudindexpresent, 0:maxtracklength]
+    print('finaltrack_coldcore_mergenumber.shape: ', finaltrack_corecold_mergenumber.shape)
     finaltrack_corecold_splitnumber = finaltrack_corecold_splitnumber[cloudindexpresent, 0:maxtracklength]
     finaltrack_corecold_cloudnumber = finaltrack_corecold_cloudnumber[cloudindexpresent, 0:maxtracklength]
     finaltrack_datetimestring = list(finaltrack_datetimestring[i][0:maxtracklength][:] for i in cloudindexpresent)
@@ -294,6 +296,8 @@ def trackstats_ct(datasource, datadescription, pixel_radius, geolimits, areathre
     print((time.ctime()))
 
     # Create adjustor
+    print('numtracks: ', numtracks)
+    print('indexcloudnumber: ', np.max(cloudindexpresent))
     indexcloudnumber = np.copy(cloudindexpresent) + 1
     adjustor = np.arange(0, np.max(cloudindexpresent)+2)
     for it in range(0, numtracks):
@@ -311,8 +315,9 @@ def trackstats_ct(datasource, datadescription, pixel_radius, geolimits, areathre
     temp_finaltrack_corecold_splitnumber[temp_finaltrack_corecold_splitnumber == -9999] = np.max(cloudindexpresent)+2
     adjusted_finaltrack_corecold_splitnumber = adjustor[temp_finaltrack_corecold_splitnumber]
     adjusted_finaltrack_corecold_splitnumber = np.reshape(adjusted_finaltrack_corecold_splitnumber, np.shape(finaltrack_corecold_splitnumber))
+  
+    print('adjusted_finaltrack_corecold_splitnumber.shape: ',adjusted_finaltrack_corecold_splitnumber.shape)
 
-            
     #########################################################################
     # Record starting and ending status
     print('Determine starting and ending status')

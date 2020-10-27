@@ -270,14 +270,14 @@ def write_cloudtype_wrf(cloudid_outfile, file_basetime, file_datestring, file_ti
                         'latitude': (['lat', 'lon'], out_lat), \
                         'longitude': (['lat', 'lon'], out_lon), \
                         'ct': (['time','lat', 'lon'], np.expand_dims(out_ct, axis=0)), \
-                        'original_cloudtype': (['lat', 'lon'], original_cloudtype), \
-                        'convcold_cloudnumber': (['lat', 'lon'], convcold_cloudnumber), \
+                        'original_cloudtype': (['time','lat', 'lon'], np.expand_dims(original_cloudtype,axis=0)), \
+                        'convcold_cloudnumber': (['time','lat', 'lon'], np.expand_dims(convcold_cloudnumber,axis=0)), \
                         'nclouds': (['clouds'], nclouds), \
                         'ncorepix': (['clouds'], ncorepix), \
                         'ncoldpix': (['clouds'], ncoldpix), \
                         'ncorecoldpix': (['clouds'], ncorecoldpix), \
                         # 'nwarmpix': (['time', 'clouds'], nwarmpix), \
-                        'final_cloudtype': (['lat', 'lon'], final_cloudtype), \
+                        'final_cloudtype': (['time','lat', 'lon'], np.expand_dims(final_cloudtype,axis=0)), \
                         }
         # Now check for optional arguments, add them to varlist if provided
         if 'precipitation' in kwargs:
@@ -376,7 +376,7 @@ def write_cloudtype_wrf(cloudid_outfile, file_basetime, file_datestring, file_ti
         ds_out.original_cloudtype.attrs['units'] = '4-deep, 3-high congestus, 2-low congestus, 1-shallow'   
         
         ds_out.final_cloudtype.attrs['long_name'] = 'final cloudtype'
-        ds_out.final_cloudtype.attrs['units'] = '4-deep, 3-high congestus, 2-low congestus, 1-shallow'          
+        ds_out.final_cloudtype.attrs['units'] = '1-deep, 2-high congestus, 3-low congestus, 4-shallow, 5-no-type'          
 
         ds_out.convcold_cloudnumber.attrs['long_name'] = 'grid with each classified cloud given a number'
         ds_out.convcold_cloudnumber.attrs['units'] = 'unitless'
@@ -455,8 +455,9 @@ def write_cloudtype_wrf(cloudid_outfile, file_basetime, file_datestring, file_ti
                 encodelist['cloudnumber_orig'] = {'zlib':True}
 
         # Write netCDF file
-        ds_out.to_netcdf(path=cloudid_outfile, mode='w', format='NETCDF4_CLASSIC', unlimited_dims='time', encoding=encodelist)
-        # print('Output cloudid file: ' + cloudid_outfile)
+        print('Output cloudid file: ' + cloudid_outfile)
+        #ds_out.to_netcdf(path=cloudid_outfile, mode='w', format='NETCDF4_CLASSIC', unlimited_dims='time', encoding=encodelist)
+        ds_out.to_netcdf(path=cloudid_outfile, mode='w', format='NETCDF4_CLASSIC', encoding=encodelist) # KB removed unlimited_dims
 
 
 def write_trackstats_tb(trackstats_outfile, numtracks, maxtracklength, nbintb, numcharfilename, \
@@ -1043,4 +1044,6 @@ def write_trackstats_ct(trackstats_outfile, numtracks, maxtracklength, numcharfi
                         'cloudtype_npix_deep': {'dtype': 'int', 'zlib':True, '_FillValue': -9999}}
 
         # Write netcdf file
+        print('Here I am with file: ',trackstats_outfile)
         output_data.to_netcdf(path=trackstats_outfile, mode='w', format='NETCDF4_CLASSIC', unlimited_dims='ntracks', encoding=encodelist)
+        

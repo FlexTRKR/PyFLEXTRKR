@@ -303,9 +303,6 @@ def trackstats_tb(datasource, datadescription, pixel_radius, geolimits, areathre
     ########################################################
     # Correct merger and split cloud numbers
     
-    print('PRINTING FINALTRACK_CORECOLD_BOUNDARY2')
-    print(finaltrack_corecold_boundary)
-
     # Initialize adjusted matrices
     adjusted_finaltrack_corecold_mergenumber = np.ones(np.shape(finaltrack_corecold_mergenumber))*-9999
     adjusted_finaltrack_corecold_splitnumber = np.ones(np.shape(finaltrack_corecold_mergenumber))*-9999

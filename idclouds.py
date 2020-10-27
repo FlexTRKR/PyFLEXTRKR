@@ -1174,8 +1174,8 @@ def idclouds_ct(zipped_inputs):
         rawdata.close()
         
         # Area threshold for cloud type
-        area_thresh = 8 # km^2
-        
+        area_thresh = area_thresh
+
         # Create latitude and longitude grids
         in_lon, in_lat = [original_lon, original_lat]
 
