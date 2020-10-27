@@ -95,7 +95,7 @@ def map_ct(zipped_inputs):
     cloudid_cloudtype = cloudid_cloudtype.astype(np.int32)
     
     # Get data dimensions
-    [nlat, nlon] = np.shape(cloudid_cloudnumber)
+    [nt, nlat, nlon] = np.shape(cloudid_cloudnumber)
 
     ##############################################################
     # Intiailize track maps
@@ -119,7 +119,7 @@ def map_ct(zipped_inputs):
             ffcloudnumber = trackstat_cloudnumber[fulltrack[ifull], fulltime[ifull]]
             ffstatus = trackstat_status[fulltrack[ifull], fulltime[ifull]]
 
-            fullypixels, fullxpixels = np.array(np.where(cloudid_cloudnumber[:, :] == ffcloudnumber))
+            fullypixels, fullxpixels = np.array(np.where(cloudid_cloudnumber[0,:, :] == ffcloudnumber))
         
             statusmap[0, fullypixels, fullxpixels] = ffstatus
             trackmap[0, fullypixels, fullxpixels] = fulltrack[ifull] + 1
@@ -132,7 +132,7 @@ def map_ct(zipped_inputs):
             splitcloudid = np.copy(ffcloudnumber[np.where(np.isfinite(ffallsplit))])
 
             for isplit in range(0, len(splittracks)):
-                splitypixels, splitxpixels = np.array(np.where(cloudid_cloudnumber[:, :] == splitcloudid[isplit]))
+                splitypixels, splitxpixels = np.array(np.where(cloudid_cloudnumber[0,:, :] == splitcloudid[isplit]))
                 allsplitmap[0, splitypixels, splitxpixels] = splittracks[isplit]
 
         ffallmerge = trackstat_mergenumbers[fulltrack, fulltime]
@@ -142,7 +142,7 @@ def map_ct(zipped_inputs):
             mergecloudid = np.copy(ffcloudnumber[np.where(np.isfinite(ffallmerge))])
 
             for imerge in range(0, len(mergetracks)):
-                mergeypixels, mergexpixels = np.array(np.where(cloudid_cloudnumber[:, :] == mergecloudid[imerge]))
+                mergeypixels, mergexpixels = np.array(np.where(cloudid_cloudnumber[0,:, :] == mergecloudid[imerge]))
                 allmergemap[0, mergeypixels, mergexpixels] = mergetracks[imerge]
 
         trackmap = trackmap.astype(np.int32)
@@ -166,8 +166,11 @@ def map_ct(zipped_inputs):
     # Check if file already exists. If exists, delete
     if os.path.isfile(celltrackmaps_outfile):
         os.remove(celltrackmaps_outfile) 
+        
+    #print(nclouds)
     
-    nclouds_tot = np.max(nclouds)
+    #nclouds_tot = np.max(nclouds)
+    #print(nclouds_tot)
     
     # Define xarray dataset
     if showalltracks == 0:
@@ -175,13 +178,13 @@ def map_ct(zipped_inputs):
                                   'lon': (['nlat', 'nlon'], longitude), \
                                   'lat': (['nlat', 'nlon'], latitude), \
                                   'nclouds': (['clouds'], nclouds), \
-                                  'cloudtype': (['nlat', 'nlon'], cloudtype), \
-                                  'ctsplittracknumbers': (['nlat', 'nlon'], allsplitmap), \
-                                  'ctmergetracknumbers': (['nlat', 'nlon'], allmergemap), \
-                                  'cloudnumber': (['nlat', 'nlon'], convcold_cloudnumber), \
-                                  'cttracknumber': (['nlat', 'nlon'], trackmap)}, \
+                                  'cloudtype': (['time','nlat', 'nlon'], cloudtype), \
+                                  'ctsplittracknumbers': (['time','nlat', 'nlon'], np.expand_dims(allsplitmap,axis=0)), \
+                                  'ctmergetracknumbers': (['time','nlat', 'nlon'], np.expand_dims(allmergemap,axis=0)), \
+                                  'cloudnumber': (['time','nlat', 'nlon'], convcold_cloudnumber), \
+                                  'cttracknumber': (['time','nlat', 'nlon'], np.expand_dims(trackmap,axis=0))}, \
                                  coords={'time': (['time'], cloudid_basetime), \
-                                         'clouds':(['clouds'], np.arange(0,nclouds_tot)), \
+                                         'clouds':(['clouds'], np.arange(0,len(nclouds))), \
                                          'nlat': (['nlat'], np.arange(0, nlat)), \
                                          'nlon': (['nlon'], np.arange(0, nlon))}, \
                                  attrs={'title':'Pixel level of tracked clouds', \

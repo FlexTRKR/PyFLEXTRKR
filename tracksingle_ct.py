@@ -95,7 +95,11 @@ def trackclouds(zipped_inputs):
         nreference = reference_data['nclouds'].data                                                     # Load number of clouds / features
         reference_data.close()                                                                           # Close file
 
-        nreference = nreference[-1]
+        if nreference.size != 0:
+            nreference = nreference[-1]        
+            print('nreference: ', nreference)
+        else:
+            nreference = 0
         
         ##########################################################
         # Load next cloudid file, called new file
@@ -106,12 +110,16 @@ def trackclouds(zipped_inputs):
         nnew = new_data['nclouds'].data                                                 # Load number of clouds / features
         new_data.close()                                                                # Close file
 
-        nnew = nnew[-1]
+        if nnew.size != 0:
+            nnew = nnew[-1]
+            print('nnew: ',nnew)
+        else:
+            nnew = 0
         
-        print(type(nreference))
+        #print(type(nreference))
         ############################################################
         # Get size of data
-        ny, nx = np.shape(new_convcold_cloudnumber)
+        times, ny, nx = np.shape(new_convcold_cloudnumber)
 
         # Add 1 to nclouds for both reference and new cloudid files to account for files that have 0 clouds
         nreference = nreference + 1

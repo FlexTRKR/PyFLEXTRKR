@@ -1841,7 +1841,8 @@ def cloud_type_tracking_NS(ct, pixel_radius, area_thresh, smoothsize, mincorecol
 
                     # Only keep pixels in dilated regions that are below the warm anvil threshold and are not associated with another feature
                     expansionzone[np.where((expansionzone == 1) & (fullsubset != 0))] = 0
-                    expansionzone[np.where((expansionzone == 1) & (ctsubset < 1))] = 0
+                    #expansionzone[np.where((expansionzone == 1) & (ctsubset < 1))] = 0
+                    expansionzone[np.where((expansionzone == 1) & (ctsubset < 2))] = 0
 
                     # Find indices of accepted dilated regions
                     expansionindices = np.column_stack(np.where(expansionzone == 1))

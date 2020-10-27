@@ -12,7 +12,7 @@ def calc_stats_single(tracknumbers, cloudidfiles, tracking_inpath, cloudid_fileb
     import xarray as xr
     import pandas as pd
 
-    file_tracknumbers = tracknumbers
+    file_tracknumbers = tracknumbers  
 
     # Only process file if that file contains a track
     if np.nanmax(file_tracknumbers) > 0:
@@ -27,6 +27,7 @@ def calc_stats_single(tracknumbers, cloudidfiles, tracking_inpath, cloudid_fileb
         file_cloudiddata = Dataset(cloudid_file, 'r')
         #file_tb = file_cloudiddata['tb'][:]
         file_cloudtype = file_cloudiddata['ct'][:]
+        print('shape file_cloudtype: ',file_cloudtype.shape)
         #file_all_cloudnumber = file_cloudiddata['cloudnumber'][:]
         file_corecold_cloudnumber = file_cloudiddata['convcold_cloudnumber'][:]
         file_basetime = file_cloudiddata['basetime'][:]
@@ -94,11 +95,14 @@ def calc_stats_single(tracknumbers, cloudidfiles, tracking_inpath, cloudid_fileb
                 coldarea = np.array(np.where((file_corecold_cloudnumber[:,:] == cloudnumber) & (file_cloudtype[:,:] == 3)))
                 ncoldpix = np.shape(coldarea)[1]
 
-                corecoldarea = np.array(np.where((file_corecold_cloudnumber[:,:] == cloudnumber) & ((file_cloudtype[:,:] == 4) | (file_cloudtype[0,:,:] == 3))))
+                #corecoldarea = np.array(np.where((file_corecold_cloudnumber[:,:] == cloudnumber) & ((file_cloudtype[:,:] == 4) | (file_cloudtype[0,:,:] == 3))))
+                corecoldarea = np.array(np.where((file_corecold_cloudnumber[:,:] == cloudnumber) & ((file_cloudtype[:,:] == 4) | (file_cloudtype[:,:] == 3))))
+                #corecoldarea = np.array(np.where((file_corecold_cloudnumber[:,:] == cloudnumber) & ((file_cloudtype[:,:] >=3))))
+                #corecoldarea = np.array(np.where((file_corecold_cloudnumber[:,:] == cloudnumber)))
                 ncorecoldpix = np.shape(corecoldarea)[1]
 
                 # Find cloud type that belongs to the current track in this file
-                cn_wherej,cn_wherei = np.array(np.where(file_corecold_cloudnumber[:,:] == cloudnumber))
+                cn_wheret, cn_wherej,cn_wherei = np.array(np.where(file_corecold_cloudnumber[:,:] == cloudnumber))
                 cloudtype_track = file_cloudtype[:,cn_wherej,cn_wherei]
                 n_lowpix = np.count_nonzero(cloudtype_track == 1)
                 n_conglowpix = np.count_nonzero(cloudtype_track == 2)
@@ -125,8 +129,8 @@ def calc_stats_single(tracknumbers, cloudidfiles, tracking_inpath, cloudid_fileb
                 # 11/21/2019 - Make sure this cloud exists
                 if (ncorecoldpix > 0):
                     # Location statistics of core+cold anvil (aka the convective system)
-                    corecoldlat = latitude[corecoldarea[0], corecoldarea[1]]
-                    corecoldlon = longitude[corecoldarea[0], corecoldarea[1]]
+                    corecoldlat = latitude[corecoldarea[1], corecoldarea[2]]
+                    corecoldlon = longitude[corecoldarea[1], corecoldarea[2]]
 
                     finaltrack_corecold_meanlat[itrack] = np.nanmean(corecoldlat)
                     finaltrack_corecold_meanlon[itrack] = np.nanmean(corecoldlon)
