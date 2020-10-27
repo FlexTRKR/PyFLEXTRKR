@@ -1,12 +1,15 @@
 import numpy as np
 import os, fnmatch, sys, glob
-import time, datetime, calendar
+import time, datetime, calendar, pytz
 from pytz import timezone, utc
-from multiprocessing import Pool
-from itertools import repeat
-from netCDF4 import Dataset
 import xarray as xr
 import json
+from multiprocessing import Pool
+from itertools import repeat
+from idcells_radar import idcell_csapr
+from tracksingle_drift import trackclouds
+from gettracks import gettracknumbers
+from mapcell_radar import mapcell_radar
 
 # Name: run_cacti_csapr.py
 
@@ -30,8 +33,16 @@ startdate = config['startdate']
 enddate = config['enddate']
 run_parallel = config['run_parallel']
 nprocesses = config['nprocesses']
+databasename = config['databasename']
+datasource = config['datasource']
+datadescription = config['datadescription']
 root_path = config['root_path']
 clouddata_path = config['clouddata_path']
+terrain_file = config['terrain_file']
+if "driftfile" in config:
+    driftfile = config['driftfile']
+
+
 
 ################################################################################################
 # Set variables describing data, file structure, and tracking thresholds
@@ -65,15 +76,14 @@ curr_tracknumbers_version = 'v1.0'
 
 # Specify cloud tracking parameters
 geolimits = np.array([-90., -180., 90., 180.])  # 4-element array with plotting boundaries [lat_min, lon_min, lat_max, lon_max]
-pixel_radius = 1                         # km
+pixel_radius = 0.5                         # km
 timegap = 30/float(60)                    # hour
 area_thresh = 4                              # km^2
 miss_thresh = 0.2                          # Missing data threshold. (0.1 = 10%)
 othresh = 0.3                              # overlap percentage threshold
-lengthrange = np.array([2, 50])            # A vector [minlength,maxlength] to specify the lifetime range for the tracks
-maxnclouds = 6000                          # Maximum clouds in one file
+lengthrange = np.array([2, 60])            # A vector [minlength,maxlength] to specify the lifetime range for the tracks
+maxnclouds = 1000                          # Maximum clouds in one file
 nmaxlinks = 10                             # Maximum number of clouds that any single cloud can be linked to
-mincellpix = 4                             # Minimum number of pixels for a cell.
 
 ## Specify cell track parameters
 maincloud_duration = 30/float(60)                      # Natural time resolution of data
@@ -81,9 +91,10 @@ merge_duration = 30/float(60)                          # Track shorter than this
 split_duration = 30/float(60)                         # Track shorter than this will be labeled as merger
 
 # Specify filenames and locations
-datasource = 'CSAPR'
-datadescription = 'COR'
-databasename = 'CSAPR2_Taranis_Gridded_1000m.Conv_Mask.'
+# datasource = 'CSAPR2'
+# datadescription = 'COR'
+# databasename = 'CSAPR2_Taranis_Gridded_1000m.Conv_Mask.'
+# databasename = 'csa_csapr2_'
 label_filebase = 'cloudtrack_'
 
 # latlon_file = clouddata_path + 'coordinates_d02_big.dat'
@@ -169,15 +180,13 @@ if run_idclouds == 1:
     files_basetime = files_basetime[:filestep]
     
     ##########################################################################
-    # Process files
-    # Load function
-    from idcells_radar import idcell_csapr
+    # Process files    
 
     # Generate input lists
     idclouds_input = zip(rawdatafiles, files_datestring, files_timestring, files_basetime, \
                         repeat(datasource), repeat(datadescription), repeat(cloudid_version), \
                         repeat(tracking_outpath), repeat(startdate), repeat(enddate), \
-                        repeat(pixel_radius), repeat(area_thresh), repeat(miss_thresh), repeat(mincellpix))
+                        repeat(pixel_radius), repeat(area_thresh), repeat(miss_thresh))
     
     ## Call function
     if run_parallel == 0:
@@ -186,7 +195,7 @@ if run_idclouds == 1:
             idcell_csapr(rawdatafiles[ifile], files_datestring[ifile], files_timestring[ifile], files_basetime[ifile], \
                             datasource, datadescription, cloudid_version, \
                             tracking_outpath, startdate, enddate, \
-                            pixel_radius, area_thresh, miss_thresh, mincellpix)
+                            pixel_radius, area_thresh, miss_thresh)
     elif run_parallel == 1:
         # Parallel version
         if __name__ == '__main__':
@@ -250,8 +259,41 @@ if run_tracksingle == 1:
     
     ################################################################
     # Process files
-    # Load function
-    from tracksingle import trackclouds
+
+    # Create draft variables that match number of reference cloudid files
+    # Number of reference cloudid files (1 less than total cloudid files)
+    ncloudidfiles = len(cloudidfiles_timestring)-1
+    datetime_drift_match = np.empty(ncloudidfiles, dtype='<U13')
+    xdrifts_match = np.zeros(ncloudidfiles, dtype=int)
+    ydrifts_match = np.zeros(ncloudidfiles, dtype=int)
+
+    # Test if driftfile is defined
+    try:
+        driftfile
+    except NameError:
+        print(f"Drift file is not defined. Regular tracksingle procedure is used.")
+    else:
+        print(f"Drift file used: {driftfile}")
+
+        # Read the drift file
+        ds_drift = xr.open_dataset(driftfile)
+        bt_drift = ds_drift.basetime
+        xdrifts = ds_drift.x.values
+        ydrifts = ds_drift.y.values
+
+        # Convert dateime64 objects to string array
+        datetime_drift = bt_drift.dt.strftime("%Y%m%d_%H%M").values
+
+        # Loop over each cloudid file time to find matching drfit data
+        for itime in range(0, len(cloudidfiles_timestring)-1):
+            cloudid_datetime = cloudidfiles_datestring[itime] + '_' + cloudidfiles_timestring[itime]
+            idx = np.where(datetime_drift == cloudid_datetime)[0]
+            if (len(idx) == 1):
+                datetime_drift_match[itime] = datetime_drift[idx[0]]
+                xdrifts_match[itime] = xdrifts[idx]
+                ydrifts_match[itime] = ydrifts[idx]
+    
+    # import pdb; pdb.set_trace()
 
     # Generate input lists
     list_trackingoutpath = [tracking_outpath]*(cloudidfilestep-1)
@@ -261,7 +303,7 @@ if run_tracksingle == 1:
     list_othresh = np.ones(cloudidfilestep-1)*othresh
     list_startdate = [startdate]*(cloudidfilestep-1)
     list_enddate = [enddate]*(cloudidfilestep-1)
-
+    
     # Call function
     print('Tracking clouds between single files')
 
@@ -270,7 +312,8 @@ if run_tracksingle == 1:
                             cloudidfiles_timestring[0:-1], cloudidfiles_timestring[1::], \
                             cloudidfiles_basetime[0:-1], cloudidfiles_basetime[1::], \
                             list_trackingoutpath, list_trackversion, list_timegap, \
-                            list_nmaxlinks, list_othresh, list_startdate, list_enddate))
+                            list_nmaxlinks, list_othresh, list_startdate, list_enddate, \
+                            datetime_drift_match, xdrifts_match, ydrifts_match))
 
     if run_parallel == 0:
         # Serial version
@@ -297,8 +340,6 @@ if run_tracksingle == 0:
 
 # Call function
 if run_gettracks == 1:
-    # Load function
-    from gettracks import gettracknumbers
 
     # Call function
     print('Getting track numbers')
@@ -318,14 +359,27 @@ if run_gettracks == 0:
 
 # Call function
 if run_finalstats == 1:
-    # Load function
-    from trackstats_radar import trackstats_radar
-
-    # Call satellite version of function
     print('Calculating cell statistics')
-    trackstats_radar(datasource, datadescription, pixel_radius, geolimits, area_thresh, \
-                    startdate, enddate, timegap, cloudid_filebase, tracking_outpath, stats_outpath, \
-                    track_version, tracknumber_version, tracknumbers_filebase, lengthrange=lengthrange)
+
+    # 
+    if run_parallel == 0:
+        from trackstats_radar import trackstats_radar
+        # Call serial version of trackstats
+        trackstats_radar(datasource, datadescription, pixel_radius, datatimeresolution, geolimits, area_thresh, \
+                        startdate, enddate, timegap, cloudid_filebase, tracking_outpath, stats_outpath, \
+                        track_version, tracknumber_version, tracknumbers_filebase, terrain_file, lengthrange=lengthrange)
+
+    elif run_parallel == 1:
+        from trackstats_radar_parallel import trackstats_radar
+        # Call parallel version of trackstats
+        trackstats_radar(datasource, datadescription, pixel_radius, datatimeresolution, geolimits, area_thresh, \
+                        startdate, enddate, timegap, cloudid_filebase, tracking_outpath, stats_outpath, \
+                        track_version, tracknumber_version, tracknumbers_filebase, terrain_file, lengthrange, \
+                        nprocesses=nprocesses)
+
+    else:
+        sys.ext('Valid parallelization flag not provided')
+
     trackstats_filebase = 'stats_tracknumbers' + tracknumber_version + '_'
 
 ##############################################################
@@ -392,12 +446,9 @@ if run_labelcell == 1:
     # Remove extra rows
     cloudidfiles = cloudidfiles[0:cloudidfilestep]
     cloudidfiles_basetime = cloudidfiles_basetime[:cloudidfilestep]
-        
+    
     #############################################################
     # Process files
-
-    # Load function 
-    from mapcell_radar import mapcell_radar
 
     # Generate input list
     # list_cellstat_filebase = [cellstats_filebase]*(cloudidfilestep-1)
@@ -418,7 +469,8 @@ if run_labelcell == 1:
     ## Call function
     if run_parallel == 0:
         # Call function
-        for iunique in range(0, cloudidfilestep-1):
+        # for iunique in range(0, cloudidfilestep-1):
+        for iunique in range(0, cloudidfilestep):
             # mapcell_radar(cellmap_input[iunique])
             mapcell_radar(cloudidfiles[iunique], cloudidfiles_basetime[iunique], stats_outpath, trackstats_filebase, \
                         startdate, enddate, celltracking_outpath, celltracking_filebase)

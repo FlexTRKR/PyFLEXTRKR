@@ -36,8 +36,8 @@ def mapcell_radar(cloudid_filename, filebasetime, stats_path, statistics_filebas
     trackstat_basetime = allstatdata['basetime'][:] # Time of cloud in seconds since 01/01/1970 00:00
     trackstat_cloudnumber = allstatdata['cloudnumber'][:] # Number of the corresponding cloudid file
     trackstat_status = allstatdata['status'][:] # Flag indicating the status of the cloud
-    trackstat_mergenumbers = allstatdata['mergenumbers'][:] # Track number that it merges into
-    trackstat_splitnumbers = allstatdata['splitnumbers'][:]
+    trackstat_mergenumbers = allstatdata['merge_tracknumbers'][:] # Track number that it merges into
+    trackstat_splitnumbers = allstatdata['split_tracknumbers'][:]
     datasource = allstatdata.getncattr('source')
     datadescription = allstatdata.getncattr('description')
     allstatdata.close()
@@ -52,7 +52,7 @@ def mapcell_radar(cloudid_filename, filebasetime, stats_path, statistics_filebas
     # Load cloudid data
     cloudiddata = Dataset(cloudid_filename, 'r')
     cloudid_cloudnumber = cloudiddata['cloudnumber'][:]
-    cloudid_cloudnumber_noinflate = cloudiddata['cloudnumber_noinflate'][:]
+    # cloudid_cloudnumber_noinflate = cloudiddata['cloudnumber_noinflate'][:]
     cloudid_basetime = cloudiddata['basetime'][:]
     basetime_units =  cloudiddata['basetime'].units
     # basetime_calendar = cloudiddata['basetime'].calendar
@@ -60,19 +60,28 @@ def mapcell_radar(cloudid_filename, filebasetime, stats_path, statistics_filebas
     latitude = cloudiddata['latitude'][:]
     nclouds = cloudiddata['nclouds'][:]
     comp_ref = cloudiddata['comp_ref'][:]
-    conv_mask1 = cloudiddata['conv_mask1'][:]
-    conv_mask2 = cloudiddata['conv_mask2'][:]
+    dbz_lowlevel = cloudiddata['dbz_lowlevel'][:]
+    conv_core = cloudiddata['conv_core'][:]
+    conv_mask = cloudiddata['conv_mask'][:]
+    echotop10 = cloudiddata['echotop10'][:] / 1000.
+    echotop20 = cloudiddata['echotop20'][:] / 1000.
+    echotop30 = cloudiddata['echotop30'][:] / 1000.
+    echotop40 = cloudiddata['echotop40'][:] / 1000.
+    echotop50 = cloudiddata['echotop50'][:] / 1000.
     # convcold_cloudnumber = cloudiddata['convcold_cloudnumber'][:]
     cloudiddata.close()
     
     # cloudid_cloudnumber = cloudid_cloudnumber.astype(np.int32)
     # cloudid_cloudnumber_noinflate = cloudid_cloudnumber_noinflate.astype(np.int32)
     comp_ref = comp_ref.data
-    conv_mask1 = conv_mask1.data
-    conv_mask2 = conv_mask2.data
+    conv_core = conv_core.data
+    conv_mask = conv_mask.data
     cloudid_cloudnumber = cloudid_cloudnumber.data
-    cloudid_cloudnumber_noinflate = cloudid_cloudnumber_noinflate.data
+    # cloudid_cloudnumber_noinflate = cloudid_cloudnumber_noinflate.data
     
+    # Create a binary conv_mask (remove the cell number)
+    conv_mask_binary = conv_mask > 0
+
     # Get data dimensions
     [timeindex, ny, nx] = np.shape(cloudid_cloudnumber)
     
@@ -115,7 +124,8 @@ def mapcell_radar(cloudid_filename, filebasetime, stats_path, statistics_filebas
                 statusmap[0, jjcloudypixels, jjcloudxpixels] = jjstatus                
                 # import pdb; pdb.set_trace()
             else:
-                sys.exit('Error: No matching cloud pixel found?!')
+                print('Error: No matching cloud pixel found?! itrack: ', itrack[jj], ', itime: ', itime[jj])
+                # sys.exit('Error: No matching cloud pixel found?!')
 
         # Get cloudnumbers and split cloudnumbers within this time
         jjcloudnumber = trackstat_cloudnumber[itrack, itime]
@@ -154,8 +164,9 @@ def mapcell_radar(cloudid_filename, filebasetime, stats_path, statistics_filebas
         allmergemap = allmergemap.astype(np.int32)
         allsplitmap = allsplitmap.astype(np.int32)
 
-        # Multiply the tracknumber map with conv_mask2 to get the actual cell size without inflation
-        trackmap_cmask2 = (trackmap * conv_mask2).astype(np.int32)
+        # Multiply the tracknumber map with conv_mask to get the actual cell size without inflation
+        # trackmap_cmask2 = (trackmap * conv_mask2).astype(np.int32)
+        trackmap_cmask2 = (trackmap * conv_mask_binary).astype(np.int32)
 
     else:
         trackmap_cmask2 = trackmap
@@ -178,15 +189,21 @@ def mapcell_radar(cloudid_filename, filebasetime, stats_path, statistics_filebas
                 'latitude': (['lat', 'lon'], latitude), \
                 'nclouds': (['time'], nclouds), \
                 'comp_ref': (['time', 'lat', 'lon'], comp_ref), \
-                'conv_mask1': (['time', 'lat', 'lon'], conv_mask1), \
-                'conv_mask2': (['time', 'lat', 'lon'], conv_mask2), \
+                'dbz_lowlevel': (['time', 'lat', 'lon'], dbz_lowlevel), \
+                'conv_core': (['time', 'lat', 'lon'], conv_core), \
+                'conv_mask': (['time', 'lat', 'lon'], conv_mask), \
                 'tracknumber': (['time', 'lat', 'lon'], trackmap), \
                 'tracknumber_cmask2': (['time', 'lat', 'lon'], trackmap_cmask2), \
-                'cloudstatus': (['time', 'lat', 'lon'], statusmap), \
+                'track_status': (['time', 'lat', 'lon'], statusmap), \
                 'cloudnumber': (['time', 'lat', 'lon'], cloudid_cloudnumber), \
-                'cloudnumber_noinflate': (['time', 'lat', 'lon'], cloudid_cloudnumber_noinflate), \
-                'mergecloudnumber': (['time', 'lat', 'lon'], allmergemap), \
-                'splitcloudnumber': (['time', 'lat', 'lon'], allsplitmap), \
+                # 'cloudnumber_noinflate': (['time', 'lat', 'lon'], cloudid_cloudnumber_noinflate), \
+                'merge_tracknumber': (['time', 'lat', 'lon'], allmergemap), \
+                'split_tracknumber': (['time', 'lat', 'lon'], allsplitmap), \
+                'echotop10': (['time', 'lat', 'lon'], echotop10), \
+                'echotop20': (['time', 'lat', 'lon'], echotop20), \
+                'echotop30': (['time', 'lat', 'lon'], echotop30), \
+                'echotop40': (['time', 'lat', 'lon'], echotop40), \
+                'echotop50': (['time', 'lat', 'lon'], echotop50), \
                 # 'tracknumber': (['time', 'lat', 'lon'], trackmap_mergesplit), \
                 # 'cellsplittracknumbers': (['time', 'lat', 'lon'], cellsplitmap), \
                 # 'cellmergetracknumbers': (['time', 'lat', 'lon'], cellmergemap), \
@@ -209,6 +226,29 @@ def mapcell_radar(cloudid_filename, filebasetime, stats_path, statistics_filebas
     
     # Define xarray dataset
     ds_out = xr.Dataset(varlist, coords=coordlist, attrs=gattrlist)
+
+    # Track status explanation
+    track_status_explanation = '0: Track stops;  ' + \
+                '1: Simple track continuation;  ' + \
+                '2: This is the bigger cloud in simple merger;  ' + \
+                '3: This is the bigger cloud from a simple split that stops at this time;  ' + \
+                '4: This is the bigger cloud from a split and this cloud continues to the next time;  ' + \
+                '5: This is the bigger cloud from a split that subsequently is the big cloud in a merger;  ' + \
+                '13: This cloud splits at the next time step;  ' + \
+                '15: This cloud is the bigger cloud in a merge that then splits at the next time step;  ' + \
+                '16: This is the bigger cloud in a split that then splits at the next time step;  ' + \
+                '18: Merge-split at same time (big merge, splitter, and big split);  ' + \
+                '21: This is the smaller cloud in a simple merger;  ' + \
+                '24: This is the bigger cloud of a split that is then the small cloud in a merger;  ' + \
+                '31: This is the smaller cloud in a simple split that stops;  ' + \
+                '32: This is a small split that continues onto the next time step;  ' + \
+                '33: This is a small split that then is the bigger cloud in a merger;  ' + \
+                '34: This is the small cloud in a merger that then splits at the next time step;  ' + \
+                '37: Merge-split at same time (small merge, splitter, big split);  ' + \
+                '44: This is the smaller cloud in a split that is smaller cloud in a merger at the next time step;  ' + \
+                '46: Merge-split at same time (big merge, splitter, small split);  ' + \
+                '52: This is the smaller cloud in a split that is smaller cloud in a merger at the next time step;  ' + \
+                '65: Merge-split at same time (smaller merge, splitter, small split)'
     
     # Specify variable attributes
     ds_out.time.attrs['long_name'] = 'epoch time (seconds since 01/01/1970 00:00) in epoch of file'
@@ -228,28 +268,32 @@ def mapcell_radar(cloudid_filename, filebasetime, stats_path, statistics_filebas
     
     ds_out.comp_ref.attrs['long_name'] = 'Composite reflectivity'
     ds_out.comp_ref.attrs['units'] = 'dBZ'
-    
-    ds_out.conv_mask1.attrs['long_name'] = 'Convective Region Mask After Reflectivity Threshold and Peakedness Steps'
-    ds_out.conv_mask1.attrs['units'] = 'unitless'
-    ds_out.conv_mask1.attrs['_FillValue'] = 0
 
-    ds_out.conv_mask2.attrs['long_name'] = 'Convective Region Mask After Reflectivity Threshold, Peakedness, and Expansion Steps'
-    ds_out.conv_mask2.attrs['units'] = 'unitless'
-    ds_out.conv_mask2.attrs['_FillValue'] = 0
+    ds_out.dbz_lowlevel.attrs['long_name'] = 'Composite Low-level Reflectivity'
+    ds_out.dbz_lowlevel.attrs['units'] = 'dBZ'
+    
+    ds_out.conv_core.attrs['long_name'] = 'Convective Core Mask After Reflectivity Threshold and Peakedness Steps'
+    ds_out.conv_core.attrs['units'] = 'unitless'
+    ds_out.conv_core.attrs['_FillValue'] = 0
+
+    ds_out.conv_mask.attrs['long_name'] = 'Convective Region Mask After Reflectivity Threshold, Peakedness, and Expansion Steps'
+    ds_out.conv_mask.attrs['units'] = 'unitless'
+    ds_out.conv_mask.attrs['_FillValue'] = 0
 
     ds_out.tracknumber.attrs['long_name'] = 'Track number in this file at a given pixel'
     ds_out.tracknumber.attrs['units'] = 'unitless'
     ds_out.tracknumber.attrs['_FillValue'] = 0
 
-    ds_out.tracknumber_cmask2.attrs['long_name'] = 'Track number (conv_mask2) in this file at a given pixel'
+    ds_out.tracknumber_cmask2.attrs['long_name'] = 'Track number (conv_mask) in this file at a given pixel'
     ds_out.tracknumber_cmask2.attrs['units'] = 'unitless'
     ds_out.tracknumber_cmask2.attrs['_FillValue'] = 0
 
-    ds_out.cloudstatus.attrs['long_name'] = 'Flag indicating history of cloud'
-    ds_out.cloudstatus.attrs['units'] = 'unitless'
-    ds_out.cloudstatus.attrs['valid_min'] = 0
-    ds_out.cloudstatus.attrs['valid_max'] = 65
-    ds_out.cloudstatus.attrs['_FillValue'] = fillval
+    ds_out.track_status.attrs['long_name'] = 'Flag indicating history of cloud'
+    ds_out.track_status.attrs['units'] = 'unitless'
+    ds_out.track_status.attrs['valid_min'] = 0
+    ds_out.track_status.attrs['valid_max'] = 65
+    ds_out.track_status.attrs['_FillValue'] = fillval
+    ds_out.track_status.attrs['comments'] = track_status_explanation
 
     ds_out.cloudnumber.attrs['long_name'] = 'Number associated with the cloud at a given pixel'
     ds_out.cloudnumber.attrs['units'] = 'unitless'
@@ -257,45 +301,64 @@ def mapcell_radar(cloudid_filename, filebasetime, stats_path, statistics_filebas
     # ds_out.cloudnumber.attrs['valid_min'] = 0
     # ds_out.cloudnumber.attrs['valid_max'] = np.nanmax(convcold_cloudnumber)
 
-    ds_out.cloudnumber_noinflate.attrs['long_name'] = 'Number associated with the cloud (no inflation) at a given pixel'
-    ds_out.cloudnumber_noinflate.attrs['units'] = 'unitless'
-    ds_out.cloudnumber_noinflate.attrs['_FillValue'] = 0
+    # ds_out.cloudnumber_noinflate.attrs['long_name'] = 'Number associated with the cloud (no inflation) at a given pixel'
+    # ds_out.cloudnumber_noinflate.attrs['units'] = 'unitless'
+    # ds_out.cloudnumber_noinflate.attrs['_FillValue'] = 0
     
-    ds_out.mergecloudnumber.attrs['long_name'] = 'Cloud number that this cloud merges into'
-    ds_out.mergecloudnumber.attrs['units'] = 'unitless'
-    ds_out.mergecloudnumber.attrs['_FillValue'] = 0
-    # ds_out.mergecloudnumber.attrs['valid_min'] = 0
-    # ds_out.mergecloudnumber.attrs['valid_max'] = np.nanmax(celltrackmap_mergesplit)
+    ds_out.merge_tracknumber.attrs['long_name'] = 'Tracknumber where this track merges with'
+    ds_out.merge_tracknumber.attrs['units'] = 'unitless'
+    ds_out.merge_tracknumber.attrs['_FillValue'] = 0
+    # ds_out.merge_tracknumber.attrs['valid_min'] = 0
+    # ds_out.merge_tracknumber.attrs['valid_max'] = np.nanmax(celltrackmap_mergesplit)
 
-    ds_out.splitcloudnumber.attrs['long_name'] = 'Cloud number that this cloud splits from'
-    ds_out.splitcloudnumber.attrs['units'] = 'unitless'
-    ds_out.splitcloudnumber.attrs['_FillValue'] = 0
-    # ds_out.splitcloudnumber.attrs['valid_min'] = 0
-    # ds_out.splitcloudnumber.attrs['valid_max'] = np.nanmax(celltrackmap_mergesplit)
+    ds_out.split_tracknumber.attrs['long_name'] = 'Tracknumber where this track splits from'
+    ds_out.split_tracknumber.attrs['units'] = 'unitless'
+    ds_out.split_tracknumber.attrs['_FillValue'] = 0
+    # ds_out.split_tracknumber.attrs['valid_min'] = 0
+    # ds_out.split_tracknumber.attrs['valid_max'] = np.nanmax(celltrackmap_mergesplit)
+
+    ds_out.echotop10.attrs['long_name'] = '10dBZ echo-top height'
+    ds_out.echotop10.attrs['units'] = 'km'
+    
+    ds_out.echotop20.attrs['long_name'] = '20dBZ echo-top height'
+    ds_out.echotop20.attrs['units'] = 'km'
+    
+    ds_out.echotop30.attrs['long_name'] = '30dBZ echo-top height'
+    ds_out.echotop30.attrs['units'] = 'km'
+    
+    ds_out.echotop40.attrs['long_name'] = '40dBZ echo-top height'
+    ds_out.echotop40.attrs['units'] = 'km'
+    
+    ds_out.echotop50.attrs['long_name'] = '50dBZ echo-top height'
+    ds_out.echotop50.attrs['units'] = 'km'
     
     # Write netcdf file
     print('Output celltracking file: ', celltrackmaps_outfile)
     # print('')
 
-    # Specify encoding list
-    encodelist = {'basetime': {'dtype':'float', 'zlib':True}, \
-                    'time': {'zlib':True}, \
-                    'lon': {'zlib':True, '_FillValue': np.nan}, \
-                    'lat': {'zlib':True, '_FillValue': np.nan}, \
-                    'longitude': {'zlib':True, '_FillValue': np.nan}, \
-                    'latitude': {'zlib':True, '_FillValue': np.nan}, \
-                    'nclouds': {'dtype': 'int64', 'zlib':True, '_FillValue': fillval}, \
-                    'comp_ref': {'zlib':True, '_FillValue': np.nan}, \
-                    'conv_mask1': {'zlib':True}, \
-                    'conv_mask2': {'zlib':True}, \
-                    'tracknumber': {'zlib':True, 'dtype':'int32'}, \
-                    'tracknumber_cmask2': {'zlib':True, 'dtype':'int32'}, \
-                    'cloudstatus': {'zlib':True}, \
-                    'cloudnumber': {'dtype':'int32', 'zlib':True}, \
-                    'cloudnumber_noinflate': {'dtype':'int32', 'zlib':True}, \
-                    'mergecloudnumber': {'zlib':True,}, \
-                    'splitcloudnumber': {'zlib':True}, \
-                }
+    # Set encoding/compression for all variables
+    comp = dict(zlib=True)
+    encodelist = {var: comp for var in ds_out.data_vars}
+
+#    # Specify encoding list
+#    encodelist = {'basetime': {'dtype':'float', 'zlib':True}, \
+#                    'time': {'zlib':True}, \
+#                    'lon': {'zlib':True, '_FillValue': np.nan}, \
+#                    'lat': {'zlib':True, '_FillValue': np.nan}, \
+#                    'longitude': {'zlib':True, '_FillValue': np.nan}, \
+#                    'latitude': {'zlib':True, '_FillValue': np.nan}, \
+#                    'nclouds': {'dtype': 'int64', 'zlib':True, '_FillValue': fillval}, \
+#                    'comp_ref': {'zlib':True, '_FillValue': np.nan}, \
+#                    'conv_core': {'zlib':True}, \
+#                    'conv_mask': {'zlib':True}, \
+#                    'tracknumber': {'zlib':True, 'dtype':'int32'}, \
+#                    'tracknumber_cmask2': {'zlib':True, 'dtype':'int32'}, \
+#                    'track_status': {'zlib':True}, \
+#                    'cloudnumber': {'dtype':'int32', 'zlib':True}, \
+#                    # 'cloudnumber_noinflate': {'dtype':'int32', 'zlib':True}, \
+#                    'merge_tracknumber': {'zlib':True,}, \
+#                    'split_tracknumber': {'zlib':True}, \
+#                }
 
     # Write to netCDF file
     ds_out.to_netcdf(path=celltrackmaps_outfile, mode='w', format='NETCDF4_CLASSIC', unlimited_dims='time', encoding=encodelist)

@@ -1,0 +1,14 @@
+{
+    "run_idclouds": 0,
+    "run_tracksingle": 0,
+    "run_gettracks": 0,
+    "run_finalstats": 1,
+    "run_labelcell": 0,
+    "startdate": "20181110.1800",
+    "enddate": "20181112.2359",
+    "run_parallel": 1,
+    "nprocesses": 20,
+    "root_path": "/lustre/or-hydra/cades-arm/proj-shared/iclass/csapr_tracking/",
+    "clouddata_path": "/lustre/or-hydra/cades-arm/proj-shared/iclass/csapr_tracking/conv_mask/",
+    "driftfile": "/lustre/or-hydra/cades-arm/proj-shared/iclass/csapr_tracking/advection_data/csapr2_nov10_to_12_2018.nc"
+}
