@@ -312,12 +312,11 @@ def trackstats_tb(datasource, datadescription, pixel_radius, geolimits, areathre
 
     # Create adjustor
     indexcloudnumber = np.copy(cloudindexpresent) + 1
-    print('indexcloudnumber line 318: ',np.max(indexcloudnumber))
     adjustor = np.arange(0, np.max(cloudindexpresent)+2)
     for it in range(0, numtracks):
         adjustor[indexcloudnumber[it]] = it+1
     adjustor = np.append(adjustor, -9999)
-    
+
     # Adjust mergers
     temp_finaltrack_corecold_mergenumber = finaltrack_corecold_mergenumber.astype(int).ravel()
     temp_finaltrack_corecold_mergenumber[temp_finaltrack_corecold_mergenumber == -9999] = np.max(cloudindexpresent)+2
@@ -329,9 +328,7 @@ def trackstats_tb(datasource, datadescription, pixel_radius, geolimits, areathre
     temp_finaltrack_corecold_splitnumber[temp_finaltrack_corecold_splitnumber == -9999] = np.max(cloudindexpresent)+2
     adjusted_finaltrack_corecold_splitnumber = adjustor[temp_finaltrack_corecold_splitnumber]
     adjusted_finaltrack_corecold_splitnumber = np.reshape(adjusted_finaltrack_corecold_splitnumber, np.shape(finaltrack_corecold_splitnumber))
-    
-    #adjusted_finaltrack_corecold_mergenumber = finaltrack_corecold_mergenumber
-    #adjusted_finaltrack_corecold_splitnumber = finaltrack_corecold_splitnumber
+
             
     #########################################################################
     # Record starting and ending status
