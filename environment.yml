@@ -16,4 +16,5 @@ dependencies:
   - joblib>=0.14
   - ipython>7.0
   - pip
+  - astropy
 
