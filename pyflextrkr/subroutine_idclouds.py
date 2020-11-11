@@ -37,6 +37,7 @@ def futyan4(
     import numpy as np
     from scipy.ndimage import label, binary_dilation, generate_binary_structure, filters
     from scipy.interpolate import RectBivariateSpline
+    from astropy.convolution import Box2DKernel, convolve
 
     ######################################################################
 
@@ -98,7 +99,9 @@ def futyan4(
 
     #################################################################
     # Smooth IR data prior to identifying cores using a boxcar filter. Along the edges the boundary elements come from the nearest edge pixel
-    smoothir = filters.uniform_filter(ir, size=smoothsize, mode="nearest")
+    # smoothir = filters.uniform_filter(ir, size=smoothsize, mode='nearest')
+    kernel = Box2DKernel(smoothsize)
+    smoothir = convolve(ir, kernel, boundary='extend', nan_treatment='interpolate', preserve_nan=True)
 
     smooth_cloudid = np.zeros((ny, nx), dtype=int)
 
