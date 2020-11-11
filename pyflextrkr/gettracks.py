@@ -155,8 +155,8 @@ def gettracknumbers(datasource, datadescription, datainpath, dataoutpath, startd
     
     nclouds_reference = int(np.nanmax(singletracking_data['nclouds_ref'][:]) + 1)  # Number of clouds in reference file
     basetime_ref = singletracking_data['basetime_ref'][:]
-    basetime_units =  singletracking_data['basetime_ref'].units
-    basetime_calendar = singletracking_data['basetime_ref'].calendar
+    # basetime_units =  singletracking_data['basetime_ref'].units
+    # basetime_calendar = singletracking_data['basetime_ref'].calendar
     ref_file = singletracking_data.getncattr('ref_file')
     singletracking_data.close()
 
@@ -165,7 +165,8 @@ def gettracknumbers(datasource, datadescription, datainpath, dataoutpath, startd
         sys.exit('# of clouds in reference file exceed allowed maximum number of clouds')
 
     # Isolate file name and add it to the filelist
-    basetime[0] = np.array([pd.to_datetime(num2date(basetime_ref, units=basetime_units, calendar=basetime_calendar))], dtype='datetime64[s]')[0, 0]
+    # basetime[0] = np.array([pd.to_datetime(num2date(basetime_ref, units=basetime_units, calendar=basetime_calendar))], dtype='datetime64[s]')[0, 0]
+    basetime[0] = basetime_ref.item()
     # import pdb; pdb.set_trace()
 
     temp_referencefile = os.path.basename(ref_file)
@@ -202,8 +203,8 @@ def gettracknumbers(datasource, datadescription, datainpath, dataoutpath, startd
         nclouds_new = int(np.nanmax(singletracking_data['nclouds_new'][:]) + 1)
         basetime_ref = singletracking_data['basetime_ref'][:]
         basetime_new = singletracking_data['basetime_new'][:]
-        basetime_units =  singletracking_data['basetime_ref'].units
-        basetime_calendar = singletracking_data['basetime_ref'].calendar# Number of clouds in new file
+        # basetime_units =  singletracking_data['basetime_ref'].units
+        # basetime_calendar = singletracking_data['basetime_ref'].calendar# Number of clouds in new file
         refcloud_forward_index = singletracking_data['refcloud_forward_index'][:].astype(int)               # Each row represents a cloud in the reference file and the numbers in that row are indices of clouds in new file linked that cloud in the reference file
         newcloud_backward_index = singletracking_data['newcloud_backward_index'][:].astype(int)             # Each row represents a cloud in the new file and the numbers in that row are indices of clouds in the reference file linked that cloud in the new file
         ref_file = singletracking_data.getncattr('ref_file')
@@ -264,7 +265,8 @@ def gettracknumbers(datasource, datadescription, datainpath, dataoutpath, startd
 
                 # Fill tracking matrices with reference data and record that the track ended
                 cloudidfiles[ifill, :] = list(os.path.basename(ref_file))
-                basetime[ifill] = np.array([pd.to_datetime(num2date(basetime_ref, units=basetime_units, calendar=basetime_calendar))], dtype='datetime64[s]')[0, 0]
+                # basetime[ifill] = np.array([pd.to_datetime(num2date(basetime_ref, units=basetime_units, calendar=basetime_calendar))], dtype='datetime64[s]')[0, 0]
+                basetime[ifill] = basetime_ref.item()
 
                 # Record that break in data occurs
                 trackreset[0, ifill, :] = 1
@@ -276,7 +278,8 @@ def gettracknumbers(datasource, datadescription, datainpath, dataoutpath, startd
 
         time_prev = time_new
         cloudidfiles[ifill + 1,:] = list(os.path.basename(new_file))
-        basetime[ifill + 1] = np.array([pd.to_datetime(num2date(basetime_new, units=basetime_units, calendar=basetime_calendar))], dtype='datetime64[s]')[0, 0]
+        # basetime[ifill + 1] = np.array([pd.to_datetime(num2date(basetime_new, units=basetime_units, calendar=basetime_calendar))], dtype='datetime64[s]')[0, 0]
+        basetime[ifill + 1] = basetime_new.item()
 
         ########################################################################################
         # Compare forward and backward single track matirces to link new and reference clouds

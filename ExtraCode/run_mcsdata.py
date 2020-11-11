@@ -1,7 +1,7 @@
 import numpy as np
 import os, fnmatch
-import time, datetime, calendar
-from pytz import timezone, utc
+import datetime, calendar
+from pytz import utc
 from multiprocessing import Pool
 from netCDF4 import Dataset
 
@@ -162,7 +162,7 @@ if run_idclouds == 1:
     ##########################################################################
     # Process files
     # Load function
-    from idclouds import idclouds_mergedir
+    from pyflextrkr.idclouds import idclouds_mergedir
 
     # Generate input lists
     list_datasource = [datasource]*(filestep)
@@ -246,7 +246,7 @@ if run_tracksingle == 1:
     ################################################################
     # Process files
     # Load function
-    from tracksingle import trackclouds_mergedir
+    from pyflextrkr.tracksingle import trackclouds_mergedir
 
     # Generate input lists
     list_trackingoutpath = [tracking_outpath]*(cloudidfilestep-1)
@@ -285,7 +285,7 @@ if run_tracksingle == 0:
 # Call function
 if run_gettracks == 1:
     # Load function
-    from gettracks import gettracknumbers_mergedir
+    from pyflextrkr.gettracks import gettracknumbers_mergedir
 
     # Call function
     print('Getting track numbers')
@@ -302,7 +302,7 @@ if run_gettracks == 0:
 # Call function
 if run_finalstats == 1:
     # Load function
-    from trackstats import trackstats_sat
+    from pyflextrkr.trackstats import trackstats_sat
 
     # Call satellite version of function
     print('Calculating track statistics')
@@ -319,7 +319,7 @@ if run_finalstats == 0:
 if run_identifymcs == 1:
     print('Identifying MCSs')
     # Load function
-    from identifymcs import identifymcs_mergedir
+    from pyflextrkr.identifymcs import identifymcs_mergedir
 
     # Call satellite version of function
     identifymcs_mergedir(trackstats_filebase, stats_outpath, startdate, enddate, datatimeresolution, mcs_areathresh, mcs_durationthresh, mcs_eccentricitythresh, mcs_splitduration, mcs_mergeduration, nmaxclouds)

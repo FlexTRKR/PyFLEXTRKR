@@ -6,17 +6,13 @@ def trackstats_radar(datasource, datadescription, pixel_radius, datatimeresoluti
                     track_version, tracknumbers_version, tracknumbers_filebase, terrain_file, lengthrange=[2,120]):
 
     import numpy as np
-    from netCDF4 import Dataset, num2date, chartostring
-    import os, fnmatch
+    from netCDF4 import Dataset, chartostring
+    import os
     import sys
     from math import pi
-    from skimage.measure import regionprops
     import time
     import gc
-    import datetime
-    import xarray as xr
-    import pandas as pd
-    import netcdf_io_trackstats as net
+    from pyflextrkr import netcdf_io_trackstats as net
     np.set_printoptions(threshold=np.inf)
 
     # Set output filename
