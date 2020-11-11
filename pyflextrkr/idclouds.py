@@ -297,7 +297,7 @@ def idclouds_wrf(zipped_inputs):
 
                     # call idclouds subroutine
                     if cloudidmethod == "futyan3":
-                        from pyflextrkr.subroutine_idclouds import futyan3
+                        from pyflextrkr.futyan3 import futyan3
 
                         clouddata = futyan3(
                             out_ir,
@@ -307,7 +307,7 @@ def idclouds_wrf(zipped_inputs):
                             warmanvilexpansion,
                         )
                     elif cloudidmethod == "futyan4":
-                        from pyflextrkr.subroutine_idclouds import futyan4
+                        from pyflextrkr.futyan4 import futyan4
 
                         clouddata = futyan4(
                             out_ir,
@@ -744,7 +744,7 @@ def idclouds_mergedir(zipped_inputs):
 
                 # call idclouds subroutine
                 if cloudidmethod == "futyan3":
-                    from pyflextrkr.subroutine_idclouds import futyan3
+                    from pyflextrkr.futyan3 import futyan3
 
                     clouddata = futyan3(
                         out_ir,
@@ -1261,7 +1261,7 @@ def idclouds_LES(zipped_inputs):
 
                 # call idclouds subroutine
                 if cloudidmethod == "futyan3":
-                    from pyflextrkr.subroutine_idclouds import futyan3
+                    from pyflextrkr.futyan3 import futyan3
 
                     clouddata = futyan3(
                         out_lwp,
@@ -1271,7 +1271,7 @@ def idclouds_LES(zipped_inputs):
                         warmanvilexpansion,
                     )
                 elif cloudidmethod == "futyan4":
-                    from pyflextrkr.subroutine_idclouds import futyan4_LES
+                    from pyflextrkr.futyan4_LES import futyan4_LES
 
                     clouddata = futyan4_LES(
                         out_lwp,
@@ -1790,7 +1790,7 @@ def idclouds_ct(zipped_inputs):
             file_timestring = str(file_basetime)[13:15] + str(file_basetime)[16:18]
 
             # call idcloud type subroutine
-            from pyflextrkr.subroutine_idclouds import cloud_type_tracking_NS
+            from pyflextrkr.cloud_type_tracking_NS import cloud_type_tracking_NS
 
             clouddata = cloud_type_tracking_NS(
                 out_ct,

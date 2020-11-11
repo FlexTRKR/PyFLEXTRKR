@@ -274,7 +274,7 @@ def idclouds_gpmmergir(
 
                         # call idclouds subroutine
                         if cloudidmethod == "futyan3":
-                            from pyflextrkr.subroutine_idclouds import futyan3
+                            from pyflextrkr.futyan3 import futyan3
 
                             clouddata = futyan3(
                                 out_ir,
@@ -284,7 +284,7 @@ def idclouds_gpmmergir(
                                 warmanvilexpansion,
                             )
                         elif cloudidmethod == "futyan4":
-                            from pyflextrkr.subroutine_idclouds import futyan4
+                            from pyflextrkr.futyan4 import futyan4
 
                             clouddata = futyan4(
                                 out_ir,
