@@ -63,7 +63,7 @@ def identifymcs_tb(statistics_filebase, stats_path, startdate, enddate, \
     eccentricity = allstatdata['eccentricity'][:]
     basetime = allstatdata['basetime'][:]  # epoch time of each cloud in a track (ntracks, nmaxlength)
     basetime_units =  allstatdata['basetime'].units
-    basetime_calendar = allstatdata['basetime'].calendar
+    # basetime_calendar = allstatdata['basetime'].calendar
     mergecloudnumbers = allstatdata['mergenumbers'][:]
     splitcloudnumbers = allstatdata['splitnumbers'][:]
     cloudnumbers = allstatdata['cloudnumber'][:]
@@ -80,7 +80,8 @@ def identifymcs_tb(statistics_filebase, stats_path, startdate, enddate, \
     datadescription = allstatdata.getncattr('description')
     allstatdata.close()
     
-    print('duration threshold: ', duration_thresh)
+    print('MCS duration threshold: ', duration_thresh)
+    print('MCS CCS area threshold: ', area_thresh)
 
     ####################################################################
     # Set up thresholds
@@ -104,7 +105,7 @@ def identifymcs_tb(statistics_filebase, stats_path, startdate, enddate, \
 
     ###################################################################
     # Identify MCSs
-    print(ntracks_all)
+    print('Total number of tracks to check: ', ntracks_all)
     for nt in range(0, ntracks_all):
         # Get data for a given track
         track_corearea = np.copy(trackstat_corearea[nt,:])
@@ -134,12 +135,11 @@ def identifymcs_tb(statistics_filebase, stats_path, startdate, enddate, \
             if iccs != []:
                 for t in range(0,nbreaks):
                     # Duration requirement
-                    #print('len(groups[t][:]): ',len(groups[t][:]))
-                    #print('np multiply: ', np.multiply(len(groups[t][:]), time_resolution))
-                    print('np multiply: ', np.multiply((groups[t][-1]-groups[t][0]), time_resolution))
-                    if np.multiply((groups[t][-1]-groups[t][0]), time_resolution) >= duration_thresh:
+                    # Duration length should be group's last index - first index + 1
+                    duration_group = np.multiply((groups[t][-1] - groups[t][0] + 1), time_resolution)
+                    if duration_group >= duration_thresh:
                     #if np.multiply(len(groups[t][:]), time_resolution) >= duration_thresh:
-                        print('Number of times * TIME RESOLUTION GREATER THAN DUR_THRESH')
+                        # print('Number of times * TIME RESOLUTION GREATER THAN DUR_THRESH')
 
                         # Isolate area and eccentricity for the subperiod
                         subtrack_ccsarea = track_ccsarea[groups[t][:]]
@@ -185,7 +185,7 @@ def identifymcs_tb(statistics_filebase, stats_path, startdate, enddate, \
     # Subset MCS / Squall track index
     trackid = np.array(np.where(mcstype > 0))[0,:]
     nmcs = len(trackid)
-    print('nmcs: ', nmcs)
+    print('Number of Tb defined MCS: ', nmcs)
 
     if nmcs > 0:
         mcsstatus = mcsstatus[trackid,:]
@@ -209,16 +209,19 @@ def identifymcs_tb(statistics_filebase, stats_path, startdate, enddate, \
     for imcs in np.arange(0,nmcs):
         ###################################################################################
         # Isolate basetime data
-        print('')
+        # print('')
         if imcs == 0:
-            mcsbasetime = np.array([pd.to_datetime(num2date(basetime[trackid[imcs], :], units=basetime_units, calendar=basetime_calendar))], dtype='datetime64[s]')
+            mcsbasetime = basetime[trackid[imcs], :]
+            # mcsbasetime = np.array([pd.to_datetime(num2date(basetime[trackid[imcs], :], units=basetime_units, calendar=basetime_calendar))], dtype='datetime64[s]')
         else:
-            mcsbasetime = np.concatenate((mcsbasetime, np.array([pd.to_datetime(num2date(basetime[trackid[imcs], :], units=basetime_units, calendar=basetime_calendar))], dtype='datetime64[s]')), axis=0)
-
+            mcsbasetime = np.row_stack((mcsbasetime, basetime[trackid[imcs], :]))
+            # mcsbasetime = np.concatenate((mcsbasetime, np.array([pd.to_datetime(num2date(basetime[trackid[imcs], :], units=basetime_units, calendar=basetime_calendar))], dtype='datetime64[s]')), axis=0)
+        # if imcs >= 2:
+        #     import pdb; pdb.set_trace()
 
         ###################################################################################
         # Find mergers
-        print('Mergers')
+        # print('Mergers')
         [mergefile, mergefeature] = np.array(np.where(mergecloudnumbers == mcstracknumbers[imcs]))
         # print((len(mergefile)))
         for imerger in range(0, len(mergefile)):
@@ -381,6 +384,7 @@ def identifymcs_tb(statistics_filebase, stats_path, startdate, enddate, \
 
     output_data.mcs_basetime.attrs['long_name'] = 'epoch time (seconds since 01/01/1970 00:00) of each cloud in a mcs track'
     output_data.mcs_basetime.attrs['standard_name'] = 'time'
+    output_data.mcs_basetime.attrs['units'] = basetime_units
 
     output_data.mcs_datetimestring.attrs['long_name'] = 'date_time for each cloud in a mcs track'
     output_data.mcs_datetimestring.attrs['units'] = 'unitless'
@@ -455,7 +459,7 @@ def identifymcs_tb(statistics_filebase, stats_path, startdate, enddate, \
     print('')
 
     output_data.to_netcdf(path=mcstrackstatistics_outfile, mode='w', format='NETCDF4_CLASSIC', unlimited_dims='ntracks', \
-                          encoding={'mcs_basetime': {'zlib':True, 'units': 'seconds since 1970-01-01'}, \
+                          encoding={'mcs_basetime': {'zlib':True}, \
                                     'mcs_datetimestring': {'zlib':True}, \
                                     'track_length': {'zlib':True, '_FillValue': -9999}, \
                                     'mcs_length': {'dtype':'int', 'zlib':True, '_FillValue': -9999}, \

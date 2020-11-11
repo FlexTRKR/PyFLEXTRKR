@@ -7,7 +7,8 @@ def write_trackstats_tb(trackstats_outfile, numtracks, maxtracklength, nbintb, n
                         track_version, tracknumbers_version, timegap, \
                         thresh_core, thresh_cold, pixel_radius, geolimits, areathresh, \
                         mintb_thresh, maxtb_thresh, \
-                        basetime_units, basetime_calendar, \
+                        basetime_units, \
+                        # basetime_units, basetime_calendar, \
                         finaltrack_tracklength, finaltrack_basetime, finaltrack_cloudidfile, finaltrack_datetimestring, \
                         finaltrack_corecold_meanlat, finaltrack_corecold_meanlon, \
                         finaltrack_corecold_minlat, finaltrack_corecold_minlon, \
@@ -18,7 +19,8 @@ def write_trackstats_tb(trackstats_outfile, numtracks, maxtracklength, nbintb, n
                         finaltrack_corecold_startstatus, finaltrack_corecold_endstatus, \
                         adjusted_finaltrack_corecold_mergenumber, adjusted_finaltrack_corecold_splitnumber, \
                         finaltrack_corecold_trackinterruptions, finaltrack_corecold_boundary, \
-                        finaltrack_corecold_mintb, finaltrack_corecold_meantb, finaltrack_core_meantb, finaltrack_corecold_histtb, \
+                        finaltrack_corecold_mintb, finaltrack_corecold_meantb, finaltrack_core_meantb, \
+                        # finaltrack_corecold_mintb, finaltrack_corecold_meantb, finaltrack_core_meantb, finaltrack_corecold_histtb, \
                         finaltrack_corecold_majoraxis, finaltrack_corecold_orientation, finaltrack_corecold_eccentricity, \
                         finaltrack_corecold_perimeter, finaltrack_corecold_xcenter, finaltrack_corecold_ycenter, \
                         finaltrack_corecold_xweightedcenter, finaltrack_corecold_yweightedcenter, \
@@ -55,7 +57,7 @@ def write_trackstats_tb(trackstats_outfile, numtracks, maxtracklength, nbintb, n
                         'mintb': (['ntracks', 'nmaxlength'], finaltrack_corecold_mintb), \
                         'meantb': (['ntracks', 'nmaxlength'], finaltrack_corecold_meantb), \
                         'meantb_conv': (['ntracks', 'nmaxlength'], finaltrack_core_meantb), \
-                        'histtb': (['ntracks', 'nmaxlength', 'nbins'], finaltrack_corecold_histtb), \
+                        # 'histtb': (['ntracks', 'nmaxlength', 'nbins'], finaltrack_corecold_histtb), \
                         'majoraxis': (['ntracks', 'nmaxlength'], finaltrack_corecold_majoraxis), \
                         'orientation': (['ntracks', 'nmaxlength'], finaltrack_corecold_orientation), \
                         'eccentricity': (['ntracks', 'nmaxlength'], finaltrack_corecold_eccentricity), \
@@ -103,6 +105,7 @@ def write_trackstats_tb(trackstats_outfile, numtracks, maxtracklength, nbintb, n
 
         output_data.basetime.attrs['long_name'] = 'epoch time of each cloud in a track'
         output_data.basetime.attrs['standard_name'] = 'time'
+        output_data.basetime.attrs['units'] = basetime_units
 
         output_data.cloudidfiles.attrs['long_name'] = 'File name for each cloud in each track'
 
@@ -231,11 +234,11 @@ def write_trackstats_tb(trackstats_outfile, numtracks, maxtracklength, nbintb, n
         output_data.meantb_conv.attrs['valid_min'] = mintb_thresh
         output_data.meantb_conv.attrs['valid_max'] = maxtb_thresh
 
-        output_data.histtb.attrs['long_name'] = 'Histogram of brightess of the core + cold anvil for each cloud in a track.'
-        output_data.histtb.attrs['standard_name'] = 'Brightness temperature'
-        output_data.histtb.attrs['hist_value'] = mintb_thresh
-        output_data.histtb.attrs['valid_max'] =  maxtb_thresh
-        output_data.histtb.attrs['units'] = 'K'
+        # output_data.histtb.attrs['long_name'] = 'Histogram of brightess of the core + cold anvil for each cloud in a track.'
+        # output_data.histtb.attrs['standard_name'] = 'Brightness temperature'
+        # output_data.histtb.attrs['hist_value'] = mintb_thresh
+        # output_data.histtb.attrs['valid_max'] =  maxtb_thresh
+        # output_data.histtb.attrs['units'] = 'K'
 
         output_data.orientation.attrs['long_name'] = 'Orientation of the major axis of the core + cold anvil for each cloud in a track'
         output_data.orientation.attrs['units'] = 'Degrees clockwise from vertical'
@@ -267,7 +270,8 @@ def write_trackstats_tb(trackstats_outfile, numtracks, maxtracklength, nbintb, n
 
         # Specify encoding list
         encodelist = {'lifetime': {'dtype': 'int', 'zlib':True, '_FillValue': -9999}, \
-                        'basetime': {'zlib':True, 'units': basetime_units, 'calendar': basetime_calendar}, \
+                        # 'basetime': {'zlib':True, 'units': basetime_units, 'calendar': basetime_calendar}, \
+                        'basetime': {'zlib':True}, \
                         'ntracks': {'dtype': 'int', 'zlib':True}, \
                         'nmaxlength': {'dtype': 'int', 'zlib':True}, \
                         'cloudidfiles': {'zlib':True}, \
@@ -295,7 +299,7 @@ def write_trackstats_tb(trackstats_outfile, numtracks, maxtracklength, nbintb, n
                         'mintb': {'zlib':True, '_FillValue': np.nan}, \
                         'meantb': {'zlib':True, '_FillValue': np.nan}, \
                         'meantb_conv': {'zlib':True, '_FillValue': np.nan}, \
-                        'histtb': {'dtype': 'int', 'zlib':True}, \
+                        # 'histtb': {'dtype': 'int', 'zlib':True}, \
                         'majoraxis': {'zlib':True, '_FillValue': np.nan}, \
                         'orientation': {'zlib':True, '_FillValue': np.nan}, \
                         'eccentricity': {'zlib':True, '_FillValue': np.nan}, \

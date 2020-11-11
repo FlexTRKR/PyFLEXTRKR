@@ -65,14 +65,12 @@ def trackstats_tb(datasource, datadescription, pixel_radius, geolimits, areathre
     # Initialize modules
     import numpy as np
     from netCDF4 import Dataset, num2date, chartostring
-    import os, fnmatch
+    import os
     import sys
     from math import pi
     from skimage.measure import regionprops
     import time
     import gc
-    import datetime
-    import xarray as xr
     import pandas as pd
     np.set_printoptions(threshold=np.inf)
 
@@ -501,7 +499,7 @@ def trackstats_tb(datasource, datadescription, pixel_radius, geolimits, areathre
     if os.path.isfile(trackstats_outfile):
         os.remove(trackstats_outfile)
 
-    import netcdf_io as net 
+    from pyflextrkr import netcdf_io as net
     net.write_trackstats_tb(trackstats_outfile, numtracks, maxtracklength, nbintb, numcharfilename, \
                             datasource, datadescription, startdate, enddate, \
                             track_version, tracknumbers_version, timegap, \
@@ -593,10 +591,8 @@ def trackstats_LES(datasource, datadescription, pixel_radius, latlon_file, geoli
     from math import pi
     from skimage.measure import regionprops
     import time
-    import datetime
     import gc
     import xarray as xr
-    import datetime
     import pandas as pd
     np.set_printoptions(threshold=np.inf)
 
@@ -1357,10 +1353,8 @@ def trackstats_WRF(datasource, datadescription, pixel_radius, latlon_file, geoli
     from math import pi
     from skimage.measure import regionprops
     import time
-    import datetime
     import gc
     import xarray as xr
-    import datetime
     import pandas as pd
     np.set_printoptions(threshold=np.inf)
 
@@ -2089,14 +2083,12 @@ def trackstats_ct(datasource, datadescription, pixel_radius, geolimits, areathre
     # Initialize modules
     import numpy as np
     from netCDF4 import Dataset, num2date, chartostring
-    import os, fnmatch
+    import os
     import sys
     from math import pi
     from skimage.measure import regionprops
     import time
     import gc
-    import datetime
-    import xarray as xr
     import pandas as pd
     np.set_printoptions(threshold=np.inf)
 
@@ -2488,7 +2480,7 @@ def trackstats_ct(datasource, datadescription, pixel_radius, geolimits, areathre
     if os.path.isfile(trackstats_outfile):
         os.remove(trackstats_outfile)
 
-    import netcdf_io as net 
+    from pyflextrkr import netcdf_io as net
     net.write_trackstats_ct(trackstats_outfile, numtracks, maxtracklength, numcharfilename, \
                             datasource, datadescription, startdate, enddate, \
                             track_version, tracknumbers_version, timegap, \

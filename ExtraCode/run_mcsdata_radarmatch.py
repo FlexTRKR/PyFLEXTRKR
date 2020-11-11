@@ -1,9 +1,8 @@
 import numpy as np
 import os, fnmatch
-import time, datetime, calendar
-from pytz import timezone, utc
+import datetime, calendar
+from pytz import utc
 from multiprocessing import Pool
-from netCDF4 import Dataset
 import xarray as xr
 
 # Name: Run_TestData.py
@@ -189,7 +188,7 @@ if run_idclouds == 1:
     ##########################################################################
     # Process files
     # Load function
-    from idclouds import idclouds_mergedir
+    from pyflextrkr.idclouds import idclouds_mergedir
 
     # Generate input lists
     list_irdatasource = [irdatasource]*(filestep)
@@ -277,7 +276,7 @@ if run_tracksingle == 1:
     ################################################################
     # Process files
     # Load function
-    from tracksingle import trackclouds_mergedir
+    from pyflextrkr.tracksingle import trackclouds_mergedir
 
     # Generate input lists
     list_trackingoutpath = [tracking_outpath]*(cloudidfilestep-1)
@@ -316,7 +315,7 @@ if run_tracksingle == 0:
 # Call function
 if run_gettracks == 1:
     # Load function
-    from gettracks import gettracknumbers_mergedir
+    from pyflextrkr.gettracks import gettracknumbers_mergedir
 
     # Call function
     print('Getting track numbers')
@@ -333,7 +332,7 @@ if run_gettracks == 0:
 # Call function
 if run_finalstats == 1:
     # Load function
-    from trackstats import trackstats_sat
+    from pyflextrkr.trackstats import trackstats_sat
 
     # Call satellite version of function
     print('Calculating track statistics')
@@ -351,7 +350,7 @@ if run_identifymcs == 1:
     print('Identifying MCSs')
 
     # Load function
-    from identifymcs import identifymcs_mergedir
+    from pyflextrkr.identifymcs import identifymcs_mergedir
 
     # Call satellite version of function
     identifymcs_mergedir(trackstats_filebase, stats_outpath, startdate, enddate, datatimeresolution, mcs_mergedir_areathresh, mcs_mergedir_durationthresh, mcs_mergedir_eccentricitythresh, mcs_mergedir_splitduration, mcs_mergedir_mergeduration, nmaxclouds)
@@ -368,7 +367,7 @@ if run_matchpf == 1:
     print('Identifying Precipitation Features in MCSs')
 
     # Load function
-    from matchpf import identifypf_mergedir_nmq
+    from pyflextrkr.matchpf import identifypf_mergedir_nmq
 
     # Call function
     identifypf_mergedir_nmq(mcsstats_filebase, cloudid_filebase, pfdata_filebase, rainaccumulation_filebase, stats_outpath, tracking_outpath, pfdata_path, rainaccumulation_path, startdate, enddate, geolimits, nmaxpf, nmaxcore, nmaxpix, nmaxclouds, rr_min, pixel_radius, irdatasource, nmqdatasource, datadescription, datatimeresolution, mcs_mergedir_areathresh, mcs_mergedir_durationthresh, mcs_mergedir_eccentricitythresh)
@@ -386,7 +385,7 @@ if run_robustmcs == 1:
     print('Identifying robust MCSs using precipitation features')
 
     # Load function
-    from robustmcs import filtermcs_mergedir_nmq
+    from pyflextrkr.robustmcs import filtermcs_mergedir_nmq
 
     # Call function
     filtermcs_mergedir_nmq(stats_outpath, pfstats_filebase, startdate, enddate, datatimeresolution, geolimits, mcs_pf_majoraxisthresh, mcs_of_durationthresh, mcs_pf_aspectratiothresh, mcs_pf_lifecyclethresh, mcs_pf_lengththresh, mcs_pf_gap)
@@ -427,7 +426,7 @@ if run_labelmcs == 1:
         # Process files
 
         # Load function 
-        from mapmcs import mapmcs_pf
+        from pyflextrkr.mapmcs import mapmcs_pf
 
         # Generate input list
         list_robustmcsstat_filebase = [robustmcs_filebase]*nuniquebasetime

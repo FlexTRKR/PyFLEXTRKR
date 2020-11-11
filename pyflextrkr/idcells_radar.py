@@ -28,20 +28,12 @@ def idcell_csapr(input_filename, file_datestring, file_timestring, file_basetime
     ##########################################################
     # Load modules
 
-    from netCDF4 import Dataset, stringtochar, num2date
+    from netCDF4 import Dataset
     import os
     import numpy as np
-    import sys
-    import datetime
-    import calendar
     import time
     import xarray as xr
-    import datetime
-    import pandas as pd
-    from scipy.signal import medfilt2d
-    from scipy.ndimage import label, filters
-    from ftfunctions import sort_renumber, sort_renumber2vars
-    import netcdf_io as net
+    from pyflextrkr.ftfunctions import sort_renumber
     np.set_printoptions(threshold=np.inf)
 
     ##########################################################

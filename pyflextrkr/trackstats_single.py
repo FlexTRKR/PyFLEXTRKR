@@ -1,5 +1,6 @@
 def calc_stats_single(tracknumbers, cloudidfiles, tracking_inpath, cloudid_filebase, nbintb, numcharfilename, latitude, longitude, \
         geolimits, nx, ny, mintb_thresh, maxtb_thresh, tbbins, pixel_radius, trackstatus, trackmerge, tracksplit, trackreset):
+    
     import numpy as np
     from netCDF4 import Dataset, num2date, chartostring
     import os, fnmatch
@@ -31,7 +32,7 @@ def calc_stats_single(tracknumbers, cloudidfiles, tracking_inpath, cloudid_fileb
         file_corecold_cloudnumber = file_cloudiddata['convcold_cloudnumber'][:]
         file_basetime = file_cloudiddata['basetime'][:]
         basetime_units = file_cloudiddata['basetime'].units
-        basetime_calendar = file_cloudiddata['basetime'].calendar
+        # basetime_calendar = file_cloudiddata['basetime'].calendar
         file_cloudiddata.close()
 
         file_datetimestring = cloudid_file[len(tracking_inpath) + len(cloudid_filebase):-3]
@@ -44,11 +45,12 @@ def calc_stats_single(tracknumbers, cloudidfiles, tracking_inpath, cloudid_fileb
         numtracks=len(uniquetracknumbers)
         #finaltrack_corecold_boundary = np.zeros(int(numtracks), dtype=np.int32) # Kb messing around
         finaltrack_corecold_boundary = np.ones(int(numtracks), dtype=np.int32)*-9999
-        finaltrack_basetime = np.empty(int(numtracks), dtype='datetime64[s]')
+        # finaltrack_basetime = np.empty(int(numtracks), dtype='datetime64[s]')
+        finaltrack_basetime = np.ones(int(numtracks), dtype=float)*np.nan
         finaltrack_corecold_mintb = np.ones(int(numtracks), dtype=float)*np.nan
         finaltrack_corecold_meantb = np.ones(int(numtracks), dtype=float)*np.nan
         finaltrack_core_meantb = np.ones(int(numtracks), dtype=float)*np.nan
-        finaltrack_corecold_histtb = np.zeros((int(numtracks), nbintb-1))
+        # finaltrack_corecold_histtb = np.zeros((int(numtracks), nbintb-1))
         finaltrack_corecold_radius = np.ones(int(numtracks), dtype=float)*np.nan
         finaltrack_corecoldwarm_radius = np.ones(int(numtracks), dtype=float)*np.nan
         finaltrack_corecold_meanlat = np.ones(int(numtracks), dtype=float)*np.nan
@@ -112,7 +114,8 @@ def calc_stats_single(tracknumbers, cloudidfiles, tracking_inpath, cloudid_fileb
                     
                 #if nc < nmaxclouds:
                 # Save information that links this cloud back to its raw pixel level data
-                finaltrack_basetime[itrack] = np.array([pd.to_datetime(num2date(file_basetime, units=basetime_units, calendar=basetime_calendar))], dtype='datetime64[s]')[0, 0]
+                # finaltrack_basetime[itrack] = np.array([pd.to_datetime(num2date(file_basetime, units=basetime_units, calendar=basetime_calendar))], dtype='datetime64[s]')[0, 0]
+                finaltrack_basetime[itrack] = file_basetime.data
                 finaltrack_corecold_cloudnumber[itrack] = cloudnumber
                 finaltrack_cloudidfile[itrack][:] = fname
                 finaltrack_datetimestring[itrack][:] = file_datetimestring
@@ -205,7 +208,7 @@ def calc_stats_single(tracknumbers, cloudidfiles, tracking_inpath, cloudid_fileb
 
                     ################################################################
                     # Histogram of brightness temperature for core+cold anvil
-                    finaltrack_corecold_histtb[itrack,:], usedtbbins = np.histogram(corecoldtb, range=(mintb_thresh, maxtb_thresh), bins=tbbins)
+                    # finaltrack_corecold_histtb[itrack,:], usedtbbins = np.histogram(corecoldtb, range=(mintb_thresh, maxtb_thresh), bins=tbbins)
 
                     # Save track information. Need to subtract one since cloudnumber gives the number of the cloud (which starts at one), but we are looking for its index (which starts at zero)
                     finaltrack_corecold_status[itrack] = np.copy(trackstatus[cloudindex])
@@ -224,6 +227,7 @@ def calc_stats_single(tracknumbers, cloudidfiles, tracking_inpath, cloudid_fileb
 
             elif len(cloudnumber) > 1:
                 sys.exit(str(cloudnumber) + ' clouds linked to one track. Each track should only be linked to one cloud in each file in the track_number array. The track_number variable only tracks the largest cell in mergers and splits. The small clouds in tracks and mergers should only be listed in the track_splitnumbers and track_mergenumbers arrays.')
+
         return uniquetracknumbers, numtracks, finaltrack_basetime, finaltrack_corecold_cloudnumber, \
                 finaltrack_cloudidfile, finaltrack_datetimestring, \
                 finaltrack_corecold_meanlat, finaltrack_corecold_meanlon, finaltrack_corecold_minlat, finaltrack_corecold_minlon, \
@@ -232,6 +236,6 @@ def calc_stats_single(tracknumbers, cloudidfiles, tracking_inpath, cloudid_fileb
                 finaltrack_corecold_majoraxis, finaltrack_corecold_orientation, finaltrack_corecold_perimeter, \
                 finaltrack_corecold_ycenter, finaltrack_corecold_xcenter, finaltrack_corecold_yweightedcenter, \
                 finaltrack_corecold_xweightedcenter, finaltrack_corecold_radius, finaltrack_corecoldwarm_radius, \
-                finaltrack_corecold_mintb, finaltrack_corecold_meantb, finaltrack_corecold_histtb, finaltrack_corecold_status, \
+                finaltrack_corecold_mintb, finaltrack_corecold_meantb, finaltrack_corecold_status, \
                 finaltrack_corecold_mergenumber, finaltrack_corecold_splitnumber, finaltrack_corecold_trackinterruptions, \
-                finaltrack_core_meantb, basetime_units, basetime_calendar
+                finaltrack_core_meantb, basetime_units #, basetime_calendar

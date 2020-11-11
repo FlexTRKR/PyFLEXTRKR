@@ -2,7 +2,11 @@
 
 # Author: Original IDL code written by Zhe Feng (zhe.feng@pnnl.gov), Python version written by Hannah C. Barnes (hannah.barnes@pnnl.gov)
 
-def mapmcs_wrf_pf(zipped_inputs):
+# def mapmcs_tb_pf(zipped_inputs):
+def mapmcs_tb_pf(cloudid_filename, filebasetime, mcsstats_filebase, statistics_filebase, rainaccumulation_filebase, \
+                mcstracking_path, stats_path, rainaccumulation_path, pcp_thresh, nmaxpf, absolutetb_threshs, \
+                startdate, enddate, showalltracks):
+
     # Inputs:
     # cloudid_filebase - file header of the cloudid file create in the first step
     # filebasetime - seconds since 1970-01-01 of the file being processed
@@ -53,21 +57,21 @@ def mapmcs_wrf_pf(zipped_inputs):
     np.set_printoptions(threshold=np.inf)
 
     # Separate inputs
-    cloudid_filename = zipped_inputs[0]
-    filebasetime = zipped_inputs[1]
-    mcsstats_filebase = zipped_inputs[2]
-    print('mcsstats_filebase: ', mcsstats_filebase)
-    statistics_filebase = zipped_inputs[3]
-    rainaccumulation_filebase = zipped_inputs[4]
-    mcstracking_path = zipped_inputs[5]
-    stats_path = zipped_inputs[6]
-    rainaccumulation_path = zipped_inputs[7]
-    pcp_thresh = zipped_inputs[8]
-    nmaxpf = zipped_inputs[9]
-    absolutetb_threshs = zipped_inputs[10]
-    startdate = zipped_inputs[11]
-    enddate = zipped_inputs[12]
-    showalltracks =  zipped_inputs[13]
+    # cloudid_filename = zipped_inputs[0]
+    # filebasetime = zipped_inputs[1]
+    # mcsstats_filebase = zipped_inputs[2]
+    # print('mcsstats_filebase: ', mcsstats_filebase)
+    # statistics_filebase = zipped_inputs[3]
+    # rainaccumulation_filebase = zipped_inputs[4]
+    # mcstracking_path = zipped_inputs[5]
+    # stats_path = zipped_inputs[6]
+    # rainaccumulation_path = zipped_inputs[7]
+    # pcp_thresh = zipped_inputs[8]
+    # nmaxpf = zipped_inputs[9]
+    # absolutetb_threshs = zipped_inputs[10]
+    # startdate = zipped_inputs[11]
+    # enddate = zipped_inputs[12]
+    # showalltracks =  zipped_inputs[13]
 
     ######################################################################
     # define constants
@@ -92,9 +96,9 @@ def mapmcs_wrf_pf(zipped_inputs):
 
     #######################################################################
     # Load MCS track stat file
-    print('Loading MCS data')
+    # print('Loading MCS data')
     mcsstatistics_file = stats_path + mcsstats_filebase + startdate + '_' + enddate + '.nc'
-    print(mcsstatistics_file)
+    # print(mcsstatistics_file)
 
     allmcsdata = Dataset(mcsstatistics_file, 'r')
     mcstrackstat_basetime = allmcsdata['base_time'][:] # basetime of each cloud in the tracked mcs
@@ -117,26 +121,27 @@ def mapmcs_wrf_pf(zipped_inputs):
 
     #########################################################################
     # Get cloudid file associated with this time
-    print('Determine corresponding cloudid file and rain accumlation file')
+    # print('Determine corresponding cloudid file and rain accumlation file')
     file_datetime = time.strftime("%Y%m%d_%H%M", time.gmtime(np.copy(filebasetime)))
     filedate = np.copy(file_datetime[0:8])
     filetime = np.copy(file_datetime[9:14])
-    irainaccumulationfile = rainaccumulation_path + rainaccumulation_filebase + str(filedate) + '.' + str(filetime) + '00.nc'
-    print(('cloudid file: ' + cloudid_filename))
-    print(('rain accumulation file: ' + irainaccumulationfile))
+    # irainaccumulationfile = rainaccumulation_path + rainaccumulation_filebase + str(filedate) + '.' + str(filetime) + '00.nc'
+    # print(('cloudid file: ' + cloudid_filename))
+    # print(('rain accumulation file: ' + irainaccumulationfile))
 
     # Load cloudid data
-    print('Load cloudid data')
+    # print('Load cloudid data')
     cloudiddata = Dataset(cloudid_filename, 'r')
     cloudid_cloudnumber = cloudiddata['convcold_cloudnumber'][:]
     cloudid_cloudtype = cloudiddata['cloudtype'][:]
     cloudid_basetime = cloudiddata['basetime'][:]
     basetime_units =  cloudiddata['basetime'].units
-    basetime_calendar = cloudiddata['basetime'].calendar
-    longitude = cloudiddata['lon'][:]
-    latitude = cloudiddata['lat'][:]
+    # basetime_calendar = cloudiddata['basetime'].calendar
+    lon = cloudiddata['lon'][:]
+    lat = cloudiddata['lat'][:]
     nclouds = cloudiddata['nclouds'][:]
     tb = cloudiddata['tb'][:]
+    ra_precipitation = cloudiddata['precipitation'][:]
     longitude2 = cloudiddata['longitude'][:]
     latitude2 = cloudiddata['latitude'][:]
     cloudiddata.close()
@@ -147,23 +152,23 @@ def mapmcs_wrf_pf(zipped_inputs):
     # Get data dimensions
     [timeindex, nlat, nlon] = np.shape(cloudid_cloudnumber)
     
-    print('Load rain data')
-    if os.path.isfile(irainaccumulationfile):
-        # Load WRF precip data
-        rainaccumulationdata = Dataset(irainaccumulationfile, 'r')
-        ra_precipitation = rainaccumulationdata['rainrate'][:] # rainrate (mm/hr)
-        #ra_pf_number = rainaccumulatationdata['pf_number'][:]
-        rainaccumulationdata.close()
+    # print('Load rain data')
+    # if os.path.isfile(irainaccumulationfile):
+    #     # Load WRF precip data
+    #     rainaccumulationdata = Dataset(irainaccumulationfile, 'r')
+    #     ra_precipitation = rainaccumulationdata['rainrate'][:] # rainrate (mm/hr)
+    #     #ra_pf_number = rainaccumulatationdata['pf_number'][:]
+    #     rainaccumulationdata.close()
 
-        rapresent = 'Yes'
-    else:
-        print('No radar data')
-        ra_precipitation = np.ones((1, nlat, nlon), dtype=float)*np.nan
-        rapresent = 'No'
+    #     rapresent = 'Yes'
+    # else:
+    #     print('No radar data')
+    #     ra_precipitation = np.ones((1, nlat, nlon), dtype=float)*np.nan
+    #     rapresent = 'No'
         
     ##############################################################
     # Intiailize track maps
-    print('Initialize maps')
+    # print('Initialize maps')
     mcstrackmap = np.zeros((1, nlat, nlon), dtype=int)
     mcstrackmap_mergesplit = np.zeros((1, nlat, nlon), dtype=int)
         
@@ -176,7 +181,7 @@ def mapmcs_wrf_pf(zipped_inputs):
     ###############################################################
     # Create map of status and track number for every feature in this file
     if showalltracks == 1:
-        print('Create maps of all tracks')
+        # print('Create maps of all tracks')
         statusmap = np.ones((1, nlat, nlon), dtype=int)*-9999
         alltrackmap = np.zeros((1, nlat, nlon), dtype=int)
         allmergemap = np.zeros((1, nlat, nlon), dtype=int)
@@ -212,16 +217,16 @@ def mapmcs_wrf_pf(zipped_inputs):
         allsplitmap = allsplitmap.astype(np.int32)
 
     ###############################################################
-    print('Generate MCS maps')
+    # print('Generate MCS maps')
     # Get tracks
     itrack, itime = np.array(np.where(mcstrackstat_basetime == cloudid_basetime))
     ntimes = len(itime)
     if ntimes > 0:
         ##############################################################
         # Loop over each cloud in this unique file
-        print('Loop over each cloud in the file')
+        # print('Loop over each cloud in the file')
         for jj in range(0, ntimes):
-            print(('MCS #: ' + str(int(itrack[jj] + 1))))
+            # print(('MCS #: ' + str(int(itrack[jj] + 1))))
             # Get cloud nummber
             jjcloudnumber = mcstrackstat_cloudnumber[itrack[jj],itime[jj]].astype(np.int32)
 
@@ -239,7 +244,7 @@ def mapmcs_wrf_pf(zipped_inputs):
 
             ###########################################################
             # Find merging clouds
-            print('Find mergers')
+            # print('Find mergers')
             jjmerge = np.array(np.where(mcstrackstat_mergecloudnumber[itrack[jj], itime[jj], :] > 0))[0,:]
 
             # Loop through merging clouds if present
@@ -258,7 +263,7 @@ def mapmcs_wrf_pf(zipped_inputs):
 
             ###########################################################
             # Find splitting clouds
-            print('Find splits')
+            # print('Find splits')
             jjsplit = np.array(np.where(mcstrackstat_splitcloudnumber[itrack[jj], itime[jj], :] > 0))[0,:]
 
             # Loop through splitting clouds if present
@@ -275,82 +280,82 @@ def mapmcs_wrf_pf(zipped_inputs):
                     else:
                         sys.exit('Error: No matching splitting cloud pixel found?!')
 
-        #####################################################################
-        ## Create pf and rain accumulation masks
-        #print('Create rain maps')
-        #print('mcstrackmap_mergesplit shape: ', mcstrackmap_mergesplit.shape)
-        #extra, iymcs, ixmcs = np.array(np.where(mcstrackmap_mergesplit > 0))
-        #nmcs = len(iymcs)
-        #if nmcs > 0:
-            ## Find unique track numbers
-            #allmcsnumbers = np.copy(mcstrackmap_mergesplit[extra, iymcs, ixmcs])
-            #uniquemcsnumber = np.unique(allmcsnumbers)
+        ####################################################################
+        # Create pf and rain accumulation masks
+        # print('Create rain maps')
+        # print('mcstrackmap_mergesplit shape: ', mcstrackmap_mergesplit.shape)
+        extra, iymcs, ixmcs = np.array(np.where(mcstrackmap_mergesplit > 0))
+        nmcs = len(iymcs)
+        if nmcs > 0:
+            # Find unique track numbers
+            allmcsnumbers = np.copy(mcstrackmap_mergesplit[extra, iymcs, ixmcs])
+            uniquemcsnumber = np.unique(allmcsnumbers)
             
-            ## Loop over each mcs track
-            #for imcs in uniquemcsnumber:
-                ## Find the cloud shield of the mcs
-                #extra, iymcscloud, ixmcscloud = np.array(np.where(mcstrackmap_mergesplit == imcs))
-                #nmcscloud = len(iymcscloud)
+            # Loop over each mcs track
+            for imcs in uniquemcsnumber:
+                # Find the cloud shield of the mcs
+                extra, iymcscloud, ixmcscloud = np.array(np.where(mcstrackmap_mergesplit == imcs))
+                nmcscloud = len(iymcscloud)
 
-                #if nmcscloud > 0:
-                    ########################################################
-                    ## Label accumulated rain associated with each track
+                if nmcscloud > 0:
+                    #######################################################
+                    # Label accumulated rain associated with each track
 
-                    ## Get accumulated rain under the cloud shield
-                    #tempra = np.ones((nlat, nlon), dtype=float)*np.nan
-                    #tempra[iymcscloud, ixmcscloud] = np.copy(ra_precipitation[extra, iymcscloud, ixmcscloud])
+                    # Get accumulated rain under the cloud shield
+                    tempra = np.ones((nlat, nlon), dtype=float)*np.nan
+                    tempra[iymcscloud, ixmcscloud] = np.copy(ra_precipitation[extra, iymcscloud, ixmcscloud])
                     
-                    ## Label "significant" precipitation with track number
-                    #iymcsra, ixmcsra = np.array(np.where(tempra > pcp_thresh))
-                    #nmcsra = len(iymcsra)
-                    #if nmcsra > 0:
-                        #mcsramap_mergesplit[0, iymcsra, ixmcsra] = np.copy(imcs)
+                    # Label "significant" precipitation with track number
+                    iymcsra, ixmcsra = np.array(np.where(tempra > pcp_thresh))
+                    nmcsra = len(iymcsra)
+                    if nmcsra > 0:
+                        mcsramap_mergesplit[0, iymcsra, ixmcsra] = np.copy(imcs)
 
-                    ########################################################
-                    ## Label precipitation features associated with each track
+                    # #######################################################
+                    # # Label precipitation features associated with each track
                 
-                    ## Get accumulated rain under the cloud shield
-                    #temppfnumber = np.ones((nlat, nlon), dtype=int)*-9999
-                    #temppfnumber[iymcscloud, ixmcscloud] = np.copy(pf_number[extra, ixmcscloud, ixmcscloud])
+                    # # Get accumulated rain under the cloud shield
+                    # temppfnumber = np.ones((nlat, nlon), dtype=int)*-9999
+                    # temppfnumber[iymcscloud, ixmcscloud] = np.copy(pf_number[extra, ixmcscloud, ixmcscloud])
                 
-                    ## Label precpitation features with track number
-                    #iymcspf, ixmcspf = np.array(np.where(temppfnumber > 0))
-                    #nmcspf = len(iymcspf)
+                    # # Label precpitation features with track number
+                    # iymcspf, ixmcspf = np.array(np.where(temppfnumber > 0))
+                    # nmcspf = len(iymcspf)
 
-                    #if nmcspf > 0:
-                        ## Find unique precpitation features
-                        #allpfnumber = np.copy(temppfnumber[iymcspf, ixmcspf])
-                        #uniquepfnumber = np.unique(allpfnumber)
-                        #npfs = len(uniquepfnumber)
+                    # if nmcspf > 0:
+                    #     # Find unique precpitation features
+                    #     allpfnumber = np.copy(temppfnumber[iymcspf, ixmcspf])
+                    #     uniquepfnumber = np.unique(allpfnumber)
+                    #     npfs = len(uniquepfnumber)
 
-                        # Count number of pixels in each precipitaiton feature
-                        #pfnpix = np.ones(npfs, dtype=int)*-9999
-                        #for pfstep, ipf in enumerate(uniquepfnumber):
-                            #iypf, ixpf = np.array(np.where(temppfnumber == ipf))
-                            #pfnpix[pfstep] = len(iypf)
+                    #     # Count number of pixels in each precipitaiton feature
+                    #     pfnpix = np.ones(npfs, dtype=int)*-9999
+                    #     for pfstep, ipf in enumerate(uniquepfnumber):
+                    #         iypf, ixpf = np.array(np.where(temppfnumber == ipf))
+                    #         pfnpix[pfstep] = len(iypf)
                         
-                        ## Sort by size
-                        #order = np.argsort(pfnpix)
-                        #order = order[::-1]
-                        #pfnpix = pfnpix[order]
+                    #     # Sort by size
+                    #     order = np.argsort(pfnpix)
+                    #     order = order[::-1]
+                    #     pfnpix = pfnpix[order]
                     
-                        ## Determine if number of precipitation features exceeds present maximum. If that is true only label as many specified by nmaxpf.
-                        #if npfs < nmaxpf:
-                            #nlabel = np.copy(npfs)
-                        #else:
-                            #nlabel = np.copy(nmaxpf)
+                    #     # Determine if number of precipitation features exceeds present maximum. If that is true only label as many specified by nmaxpf.
+                    #     if npfs < nmaxpf:
+                    #         nlabel = np.copy(npfs)
+                    #     else:
+                    #         nlabel = np.copy(nmaxpf)
                             
-                        ## Loop over each precipitation feature and label it with track number
-                        ##import pdb; pdb.set_trace()
-                        #for ilabel in range(0, int(nlabel)):
-                            #iylabel, ixlabel = np.array(np.where(temppfnumber == uniquepfnumber[order[ilabel]]))
-                            #nlabelpix = len(ixlabel)
-                            #if nlabelpix > 0:
-                                #mcspfnumbermap_mergesplit[0, iylabel, ixlabel] = np.copy(imcs)
+                    #     # Loop over each precipitation feature and label it with track number
+                    #     #import pdb; pdb.set_trace()
+                    #     for ilabel in range(0, int(nlabel)):
+                    #         iylabel, ixlabel = np.array(np.where(temppfnumber == uniquepfnumber[order[ilabel]]))
+                    #         nlabelpix = len(ixlabel)
+                    #         if nlabelpix > 0:
+                    #             mcspfnumbermap_mergesplit[0, iylabel, ixlabel] = np.copy(imcs)
 
     mcssplitmap = mcssplitmap.astype(np.int32)
     mcsmergemap = mcsmergemap.astype(np.int32)
-    #mcsramap_mergesplit = mcsramap_mergesplit.astype(np.int32)
+    mcsramap_mergesplit = mcsramap_mergesplit.astype(np.int32)
     #mcspfnumbermap_mergesplit = mcspfnumbermap_mergesplit.astype(np.int32)
     mcstrackmap_mergesplit = mcstrackmap_mergesplit.astype(np.int32)
     mcstrackmap = mcstrackmap.astype(np.int32)
@@ -362,7 +367,7 @@ def mapmcs_wrf_pf(zipped_inputs):
 
     #####################################################################
     # Output maps to netcdf file
-    print('Writing data')
+    # print('Writing data')
 
     # Create output directories
     if not os.path.exists(mcstracking_path):
@@ -370,7 +375,7 @@ def mapmcs_wrf_pf(zipped_inputs):
 
     # Define output fileame
     mcstrackmaps_outfile = mcstracking_path + 'mcstracks_' + str(filedate) + '_' + str(filetime) + '.nc'
-    print('mcstrackmaps_outfile: ', mcstrackmaps_outfile)
+    # print('mcstrackmaps_outfile: ', mcstrackmaps_outfile)
 
     # Check if file already exists. If exists, delete
     if os.path.isfile(mcstrackmaps_outfile):
@@ -378,30 +383,34 @@ def mapmcs_wrf_pf(zipped_inputs):
 
     # Define xarray dataset
     if showalltracks == 0:
-        output_data = xr.Dataset({'basetime': (['time'], np.array([pd.to_datetime(num2date(cloudid_basetime, units=basetime_units, calendar=basetime_calendar))], dtype='datetime64[s]')[0, :]), \
-                                  'lon': (['lat7', 'lon7'], longitude2), \
-                                  'lat': (['lat7', 'lon7'], latitude2), \
+        output_data = xr.Dataset({
+                                #   'basetime': (['time'], np.array([pd.to_datetime(num2date(cloudid_basetime, units=basetime_units, calendar=basetime_calendar))], dtype='datetime64[s]')[0, :]), \
+                                  'basetime': (['time'], cloudid_basetime), \
+                                  'longitude': (['lat', 'lon'], longitude2), \
+                                  'latitude': (['lat', 'lon'], latitude2), \
                                   'nclouds': (['time'], nclouds), \
-                                  'tb': (['time', 'nlat', 'nlon'], tb), \
-                                  'precipitation': (['time', 'nlat', 'nlon'], ra_precipitation), \
-                                  #'mask': (['time', 'nlat', 'nlon'], pf_mask), \
-                                  'cloudtype': (['time', 'nlat', 'nlon'], cloudid_cloudtype), \
-                                  'mcssplittracknumbers': (['time', 'nlat', 'nlon'], mcssplitmap), \
-                                  'mcsmergetracknumbers': (['time', 'nlat', 'nlon'], mcsmergemap), \
-                                  'cloudnumber': (['time', 'nlat', 'nlon'], cloudid_cloudnumber), \
-                                  'cloudtracknumber_nomergesplit': (['time', 'nlat', 'nlon'], mcstrackmap), \
-                                  'cloudtracknumber': (['time', 'nlat', 'nlon'], mcstrackmap_mergesplit)}, \
-                                  #'pftracknumber': (['time', 'nlat', 'nlon'], mcspfnumbermap_mergesplit), \
-                                  #'pcptracknumber': (['time', 'nlat', 'nlon'], mcsramap_mergesplit)}, \
-                                 coords={'time': (['time'], cloudid_basetime)}, \
-                                         #'nlat': (['nlat'], np.arange(0, nlat)), \
-                                         #'nlon': (['nlon'], np.arange(0, nlon))}, \
+                                  'tb': (['time', 'lat', 'lon'], tb), \
+                                  'precipitation': (['time', 'lat', 'lon'], ra_precipitation), \
+                                  #'mask': (['time', 'lat', 'lon'], pf_mask), \
+                                  'cloudtype': (['time', 'lat', 'lon'], cloudid_cloudtype), \
+                                  'mcssplittracknumbers': (['time', 'lat', 'lon'], mcssplitmap), \
+                                  'mcsmergetracknumbers': (['time', 'lat', 'lon'], mcsmergemap), \
+                                  'cloudnumber': (['time', 'lat', 'lon'], cloudid_cloudnumber), \
+                                  'cloudtracknumber_nomergesplit': (['time', 'lat', 'lon'], mcstrackmap), \
+                                  'cloudtracknumber': (['time', 'lat', 'lon'], mcstrackmap_mergesplit), \
+                                  #'pftracknumber': (['time', 'lat', 'lon'], mcspfnumbermap_mergesplit), \
+                                  'pcptracknumber': (['time', 'lat', 'lon'], mcsramap_mergesplit), \
+                                  }, \
+                                 coords={'time': (['time'], cloudid_basetime), \
+                                         'lat': (['lat'], lat), \
+                                         'lon': (['lon'], lon), \
+                                         }, \
                                  attrs={'title':'Pixel level of tracked clouds and MCSs', \
                                         'source1': datasource1, \
                                         'source2': datasource2, \
                                         'description': datadescription, \
                                         #'WRF_Data_Present': pfpresent, \
-                                        'Rain_Acccumulation_Data_Present': rapresent, \
+                                        # 'Rain_Acccumulation_Data_Present': rapresent, \
                                         'MCS_IR_area_km2': irareathresh, \
                                         'MCS_IR_duration_hr': irdurationthresh, \
                                         'MCS_IR_eccentricity': ireccentricitythresh, \
@@ -413,6 +422,7 @@ def mapmcs_wrf_pf(zipped_inputs):
 
         # Specify variable attributes
         output_data.basetime.attrs['long_name'] = 'Epoch time (seconds since 01/01/1970 00:00) of this file'
+        output_data.basetime.attrs['units'] = basetime_units
         
         output_data.lon.attrs['long_name'] = 'Grid of longitude'
         output_data.lon.attrs['units'] = 'degrees'
@@ -455,16 +465,16 @@ def mapmcs_wrf_pf(zipped_inputs):
         #output_data.pftracknumber.attrs['comments'] = 'mcs includes smaller merges and splits'
         #output_data.pftracknumber.attrs['units'] = 'unitless'
     
-        #output_data.pcptracknumber.attrs['long_name'] = 'Number of the tracked mcs associated with the accumulated precipitation at a given pixel'
-        #output_data.pcptracknumber.attrs['comments'] = 'mcs includes smaller merges and splits'
-        #output_data.pcptracknumber.attrs['units'] = 'unitless'
+        output_data.pcptracknumber.attrs['long_name'] = 'Number of the tracked mcs associated with the accumulated precipitation at a given pixel'
+        output_data.pcptracknumber.attrs['comments'] = 'mcs includes smaller merges and splits'
+        output_data.pcptracknumber.attrs['units'] = 'unitless'
         
         # Write netcdf file
         print(mcstrackmaps_outfile)
-        print('')
+        # print('')
 
         output_data.to_netcdf(path=mcstrackmaps_outfile, mode='w', format='NETCDF4_CLASSIC', unlimited_dims='time', \
-                              encoding={'basetime': {'zlib':True, 'units': basetime_units, 'calendar': basetime_calendar}, \
+                              encoding={'basetime': {'zlib':True}, \
                                         'time': {'dtype': 'int'}, \
                                         'lon': {'zlib':True, '_FillValue': np.nan}, \
                                         'lat': {'zlib':True, '_FillValue': np.nan}, \
@@ -473,33 +483,36 @@ def mapmcs_wrf_pf(zipped_inputs):
                                         #'mask': {'zlib':True, '_FillValue': -9999}, \
                                         'precipitation': {'zlib':True, '_FillValue': np.nan},
                                         'cloudtype': {'zlib':True, '_FillValue': -9999}, \
-                                        'mcssplittracknumbers': {'zlib':True, '_FillValue': -9999}, \
-                                        'mcsmergetracknumbers': {'zlib':True, '_FillValue': -9999}, \
+                                        'mcssplittracknumbers': {'zlib':True, '_FillValue': 0}, \
+                                        'mcsmergetracknumbers': {'zlib':True, '_FillValue': 0}, \
                                         'cloudnumber': {'dtype': 'int', 'zlib':True, '_FillValue': -9999}, \
-                                        'cloudtracknumber_nomergesplit': {'zlib':True, '_FillValue': -9999}, \
-                                        'cloudtracknumber': {'zlib':True, '_FillValue': -9999}})
+                                        'cloudtracknumber_nomergesplit': {'zlib':True, '_FillValue': 0}, \
+                                        'cloudtracknumber': {'zlib':True, '_FillValue':0}, \
                                         #'pftracknumber': {'zlib':True, '_FillValue': -9999}, \
-                                        #'pcptracknumber': {'zlib':True, '_FillValue': -9999}})
+                                        'pcptracknumber': {'zlib':True, '_FillValue': 0}, \
+                                        })
     else:
-        output_data = xr.Dataset({'basetime': (['time'], np.array([pd.to_datetime(num2date(cloudid_basetime, units=basetime_units, calendar=basetime_calendar))], dtype='datetime64[s]')[0, :]), \
-                                  'lon': (['lat7', 'lon7'], longitude2), \
-                                  'lat': (['lat7', 'lon7'], latitude2), \
+        output_data = xr.Dataset({\
+                                #   'basetime': (['time'], np.array([pd.to_datetime(num2date(cloudid_basetime, units=basetime_units, calendar=basetime_calendar))], dtype='datetime64[s]')[0, :]), \
+                                  'basetime': {'zlib':True}, \
+                                  'longitude': (['lat', 'lon'], longitude2), \
+                                  'latitude': (['lat', 'lon'], latitude2), \
                                   'nclouds': (['time'], nclouds), \
-                                  'tb': (['time', 'nlat', 'nlon'], tb), \
-                                  'precipitation': (['time', 'nlat', 'nlon'], ra_precipitation), \
-                                  #'mask': (['time', 'nlat', 'nlon'], pf_mask), \
-                                  'cloudtype': (['time', 'nlat', 'nlon'], cloudtype), \
-                                  'cloudstatus': (['time', 'nlat', 'nlon'], statusmap), \
-                                  'alltracknumbers': (['time', 'nlat', 'nlon'], alltrackmap), \
-                                  'allsplittracknumbers': (['time', 'nlat', 'nlon'], allsplitmap), \
-                                  'allmergetracknumbers': (['time', 'nlat', 'nlon'], allmergemap), \
-                                  'mcssplittracknumbers': (['time', 'nlat', 'nlon'], mcssplitmap), \
-                                  'mcsmergetracknumbers': (['time', 'nlat', 'nlon'], mcsmergemap), \
-                                  'cloudnumber': (['time', 'nlat', 'nlon'], convcold_cloudnumber), \
-                                  'cloudtracknumber_nomergesplit': (['time', 'nlat', 'nlon'], mcstrackmap), \
-                                  'cloudtracknumber': (['time', 'nlat', 'nlon'], mcstrackmap_mergesplit)}, \
-                                  #'pftracknumber': (['time', 'nlat', 'nlon'], mcspfnumbermap_mergesplit), \
-                                  #'pcptracknumber': (['time', 'nlat', 'nlon'], mcsramap_mergesplit)}, \
+                                  'tb': (['time', 'lat', 'lon'], tb), \
+                                  'precipitation': (['time', 'lat', 'lon'], ra_precipitation), \
+                                  #'mask': (['time', 'lat', 'lon'], pf_mask), \
+                                  'cloudtype': (['time', 'lat', 'lon'], cloudtype), \
+                                  'cloudstatus': (['time', 'lat', 'lon'], statusmap), \
+                                  'alltracknumbers': (['time', 'lat', 'lon'], alltrackmap), \
+                                  'allsplittracknumbers': (['time', 'lat', 'lon'], allsplitmap), \
+                                  'allmergetracknumbers': (['time', 'lat', 'lon'], allmergemap), \
+                                  'mcssplittracknumbers': (['time', 'lat', 'lon'], mcssplitmap), \
+                                  'mcsmergetracknumbers': (['time', 'lat', 'lon'], mcsmergemap), \
+                                  'cloudnumber': (['time', 'lat', 'lon'], convcold_cloudnumber), \
+                                  'cloudtracknumber_nomergesplit': (['time', 'lat', 'lon'], mcstrackmap), \
+                                  'cloudtracknumber': (['time', 'lat', 'lon'], mcstrackmap_mergesplit)}, \
+                                  #'pftracknumber': (['time', 'lat', 'lon'], mcspfnumbermap_mergesplit), \
+                                  #'pcptracknumber': (['time', 'lat', 'lon'], mcsramap_mergesplit)}, \
                                  coords={'time': (['time'], cloudid_basetime)}, \
                                          #'nlat': (['nlat'], np.arange(0, nlat)), \
                                          #'nlon': (['nlon'], np.arange(0, nlon))}, \

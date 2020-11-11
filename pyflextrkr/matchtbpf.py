@@ -62,15 +62,14 @@ def identifypf_wrf_rain(mcsstats_filebase, cloudid_filebase, rainaccumulation_fi
     
     import numpy as np
     import os.path
-    from netCDF4 import Dataset, num2date, chartostring
+    from netCDF4 import Dataset, num2date
     from scipy.ndimage import label, binary_dilation, generate_binary_structure
     from skimage.measure import regionprops
     from math import pi
     from scipy.stats import skew
     import xarray as xr
-    import time
     import pandas as pd
-    import time, datetime, calendar
+    import time
     np.set_printoptions(threshold=np.inf)
 
     #########################################################
@@ -332,7 +331,7 @@ def identifypf_wrf_rain(mcsstats_filebase, cloudid_filebase, rainaccumulation_fi
                         min_npix = np.ceil(pf_link_area_thresh / (pixel_radius**2))
                             
                         # Sort and renumber PFs, and remove small PFs
-                        from ftfunctions import sort_renumber
+                        from pyflextrkr.ftfunctions import sort_renumber
                         pf_number, pf_npix = sort_renumber(pfnumberlabelmap, min_npix)
                         # Update number of PFs after sorting and renumbering
                         npf_new = np.nanmax(pf_number)
