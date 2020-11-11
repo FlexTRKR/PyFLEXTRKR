@@ -76,7 +76,9 @@ def futyan4(
     # Smooth IR data prior to identifying cores using a boxcar filter. Along the edges the boundary elements come from the nearest edge pixel
     # smoothir = filters.uniform_filter(ir, size=smoothsize, mode='nearest')
     kernel = Box2DKernel(smoothsize)
-    smoothir = convolve(ir, kernel, boundary='extend', nan_treatment='interpolate', preserve_nan=True)
+    smoothir = convolve(
+        ir, kernel, boundary="extend", nan_treatment="interpolate", preserve_nan=True
+    )
 
     smooth_cloudid = np.zeros((ny, nx), dtype=int)
 
@@ -164,14 +166,17 @@ def futyan4(
             # Spread cold cores outward until reach cold anvil threshold. Generates cold anvil.
             labelcorecold_number2d = np.copy(sortedcore_number2d)
             labelcorecold_npix = np.copy(sortedcore_npix)
-
             keepspreading = 1
             # Keep looping through dilating code as long as at least one feature is growing. At this point limit it to 20 dilations. Remove this once use real data.
+            spread_list = np.ones(ncores + 1)  # 1 indexing...eww
+            spread_list[0] = 0  # just to avoid jumping to here somehow.
             while keepspreading > 0:
                 keepspreading = 0
 
                 # Loop through each feature
                 for ifeature in range(1, ncores + 1):
+                    if spread_list[ifeature] == 0:
+                        continue
                     # Create map of single feature
                     featuremap = np.copy(labelcorecold_number2d)
                     featuremap[labelcorecold_number2d != ifeature] = 0
@@ -247,10 +252,10 @@ def futyan4(
                     )
 
                     # Count the number of dilated pixels. Add to the keepspreading variable. As long as this variables is > 0 the code continues to run the dilating portion. Also at this point have a requirement that can't dilate more than 20 times. This shoudl be removed when have actual data.
-                    keepspreading = keepspreading + len(
-                        np.extract(expansionzone == 1, expansionzone)
-                    )
-
+                    keepspreading_l = len(np.extract(expansionzone == 1, expansionzone))
+                    keepspreading = keepspreading + keepspreading_l
+                    if keepspreading_l == 0:
+                        spread_list[ifeature] = 0
         #############################################################
         # Create blank core and cold anvil arrays if no cores present
         elif ncores == 0:
