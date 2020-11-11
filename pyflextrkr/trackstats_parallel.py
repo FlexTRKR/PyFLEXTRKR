@@ -64,17 +64,13 @@ def trackstats_tb(datasource, datadescription, pixel_radius, geolimits, areathre
     ###################################################################################
     # Initialize modules
     import numpy as np
-    from netCDF4 import Dataset, num2date, chartostring
-    import os, fnmatch
-    import sys
-    from math import pi
-    from skimage.measure import regionprops
+    from netCDF4 import Dataset, chartostring
+    import os
     import time
     import gc
-    import datetime
-    import xarray as xr
-    import pandas as pd
     from multiprocessing import Pool
+    from pyflextrkr.trackstats_single import calc_stats_single
+    from pyflextrkr import netcdf_io_trackstats as net
     np.set_printoptions(threshold=np.inf)
 
     #############################################################################
@@ -158,11 +154,12 @@ def trackstats_tb(datasource, datadescription, pixel_radius, geolimits, areathre
     finaltrack_tracklength = np.zeros(int(numtracks), dtype=np.int32)
     finaltrack_corecold_boundary = np.ones((int(numtracks), int(nmaxclouds)), dtype=np.int32)*-9999
     #finaltrack_corecold_boundary = np.zeros((int(numtracks), int(nmaxclouds)), dtype=np.int32) # kb playing with field
-    finaltrack_basetime = np.empty((int(numtracks),int(nmaxclouds)), dtype='datetime64[s]')
+    # finaltrack_basetime = np.empty((int(numtracks),int(nmaxclouds)), dtype='datetime64[s]')
+    finaltrack_basetime = np.ones((int(numtracks),int(nmaxclouds)), dtype=float)*np.nan
     finaltrack_corecold_mintb = np.ones((int(numtracks),int(nmaxclouds)), dtype=float)*np.nan
     finaltrack_corecold_meantb = np.ones((int(numtracks),int(nmaxclouds)), dtype=float)*np.nan
     finaltrack_core_meantb = np.ones((int(numtracks),int(nmaxclouds)), dtype=float)*np.nan
-    finaltrack_corecold_histtb = np.zeros((int(numtracks),int(nmaxclouds), nbintb-1))
+    # finaltrack_corecold_histtb = np.zeros((int(numtracks),int(nmaxclouds), nbintb-1))
     finaltrack_corecold_radius = np.ones((int(numtracks),int(nmaxclouds)), dtype=float)*np.nan
     finaltrack_corecoldwarm_radius = np.ones((int(numtracks),int(nmaxclouds)), dtype=float)*np.nan
     finaltrack_corecold_meanlat = np.ones((int(numtracks),int(nmaxclouds)), dtype=float)*np.nan
@@ -196,57 +193,62 @@ def trackstats_tb(datasource, datadescription, pixel_radius, geolimits, areathre
     print('Looping over files and calculating statistics for each file')
     print((time.ctime()))
     #parallel here, by Jianfeng Li
-    from trackstats_single import calc_stats_single
+    
     with Pool(nprocesses) as pool:
         Results=pool.starmap(calc_stats_single,[(tracknumbers[0, nf, :],cloudidfiles[nf],tracking_inpath,cloudid_filebase,nbintb, \
                 numcharfilename, latitude, longitude, geolimits, nx, ny, mintb_thresh, maxtb_thresh, tbbins, pixel_radius, trackstatus[0, nf, :], \
                 trackmerge[0, nf, :], tracksplit[0, nf, :], trackreset[0, nf, :]) for nf in range(0,nfiles)])
         pool.close()
+    # for nf in range(0,nfiles):
+    #     Results = calc_stats_single(tracknumbers[0, nf, :],cloudidfiles[nf],tracking_inpath,cloudid_filebase,nbintb, \
+    #             numcharfilename, latitude, longitude, geolimits, nx, ny, mintb_thresh, maxtb_thresh, tbbins, pixel_radius, trackstatus[0, nf, :], \
+    #             trackmerge[0, nf, :], tracksplit[0, nf, :], trackreset[0, nf, :])
+    # import pdb; pdb.set_trace()
 
     #collect pool results
     for nf in range(0, nfiles):
-        tmp=Results[nf]
+        tmp = Results[nf]
         if (tmp is not None) :
-            tracknumbertmp=tmp[0]-1
-            numtrackstmp=tmp[1]
-            finaltrack_tracklength[tracknumbertmp]=finaltrack_tracklength[tracknumbertmp]+1
+            tracknumbertmp = tmp[0]-1
+            numtrackstmp = tmp[1]
+            finaltrack_tracklength[tracknumbertmp] = finaltrack_tracklength[tracknumbertmp]+1
             for iitrack in range(numtrackstmp):
                 if (finaltrack_tracklength[tracknumbertmp[iitrack]] <= nmaxclouds):
-                    finaltrack_basetime[tracknumbertmp[iitrack],finaltrack_tracklength[tracknumbertmp[iitrack]]-1]=tmp[2][iitrack]
-                    finaltrack_corecold_cloudnumber[tracknumbertmp[iitrack],finaltrack_tracklength[tracknumbertmp[iitrack]]-1]=tmp[3][iitrack]
-                    finaltrack_cloudidfile[tracknumbertmp[iitrack],finaltrack_tracklength[tracknumbertmp[iitrack]]-1,:]=tmp[4][iitrack,:]
-                    finaltrack_datetimestring[tracknumbertmp[iitrack]][finaltrack_tracklength[tracknumbertmp[iitrack]]-1][:]=tmp[5][iitrack][:]
-                    finaltrack_corecold_meanlat[tracknumbertmp[iitrack],finaltrack_tracklength[tracknumbertmp[iitrack]]-1]=tmp[6][iitrack]
-                    finaltrack_corecold_meanlon[tracknumbertmp[iitrack],finaltrack_tracklength[tracknumbertmp[iitrack]]-1]=tmp[7][iitrack]
-                    finaltrack_corecold_minlat[tracknumbertmp[iitrack],finaltrack_tracklength[tracknumbertmp[iitrack]]-1]=tmp[8][iitrack]
-                    finaltrack_corecold_minlon[tracknumbertmp[iitrack],finaltrack_tracklength[tracknumbertmp[iitrack]]-1]=tmp[9][iitrack]
-                    finaltrack_corecold_maxlat[tracknumbertmp[iitrack],finaltrack_tracklength[tracknumbertmp[iitrack]]-1]=tmp[10][iitrack]
-                    finaltrack_corecold_maxlon[tracknumbertmp[iitrack],finaltrack_tracklength[tracknumbertmp[iitrack]]-1]=tmp[11][iitrack]
-                    finaltrack_corecold_boundary[tracknumbertmp[iitrack],finaltrack_tracklength[tracknumbertmp[iitrack]]-1]=tmp[12][iitrack]
-                    finaltrack_ncorecoldpix[tracknumbertmp[iitrack],finaltrack_tracklength[tracknumbertmp[iitrack]]-1]=tmp[13][iitrack]
-                    finaltrack_ncorepix[tracknumbertmp[iitrack],finaltrack_tracklength[tracknumbertmp[iitrack]]-1]=tmp[14][iitrack]
-                    finaltrack_ncoldpix[tracknumbertmp[iitrack],finaltrack_tracklength[tracknumbertmp[iitrack]]-1]=tmp[15][iitrack]
-                    finaltrack_nwarmpix[tracknumbertmp[iitrack],finaltrack_tracklength[tracknumbertmp[iitrack]]-1]=tmp[16][iitrack]
-                    finaltrack_corecold_eccentricity[tracknumbertmp[iitrack],finaltrack_tracklength[tracknumbertmp[iitrack]]-1]=tmp[17][iitrack]
-                    finaltrack_corecold_majoraxis[tracknumbertmp[iitrack],finaltrack_tracklength[tracknumbertmp[iitrack]]-1]=tmp[18][iitrack]
-                    finaltrack_corecold_orientation[tracknumbertmp[iitrack],finaltrack_tracklength[tracknumbertmp[iitrack]]-1]=tmp[19][iitrack]
-                    finaltrack_corecold_perimeter[tracknumbertmp[iitrack],finaltrack_tracklength[tracknumbertmp[iitrack]]-1]=tmp[20][iitrack]
-                    finaltrack_corecold_ycenter[tracknumbertmp[iitrack],finaltrack_tracklength[tracknumbertmp[iitrack]]-1]=tmp[21][iitrack]
-                    finaltrack_corecold_xcenter[tracknumbertmp[iitrack],finaltrack_tracklength[tracknumbertmp[iitrack]]-1]=tmp[22][iitrack]
-                    finaltrack_corecold_yweightedcenter[tracknumbertmp[iitrack],finaltrack_tracklength[tracknumbertmp[iitrack]]-1]=tmp[23][iitrack]
-                    finaltrack_corecold_xweightedcenter[tracknumbertmp[iitrack],finaltrack_tracklength[tracknumbertmp[iitrack]]-1]=tmp[24][iitrack]
-                    finaltrack_corecold_radius[tracknumbertmp[iitrack],finaltrack_tracklength[tracknumbertmp[iitrack]]-1]=tmp[25][iitrack]
-                    finaltrack_corecoldwarm_radius[tracknumbertmp[iitrack],finaltrack_tracklength[tracknumbertmp[iitrack]]-1]=tmp[26][iitrack]
-                    finaltrack_corecold_mintb[tracknumbertmp[iitrack],finaltrack_tracklength[tracknumbertmp[iitrack]]-1]=tmp[27][iitrack]
-                    finaltrack_corecold_meantb[tracknumbertmp[iitrack],finaltrack_tracklength[tracknumbertmp[iitrack]]-1]=tmp[28][iitrack]
-                    finaltrack_corecold_histtb[tracknumbertmp[iitrack],finaltrack_tracklength[tracknumbertmp[iitrack]]-1]=tmp[29][iitrack]
-                    finaltrack_corecold_status[tracknumbertmp[iitrack],finaltrack_tracklength[tracknumbertmp[iitrack]]-1]=tmp[30][iitrack]
-                    finaltrack_corecold_mergenumber[tracknumbertmp[iitrack],finaltrack_tracklength[tracknumbertmp[iitrack]]-1]=tmp[31][iitrack]
-                    finaltrack_corecold_splitnumber[tracknumbertmp[iitrack],finaltrack_tracklength[tracknumbertmp[iitrack]]-1]=tmp[32][iitrack]
-                    finaltrack_corecold_trackinterruptions[tracknumbertmp[iitrack]]=tmp[33][iitrack]
-                    finaltrack_core_meantb[tracknumbertmp[iitrack],finaltrack_tracklength[tracknumbertmp[iitrack]]-1]=tmp[34][iitrack]
-                    basetime_units=tmp[35]
-                    basetime_calendar=tmp[36]
+                    finaltrack_basetime[tracknumbertmp[iitrack],finaltrack_tracklength[tracknumbertmp[iitrack]]-1] = tmp[2][iitrack]
+                    finaltrack_corecold_cloudnumber[tracknumbertmp[iitrack],finaltrack_tracklength[tracknumbertmp[iitrack]]-1] = tmp[3][iitrack]
+                    finaltrack_cloudidfile[tracknumbertmp[iitrack],finaltrack_tracklength[tracknumbertmp[iitrack]]-1,:] = tmp[4][iitrack,:]
+                    finaltrack_datetimestring[tracknumbertmp[iitrack]][finaltrack_tracklength[tracknumbertmp[iitrack]]-1][:] = tmp[5][iitrack][:]
+                    finaltrack_corecold_meanlat[tracknumbertmp[iitrack],finaltrack_tracklength[tracknumbertmp[iitrack]]-1] = tmp[6][iitrack]
+                    finaltrack_corecold_meanlon[tracknumbertmp[iitrack],finaltrack_tracklength[tracknumbertmp[iitrack]]-1] = tmp[7][iitrack]
+                    finaltrack_corecold_minlat[tracknumbertmp[iitrack],finaltrack_tracklength[tracknumbertmp[iitrack]]-1] = tmp[8][iitrack]
+                    finaltrack_corecold_minlon[tracknumbertmp[iitrack],finaltrack_tracklength[tracknumbertmp[iitrack]]-1] = tmp[9][iitrack]
+                    finaltrack_corecold_maxlat[tracknumbertmp[iitrack],finaltrack_tracklength[tracknumbertmp[iitrack]]-1] = tmp[10][iitrack]
+                    finaltrack_corecold_maxlon[tracknumbertmp[iitrack],finaltrack_tracklength[tracknumbertmp[iitrack]]-1] = tmp[11][iitrack]
+                    finaltrack_corecold_boundary[tracknumbertmp[iitrack],finaltrack_tracklength[tracknumbertmp[iitrack]]-1] = tmp[12][iitrack]
+                    finaltrack_ncorecoldpix[tracknumbertmp[iitrack],finaltrack_tracklength[tracknumbertmp[iitrack]]-1] = tmp[13][iitrack]
+                    finaltrack_ncorepix[tracknumbertmp[iitrack],finaltrack_tracklength[tracknumbertmp[iitrack]]-1] = tmp[14][iitrack]
+                    finaltrack_ncoldpix[tracknumbertmp[iitrack],finaltrack_tracklength[tracknumbertmp[iitrack]]-1] = tmp[15][iitrack]
+                    finaltrack_nwarmpix[tracknumbertmp[iitrack],finaltrack_tracklength[tracknumbertmp[iitrack]]-1] = tmp[16][iitrack]
+                    finaltrack_corecold_eccentricity[tracknumbertmp[iitrack],finaltrack_tracklength[tracknumbertmp[iitrack]]-1] = tmp[17][iitrack]
+                    finaltrack_corecold_majoraxis[tracknumbertmp[iitrack],finaltrack_tracklength[tracknumbertmp[iitrack]]-1] = tmp[18][iitrack]
+                    finaltrack_corecold_orientation[tracknumbertmp[iitrack],finaltrack_tracklength[tracknumbertmp[iitrack]]-1] = tmp[19][iitrack]
+                    finaltrack_corecold_perimeter[tracknumbertmp[iitrack],finaltrack_tracklength[tracknumbertmp[iitrack]]-1] = tmp[20][iitrack]
+                    finaltrack_corecold_ycenter[tracknumbertmp[iitrack],finaltrack_tracklength[tracknumbertmp[iitrack]]-1] = tmp[21][iitrack]
+                    finaltrack_corecold_xcenter[tracknumbertmp[iitrack],finaltrack_tracklength[tracknumbertmp[iitrack]]-1] = tmp[22][iitrack]
+                    finaltrack_corecold_yweightedcenter[tracknumbertmp[iitrack],finaltrack_tracklength[tracknumbertmp[iitrack]]-1] = tmp[23][iitrack]
+                    finaltrack_corecold_xweightedcenter[tracknumbertmp[iitrack],finaltrack_tracklength[tracknumbertmp[iitrack]]-1] = tmp[24][iitrack]
+                    finaltrack_corecold_radius[tracknumbertmp[iitrack],finaltrack_tracklength[tracknumbertmp[iitrack]]-1] = tmp[25][iitrack]
+                    finaltrack_corecoldwarm_radius[tracknumbertmp[iitrack],finaltrack_tracklength[tracknumbertmp[iitrack]]-1] = tmp[26][iitrack]
+                    finaltrack_corecold_mintb[tracknumbertmp[iitrack],finaltrack_tracklength[tracknumbertmp[iitrack]]-1] = tmp[27][iitrack]
+                    finaltrack_corecold_meantb[tracknumbertmp[iitrack],finaltrack_tracklength[tracknumbertmp[iitrack]]-1] = tmp[28][iitrack]
+                    # finaltrack_corecold_histtb[tracknumbertmp[iitrack],finaltrack_tracklength[tracknumbertmp[iitrack]]-1] = tmp[29][iitrack]
+                    finaltrack_corecold_status[tracknumbertmp[iitrack],finaltrack_tracklength[tracknumbertmp[iitrack]]-1] = tmp[29][iitrack]
+                    finaltrack_corecold_mergenumber[tracknumbertmp[iitrack],finaltrack_tracklength[tracknumbertmp[iitrack]]-1] = tmp[30][iitrack]
+                    finaltrack_corecold_splitnumber[tracknumbertmp[iitrack],finaltrack_tracklength[tracknumbertmp[iitrack]]-1] = tmp[31][iitrack]
+                    finaltrack_corecold_trackinterruptions[tracknumbertmp[iitrack]] = tmp[32][iitrack]
+                    finaltrack_core_meantb[tracknumbertmp[iitrack],finaltrack_tracklength[tracknumbertmp[iitrack]]-1] = tmp[33][iitrack]
+                    basetime_units = tmp[34]
+                    # basetime_calendar = tmp[36]
                 
     ###############################################################
     ## Remove tracks that have no cells. These tracks are short.
@@ -260,7 +262,8 @@ def trackstats_tb(datasource, datadescription, pixel_radius, geolimits, areathre
     numtracks = len(cloudindexpresent)
     #print('length of cloudindex present: ', len(cloudindexpresent))
 
-    maxtracklength = np.nanmax(finaltrack_tracklength)
+    # maxtracklength = np.nanmax(finaltrack_tracklength)
+    maxtracklength = nmaxclouds
     #print('maxtracklength: ', maxtracklength)
 
     finaltrack_tracklength = finaltrack_tracklength[cloudindexpresent]
@@ -269,7 +272,7 @@ def trackstats_tb(datasource, datadescription, pixel_radius, geolimits, areathre
     finaltrack_corecold_mintb = finaltrack_corecold_mintb[cloudindexpresent, 0:maxtracklength]
     finaltrack_corecold_meantb = finaltrack_corecold_meantb[cloudindexpresent, 0:maxtracklength]
     finaltrack_core_meantb = finaltrack_core_meantb[cloudindexpresent, 0:maxtracklength]
-    finaltrack_corecold_histtb = finaltrack_corecold_histtb[cloudindexpresent, 0:maxtracklength, :]
+    # finaltrack_corecold_histtb = finaltrack_corecold_histtb[cloudindexpresent, 0:maxtracklength, :]
     finaltrack_corecold_radius = finaltrack_corecold_radius[cloudindexpresent, 0:maxtracklength]
     finaltrack_corecoldwarm_radius = finaltrack_corecoldwarm_radius[cloudindexpresent, 0:maxtracklength]
     finaltrack_corecold_meanlat = finaltrack_corecold_meanlat[cloudindexpresent, 0:maxtracklength]
@@ -355,13 +358,13 @@ def trackstats_tb(datasource, datadescription, pixel_radius, geolimits, areathre
     if os.path.isfile(trackstats_outfile):
         os.remove(trackstats_outfile)
 
-    import netcdf_io_trackstats as net 
     net.write_trackstats_tb(trackstats_outfile, numtracks, maxtracklength, nbintb, numcharfilename, \
                             datasource, datadescription, startdate, enddate, \
                             track_version, tracknumbers_version, timegap, \
                             thresh_core, thresh_cold, pixel_radius, geolimits, areathresh, \
                             mintb_thresh, maxtb_thresh, \
-                            basetime_units, basetime_calendar, \
+                            basetime_units, \
+                            # basetime_units, basetime_calendar, \
                             finaltrack_tracklength, finaltrack_basetime, finaltrack_cloudidfile, finaltrack_datetimestring, \
                             finaltrack_corecold_meanlat, finaltrack_corecold_meanlon, \
                             finaltrack_corecold_minlat, finaltrack_corecold_minlon, \
@@ -372,7 +375,8 @@ def trackstats_tb(datasource, datadescription, pixel_radius, geolimits, areathre
                             finaltrack_corecold_startstatus, finaltrack_corecold_endstatus, \
                             adjusted_finaltrack_corecold_mergenumber, adjusted_finaltrack_corecold_splitnumber, \
                             finaltrack_corecold_trackinterruptions, finaltrack_corecold_boundary, \
-                            finaltrack_corecold_mintb, finaltrack_corecold_meantb, finaltrack_core_meantb, finaltrack_corecold_histtb, \
+                            finaltrack_corecold_mintb, finaltrack_corecold_meantb, finaltrack_core_meantb, \
+                            # finaltrack_corecold_mintb, finaltrack_corecold_meantb, finaltrack_core_meantb, finaltrack_corecold_histtb, \
                             finaltrack_corecold_majoraxis, finaltrack_corecold_orientation, finaltrack_corecold_eccentricity, \
                             finaltrack_corecold_perimeter, finaltrack_corecold_xcenter, finaltrack_corecold_ycenter, \
                             finaltrack_corecold_xweightedcenter, finaltrack_corecold_yweightedcenter)

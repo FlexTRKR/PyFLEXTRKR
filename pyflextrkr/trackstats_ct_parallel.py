@@ -64,16 +64,10 @@ def trackstats_ct(datasource, datadescription, pixel_radius, geolimits, areathre
     ###################################################################################
     # Initialize modules
     import numpy as np
-    from netCDF4 import Dataset, num2date, chartostring
-    import os, fnmatch
-    import sys
-    from math import pi
-    from skimage.measure import regionprops
+    from netCDF4 import Dataset, chartostring
+    import os
     import time
     import gc
-    import datetime
-    import xarray as xr
-    import pandas as pd
     from multiprocessing import Pool
     np.set_printoptions(threshold=np.inf)
 
@@ -185,7 +179,7 @@ def trackstats_ct(datasource, datadescription, pixel_radius, geolimits, areathre
     print('Looping over files and calculating statistics for each file')
     print((time.ctime()))
     #parallel here, by Jianfeng Li
-    from trackstats_ct_single import calc_stats_single
+    from pyflextrkr.trackstats_ct_single import calc_stats_single
     with Pool(nprocesses) as pool:
         Results=pool.starmap(calc_stats_single,[(tracknumbers[0, nf, :],cloudidfiles[nf],tracking_inpath,cloudid_filebase, \
                 numcharfilename, latitude, longitude, geolimits, nx, ny, pixel_radius, trackstatus[0, nf, :], \
@@ -341,9 +335,9 @@ def trackstats_ct(datasource, datadescription, pixel_radius, geolimits, areathre
     
     # Check if file already exists. If exists, delete
     if os.path.isfile(trackstats_outfile):
-        os.remove(trackstats_outfile) 
-        
-    import netcdf_io as net 
+        os.remove(trackstats_outfile)
+
+    from pyflextrkr import netcdf_io as net
     net.write_trackstats_ct(trackstats_outfile, numtracks, maxtracklength, numcharfilename, \
                             datasource, datadescription, startdate, enddate, \
                             track_version, tracknumbers_version, timegap, \

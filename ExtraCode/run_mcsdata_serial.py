@@ -113,7 +113,6 @@ if not os.path.exists(stats_outpath):
 # Identify clouds / features in the data, if neccesary
 if run_idclouds == 1:
     # Load function
-    from idclouds import idclouds_mergedir_serial
 
     # Call function
     print('Identifying Clouds')
@@ -147,7 +146,7 @@ if run_tracksingle == 0:
 # Call function
 if run_gettracks == 1:
     # Load function
-    from gettracks import gettracknumbers_mergedir
+    from pyflextrkr.gettracks import gettracknumbers_mergedir
 
     # Call function
     print('Getting track numbers')
@@ -164,7 +163,7 @@ if run_gettracks == 0:
 # Call function
 if run_finalstats == 1:
     # Load function
-    from trackstats import trackstats_sat
+    from pyflextrkr.trackstats import trackstats_sat
 
     # Call satellite version of function
     print('Calculating track statistics')

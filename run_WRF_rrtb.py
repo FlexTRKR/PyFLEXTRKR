@@ -3,9 +3,7 @@ import os, fnmatch
 import time, datetime, calendar
 from pytz import utc
 from multiprocessing import Pool
-from netCDF4 import Dataset
-import xarray as xr
-import json
+
 #import cProfile
 
 # Purpose: Master script for tracking MCS identified using IR satellite and radar data in the central and eastern USA. 
@@ -223,7 +221,7 @@ if run_idclouds == 1:
     ##########################################################################
     # Process files
     # Load function
-    from idclouds import idclouds_wrf
+    from pyflextrkr.idclouds import idclouds_wrf
 
     # Generate input lists
     list_irdatasource = [irdatasource]*(filestep)
@@ -332,7 +330,7 @@ if run_tracksingle == 1:
     ################################################################
     # Process files
     # Load function
-    from tracksingle import trackclouds_wrf
+    from pyflextrkr.tracksingle import trackclouds_wrf
 
     # Generate input lists
     list_trackingoutpath = [tracking_outpath]*(cloudidfilestep-1)
@@ -380,7 +378,7 @@ if run_tracksingle == 0:
 # Call function
 if run_gettracks == 1:
     # Load function
-    from gettracks import gettracknumbers
+    from pyflextrkr.gettracks import gettracknumbers
 
     # Call function
     print('Getting track numbers')
@@ -402,7 +400,7 @@ if run_gettracks == 0:
 # Call function
 if run_finalstats == 1:
     # Load function
-    from trackstats import trackstats_wrf
+    from pyflextrkr.trackstats import trackstats_wrf
 
     # Call satellite version of function
     print('Calculating track statistics')
@@ -425,7 +423,7 @@ if run_identifymcs == 1:
     print('Identifying MCSs')
 
     # Load function
-    from identifymcs import identifymcs_wrf_xarray
+    from pyflextrkr.identifymcs import identifymcs_wrf_xarray
 
     # Call wrf version of function
     print((time.ctime()))
@@ -472,7 +470,7 @@ if run_matchtbpf == 1:
     print('Identifying precipitation features in MCSs')
     
     # Load function
-    from matchtbpf import identifypf_wrf_rain
+    from pyflextrkr.matchtbpf import identifypf_wrf_rain
     
     # Call function
     print((time.ctime()))
@@ -521,7 +519,7 @@ if run_robustmcspf == 1:
     print('Identifying robust MCSs using precipitation features')
 
     # Load function
-    from robustmcspf import filtermcs_wrf_rain
+    from pyflextrkr.robustmcspf import filtermcs_wrf_rain
 
     # Call function
     print((time.ctime()))
@@ -672,7 +670,7 @@ if run_labelmcspf == 1:
     # Process files
 
     # Load function 
-    from mapmcspf import mapmcs_wrf_pf
+    from pyflextrkr.mapmcspf import mapmcs_wrf_pf
 
     # Generate input list
     list_robustmcsstat_filebase = [robustmcs_filebase]*(cloudidfilestep-1)

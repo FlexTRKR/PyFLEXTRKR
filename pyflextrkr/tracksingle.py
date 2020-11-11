@@ -252,10 +252,7 @@ def trackclouds(zipped_inputs):
         output_data.refcloud_forward_size.attrs['units'] = 'km^2'
 
         # Write netcdf files
-<<<<<<< HEAD
-=======
         # output_data.to_netcdf(path=track_outfile, mode='w', format='NETCDF4_CLASSIC', unlimited_dims='times', \
->>>>>>> Added 1 cloud to both reference and new cloud counts to account for idcloud files that has 0 clouds.
         output_data.to_netcdf(path=track_outfile, mode='w', format='NETCDF4_CLASSIC', unlimited_dims='time', \
                               encoding={'basetime_new': {'dtype':'int64', 'zlib':True, 'units': 'seconds since 1970-01-01'}, \
                                         'basetime_ref': {'dtype':'int64', 'zlib':True, 'units': 'seconds since 1970-01-01'}, \

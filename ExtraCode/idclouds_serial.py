@@ -5,7 +5,7 @@ import sys
 import datetime
 import calendar
 import time
-import matplotlib.pyplot as plt
+
 
 # purpose: identifies features and outputs netcdf files
 
@@ -112,7 +112,7 @@ def idclouds_mergedir(datasource, datadescription, datapath, databasename, filey
                     if np.divide(missingcount, (ny*nx)) < miss_thresh:
                         ######################################################
                         # call idclouds subroutine
-                        from subroutine_idclouds import futyan
+                        from pyflextrkr.subroutine_idclouds import futyan
 
                         clouddata = futyan(out_ir, pixel_radius, cloudtb_threshs, area_thresh, warmanvilexpansion)
 

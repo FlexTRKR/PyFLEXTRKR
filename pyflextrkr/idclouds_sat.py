@@ -44,19 +44,13 @@ def idclouds_gpmmergir(datafilepath, datasource, datadescription, variablename, 
     ##########################################################
     # Load modules
 
-    from netCDF4 import Dataset, stringtochar, num2date
+    from netCDF4 import Dataset
     import os
     import numpy as np
-    import sys
-    import datetime
-    import calendar
-    import time
     import xarray as xr
-    import datetime
-    import pandas as pd
     from scipy.signal import medfilt2d
     from scipy.ndimage import label, filters
-    import netcdf_io as net
+    from pyflextrkr import netcdf_io as net
     np.set_printoptions(threshold=np.inf)
 
     ##########################################################
@@ -132,31 +126,46 @@ def idclouds_gpmmergir(datafilepath, datasource, datadescription, variablename, 
         # original_ir = rawdata[variablename].data                                           # load brightness temperature data
         # rawdata.close()
 
-        rawdata = Dataset(datafilepath, 'r')
-        lat = rawdata['lat'][:]
-        lon = rawdata['lon'][:]
-        original_time = rawdata['time'][:]
-        basetime_units = rawdata['time'].units
-        original_ir = rawdata[variablename][:]
+        # rawdata = Dataset(datafilepath, 'r')
+        # lat = rawdata['lat'][:]
+        # lon = rawdata['lon'][:]
+        # original_time = rawdata['time'][:]
+        # basetime_units = rawdata['time'].units
+        # original_ir = rawdata[variablename][:]
+        # rawdata.close()
+
+        # Read in data using xarray
+        rawdata = xr.open_dataset(datafilepath)
+        lat = rawdata['lat'].values
+        lon = rawdata['lon'].values
+        time_decode = rawdata['time']
+        original_ir = rawdata[variablename].values
         rawdata.close()
 
         # Mesh 1D grid into 2D
         in_lon, in_lat = np.meshgrid(lon, lat)
      
         # Loop over each time
-        for tt in range(0, len(original_time)):
+        # for tt in range(0, len(original_time)):
+        for tt in range(0, len(time_decode)):
 
             # Get the data time
             # iTime = original_time[tt]
             # iminute = iTime.dt.minute.data
 
+            iTime = time_decode[tt]
+            file_basetime = np.array([iTime.values.tolist()/1e9])
+            file_datestring = iTime.dt.strftime("%Y%m%d").item()
+            file_timestring = iTime.dt.strftime("%H%M").item()
+            iminute = iTime.dt.minute.item()
+
             # Convert basetime to strings
-            iTime = original_time[tt]
-            file_basetime = np.array([pd.to_datetime(num2date(iTime, units=basetime_units))], dtype='datetime64[s]')
-            file_bt = file_basetime.item()  # Get the datetime64 value from numpy array
-            file_datestring = file_bt.strftime("%Y") + file_bt.strftime("%m") + file_bt.strftime("%d")
-            file_timestring = file_bt.strftime("%H") + file_bt.strftime("%M")
-            iminute = float(file_bt.strftime("%M"))
+            # iTime = original_time[tt]
+            # file_basetime = np.array([pd.to_datetime(num2date(iTime, units=basetime_units))], dtype='datetime64[s]')
+            # file_bt = file_basetime.item()  # Get the datetime64 value from numpy array
+            # file_datestring = file_bt.strftime("%Y") + file_bt.strftime("%m") + file_bt.strftime("%d")
+            # file_timestring = file_bt.strftime("%H") + file_bt.strftime("%M")
+            # iminute = float(file_bt.strftime("%M"))
             # import pdb; pdb.set_trace()
 
             # If idclouds_hourly is set to 1, then check if iminutes is within the allowed difference from idclouds_minutes
@@ -219,27 +228,31 @@ def idclouds_gpmmergir(datafilepath, datasource, datadescription, variablename, 
 
                         # call idclouds subroutine
                         if cloudidmethod == 'futyan3':
-                            from subroutine_idclouds import futyan3
+                            from pyflextrkr.subroutine_idclouds import futyan3
                             clouddata = futyan3(out_ir, pixel_radius, cloudtb_threshs, area_thresh, warmanvilexpansion)
                         elif cloudidmethod == 'futyan4':
-                            from subroutine_idclouds import futyan4
+                            from pyflextrkr.subroutine_idclouds import futyan4
                             clouddata = futyan4(out_ir, pixel_radius, cloudtb_threshs, area_thresh, mincoldcorepix, smoothsize, warmanvilexpansion)
 
                         ######################################################
                         # separate output from futyan into the separate variables
                         final_nclouds = np.array([clouddata['final_nclouds']])
-                        final_ncorepix = np.array([clouddata['final_ncorepix']])
-                        final_ncoldpix = np.array([clouddata['final_ncoldpix']])
-                        final_ncorecoldpix = np.array([clouddata['final_ncorecoldpix']])
-                        final_nwarmpix = np.array([clouddata['final_nwarmpix']])
+                        final_ncorepix = clouddata['final_ncorepix']
+                        final_ncoldpix = clouddata['final_ncoldpix']
+                        final_ncorecoldpix = clouddata['final_ncorecoldpix']
+                        final_nwarmpix = clouddata['final_nwarmpix']
+                        # final_ncorepix = np.array([clouddata['final_ncorepix']])
+                        # final_ncoldpix = np.array([clouddata['final_ncoldpix']])
+                        # final_ncorecoldpix = np.array([clouddata['final_ncorecoldpix']])
+                        # final_nwarmpix = np.array([clouddata['final_nwarmpix']])
                         final_cloudtype = np.array([clouddata['final_cloudtype']])
                         final_cloudnumber = np.array([clouddata['final_cloudnumber']])
                         final_convcold_cloudnumber = np.array([clouddata['final_convcold_cloudnumber']])
-
+                        # import pdb; pdb.set_trace()
                         
                         # Option to linkpf
                         if (linkpf == 1):
-                            from ftfunctions import sort_renumber, sort_renumber2vars, link_pf_tb
+                            from pyflextrkr.ftfunctions import sort_renumber, sort_renumber2vars, link_pf_tb
 
                             # Proceed if there is at least 1 cloud
                             if (final_nclouds > 0):
@@ -281,7 +294,8 @@ def idclouds_gpmmergir(datafilepath, datasource, datadescription, variablename, 
                                 final_convcold_cloudnumber = np.expand_dims(pf_convcold_cloudnumber_sorted, axis=0)
                                 final_nclouds = np.array([nclouds_linkpf], dtype=int)
                                 final_pf_number = np.expand_dims(pf_number, axis=0)
-                                final_ncorecoldpix = np.array([npix_convcold_linkpf], dtype=int)
+                                # final_ncorecoldpix = np.array([npix_convcold_linkpf], dtype=int)
+                                final_ncorecoldpix = npix_convcold_linkpf
                                 if pcp.ndim == 2:
                                     final_pcp = np.expand_dims(pcp, axis=0)
                                 else:
