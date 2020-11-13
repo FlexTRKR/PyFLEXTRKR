@@ -376,7 +376,7 @@ def trackstats_radar(
                             )
 
                             # Reflectivity maximum
-                            finaltrack_cell_maxdbz[itrack - 1, nc] = np.nanmean(
+                            finaltrack_cell_maxdbz[itrack - 1, nc] = np.nanmax(
                                 file_dbz[0, cellarea[0], cellarea[1]]
                             )
 

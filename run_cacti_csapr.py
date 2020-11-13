@@ -95,7 +95,7 @@ split_duration = 30/float(60)                         # Track shorter than this 
 # datadescription = 'COR'
 # databasename = 'CSAPR2_Taranis_Gridded_1000m.Conv_Mask.'
 # databasename = 'csa_csapr2_'
-label_filebase = 'cloudtrack_'
+# label_filebase = 'cloudtrack_'
 
 # latlon_file = clouddata_path + 'coordinates_d02_big.dat'
 

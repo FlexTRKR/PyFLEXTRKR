@@ -219,7 +219,7 @@ def calc_stats_radar(
                     finaltrack_cell_area[itrack] = ncellpix * pixel_radius ** 2
 
                     # Reflectivity maximum
-                    finaltrack_cell_maxdbz[itrack] = np.nanmean(
+                    finaltrack_cell_maxdbz[itrack] = np.nanmax(
                         file_dbz[0, cellarea[0], cellarea[1]]
                     )
 
