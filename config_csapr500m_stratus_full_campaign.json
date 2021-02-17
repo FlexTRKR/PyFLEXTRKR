@@ -11,8 +11,8 @@
     "datasource": "CSAPR2", 
     "datadescription": "COR", 
     "databasename": "taranis_corcsapr2cfrppiqcM1_convmask.c1.", 
-    "root_path": "/lustre/or-hydra/cades-arm/proj-shared/iclass/cacti/radar_processing/taranis_corcsapr2cfrppiqcM1_celltracking.c1/",
-    "clouddata_path": "/lustre/or-hydra/cades-arm/proj-shared/iclass/cacti/radar_processing/taranis_corcsapr2cfrppiqcM1_gridded_convmask.c1/",
+    "root_path": "/lustre/or-hydra/cades-arm/proj-shared/iclass/cacti/radar_processing/taranis_corcsapr2cfrppiqcM1_celltracking.c1.test/",
+    "clouddata_path": "/lustre/or-hydra/cades-arm/proj-shared/iclass/cacti/radar_processing/taranis_corcsapr2cfrppiqcM1_gridded_convmask.c1.diag/",
     "driftfile": "/lustre/or-hydra/cades-arm/proj-shared/iclass/cacti/radar_processing/taranis_corcsapr2cfr_advectionM1.c1/csapr2_500m_advection_full_campaign.nc",
     "terrain_file": "/lustre/or-hydra/cades-arm/proj-shared/iclass/cacti/radar_processing/corgridded_terrain.c0/CSAPR2_Taranis_Gridded_500m.Terrain_RangeMask.nc"
 }
