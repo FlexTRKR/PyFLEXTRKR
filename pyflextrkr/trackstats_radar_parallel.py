@@ -483,7 +483,8 @@ def trackstats_radar(
     # Create adjustor
     indexcloudnumber = np.copy(cloudindexpresent) + 1
     #adjustor = np.arange(0, np.max(cloudindexpresent) + 2)
-    adjustor = np.full(np.max(cloudindexpresent) + 2, fillval, dtype=np.int32) #Modified by Zhixiao, initialize adjustor by fill values, rather than using np.arange
+    #Modified by Zhixiao, initialize adjustor by fill values, rather than using np.arange
+    adjustor = np.full(np.max(cloudindexpresent) + 2, fillval, dtype=np.int32) 
     for it in range(0, numtracks):
         adjustor[indexcloudnumber[it]] = it + 1
     adjustor = np.append(adjustor, fillval)
@@ -597,7 +598,9 @@ def trackstats_radar(
                 match_timeidx = np.where(ibasetime == finaltrack_startbasetime[itrack])[
                     0
                 ]
-                # Modified by Zhixiao: If there is no overlap time between split and reference tracks, we test whether the reference cell end time is a time step earlier than the split cell initiation. We take this as a resonable split, because the referecence cell can merge with other cells after the split moment.
+                # Modified by Zhixiao: If there is no overlap time between split and reference tracks, 
+                # we test whether the reference cell end time is a time step earlier than the split cell initiation. 
+                # We take this as a resonable split, because the referecence cell can merge with other cells after the split moment.
                 if len(match_timeidx) == 0:
                     match_timeidx = np.where(ibasetime == ibasetime[len(ibasetime)-1])[0] #zhixiao
                     if len(match_timeidx) == 1:

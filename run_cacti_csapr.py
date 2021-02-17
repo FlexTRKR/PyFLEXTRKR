@@ -4,6 +4,7 @@ import datetime, calendar
 from pytz import utc
 import xarray as xr
 import json
+import yaml
 from multiprocessing import Pool
 from itertools import repeat
 from pyflextrkr.idcells_radar import idcell_csapr
@@ -19,16 +20,15 @@ from pyflextrkr.mapcell_radar import mapcell_radar
 
 # Get configuration file name from input
 config_file = sys.argv[1]
-# Read configuration from json file
-with open(config_file, encoding='utf-8') as data_file:
-    config = json.load(data_file)
+# Read configuration from yaml file
+stream = open(config_file, 'r')
+config = yaml.full_load(stream)
 
-run_idclouds = config['run_idclouds']        # Segment and identify cloud systems
-run_tracksingle = config['run_tracksingle']     # Track single consecutive cloudid files
-run_gettracks = config['run_gettracks']       # Run trackig for all files
-run_finalstats = config['run_finalstats']      # Calculate final statistics
-# run_identifycell = config['run_identifycell']    # Isolate cells
-run_labelcell = config['run_labelcell']        # Create maps of MCSs
+run_idclouds = config['run_idclouds']
+run_tracksingle = config['run_tracksingle']
+run_gettracks = config['run_gettracks']
+run_finalstats = config['run_finalstats']
+run_labelcell = config['run_labelcell']
 startdate = config['startdate']
 enddate = config['enddate']
 run_parallel = config['run_parallel']
@@ -47,22 +47,8 @@ if "driftfile" in config:
 ################################################################################################
 # Set variables describing data, file structure, and tracking thresholds
 
-# Specify which sets of code to run. (1 = run code, 0 = don't run code)
-#run_idclouds = 0        # Segment and identify cloud systems
-#run_tracksingle = 0     # Track single consecutive cloudid files
-#run_gettracks = 0       # Run trackig for all files
-#run_finalstats = 1      # Calculate final statistics
-#run_identifycell = 0    # Isolate cells
-#run_labelcell = 0        # Create maps of MCSs
-#
-## Specify days to run
-#startdate = '20160830.1800'
-#enddate = '20160830.2000'
-
-keep_singlemergesplit = 1 # 0=all short tracks removed, 1=only short tracks that are not mergers or splits are removed
-# show_alltracks = 0 # 0=do not create maps of all tracks in map stage, 1=create maps of all tracks (greatly slows the code)
-#run_parallel = 1 # Options: 0-run serially, 1-run parallel (uses Pool from Multiprocessing)
-#nprocesses = 4   # Number of processes to run if run_parallel is set to 1
+# 0=all short tracks removed, 1=only short tracks that are not mergers or splits are removed
+keep_singlemergesplit = 1
 
 # Specify version of code using
 cloudid_version = 'v1.0'
@@ -89,15 +75,6 @@ nmaxlinks = 10                             # Maximum number of clouds that any s
 maincloud_duration = 30/float(60)                      # Natural time resolution of data
 merge_duration = 30/float(60)                          # Track shorter than this will be labeled as merger
 split_duration = 30/float(60)                         # Track shorter than this will be labeled as merger
-
-# Specify filenames and locations
-# datasource = 'CSAPR2'
-# datadescription = 'COR'
-# databasename = 'CSAPR2_Taranis_Gridded_1000m.Conv_Mask.'
-# databasename = 'csa_csapr2_'
-# label_filebase = 'cloudtrack_'
-
-# latlon_file = clouddata_path + 'coordinates_d02_big.dat'
 
 # Specify data structure
 datatimeresolution = 15/float(60)            # hours

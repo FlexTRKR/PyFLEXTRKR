@@ -27,10 +27,8 @@ def mapcell_radar(
     import numpy as np
     import time
     import os
-    import sys
     import xarray as xr
-    import pandas as pd
-    from netCDF4 import Dataset, num2date
+    from netCDF4 import Dataset
 
     np.set_printoptions(threshold=np.inf)
 
@@ -44,18 +42,14 @@ def mapcell_radar(
     )
 
     allstatdata = Dataset(statistics_file, "r")
-    trackstat_basetime = allstatdata["basetime"][
-        :
-    ]  # Time of cloud in seconds since 01/01/1970 00:00
-    trackstat_cloudnumber = allstatdata["cloudnumber"][
-        :
-    ]  # Number of the corresponding cloudid file
-    trackstat_status = allstatdata["status"][
-        :
-    ]  # Flag indicating the status of the cloud
-    trackstat_mergenumbers = allstatdata["merge_tracknumbers"][
-        :
-    ]  # Track number that it merges into
+    # Time of cloud in seconds since 01/01/1970 00:00
+    trackstat_basetime = allstatdata["basetime"][:]
+    # Number of the corresponding cloudid file
+    trackstat_cloudnumber = allstatdata["cloudnumber"][:]
+    # Flag indicating the status of the cloud
+    trackstat_status = allstatdata["status"][:]
+    # Track number that it merges into
+    trackstat_mergenumbers = allstatdata["merge_tracknumbers"][:]  
     trackstat_splitnumbers = allstatdata["split_tracknumbers"][:]
     datasource = allstatdata.getncattr("source")
     datadescription = allstatdata.getncattr("description")
@@ -82,6 +76,7 @@ def mapcell_radar(
     dbz_lowlevel = cloudiddata["dbz_lowlevel"][:]
     conv_core = cloudiddata["conv_core"][:]
     conv_mask = cloudiddata["conv_mask"][:]
+    # Convert ETH units from [m] to [km]
     echotop10 = cloudiddata["echotop10"][:] / 1000.0
     echotop20 = cloudiddata["echotop20"][:] / 1000.0
     echotop30 = cloudiddata["echotop30"][:] / 1000.0
@@ -106,11 +101,11 @@ def mapcell_radar(
 
     ##############################################################
     # Intiailize track maps
-    celltrackmap = np.zeros((1, ny, nx), dtype=int)
-    celltrackmap_mergesplit = np.zeros((1, ny, nx), dtype=int)
+    # celltrackmap = np.zeros((1, ny, nx), dtype=int)
+    # celltrackmap_mergesplit = np.zeros((1, ny, nx), dtype=int)
 
-    cellmergemap = np.zeros((1, ny, nx), dtype=int)
-    cellsplitmap = np.zeros((1, ny, nx), dtype=int)
+    # cellmergemap = np.zeros((1, ny, nx), dtype=int)
+    # cellsplitmap = np.zeros((1, ny, nx), dtype=int)
 
     ################################################################
     # Create map of status and track number for every feature in this file
@@ -218,7 +213,7 @@ def mapcell_radar(
         "basetime": (
             ["time"],
             cloudid_basetime,
-        ),  # 'basetime': (['time'], np.array([pd.to_datetime(num2date(cloudid_basetime, units=basetime_units, calendar=basetime_calendar))], dtype='datetime64[s]')[0, :]),  \
+        ),
         "longitude": (["lat", "lon"], longitude),
         "latitude": (["lat", "lon"], latitude),
         "nclouds": (["time"], nclouds),
@@ -232,7 +227,7 @@ def mapcell_radar(
         "cloudnumber": (
             ["time", "lat", "lon"],
             cloudid_cloudnumber,
-        ),  # 'cloudnumber_noinflate': (['time', 'lat', 'lon'], cloudid_cloudnumber_noinflate), \
+        ),
         "merge_tracknumber": (["time", "lat", "lon"], allmergemap),
         "split_tracknumber": (["time", "lat", "lon"], allsplitmap),
         "echotop10": (["time", "lat", "lon"], echotop10),
@@ -393,31 +388,12 @@ def mapcell_radar(
 
     # Write netcdf file
     print("Output celltracking file: ", celltrackmaps_outfile)
-    # print('')
 
     # Set encoding/compression for all variables
     comp = dict(zlib=True)
     encodelist = {var: comp for var in ds_out.data_vars}
-
-    #    # Specify encoding list
-    #    encodelist = {'basetime': {'dtype':'float', 'zlib':True}, \
-    #                    'time': {'zlib':True}, \
-    #                    'lon': {'zlib':True, '_FillValue': np.nan}, \
-    #                    'lat': {'zlib':True, '_FillValue': np.nan}, \
-    #                    'longitude': {'zlib':True, '_FillValue': np.nan}, \
-    #                    'latitude': {'zlib':True, '_FillValue': np.nan}, \
-    #                    'nclouds': {'dtype': 'int64', 'zlib':True, '_FillValue': fillval}, \
-    #                    'comp_ref': {'zlib':True, '_FillValue': np.nan}, \
-    #                    'conv_core': {'zlib':True}, \
-    #                    'conv_mask': {'zlib':True}, \
-    #                    'tracknumber': {'zlib':True, 'dtype':'int32'}, \
-    #                    'tracknumber_cmask2': {'zlib':True, 'dtype':'int32'}, \
-    #                    'track_status': {'zlib':True}, \
-    #                    'cloudnumber': {'dtype':'int32', 'zlib':True}, \
-    #                    # 'cloudnumber_noinflate': {'dtype':'int32', 'zlib':True}, \
-    #                    'merge_tracknumber': {'zlib':True,}, \
-    #                    'split_tracknumber': {'zlib':True}, \
-    #                }
+    encodelist["longitude"] = dict(zlib=True, dtype='float32')
+    encodelist["latitude"] = dict(zlib=True, dtype='float32')
 
     # Write to netCDF file
     ds_out.to_netcdf(
@@ -427,5 +403,3 @@ def mapcell_radar(
         unlimited_dims="time",
         encoding=encodelist,
     )
-
-    # import pdb; pdb.set_trace()

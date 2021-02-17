@@ -102,9 +102,10 @@ def trackclouds(zipped_inputs):
         nreference = reference_data["nclouds"].data  # Load number of clouds / features
         reference_data.close()  # Close file
         
-        # Modifed by Zhixiao: Return value from reference_data["convcold_cloudnumber"].data is FLOAT. reference_convcold_cloudnumber must be converted to INT for avoiding systematic errors while using np.unique, ndi.shift and selecting DCC by specific int cloudnumber.
+        # Modifed by Zhixiao: Return value from reference_data["convcold_cloudnumber"].data is FLOAT. 
+        # reference_convcold_cloudnumber must be converted to INT for avoiding systematic errors while using np.unique, ndi.shift and selecting DCC by specific int cloudnumber.
         reference_convcold_cloudnumber[np.isnan(reference_convcold_cloudnumber)] = 0 # Replace NAN with 0 for the cloudnumber before convert it to INT
-        reference_convcold_cloudnumber=reference_convcold_cloudnumber.astype('int32')
+        reference_convcold_cloudnumber = reference_convcold_cloudnumber.astype('int32')
 
         ##########################################################
         # Load next cloudid file, called new file
@@ -116,16 +117,14 @@ def trackclouds(zipped_inputs):
         ].data  # Load cloud id map
         
         # Modifed by Zhixiao: Similar as reference_convcold_cloudnumber, we convert float to int for new_convcold_cloudnumber
-        new_convcold_cloudnumber=new_convcold_cloudnumber.astype('int32')
+        new_convcold_cloudnumber[np.isnan(new_convcold_cloudnumber)] = 0
+        new_convcold_cloudnumber = new_convcold_cloudnumber.astype('int32')
         
         nnew = new_data["nclouds"].data  # Load number of clouds / features
         new_data.close()  # Close file
 
         # Compare drift datetime with reference datetime
         if reference_filedatetime == datetime_drift:
-            # Replace NAN with 0 for the cloudnumber
-            #ref_cn = np.copy(reference_convcold_cloudnumber)
-            #ref_cn[np.isnan(ref_cn)] = 0
 
             # Shift the reference cloudnumber and replace the original
             reference_convcold_cloudnumber = ndi.shift(reference_convcold_cloudnumber, [0, ydrift, xdrift])
@@ -148,14 +147,15 @@ def trackclouds(zipped_inputs):
 
         #######################################################
         # Initialize matrices
+        fillval = -9999
         reference_forward_index = (
-            np.ones((1, int(nreference), int(nmaxlinks)), dtype=int) * -9999
+            np.ones((1, int(nreference), int(nmaxlinks)), dtype=int) * fillval
         )
         reference_forward_size = (
-            np.ones((1, int(nreference), int(nmaxlinks)), dtype=int) * -9999
+            np.ones((1, int(nreference), int(nmaxlinks)), dtype=int) * fillval
         )
-        new_backward_index = np.ones((1, int(nnew), int(nmaxlinks)), dtype=int) * -9999
-        new_backward_size = np.ones((1, int(nnew), int(nmaxlinks)), dtype=int) * -9999
+        new_backward_index = np.ones((1, int(nnew), int(nmaxlinks)), dtype=int) * fillval
+        new_backward_size = np.ones((1, int(nnew), int(nmaxlinks)), dtype=int) * fillval
 
         ######################################################
         # Loop through each cloud / feature in reference time and look for overlaping clouds / features in the new file
@@ -317,7 +317,7 @@ def trackclouds(zipped_inputs):
                 "title": "Indices linking clouds in two consecutive files forward and backward in time and the size of the linked cloud",
                 "Conventions": "CF-1.6",
                 "Institution": "Pacific Northwest National Laboratoy",
-                "Contact": "Katelyn Barber: katelyn.barber@pnnl.gov",
+                "Contact": "Zhe Feng, zhe.feng@pnnl.gov",
                 "Created_on": time.ctime(time.time()),
                 "new_date": new_filedatetime,
                 "ref_date": reference_filedatetime,
@@ -400,22 +400,22 @@ def trackclouds(zipped_inputs):
                 "newcloud_backward_index": {
                     "dtype": "int",
                     "zlib": True,
-                    "_FillValue": -9999,
+                    "_FillValue": fillval,
                 },
                 "newcloud_backward_size": {
                     "dtype": "int",
                     "zlib": True,
-                    "_FillValue": -9999,
+                    "_FillValue": fillval,
                 },
                 "refcloud_forward_index": {
                     "dtype": "int",
                     "zlib": True,
-                    "_FillValue": -9999,
+                    "_FillValue": fillval,
                 },
                 "refcloud_forward_size": {
                     "dtype": "int",
                     "zlib": True,
-                    "_FillValue": -9999,
+                    "_FillValue": fillval,
                 },
             },
         )
