@@ -81,7 +81,7 @@ def idcell_csapr(
 
     # Get the number of pixels for each cell.
     # conv_mask is already sorted so the returned sorted array is not needed, only the pixel count (cell size).
-    tmp, conv_npix = sort_renumber(conv_mask, 1)
+    tmp, conv_npix = sort_renumber(conv_mask, 0) #Modified by zhixiao, should not remove any single grid cells in coarse resolution wrf
 
     # conv_mask_noinflate = conv_mask2
     # conv_mask_sorted_noinflate = conv_mask2
@@ -172,7 +172,7 @@ def idcell_csapr(
         "lon": (["lon"], np.squeeze(out_lon[0, :])),
         "clouds": (
             ["clouds"],
-            np.arange(1, nclouds + 1),
+            np.arange(1, nclouds+1),
         ),  # 'ndatechar': (['ndatechar'], np.arange(0, 32)), \
         # 'ntimechar': (['ntimechar'], np.arange(0, 16)), \
     }

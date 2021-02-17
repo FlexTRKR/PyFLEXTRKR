@@ -2,7 +2,6 @@
 # This version uses multiprocessing for parallelization
 # Author: Zhe Feng (zhe.feng@pnnl.gov)
 
-
 def trackstats_radar(
     datasource,
     datadescription,
@@ -483,7 +482,9 @@ def trackstats_radar(
 
     # Create adjustor
     indexcloudnumber = np.copy(cloudindexpresent) + 1
-    adjustor = np.arange(0, np.max(cloudindexpresent) + 2)
+    #adjustor = np.arange(0, np.max(cloudindexpresent) + 2)
+    #Modified by Zhixiao, initialize adjustor by fill values, rather than using np.arange
+    adjustor = np.full(np.max(cloudindexpresent) + 2, fillval, dtype=np.int32) 
     for it in range(0, numtracks):
         adjustor[indexcloudnumber[it]] = it + 1
     adjustor = np.append(adjustor, fillval)
@@ -503,6 +504,7 @@ def trackstats_radar(
     temp_finaltrack_splitnumber[temp_finaltrack_splitnumber == fillval] = (
         np.max(cloudindexpresent) + 2
     )
+    
     adjusted_finaltrack_splitnumber = adjustor[temp_finaltrack_splitnumber]
     adjusted_finaltrack_splitnumber = np.reshape(
         adjusted_finaltrack_splitnumber, np.shape(finaltrack_splitnumber)
@@ -596,6 +598,17 @@ def trackstats_radar(
                 match_timeidx = np.where(ibasetime == finaltrack_startbasetime[itrack])[
                     0
                 ]
+                # Modified by Zhixiao: If there is no overlap time between split and reference tracks, 
+                # we test whether the reference cell end time is a time step earlier than the split cell initiation. 
+                # We take this as a resonable split, because the referecence cell can merge with other cells after the split moment.
+                if len(match_timeidx) == 0:
+                    match_timeidx = np.where(ibasetime == ibasetime[len(ibasetime)-1])[0] #zhixiao
+                    if len(match_timeidx) == 1:
+                        match_timeidx = match_timeidx + 1
+                        print(
+                        f"Note: Track {itrack} splits from transient parent cell!"
+                        )
+                
                 if len(match_timeidx) == 1:
                     # The time to connect to the track it splits from should be 1 time step prior
                     if (match_timeidx - 1) >= 0:
@@ -609,6 +622,7 @@ def trackstats_radar(
                     print(
                         f"Error: track {itrack} has no matching time in the track it splits from!"
                     )
+                    
                     sys.exit(itrack)
 
     t1_status = (time.time() - t0_status) / 60.0

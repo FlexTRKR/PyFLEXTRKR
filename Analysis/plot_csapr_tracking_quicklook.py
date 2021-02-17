@@ -327,7 +327,7 @@ if __name__ == "__main__":
     # Output figure directory  
     figdir = f'{datadir}/quicklooks/'
     print(f'Output dir: {figdir}')
-    # os.makedirs(figdir, exist_ok=True)
+    os.makedirs(figdir, exist_ok=True)
 
     # Serial option
     if run_parallel == 0:

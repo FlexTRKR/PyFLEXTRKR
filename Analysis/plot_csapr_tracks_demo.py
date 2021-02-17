@@ -239,13 +239,16 @@ if __name__ == "__main__":
     n_workers = 32
 
     # Track stats file
-    statsdir = os.path.expandvars('$ICLASS') + f'cacti/radar_processing/taranis_corcsapr2cfrppiqcM1_celltracking.c1/stats/'
-    statsfile = f'{statsdir}stats_tracknumbersv1.0_20181015.0000_20190303.0000.nc'
+    rootdir = os.path.expandvars('$ICLASS') + f'cacti/radar_processing/taranis_corcsapr2cfrppiqcM1_celltracking.c1/'
+    statsfile = f'{rootdir}stats/stats_tracknumbersv1.0_20181015.0000_20190303.0000.nc'
+    # rootdir = os.path.expandvars('$ICLASS') + f'cacti/radar_processing/taranis_corcsapr2cfrppiqcM1_mpgridded_celltracking.c1/'
+    # statsfile = f'{rootdir}stats/stats_tracknumbersv1.0_20181110.1800_20181112.2359.nc'
     # Terrain file (not used)
-    terrain_file = os.path.expandvars('$ICLASS') + f'cacti/radar_processing/corgridded_terrain.c0/topo_cacti_csapr2.nc'
+    # terrain_file = os.path.expandvars('$ICLASS') + f'cacti/radar_processing/corgridded_terrain.c0/topo_cacti_csapr2.nc'
 
     # Pixel-level files
-    datadir = os.path.expandvars('$ICLASS') + f'cacti/radar_processing/taranis_corcsapr2cfrppiqcM1_celltracking.c1/celltracking/20181015.0000_20190303.0000/'
+    datadir = f'{rootdir}/celltracking/20181015.0000_20190303.0000/'
+    # datadir = f'{rootdir}celltracking/20181110.1800_20181112.2359/'
     # Generate 15min time marks within the start/end datetime
     input_datetimes = pd.date_range(start=start_datetime, end=end_datetime, freq='15min').strftime('%Y%m%d_%H%M')
     # Find all files that matches the input datetime
@@ -255,7 +258,8 @@ if __name__ == "__main__":
     print(f'Number of pixel files: {len(datafiles)}')
  
     # Output figure directory
-    figdir = os.path.expandvars('$ICLASS') + f'cacti/radar_processing/taranis_corcsapr2cfrppiqcM1_celltracking.c1/celltracking/track_demo/'
+    figdir = f'{rootdir}celltracking/track_demo/'
+    os.makedirs(figdir, exist_ok=True)
 
     # Create a timedelta threshold in minutes
     # Tracks that end longer than this threshold from the current pixel-level frame are not plotted
