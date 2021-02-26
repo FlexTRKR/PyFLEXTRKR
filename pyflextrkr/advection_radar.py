@@ -1,31 +1,15 @@
 import numpy as np
-import matplotlib.pyplot as plt
-import matplotlib
-import scipy as sp
 import xarray as xr
 from netCDF4 import Dataset
-
-from scipy.signal import fftconvolve
 import glob, os, sys
-from matplotlib.colors import LogNorm
 from scipy.signal import medfilt
-
-
-from skimage import data, draw
 from skimage.feature import masked_register_translation
 from scipy import ndimage as ndi
 import datetime
-
 from joblib import Parallel, delayed
 
 
-DBZ_THRESHOLD=20
-dx = 0.5
-dy = 0.5
-NJOBS = 30
-MED_FILT_LEN=9
-
-def offset_to_speed(x, y, time_lag, dx=0.5, dy=0.5):
+def offset_to_speed(x, y, time_lag, dx, dy):
     """ Return normalized speed assuming uniform grid.
     """
     mag_movement = np.sqrt((dx * x) ** 2 + (dy * y) ** 2)
@@ -61,28 +45,52 @@ def get_pixel_size_of_clouds(dataset, total_tracks, track_variable='pcptracknumb
 def movement_of_storm_fft(
     dset_1,
     dset_2,
+    dx,
+    dy,
     cuts=1,
     times=None,
     threshold=30,
     plot_subplots=False,
     buffer=30,
     size_threshold=10,
+    TIME_RES_SECOND=15*60,
+    MAX_MOVEMENT_MPS=60,
 ):
 
     """ Calculate Movement of first labeled storm
     Parameters
     ----------
-    field_1: str
-        Current field (t=0)
-    field_2: str
-        t=1 field
+    dset_1: Xarray DataSet
+        Dataset at current time (t=0)
+    dset_2: Xarray DataSet
+        Dataset at next time (t=1)
+    dx: float
+        Grid spacing in x-direction [km]
+    dy: float
+        Grid spacing in y-direction [km]
+    cuts: int
+        Number of tiles to cut the domain into for calculating advection
+    times: ?
+        Unknown.
+    threshold: float
+        Threshold value for filtering the data
+    buffer: int
+        Number of grids to add buffer to the field
+    size_threshold: int
+        Number of valid points to calculate advection.
+    TIME_RES_SECOND: float
+        Time resolution of data [seconds]
+    MAX_MOVEMENT_MPS: float
+        Maximum movement speed allowed [m/s]
+    Returns:
+    --------
+    y_lag: int
+        Advection in x-direction [number of grids]
+    x_lag: int
+        Advection in y-direction [number of grids]
     """
     field_1 = np.squeeze(dset_1['dbz_comp'].values)
     field_2 = np.squeeze(dset_2['dbz_comp'].values)
-    #     cuts = 1
-    #     thresh = 25
-    #     plot_subplots = False
-    #     buffer = 30
 
     y_lag = np.zeros((cuts, cuts))
     x_lag = np.zeros((cuts, cuts))
@@ -149,13 +157,15 @@ def movement_of_storm_fft(
             y_lag[row, col] = y
             x_lag[row, col] = x
 
-    mag_movement, mag_dir, mag_movement_mps = offset_to_speed(x_lag, y_lag, 15 * 60)
+    # mag_movement, mag_dir, mag_movement_mps = offset_to_speed(x_lag, y_lag, 15 * 60)
+    mag_movement, mag_dir, mag_movement_mps = offset_to_speed(x_lag, y_lag, TIME_RES_SECOND, dx, dy)
 
-    x_lag[mag_movement_mps > 60] = np.nan
-    y_lag[mag_movement_mps > 60] = np.nan
+    x_lag[mag_movement_mps > MAX_MOVEMENT_MPS] = np.nan
+    y_lag[mag_movement_mps > MAX_MOVEMENT_MPS] = np.nan
 
     x_lag[np.isnan(x_lag)] = np.nanmedian(0)
     y_lag[np.isnan(y_lag)] = np.nanmedian(0)
+
     return y_lag[0,0], x_lag[0,0]
 
 
@@ -175,25 +185,66 @@ def get_basetime(filename):
     )
     return int(basetime.timestamp()), str(basetime)
 
-def movement_of_storm_fft_l(filenames):
+# def movement_of_storm_fft_l(filenames):
+def movement_of_storm_fft_l(filenames, dx, dy, DBZ_THRESHOLD, TIME_RES_SECOND, MAX_MOVEMENT_MPS):
     """ This just exists to make parallelism easier"""
     dset_1 = xr.open_dataset(filenames[0])
     dset_2 = xr.open_dataset(filenames[1])
 
-    y1, x1 = movement_of_storm_fft(dset_1, dset_2, threshold=DBZ_THRESHOLD)
+    y1, x1 = movement_of_storm_fft(dset_1, dset_2, 
+                                    dx=dx, dy=dy, 
+                                    threshold=DBZ_THRESHOLD, 
+                                    TIME_RES_SECOND=TIME_RES_SECOND,
+                                    MAX_MOVEMENT_MPS=MAX_MOVEMENT_MPS)
     return y1, x1
 
 
-if __name__ == "__main__":
-    output_path_name = "../../csapr2_500m_advection_full_campaign_20dbz.nc"
-    filelist = sorted(
-        glob.glob(
-            '/home/josephhardinee/data/proj-shared/iclass/cacti/radar_processing/taranis_corcsapr2cfrppiqcM1_gridded_convmask.c1/*.nc'
-        )
-    )
+def calc_mean_advection(
+    clouddata_path, 
+    output_filename, 
+    DBZ_THRESHOLD,
+    dx,
+    dy,
+    MED_FILT_LEN,
+    MAX_MOVEMENT_MPS,
+    datatimeresolution,
+    nprocesses=1
+    ):
+    """ Calculate domain mean advection
+    Parameters:
+    -----------
+    clouddata_path: string
+        Directory of the input data.
+    output_filename: string
+        Output advection file name.
+    DBZ_THRESHOLD: float
+        Reflectivity threshold to filter echoes [dBZ].
+    dx: float
+        Grid spacing in x-direction [km].
+    dy: float
+        Grid spacing in y-direction [km].
+    MED_FILT_LEN: int
+        Median filter window size.
+    datatimeresolution: float
+        Data time resolution [hour].
+    nprocesses: int
+        Number of jobs for parallel processing.
+    Returns:
+    --------
+    status: int
+        A status indicating run is complete.
+    """
+
+    status = 0
+
+    # Find all input files
+    filelist = sorted(glob.glob(f'{clouddata_path}*.nc'))
+
     print(f'Found {len(filelist)} files.')
     x = np.zeros((len(filelist), 1))
     y = np.zeros((len(filelist), 1))
+    # Convert data time resolution from [hour] to [second]
+    TIME_RES_SECOND = datatimeresolution * 3600
     # for test_file_idx in np.arange(0, len(filelist) - 1):
     #     filename_1 = filelist[test_file_idx]
     #     filename_2 = filelist[test_file_idx + 1]
@@ -206,7 +257,16 @@ if __name__ == "__main__":
     #     y[test_file_idx, :] = y1.ravel()
     # import pdb; pdb.set_trace()
 
-    results = list(Parallel(n_jobs=NJOBS)(delayed(movement_of_storm_fft_l)(i ) for i in zip(filelist[:-1], filelist[1:])))
+    # results = list(Parallel(n_jobs=nprocesses)(delayed(movement_of_storm_fft_l)(i ) for i in zip(filelist[:-1], filelist[1:])))
+    results = list(Parallel(n_jobs=nprocesses)\
+                    (delayed(movement_of_storm_fft_l)\
+                    (ii, 
+                    dx=dx,
+                    dy=dy,
+                    DBZ_THRESHOLD=DBZ_THRESHOLD, 
+                    TIME_RES_SECOND=TIME_RES_SECOND, 
+                    MAX_MOVEMENT_MPS=MAX_MOVEMENT_MPS) \
+                    for ii in zip(filelist[:-1], filelist[1:])))
     x_and_y = np.array(tuple(zip(*results)))
     y = x_and_y[0]
     x = x_and_y[1]
@@ -228,21 +288,39 @@ if __name__ == "__main__":
     basedate = [t[0][1] for t in corrections]
 
     rootgrp = Dataset(
-        output_path_name, "w", format="NETCDF4"
+        output_filename, "w", format="NETCDF4"
     )
     d_time = rootgrp.createDimension("time", len(corrections))
+    v_time = rootgrp.createVariable("time", "i8", ("time",))
     v_basetime = rootgrp.createVariable("basetime", "i8", ("time",))
     v_x = rootgrp.createVariable("x", "f8", ("time",))
     v_y = rootgrp.createVariable("y", "f8", ("time",))
     v_mag = rootgrp.createVariable("magnitude", "f8", ("time",))
     v_dir = rootgrp.createVariable("direction", "f8", ("time",))
 
+    v_time[:] = [t[0][0] for t in corrections]
+    v_time.units = 'Seconds since 1970-1-1 0:00:00 0:00'
     v_basetime[:] = [t[0][0] for t in corrections]
     v_basetime.units = 'Seconds since 1970-1-1 0:00:00 0:00'
     v_x[:] = [np.round(t[1][0]) for t in corrections]
+    v_x.long_name = 'Advection in x-direction'
+    v_x.units = 'Number of grids'
     v_y[:] = [np.round(t[1][1]) for t in corrections]
+    v_y.long_name = 'Advection in y-direction'
+    v_y.units = 'Number of grids'
     v_mag[:] = [t[1][2] for t in corrections]
+    v_mag.long_name = 'Advection speed magnitude'
+    v_mag.units = 'm/s'
     v_dir[:] = [t[1][3] for t in corrections]
+    v_dir.long_name = 'Advection direction'
+    v_dir.units = 'degree'
 
-    rootgrp.dbz_threshold=DBZ_THRESHOLD
+    rootgrp.dbz_threshold = float(DBZ_THRESHOLD)
+    rootgrp.MAX_MOVEMENT_MPS = float(MAX_MOVEMENT_MPS)
+    rootgrp.dx = dx
+    rootgrp.dy = dy
     rootgrp.close()
+    print(f'Advection file saved: {output_filename}')
+
+    status = 1
+    return status

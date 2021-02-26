@@ -1,15 +1,16 @@
 ---
 # Tracking steps to run
+run_advection: 1
 # Segment and identify clouds 
-run_idclouds: 1
+run_idclouds: 0
 # Track single consecutive cloudid files
-run_tracksingle: 1
+run_tracksingle: 0
 # Run trackig for all files
-run_gettracks: 1
+run_gettracks: 0
 # Calculate final statistics
-run_finalstats: 1
+run_finalstats: 0
 # Create maps of cells
-run_labelcell: 1
+run_labelcell: 0
 # Start/end date and time
 startdate: '20181015.0000'
 enddate: '20190303.0000'
@@ -25,6 +26,6 @@ root_path: "/lustre/or-hydra/cades-arm/proj-shared/iclass/cacti/radar_processing
 # Input files directory
 clouddata_path: "/lustre/or-hydra/cades-arm/proj-shared/iclass/cacti/radar_processing/taranis_corcsapr2cfrppiqcM1_gridded_convmask.c1/"
 # Drift (advection) file directory
-driftfile: "/lustre/or-hydra/cades-arm/proj-shared/iclass/cacti/radar_processing/taranis_corcsapr2cfr_advectionM1.c1/csapr2_500m_advection_full_campaign.nc"
+# driftfile: "/lustre/or-hydra/cades-arm/proj-shared/iclass/cacti/radar_processing/taranis_corcsapr2cfr_advectionM1.c1/csapr2_500m_advection_full_campaign.nc"
 # Terrain file 
 terrain_file: "/lustre/or-hydra/cades-arm/proj-shared/iclass/cacti/radar_processing/corgridded_terrain.c0/CSAPR2_Taranis_Gridded_500m.Terrain_RangeMask.nc"
