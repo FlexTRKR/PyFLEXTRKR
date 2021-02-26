@@ -3,10 +3,10 @@ import os, fnmatch, sys
 import datetime, calendar
 from pytz import utc
 import xarray as xr
-import json
 import yaml
 from multiprocessing import Pool
 from itertools import repeat
+from pyflextrkr.advection_radar import calc_mean_advection
 from pyflextrkr.idcells_radar import idcell_csapr
 from pyflextrkr.tracksingle_drift import trackclouds
 from pyflextrkr.gettracks import gettracknumbers
@@ -24,6 +24,7 @@ config_file = sys.argv[1]
 stream = open(config_file, 'r')
 config = yaml.full_load(stream)
 
+run_advection = config['run_advection']
 run_idclouds = config['run_idclouds']
 run_tracksingle = config['run_tracksingle']
 run_gettracks = config['run_gettracks']
@@ -41,7 +42,9 @@ clouddata_path = config['clouddata_path']
 terrain_file = config['terrain_file']
 if "driftfile" in config:
     driftfile = config['driftfile']
-
+    if os.path.isfile(driftfile):
+        print(f'Drift file already exist: {driftfile}')
+        print('Will be overwritten.')
 
 
 ################################################################################################
@@ -103,6 +106,10 @@ os.makedirs(tracking_outpath, exist_ok=True)
 os.makedirs(stats_outpath, exist_ok=True)
 # os.makedirs(celltracking_outpath, exist_ok=True)
 
+# Set default driftfile if not specified in config file
+if "driftfile" not in config:
+    driftfile = f'{stats_outpath}{datasource}_advection_all.nc'
+
 ########################################################################
 # Calculate basetime of start and end date
 TEMP_starttime = datetime.datetime(int(startdate[0:4]), int(startdate[4:6]), int(startdate[6:8]), \
@@ -112,6 +119,24 @@ start_basetime = calendar.timegm(TEMP_starttime.timetuple())
 TEMP_endtime = datetime.datetime(int(enddate[0:4]), int(enddate[4:6]), int(enddate[6:8]), \
                                     int(enddate[9:11]), int(enddate[11:]), 0, tzinfo=utc)
 end_basetime = calendar.timegm(TEMP_endtime.timetuple())
+
+##########################################################################
+# Domain mean advection
+if run_advection == 1:
+    print('Calculating domain mean advection.')
+
+    status = calc_mean_advection(
+                clouddata_path, 
+                driftfile, 
+                DBZ_THRESHOLD=10,
+                dx=pixel_radius,
+                dy=pixel_radius,
+                MED_FILT_LEN=9,
+                MAX_MOVEMENT_MPS=60,
+                datatimeresolution=datatimeresolution,
+                nprocesses=nprocesses,
+                )
+
 
 ##########################################################################
 # Identify clouds / features in the data, if neccesary
