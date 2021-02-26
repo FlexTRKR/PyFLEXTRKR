@@ -108,7 +108,7 @@ os.makedirs(stats_outpath, exist_ok=True)
 
 # Set default driftfile if not specified in config file
 if "driftfile" not in config:
-    driftfile = f'{stats_outpath}{datasource}_advection_full_campaign.nc'
+    driftfile = f'{stats_outpath}{datasource}_advection_all.nc'
 
 ########################################################################
 # Calculate basetime of start and end date
@@ -128,12 +128,14 @@ if run_advection == 1:
     status = calc_mean_advection(
                 clouddata_path, 
                 driftfile, 
-                DBZ_THRESHOLD=20,
+                DBZ_THRESHOLD=10,
                 dx=pixel_radius,
                 dy=pixel_radius,
                 MED_FILT_LEN=9,
+                MAX_MOVEMENT_MPS=60,
                 datatimeresolution=datatimeresolution,
-                nprocesses=nprocesses)
+                nprocesses=nprocesses,
+                )
 
 
 ##########################################################################
