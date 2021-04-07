@@ -2,22 +2,21 @@ import numpy as np
 import glob, os, sys
 import xarray as xr
 from scipy.ndimage import label, binary_dilation, binary_erosion, generate_binary_structure
-import time, datetime, calendar, pytz
+# import time, datetime, calendar, pytz
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
-import cartopy
+# import cartopy
 import cartopy.crs as ccrs
-import cartopy.feature as cfeature
+# import cartopy.feature as cfeature
 from cartopy.mpl.gridliner import LONGITUDE_FORMATTER, LATITUDE_FORMATTER
 
 # For non-gui matplotlib back end
 from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
-from matplotlib.figure import Figure
+# from matplotlib.figure import Figure
 mpl.use('agg')
 # Parallalization
 import dask
-from dask import delayed
 from dask.distributed import Client, LocalCluster
 
 import warnings
@@ -129,7 +128,7 @@ def plot_map_2panels(xx, yy, comp_ref, tn_perim, notn_perim, xx_tn, yy_tn, track
     latvals = mpl.ticker.FixedLocator(np.arange(-34,-30,0.5))
     proj = ccrs.PlateCarree()
     
-    fig = plt.figure(figsize=[11,5], dpi=200)
+    fig = plt.figure(figsize=[11,4.7], dpi=200)
     
     # Set up the two panels with GridSpec, use GridSpecFromSubplotSpec to make enough space between the two panels for colorbars
     # and make the colorbars right next to the panels
@@ -137,12 +136,13 @@ def plot_map_2panels(xx, yy, comp_ref, tn_perim, notn_perim, xx_tn, yy_tn, track
     # which is good for making animations where the panel locations need to be locked
     # Set GridSpec for left and right panel
     gs = gridspec.GridSpec(1,2, height_ratios=[1], width_ratios=[0.5,0.5])
-    gs.update(left=0.08, right=0.92, top=0.85, wspace=0.35, hspace=0.1)
+    # gs.update(left=0.08, right=0.92, top=0.85, wspace=0.35, hspace=0.1)
+    gs.update(left=0.05, right=0.94, top=0.88, bottom=0.05, wspace=0.35, hspace=0.1)
     # Use GridSpecFromSubplotSpec for panel and colorbar
     gs_left = gridspec.GridSpecFromSubplotSpec(1, 2, subplot_spec=gs[0], height_ratios=[1], width_ratios=[1,0.03], wspace=0.05, hspace=0.1)
     gs_right = gridspec.GridSpecFromSubplotSpec(1, 2, subplot_spec=gs[1], height_ratios=[1], width_ratios=[1,0.03], wspace=0.05, hspace=0.1)
     
-    fig.text(0.5, 0.93, timestr, fontsize=14, ha='center')
+    fig.text(0.5, 0.95, timestr, fontsize=14, ha='center')
     
     ##########################################################
     # Panel 1
@@ -161,16 +161,16 @@ def plot_map_2panels(xx, yy, comp_ref, tn_perim, notn_perim, xx_tn, yy_tn, track
     # Plot reflectivity
     cmap = plt.get_cmap(cmaps)
     norm_ref = mpl.colors.BoundaryNorm(levels, ncolors=cmap.N, clip=True)
-    cf1 = ax1.pcolormesh(xx, yy, comp_ref, norm=norm_ref, cmap=cmap, transform=proj, zorder=2)
+    cf1 = ax1.pcolormesh(xx, yy, comp_ref, shading='nearest', norm=norm_ref, cmap=cmap, transform=proj, zorder=2)
     # Overplot cell tracknumber perimeters
 #     cmap_tn = plt.get_cmap('jet')
 #     norm_tn = mpl.colors.BoundaryNorm(np.arange(0,len(tn_perim)+1,1), ncolors=cmap_tn.N, clip=True)
     Tn = np.ma.masked_where(tn_perim == 0, tn_perim)
     Tn[Tn > 0] = 10
-    tn1 = ax1.pcolormesh(xx, yy, Tn, cmap='gray', transform=proj, zorder=3)
+    tn1 = ax1.pcolormesh(xx, yy, Tn, shading='nearest', cmap='gray', transform=proj, zorder=3)
     # Overplot cell tracknumbers
     for ii in range(0, len(xx_tn)):
-        ax1.text(xx_tn[ii], yy_tn[ii], f'{tracknumbers[ii]:.0f}', color='k', size=14, weight='bold', ha='left', va='center', transform=proj, zorder=3)
+        ax1.text(xx_tn[ii], yy_tn[ii], f'{tracknumbers[ii]:.0f}', color='k', size=10, weight='bold', ha='left', va='center', transform=proj, zorder=3)
 #         ax1.plot(xx_tn[ii], yy_tn[ii], marker='o', markersize=3, color='k', transform=proj, zorder=3)
 #     ax1.scatter(xx_tn, yy_tn, s=20, marker='o', c='dodgerblue', edgecolors='k', linewidths=1, transform=proj, zorder=3)
 
@@ -201,14 +201,14 @@ def plot_map_2panels(xx, yy, comp_ref, tn_perim, notn_perim, xx_tn, yy_tn, track
     gl.yformatter = LATITUDE_FORMATTER
     
     # Plot reflectivity
-    cf2 = ax2.pcolormesh(xx, yy, comp_ref, norm=norm_ref, cmap='gist_ncar', transform=proj, zorder=2)
+    cf2 = ax2.pcolormesh(xx, yy, comp_ref, shading='nearest', norm=norm_ref, cmap='gist_ncar', transform=proj, zorder=2)
     # Overplot cells that are not tracked
     Tn = np.ma.masked_where(notn_perim == 0, notn_perim)
     Tn[Tn > 0] = 10
-    tn2 = ax2.pcolormesh(xx, yy, Tn, cmap='gray', transform=proj, zorder=3)
+    tn2 = ax2.pcolormesh(xx, yy, Tn, shading='nearest', cmap='gray', transform=proj, zorder=3)
     # Overplot cell tracknumbers
     for ii in range(0, len(xx_cn)):
-        ax2.text(xx_cn[ii], yy_cn[ii], f'{notracknumbers[ii]:.0f}', color='k', transform=proj, zorder=3)
+        ax2.text(xx_cn[ii], yy_cn[ii], f'{notracknumbers[ii]:.0f}', color='k', size=10, transform=proj, zorder=3)
 #         ax2.plot(xx_cn[ii], yy_cn[ii], marker='o', markersize=3, color='k', transform=proj, zorder=3)
 #     ax2.scatter(xx_cn, yy_cn, s=20, marker='o', c='dodgerblue', edgecolors='k', linewidths=1, transform=proj, zorder=3)
     
@@ -269,7 +269,7 @@ def work_for_time_loop(datafile, figdir):
     tnconv1 = tn.where(conv > 0).data
 
     # Calculates cell center locations
-    lon_tn1, lat_tn1, xx_tn1, yy_tn1, tnconv1_uniqe = calc_cell_center(tnconv1, longitude, latitude, xx, yy)
+    lon_tn1, lat_tn1, xx_tn1, yy_tn1, tnconv1_unique = calc_cell_center(tnconv1, longitude, latitude, xx, yy)
     lon_cn1, lat_cn1, xx_cn1, yy_cn1, cnnotrack_unique = calc_cell_center(cn_notrack.data, longitude, latitude, xx, yy)
 
     comp_ref = ds.comp_ref.squeeze()
@@ -283,7 +283,7 @@ def work_for_time_loop(datafile, figdir):
     figname = figdir + fignametimestr + '.png'
     print(figname)
 
-    fig = plot_map_2panels(longitude, latitude, comp_ref, tn_perim, cn_notrack_perim, lon_tn1, lat_tn1, tnconv1_uniqe, lon_cn1, lat_cn1, cnnotrack_unique, 
+    fig = plot_map_2panels(longitude, latitude, comp_ref, tn_perim, cn_notrack_perim, lon_tn1, lat_tn1, tnconv1_unique, lon_cn1, lat_cn1, cnnotrack_unique, 
                             levels, cmaps, titles, cblabels, cbticks, timestr, figname)
     plt.close(fig)
     ds.close()
@@ -313,19 +313,15 @@ if __name__ == "__main__":
     #         exit()
 
     # Input data files
-    # datadir = f'/global/cscratch1/sd/feng045/iclass/cacti/arm/csapr/celltracking/{startdate}_{enddate}/'
-    # datadir = os.path.expandvars('$ICLASS') + f'/cacti/radar_processing/taranis_corcsapr2cfrppiqcM1_celltracking.c1/celltracking/{startdate}_{enddate}/'
-    datadir = os.path.expandvars('$ICLASS') + f'cacti/radar_processing/taranis_corcsapr2cfrppiqcM1_celltracking.c1/celltracking/20181015.0000_20190303.0000/'
+    rootdir = os.path.expandvars('$ICLASS') + f'cacti/arm/csapr/taranis_corcsapr2cfrppiqcM1_celltracking.c1.new/'
+    # datadir = os.path.expandvars('$ICLASS') + f'cacti/radar_processing/taranis_corcsapr2cfrppiqcM1_celltracking.c1/celltracking/20181015.0000_20190303.0000/'
+    datadir = f'{rootdir}/celltracking/20181015.0000_20190303.0000/'
     datafiles = sorted(glob.glob(f'{datadir}celltracks_{startdate}*.nc'))
-    # datadir = '/global/cscratch1/sd/feng045/iclass/cacti/arm/csapr/celltracking/20181110.1800_20181112.2359/'
-    # datafiles = sorted(glob.glob(f'{datadir}celltracks_2018111[0-2]_????.nc'))
-    # datadir = '/global/cscratch1/sd/feng045/iclass/cacti/arm/csapr/celltracking/20181125.2200_20181127.2359/'
-    # datafiles = sorted(glob.glob(f'{datadir}celltracks_2018112[5-7]_????*.nc'))
     print(f'Number of files: {len(datafiles)}')
     print(f'{datadir}celltracks_{startdate}*.nc')
 
     # Output figure directory  
-    figdir = f'{datadir}/quicklooks/'
+    figdir = f'{rootdir}celltracking/quicklooks_track_notrack/'
     print(f'Output dir: {figdir}')
     os.makedirs(figdir, exist_ok=True)
 
@@ -353,12 +349,8 @@ if __name__ == "__main__":
             print(datafiles[ifile])
             # Plot the current file
             # Dask
-            result = delayed(work_for_time_loop)(datafiles[ifile], figdir)
+            result = dask.delayed(work_for_time_loop)(datafiles[ifile], figdir)
             results.append(result)
-
-        # # Trigger dask computation...
-        # thesum = delayed(sum)(results)
-        # thesum = thesum.compute()
 
         # Trigger dask computation
         final_result = dask.compute(*results)
