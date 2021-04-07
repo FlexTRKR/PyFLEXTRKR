@@ -3,13 +3,13 @@ import glob, os, sys
 import xarray as xr
 import pandas as pd
 from scipy.ndimage import label, binary_dilation, binary_erosion, generate_binary_structure
-import time, datetime, calendar, pytz
+import datetime
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
-import cartopy
+from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 import cartopy.crs as ccrs
-import cartopy.feature as cfeature
+# import cartopy.feature as cfeature
 from cartopy.mpl.gridliner import LONGITUDE_FORMATTER, LATITUDE_FORMATTER
 # For non-gui matplotlib back end
 from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
@@ -17,13 +17,12 @@ from matplotlib.figure import Figure
 mpl.use('agg')
 # Parallalization
 import dask
-from dask import delayed
 from dask.distributed import Client, LocalCluster
 
 import warnings
 warnings.filterwarnings("ignore")
 
-
+#-----------------------------------------------------------------------
 def label_perimeter(tracknumber):
     """
     Labels the perimeter on a 2D map from cell tracknumbers.
@@ -51,6 +50,34 @@ def label_perimeter(tracknumber):
     
     return tracknumber_perim
 
+#-----------------------------------------------------------------------
+def calc_cell_center(tracknumber, longitude, latitude, xx, yy):
+    """
+    Calculates the center location from labeled cells.
+    """
+    
+    # Find unique tracknumbers
+    tracknumber_uniqe = np.unique(tracknumber[~np.isnan(tracknumber)])
+    num_tracknumber = len(tracknumber_uniqe)
+    # Make arrays for cell center locations
+    lon_c = np.full(num_tracknumber, np.nan, dtype=float)
+    lat_c = np.full(num_tracknumber, np.nan, dtype=float)
+    xx_c = np.full(num_tracknumber, np.nan, dtype=float)
+    yy_c = np.full(num_tracknumber, np.nan, dtype=float)
+
+    # Loop over each tracknumbers to calculate the mean lat/lon & x/y for their center locations
+    for ii, itn in enumerate(tracknumber_uniqe):
+        iyy, ixx = np.where(tracknumber == itn)
+        # lon_c[ii] = np.mean(longitude[iyy, ixx])
+        # lat_c[ii] = np.mean(latitude[iyy, ixx])
+        lon_c[ii] = np.mean(longitude[tracknumber == itn])
+        lat_c[ii] = np.mean(latitude[tracknumber == itn])
+        xx_c[ii] = np.mean(xx[ixx])
+        yy_c[ii] = np.mean(yy[iyy])
+        
+    return lon_c, lat_c, xx_c, yy_c, tracknumber_uniqe
+
+#-----------------------------------------------------------------------
 def calc_latlon(lon1, lat1, dist, angle):
     """
     Haversine formula to calculate lat/lon locations from distance and angle.
@@ -84,36 +111,38 @@ def calc_latlon(lon1, lat1, dist, angle):
 
 
 def plot_map(xx, yy, comp_ref, tn_perim, pixel_bt, levels, cmaps, cblabels, cbticks, timestr, dt_thres, 
-             ntracks, lifetime, cell_bt, cell_lon, cell_lat, figname):
+             ntracks, lifetime, cell_bt, cell_lon, cell_lat, lon_tn, lat_tn, tracknumbers, figname):
 
     mpl.rcParams['font.size'] = 14
     mpl.rcParams['font.family'] = 'Helvetica'
 
-    size_centroid = 80
-    lw_centroid = 1.5
+    # Set up track lifetime colors
+    size_centroid = [30,50,80]
+    lw_centroid = [1,2,3]
+    cmap_tracks = 'Spectral_r'
+    cblabel_tracks = 'Lifetime (hour)'
+    cbticks_tracks = [1,2,3,4]
+    lev_lifetime = np.arange(0.5, 4.01, 0.5)
+    cmap_lifetime = plt.get_cmap(cmap_tracks)
+    norm_lifetime = mpl.colors.BoundaryNorm(lev_lifetime, ncolors=cmap_lifetime.N, clip=True)
     
     radii = np.arange(20,101,20)  # radii for the range rings [km]
     azimuths = np.arange(0,361,30)  # azimuth angles for HSRHI scans [degree]
     radar_lon, radar_lat = -64.7284, -32.1264  # CSAPR radar location
-
-    topo_levs = [500,1000,1500,2000,2500]
-    cmap_topo = 'Reds'
 
     radii = np.arange(20,101,20)  # radii for the range rings [km]
     azimuths = np.arange(0,361,30)  # azimuth angles for HSRHI scans [degree]
     radar_lon, radar_lat = -64.7284, -32.1264  # CSAPR radar location
 
     map_extend = [np.min(xx), np.max(xx), np.min(yy), np.max(yy)]
-    # map_extend = [minlon, maxlon, minlat, maxlat]
     lonvals = mpl.ticker.FixedLocator(np.arange(-66,-63,0.5))
     latvals = mpl.ticker.FixedLocator(np.arange(-34,-30,0.5))
     proj = ccrs.PlateCarree()
 
-    fig = plt.figure(figsize=[8,7.5], dpi=200)
+    fig = plt.figure(figsize=[8,7], dpi=200)
     gs = gridspec.GridSpec(1,2, height_ratios=[1], width_ratios=[1,0.03])
-    gs.update(wspace=0.05, hspace=0.05)
+    gs.update(wspace=0.05, hspace=0.05, left=0.08, right=0.9, top=0.93, bottom=0.05)
 
-    # ax1 = plt.subplot(111, projection=proj)
     ax1 = plt.subplot(gs[0], projection=proj)
     ax1.set_extent(map_extend, crs=proj)
     ax1.set_aspect('auto', adjustable=None)
@@ -125,8 +154,6 @@ def plot_map(xx, yy, comp_ref, tn_perim, pixel_bt, levels, cmaps, cblabels, cbti
     gl.xformatter = LONGITUDE_FORMATTER
     gl.yformatter = LATITUDE_FORMATTER
 
-    # ax1.contour(topoLon, topoLat, topoZ, levels=topo_levs, cmap=cmap_topo, linewidths=1, transform=proj)
-
     # Plot reflectivity
     cmap = plt.get_cmap(cmaps)
     norm_ref = mpl.colors.BoundaryNorm(levels, ncolors=cmap.N, clip=True)
@@ -137,15 +164,19 @@ def plot_map(xx, yy, comp_ref, tn_perim, pixel_bt, levels, cmaps, cblabels, cbti
     tn1 = ax1.pcolormesh(xx, yy, Tn, cmap='gray', transform=proj, zorder=3)
 
     # Plot track centroids and paths
-    marker_style = dict(edgecolor='k', linestyle='-', marker='o')
+    marker_style_s = dict(edgecolor='k', linestyle='-', marker='^')
+    marker_style_m = dict(edgecolor='k', linestyle='-', marker='D')
+    marker_style_l = dict(edgecolor='k', linestyle='-', marker='o')
     for itrack in range(0, ntracks):
         # Get duration of the track
-        idur = (lifetime.values[itrack] / time_res).astype(int)
+        ilifetime = lifetime.values[itrack]
+        idur = (ilifetime / time_res).astype(int)
         # Get basetime of the track and the last time
         ibt = cell_bt.values[itrack,:idur]
         ibt_last = np.nanmax(ibt)
         # Compute time difference between current pixel-level data time and the last time of the track
         idt = (pixel_bt - ibt_last).astype('timedelta64[m]')
+        # import pdb; pdb.set_trace()
         # Proceed if time difference is <= threshold
         # This means for tracks that end longer than the time threshold are not plotted
         if (idt <= dt_thres):
@@ -153,12 +184,47 @@ def plot_map(xx, yy, comp_ref, tn_perim, pixel_bt, levels, cmaps, cblabels, cbti
             idx_cut = np.where(ibt <= pixel_bt)[0]
             idur_cut = len(idx_cut)
             if (idur_cut > 0):
-                color_vals = np.repeat(lifetime.values[itrack], idur_cut)
-                size_vals = np.repeat(size_centroid, idur_cut)
-                size_vals[0] = size_centroid * 2
-                cc = ax1.plot(cell_lon.values[itrack,idx_cut], cell_lat.values[itrack,idx_cut], lw=lw_centroid, ls='-', color='k', transform=proj, zorder=3)
+                color_vals = np.repeat(ilifetime, idur_cut)
+                # Change centroid marker, linewidth based on track lifetime [hour]
+                if (ilifetime < 1):
+                    lw_c = lw_centroid[0]
+                    size_c = size_centroid[0]
+                    marker_style = marker_style_s
+                elif ((ilifetime >= 1) & (ilifetime < 2)):
+                    lw_c = lw_centroid[1]
+                    size_c = size_centroid[1]
+                    marker_style = marker_style_m
+                elif (ilifetime >= 2):
+                    lw_c = lw_centroid[2]
+                    size_c = size_centroid[2]
+                    marker_style = marker_style_l
+                else:
+                    lw_c = 0
+                    size_c = 0
+                size_vals = np.repeat(size_c, idur_cut)
+                size_vals[0] = size_c * 2
+                cc = ax1.plot(cell_lon.values[itrack,idx_cut], cell_lat.values[itrack,idx_cut], lw=lw_c, ls='-', color='k', transform=proj, zorder=3)
                 cl = ax1.scatter(cell_lon.values[itrack,idx_cut], cell_lat.values[itrack,idx_cut], s=size_vals, c=color_vals, 
-                                vmin=0.5, vmax=5, cmap='Spectral_r', transform=proj, zorder=4, **marker_style)
+                                 norm=norm_lifetime, cmap=cmap_lifetime, transform=proj, zorder=4, **marker_style)
+                                #  vmin=0.5, vmax=4, cmap=cmap_lifetime, transform=proj, zorder=4, **marker_style)
+    # Overplot cell tracknumbers at current frame
+    for ii in range(0, len(lon_tn)):
+        ax1.text(lon_tn[ii]+0.02, lat_tn[ii]+0.02, f'{tracknumbers[ii]:.0f}', color='k', size=10, 
+                 weight='bold', ha='left', va='center', transform=proj, zorder=4)
+    
+    # Plot colorbar for tracks
+    cax = inset_axes(ax1, width="100%", height="100%", bbox_to_anchor=(.04, .97, .3, .03), bbox_transform=ax1.transAxes)
+    cbinset = mpl.colorbar.ColorbarBase(cax, cmap=cmap_lifetime, norm=norm_lifetime, orientation='horizontal', label=cblabel_tracks)
+    cbinset.set_ticks(cbticks_tracks)
+    
+    # Plot legends for tracks
+    legend_elements = [mpl.lines.Line2D([0], [0], lw=lw_centroid[0], color='k', label='0.5-1 h', 
+                        marker=marker_style_s['marker'], markersize=4, markerfacecolor=cmap_lifetime(0)),
+                       mpl.lines.Line2D([0], [0], lw=lw_centroid[1], color='k', label='1-2 h', 
+                        marker=marker_style_m['marker'], markersize=7, markerfacecolor=cmap_lifetime(0.2)),
+                       mpl.lines.Line2D([0], [0], lw=lw_centroid[2], color='k', label='2-4 h', 
+                        marker=marker_style_l['marker'], markersize=10, markerfacecolor=cmap_lifetime(0.5))]
+    ax1.legend(handles=legend_elements, loc='upper right')
 
     # Plot range circles around radar
     for ii in range(0, len(radii)):
@@ -197,15 +263,22 @@ def work_for_time_loop(datafile, ntracks, lifetime, cell_bt, cell_lon, cell_lat,
 
     # Get cell tracknumbers and cloudnumbers
     tn = ds.tracknumber.squeeze()
-    cn = ds.cloudnumber.squeeze()
+    # cn = ds.cloudnumber.squeeze()
 
     # Find cells that are not tracked (tracknumber == nan)
-    cn_notrack = cn.where(np.isnan(tn))
+    # cn_notrack = cn.where(np.isnan(tn))
 
     # Get cell perimeters
     tn_perim = label_perimeter(tn.data)
-    cn_perim = label_perimeter(cn.data)
-    cn_notrack_perim = label_perimeter(cn_notrack.data)
+    # cn_perim = label_perimeter(cn.data)
+    # cn_notrack_perim = label_perimeter(cn_notrack.data)
+
+    # Apply tracknumber to conv_mask1
+    conv = ds.conv_mask.squeeze()
+    tnconv = tn.where(conv > 0).data
+
+    # Calculates cell center locations
+    lon_tn, lat_tn, xx_tn, yy_tn, tnconv_unique = calc_cell_center(tnconv, longitude, latitude, xx, yy)
 
     comp_ref = ds.comp_ref.squeeze()
 
@@ -219,9 +292,9 @@ def work_for_time_loop(datafile, ntracks, lifetime, cell_bt, cell_lon, cell_lat,
     figname = figdir + fignametimestr + '.png'
 
     fig = plot_map(longitude, latitude, comp_ref, tn_perim, pixel_bt, levels, cmaps, cblabels, cbticks, timestr, dt_thres, 
-                   ntracks, lifetime, cell_bt, cell_lon, cell_lat, figname)
+                   ntracks, lifetime, cell_bt, cell_lon, cell_lat, lon_tn, lat_tn, tnconv_unique, figname)
 
-    # plt.close(fig)
+    plt.close(fig)
     ds.close()
 
 
@@ -239,12 +312,9 @@ if __name__ == "__main__":
     n_workers = 32
 
     # Track stats file
-    rootdir = os.path.expandvars('$ICLASS') + f'cacti/radar_processing/taranis_corcsapr2cfrppiqcM1_celltracking.c1/'
+    # rootdir = os.path.expandvars('$ICLASS') + f'cacti/radar_processing/taranis_corcsapr2cfrppiqcM1_celltracking.c1/'
+    rootdir = os.path.expandvars('$ICLASS') + f'cacti/arm/csapr/taranis_corcsapr2cfrppiqcM1_celltracking.c1.new/'
     statsfile = f'{rootdir}stats/stats_tracknumbersv1.0_20181015.0000_20190303.0000.nc'
-    # rootdir = os.path.expandvars('$ICLASS') + f'cacti/radar_processing/taranis_corcsapr2cfrppiqcM1_mpgridded_celltracking.c1/'
-    # statsfile = f'{rootdir}stats/stats_tracknumbersv1.0_20181110.1800_20181112.2359.nc'
-    # Terrain file (not used)
-    # terrain_file = os.path.expandvars('$ICLASS') + f'cacti/radar_processing/corgridded_terrain.c0/topo_cacti_csapr2.nc'
 
     # Pixel-level files
     datadir = f'{rootdir}/celltracking/20181015.0000_20190303.0000/'
@@ -258,7 +328,7 @@ if __name__ == "__main__":
     print(f'Number of pixel files: {len(datafiles)}')
  
     # Output figure directory
-    figdir = f'{rootdir}celltracking/track_demo/'
+    figdir = f'{rootdir}celltracking/quicklooks_trackpaths/'
     os.makedirs(figdir, exist_ok=True)
 
     # Create a timedelta threshold in minutes
@@ -319,7 +389,7 @@ if __name__ == "__main__":
         results = []
         for ifile in range(len(datafiles)):
             print(datafiles[ifile])
-            result = delayed(work_for_time_loop)(datafiles[ifile], ntracks_long, lifetime_long, cell_bt_long, cell_lon_long, cell_lat_long, dt_thres, figdir)
+            result = dask.delayed(work_for_time_loop)(datafiles[ifile], ntracks_long, lifetime_long, cell_bt_long, cell_lon_long, cell_lat_long, dt_thres, figdir)
             results.append(result)
 
         # Trigger dask computation
