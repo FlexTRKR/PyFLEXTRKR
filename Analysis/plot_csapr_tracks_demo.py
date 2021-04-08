@@ -9,13 +9,10 @@ import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 import cartopy.crs as ccrs
-# import cartopy.feature as cfeature
 from cartopy.mpl.gridliner import LONGITUDE_FORMATTER, LATITUDE_FORMATTER
 # For non-gui matplotlib back end
 from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
-from matplotlib.figure import Figure
 mpl.use('agg')
-# Parallalization
 import dask
 from dask.distributed import Client, LocalCluster
 
@@ -263,39 +260,43 @@ def work_for_time_loop(datafile, ntracks, lifetime, cell_bt, cell_lon, cell_lat,
 
     # Get cell tracknumbers and cloudnumbers
     tn = ds.tracknumber.squeeze()
-    # cn = ds.cloudnumber.squeeze()
+    # Only plot if there is cell in the frame
+    if (np.nanmax(tn) > 0):
+        # cn = ds.cloudnumber.squeeze()
 
-    # Find cells that are not tracked (tracknumber == nan)
-    # cn_notrack = cn.where(np.isnan(tn))
+        # Find cells that are not tracked (tracknumber == nan)
+        # cn_notrack = cn.where(np.isnan(tn))
 
-    # Get cell perimeters
-    tn_perim = label_perimeter(tn.data)
-    # cn_perim = label_perimeter(cn.data)
-    # cn_notrack_perim = label_perimeter(cn_notrack.data)
+        # Get cell perimeters
+        tn_perim = label_perimeter(tn.data)
+        # cn_perim = label_perimeter(cn.data)
+        # cn_notrack_perim = label_perimeter(cn_notrack.data)
 
-    # Apply tracknumber to conv_mask1
-    conv = ds.conv_mask.squeeze()
-    tnconv = tn.where(conv > 0).data
+        # Apply tracknumber to conv_mask1
+        conv = ds.conv_mask.squeeze()
+        tnconv = tn.where(conv > 0).data
 
-    # Calculates cell center locations
-    lon_tn, lat_tn, xx_tn, yy_tn, tnconv_unique = calc_cell_center(tnconv, longitude, latitude, xx, yy)
+        # Calculates cell center locations
+        lon_tn, lat_tn, xx_tn, yy_tn, tnconv_unique = calc_cell_center(tnconv, longitude, latitude, xx, yy)
 
-    comp_ref = ds.comp_ref.squeeze()
+        comp_ref = ds.comp_ref.squeeze()
 
-    cmaps = 'gist_ncar'
-    levels = np.arange(-10, 60.1, 5)
-    cbticks = np.arange(-10, 60.1, 5)
-    timestr = ds.time.squeeze().dt.strftime("%Y-%m-%d %H:%M UTC").data
-    # titles = [timestr]
-    cblabels = 'Composite Reflectivity (dBZ)'
-    fignametimestr = ds.time.squeeze().dt.strftime("%Y%m%d_%H%M").data.item()
-    figname = figdir + fignametimestr + '.png'
+        cmaps = 'gist_ncar'
+        levels = np.arange(-10, 60.1, 5)
+        cbticks = np.arange(-10, 60.1, 5)
+        timestr = ds.time.squeeze().dt.strftime("%Y-%m-%d %H:%M UTC").data
+        # titles = [timestr]
+        cblabels = 'Composite Reflectivity (dBZ)'
+        fignametimestr = ds.time.squeeze().dt.strftime("%Y%m%d_%H%M").data.item()
+        figname = figdir + fignametimestr + '.png'
 
-    fig = plot_map(longitude, latitude, comp_ref, tn_perim, pixel_bt, levels, cmaps, cblabels, cbticks, timestr, dt_thres, 
-                   ntracks, lifetime, cell_bt, cell_lon, cell_lat, lon_tn, lat_tn, tnconv_unique, figname)
+        fig = plot_map(longitude, latitude, comp_ref, tn_perim, pixel_bt, levels, cmaps, cblabels, cbticks, timestr, dt_thres, 
+                    ntracks, lifetime, cell_bt, cell_lon, cell_lat, lon_tn, lat_tn, tnconv_unique, figname)
 
-    plt.close(fig)
+        plt.close(fig)
+
     ds.close()
+    return 1
 
 
 if __name__ == "__main__":
