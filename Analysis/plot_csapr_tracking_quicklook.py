@@ -2,20 +2,14 @@ import numpy as np
 import glob, os, sys
 import xarray as xr
 from scipy.ndimage import label, binary_dilation, binary_erosion, generate_binary_structure
-# import time, datetime, calendar, pytz
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
-# import cartopy
 import cartopy.crs as ccrs
-# import cartopy.feature as cfeature
 from cartopy.mpl.gridliner import LONGITUDE_FORMATTER, LATITUDE_FORMATTER
-
 # For non-gui matplotlib back end
 from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
-# from matplotlib.figure import Figure
 mpl.use('agg')
-# Parallalization
 import dask
 from dask.distributed import Client, LocalCluster
 
@@ -255,39 +249,41 @@ def work_for_time_loop(datafile, figdir):
     # Get cell tracknumbers and cloudnumbers
     tn = ds.tracknumber.squeeze()
     cn = ds.cloudnumber.squeeze()
+    # Only plot if there is cell in the frame
+    if (np.nanmax(cn) > 0):
 
-    # Find cells that are not tracked (tracknumber == nan)
-    cn_notrack = cn.where(np.isnan(tn))
+        # Find cells that are not tracked (tracknumber == nan)
+        cn_notrack = cn.where(np.isnan(tn))
 
-    # Get cell perimeters
-    tn_perim = label_perimeter(tn.data)
-    cn_perim = label_perimeter(cn.data)
-    cn_notrack_perim = label_perimeter(cn_notrack.data)
+        # Get cell perimeters
+        tn_perim = label_perimeter(tn.data)
+        cn_perim = label_perimeter(cn.data)
+        cn_notrack_perim = label_perimeter(cn_notrack.data)
 
-    # Apply tracknumber to conv_mask1
-    conv = ds.conv_mask.squeeze()
-    tnconv1 = tn.where(conv > 0).data
+        # Apply tracknumber to conv_mask1
+        conv = ds.conv_mask.squeeze()
+        tnconv1 = tn.where(conv > 0).data
 
-    # Calculates cell center locations
-    lon_tn1, lat_tn1, xx_tn1, yy_tn1, tnconv1_unique = calc_cell_center(tnconv1, longitude, latitude, xx, yy)
-    lon_cn1, lat_cn1, xx_cn1, yy_cn1, cnnotrack_unique = calc_cell_center(cn_notrack.data, longitude, latitude, xx, yy)
+        # Calculates cell center locations
+        lon_tn1, lat_tn1, xx_tn1, yy_tn1, tnconv1_unique = calc_cell_center(tnconv1, longitude, latitude, xx, yy)
+        lon_cn1, lat_cn1, xx_cn1, yy_cn1, cnnotrack_unique = calc_cell_center(cn_notrack.data, longitude, latitude, xx, yy)
 
-    comp_ref = ds.comp_ref.squeeze()
-    levels = np.arange(-10, 60.1, 5)
-    cbticks = np.arange(-10, 60.1, 5)
-    cmaps = 'gist_ncar'
-    titles = ['(a) Tracked Cells', '(b) Not Tracked Cells']
-    cblabels = 'Composite Reflectivity (dBZ)'
-    timestr = ds.time.squeeze().dt.strftime("%Y-%m-%d %H:%M UTC").data
-    fignametimestr = ds.time.squeeze().dt.strftime("%Y%m%d_%H%M").data.item()
-    figname = figdir + fignametimestr + '.png'
-    print(figname)
+        comp_ref = ds.comp_ref.squeeze()
+        levels = np.arange(-10, 60.1, 5)
+        cbticks = np.arange(-10, 60.1, 5)
+        cmaps = 'gist_ncar'
+        titles = ['(a) Tracked Cells', '(b) Not Tracked Cells']
+        cblabels = 'Composite Reflectivity (dBZ)'
+        timestr = ds.time.squeeze().dt.strftime("%Y-%m-%d %H:%M UTC").data
+        fignametimestr = ds.time.squeeze().dt.strftime("%Y%m%d_%H%M").data.item()
+        figname = figdir + fignametimestr + '.png'
+        print(figname)
 
-    fig = plot_map_2panels(longitude, latitude, comp_ref, tn_perim, cn_notrack_perim, lon_tn1, lat_tn1, tnconv1_unique, lon_cn1, lat_cn1, cnnotrack_unique, 
-                            levels, cmaps, titles, cblabels, cbticks, timestr, figname)
-    plt.close(fig)
+        fig = plot_map_2panels(longitude, latitude, comp_ref, tn_perim, cn_notrack_perim, lon_tn1, lat_tn1, tnconv1_unique, lon_cn1, lat_cn1, cnnotrack_unique, 
+                                levels, cmaps, titles, cblabels, cbticks, timestr, figname)
+        plt.close(fig)
+
     ds.close()
-
     return 1
 
 
