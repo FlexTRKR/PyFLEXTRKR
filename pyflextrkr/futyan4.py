@@ -304,18 +304,7 @@ def futyan4(
                     continue
                 if idx_counts[idx]>nthresh:
                     labelisolated_npix[idx-1] = idx_counts[idx]
-#             for ilabelisolated in range(1, nlabelisolated + 1):
-# #                 import pdb; pdb.set_trace()
-#                 temp_labelisolated_npix = np.count_nonzero(labelisolated_number2d==ilabelisolated)
-# #                 temp_labelisolated_npix = len(
-# #                     np.array(np.where(labelisolated_number2d == ilabelisolated))[0, :]
-# #                 )
-#                 if temp_labelisolated_npix > nthresh:
-#                     labelisolated_npix[ilabelisolated - 1] = np.copy(
-#                         temp_labelisolated_npix
-#                     )
-            print(labelisolated_npix)
-            print(sum(labelisolated_npix))
+
             ###############################################################
             # Check if any of the features are retained
             ivalidisolated = np.array(np.where(labelisolated_npix > 0))[0, :]
@@ -391,15 +380,17 @@ def futyan4(
         final_nwarmpix = np.ones(ncorecoldisolated, dtype=int) * -9999
         featurecount = 0
         for ifeature in range(0, ncorecoldisolated):
-            feature_indices = np.where(
-                labelcorecoldisolated_number2d
-                == sortedcorecoldisolated_number1d[ifeature]
-            )
-            nfeatureindices = np.shape(feature_indices)[1]
-
+#             feature_indices = np.where( # Find pixels that have matching #
+#                 labelcorecoldisolated_number2d
+#                 == sortedcorecoldisolated_number1d[ifeature]
+#             )
+#             nfeatureindices = np.shape(feature_indices)[1]
+            feature_indices = labelcorecoldisolated_number2d == sortedcorecoldisolated_number1d[ifeature]
+            nfeatureindices = np.count_nonzero(feature_indices)
+        
             if nfeatureindices == sortedcorecoldisolated_npix[ifeature]:
                 featurecount = featurecount + 1
-                sortedcorecoldisolated_number2d[feature_indices] = np.copy(featurecount)
+                sortedcorecoldisolated_number2d[feature_indices] = featurecount
 
                 final_ncorepix[featurecount - 1] = np.nansum(core_flag[feature_indices])
                 final_ncoldpix[featurecount - 1] = np.nansum(
