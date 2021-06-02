@@ -1,3 +1,4 @@
+
 def futyan4(
     ir,
     pixel_radius,
@@ -12,7 +13,7 @@ def futyan4(
     import numpy as np
     from scipy.ndimage import label, binary_dilation, generate_binary_structure, filters
     from scipy.interpolate import RectBivariateSpline
-    from astropy.convolution import Box2DKernel, convolve
+    from astropy.convolution import Box2DKernel, convolve, convolve_fft
 
     ######################################################################
 
@@ -162,6 +163,9 @@ def futyan4(
                     corestep = corestep + 1
                     sortedcore_number2d[sortedcore_indices] = np.copy(corestep)
 
+            ###### START of where we are replacing
+                    
+                    
             #####################################################
             # Spread cold cores outward until reach cold anvil threshold. Generates cold anvil.
             labelcorecold_number2d = np.copy(sortedcore_number2d)
@@ -170,7 +174,7 @@ def futyan4(
             # Keep looping through dilating code as long as at least one feature is growing. At this point limit it to 20 dilations. Remove this once use real data.
             spread_list = np.ones(ncores + 1)  # 1 indexing...eww
             spread_list[0] = 0  # just to avoid jumping to here somehow.
-            while keepspreading > 0:
+            while keepspreading > 0: #. FLipped for testing
                 keepspreading = 0
 
                 # Loop through each feature
@@ -256,6 +260,11 @@ def futyan4(
                     keepspreading = keepspreading + keepspreading_l
                     if keepspreading_l == 0:
                         spread_list[ifeature] = 0
+                        
+                        
+        ## END of part we're replacing
+        
+        
         #############################################################
         # Create blank core and cold anvil arrays if no cores present
         elif ncores == 0:
@@ -289,15 +298,24 @@ def futyan4(
             #############################################################
             # Check if features satisfy size threshold
             labelisolated_npix = np.ones(nlabelisolated, dtype=int) * -9999
-            for ilabelisolated in range(1, nlabelisolated + 1):
-                temp_labelisolated_npix = len(
-                    np.array(np.where(labelisolated_number2d == ilabelisolated))[0, :]
-                )
-                if temp_labelisolated_npix > nthresh:
-                    labelisolated_npix[ilabelisolated - 1] = np.copy(
-                        temp_labelisolated_npix
-                    )
-
+            idxs, idx_counts = np.unique(labelisolated_number2d, return_counts=True)
+            for idx in idxs:
+                if idx<1 or idx > nlabelisolated+1:
+                    continue
+                if idx_counts[idx]>nthresh:
+                    labelisolated_npix[idx-1] = idx_counts[idx]
+#             for ilabelisolated in range(1, nlabelisolated + 1):
+# #                 import pdb; pdb.set_trace()
+#                 temp_labelisolated_npix = np.count_nonzero(labelisolated_number2d==ilabelisolated)
+# #                 temp_labelisolated_npix = len(
+# #                     np.array(np.where(labelisolated_number2d == ilabelisolated))[0, :]
+# #                 )
+#                 if temp_labelisolated_npix > nthresh:
+#                     labelisolated_npix[ilabelisolated - 1] = np.copy(
+#                         temp_labelisolated_npix
+#                     )
+            print(labelisolated_npix)
+            print(sum(labelisolated_npix))
             ###############################################################
             # Check if any of the features are retained
             ivalidisolated = np.array(np.where(labelisolated_npix > 0))[0, :]
