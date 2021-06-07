@@ -588,7 +588,7 @@ def get_neighborhood(point, grid):
 
 def grow_cells(grid):
     seed_points = np.where(grid>0)
-    point_que = deque([[seed_points[0][i], seed_points[1][i]] for i in range(np.count_nonzero(seed_points))])
+    point_que = deque([[seed_points[0][i], seed_points[1][i]] for i in range(np.count_nonzero(seed_points[0]))])
     while len(point_que)>0:
         current_pt = point_que.popleft()
         neighbor_values = grid[max(current_pt[0]-1,0):current_pt[0]+2, max(0,current_pt[1]-1):current_pt[1]+2]
