@@ -56,15 +56,16 @@ def futyan4(
     # Check is any cores have been identified
     if nlabelcores > 0:
 
-        #############################################################
+
         # Check if cores satisfy size threshold
         labelcore_npix = np.ones(nlabelcores, dtype=int) * -9999
-        for ilabelcore in range(1, nlabelcores + 1):
-            temp_labelcore_npix = len(
-                np.array(np.where(labelcore_number2d == ilabelcore))[0, :]
-            )
-            if temp_labelcore_npix > mincorecoldpix:
-                labelcore_npix[ilabelcore - 1] = np.copy(temp_labelcore_npix)
+        temp_labelcore_idx, temp_labelcore_counts = np.unique(labelcore_number2d, return_counts=True)
+
+        for ilabelcore in temp_labelcore_idx:
+            if ilabelcore < 1 or ilabelcore > nlabelcores:
+                continue  # THis is just to match previous logic
+            if temp_labelcore_counts[ilabelcore] > mincorecoldpix:
+                labelcore_npix[ilabelcore - 1] = temp_labelcore_counts[ilabelcore]
 
         # Check if any of the cores passed the size threshold test
         ivalidcores = np.array(np.where(labelcore_npix > 0))[0, :]
@@ -96,8 +97,7 @@ def futyan4(
                     corestep = corestep + 1
                     sortedcore_number2d[sortedcore_indices] = np.copy(corestep)
 
-            ###### START of where we are replacing
-                    
+
                     
             #####################################################
             # Spread cold cores outward until reach cold anvil threshold. Generates cold anvil.
