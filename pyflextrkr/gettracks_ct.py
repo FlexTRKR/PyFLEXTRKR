@@ -763,7 +763,7 @@ def gettracknumbers(
     # Loop over single cloudtracks
     nsingleremove = 0
     for strack in singletracks:
-        logger.info(("single track: " + str(strack + 1)))
+        logger.info(f"single track: {str(strack + 1)}")
         logger.info("Getting track index")
         # Indentify clouds in this track
         cloudindex = np.array(
@@ -785,7 +785,7 @@ def gettracknumbers(
         # Remove all single tracks. This corresponds to keepsingletrack == 0.
         else:
             logger.info("we are in this loop")
-            logger.info("nsingletracks: ", nsingletracks)
+            logger.info(f"nsingletracks: {nsingletracks})
             tracknumber[0, cloudindex[0], cloudindex[1]] = -2
             trackstatus[0, cloudindex[0], cloudindex[1]] = -9999
             nsingleremove = nsingleremove + 1

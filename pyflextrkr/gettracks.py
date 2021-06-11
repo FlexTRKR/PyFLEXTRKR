@@ -135,7 +135,7 @@ def gettracknumbers(
     ###########################################################################
     # Loop over files and generate tracks
     logger.info("Loop through the rest of the files")
-    logger.info(("Number of files: " + str(nfiles)))
+    logger.info((f"Number of files: {str(nfiles))}")
     logger.info((time.ctime()))
     ifill = 0
     for ifile in range(0, nfiles):
@@ -213,10 +213,10 @@ def gettracknumbers(
         if ifile > 0:
             hour_diff = np.array([time_new - time_prev]).astype(float)
             if hour_diff > (timegap * 3.6 * 10 ** 12):
-                logger.info(("Track terminates on: " + ref_date))
-                logger.info(("Time difference: " + str(hour_diff)))
-                logger.info(("Maximum timegap allowed: " + str(timegap)))
-                logger.info(("New track starts on: " + new_date))
+                logger.info(f"Track terminates on: {ref_date}")
+                logger.info(f"Time difference: {str(hour_diff)}")
+                logger.info(f"Maximum timegap allowed: {str(timegap)}")
+                logger.info(f"New track starts on: {new_date}")
 
                 # Flag the previous file as the last file
                 trackreset[0, ifill, :] = 2
@@ -378,14 +378,10 @@ def gettracknumbers(
                         largestnewindex
                     ]  # Cloud numberof the largest new cloud
 
-                    # logger.info(associated_referenceclouds)
-                    # logger.info(associated_newclouds)
 
                     if nnewclouds == 1 and nreferenceclouds == 1:
                         ############################################################
                         # Simple continuation
-                        # logger.info('Simple continuation')
-                        # logger.info((time.ctime()))
 
                         # Check trackstatus already has a valid value. This will prtrack splits from a previous step being overwritten
 
@@ -403,12 +399,9 @@ def gettracknumbers(
                         # Loop through the reference clouds and assign the track to the largest one, the rest just go
                         # away
                         if nnewclouds == 1:
-                            # logger.info('Merge only')
-                            # logger.info((time.ctime()))
                             for tempreferencecloud in associated_referenceclouds:
                                 trackfound[tempreferencecloud - 1] = 1
 
-                                # logger.info(trackstatus[ifill,tempreferencecloud-1])
 
                                 # If this reference cloud is the largest fragment of the merger, label this reference time (file) as the larger part of merger (2) and merging at the next time (ifile + 1)
                                 if tempreferencecloud == largest_referencecloud:
@@ -438,8 +431,6 @@ def gettracknumbers(
                         #################################################################
                         # Merging and spliting
                         else:
-                            # logger.info('Merging and splitting')
-                            # logger.info((time.ctime()))
 
                             # Loop over the reference clouds and assign the track the largest one
                             for tempreferencecloud in associated_referenceclouds:

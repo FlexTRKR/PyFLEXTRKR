@@ -56,7 +56,6 @@ def cloud_type_tracking(ct, pixel_radius, area_thresh, smoothsize, mincorecoldpi
 
     core_indices = np.where(smoothct == thresh_core)
     ncorepix = np.shape(core_indices)[1]
-    logger.info("ncorepix at 1530: ", ncorepix)
     if ncorepix > 0:
         smooth_cloudid[core_indices] = 1
 
@@ -442,7 +441,7 @@ def cloud_type_tracking(ct, pixel_radius, area_thresh, smoothsize, mincorecoldpi
 
             final_ncorecoldpix = final_ncorepix + final_ncoldpix
 
-            logger.info("final_cloudid.shape: ", final_cloudid.shape)
+            logger.info(f"final_cloudid.shape:  {final_cloudid.shape}")
 
     ##################################################################
     # Output data. Only done if core-cold exist in this file

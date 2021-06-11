@@ -117,7 +117,7 @@ def idcell_csapr(
         + file_timestring
         + ".nc"
     )
-    logger.info("outcloudidfile: ", cloudid_outfile)
+    logger.info(f"outcloudidfile: {cloudid_outfile}")
 
     # Check if file exists, if it does delete it
     if os.path.isfile(cloudid_outfile):

@@ -400,7 +400,7 @@ def idclouds_wrf(zipped_inputs):
                                 area_thresh / pixel_radius ** 2,
                             )
 
-                            logger.info("npix_convcold_linkpf:", npix_convcold_linkpf.shape)
+                            logger.info(f"npix_convcold_linkpf:{npix_convcold_linkpf.shape}")
                             # Get number of clouds from the sorted linkpf clouds
                             nclouds_linkpf = np.nanmax(pf_convcold_cloudnumber_sorted)
 
@@ -456,7 +456,7 @@ def idclouds_wrf(zipped_inputs):
                             + file_timestring
                             + ".nc"
                         )
-                        logger.info("outcloudfile: ", cloudid_outfile)
+                        logger.info(f"outcloudfile: {cloudid_outfile}")
 
                         # Check if file exists, if it does delete it
                         if os.path.isfile(cloudid_outfile):
@@ -1140,6 +1140,9 @@ def idclouds_LES(zipped_inputs):
     import xarray as xr
     import datetime
     import pandas as pd
+    import logging
+
+    logger=logging.getLogger(__name__)
 
     ########################################################
     # Separate inputs
@@ -1841,7 +1844,7 @@ def idclouds_ct(zipped_inputs):
                     + file_timestring
                     + ".nc"
                 )
-                logger.info("outcloudfile: ", cloudid_outfile)
+                logger.info(f"outcloudfile: {cloudid_outfile}")
 
                 # Check if file exists, if it does delete it
                 if os.path.isfile(cloudid_outfile):
