@@ -135,7 +135,7 @@ def gettracknumbers(
     ###########################################################################
     # Loop over files and generate tracks
     logger.info("Loop through the rest of the files")
-    logger.info((f"Number of files: {str(nfiles))}")
+    logger.info(f"Number of files: {str(nfiles)}")
     logger.info((time.ctime()))
     ifill = 0
     for ifile in range(0, nfiles):
