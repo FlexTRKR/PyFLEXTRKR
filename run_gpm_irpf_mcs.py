@@ -63,8 +63,8 @@ if __name__ == '__main__':
     curr_tracknumbers_version = 'v1.0'
 
     # Specify days to run, (YYYYMMDD.hhmm)
-    startdate = '20140601.0000'
-    enddate = '20140601.2300'
+    startdate = '20150000.0000'
+    enddate = '20160001.2300'
 
     # Specify cloud tracking parameters
     geolimits = np.array([-90, -360, 90, 360])  # 4-element array with plotting boundaries [lat_min, lon_min, lat_max, lon_max]
