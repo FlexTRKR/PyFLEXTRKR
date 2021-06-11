@@ -2,8 +2,7 @@
 
 # Author: Original IDL code written by Zhe Feng (zhe.feng@pnnl.gov), Python version written by Hannah C. Barnes (hannah.barnes@pnnl.gov)
 
-# def mapmcs_tb_pf(zipped_inputs):
-def mapmcs_tb_pf(
+def logger.info((
     cloudid_filename,
     filebasetime,
     mcsstats_filebase,
@@ -76,7 +75,7 @@ def mapmcs_tb_pf(
     # cloudid_filename = zipped_inputs[0]
     # filebasetime = zipped_inputs[1]
     # mcsstats_filebase = zipped_inputs[2]
-    # print('mcsstats_filebase: ', mcsstats_filebase)
+    # logger.info('mcsstats_filebase: ', mcsstats_filebase)
     # statistics_filebase = zipped_inputs[3]
     # rainaccumulation_filebase = zipped_inputs[4]
     # mcstracking_path = zipped_inputs[5]
@@ -98,11 +97,11 @@ def mapmcs_tb_pf(
     ##################################################################
     # Load all track stat file
     if showalltracks == 1:
-        print("Loading track data")
+        logger.info("Loading track data")
         statistics_file = (
             stats_path + statistics_filebase + "_" + startdate + "_" + enddate + ".nc"
         )
-        print(statistics_file)
+        logger.info(statistics_file)
 
         allstatdata = Dataset(statistics_file, "r")
         trackstat_basetime = allstatdata["basetime"][
@@ -122,11 +121,11 @@ def mapmcs_tb_pf(
 
     #######################################################################
     # Load MCS track stat file
-    # print('Loading MCS data')
+    # logger.info('Loading MCS data')
     mcsstatistics_file = (
         stats_path + mcsstats_filebase + startdate + "_" + enddate + ".nc"
     )
-    # print(mcsstatistics_file)
+    # logger.info(mcsstatistics_file)
 
     allmcsdata = Dataset(mcsstatistics_file, "r")
     mcstrackstat_basetime = allmcsdata["base_time"][
@@ -159,16 +158,16 @@ def mapmcs_tb_pf(
 
     #########################################################################
     # Get cloudid file associated with this time
-    # print('Determine corresponding cloudid file and rain accumlation file')
+    # logger.info('Determine corresponding cloudid file and rain accumlation file')
     file_datetime = time.strftime("%Y%m%d_%H%M", time.gmtime(np.copy(filebasetime)))
     filedate = np.copy(file_datetime[0:8])
     filetime = np.copy(file_datetime[9:14])
     # irainaccumulationfile = rainaccumulation_path + rainaccumulation_filebase + str(filedate) + '.' + str(filetime) + '00.nc'
-    # print(('cloudid file: ' + cloudid_filename))
-    # print(('rain accumulation file: ' + irainaccumulationfile))
+    # logger.info(('cloudid file: ' + cloudid_filename))
+    # logger.info(('rain accumulation file: ' + irainaccumulationfile))
 
     # Load cloudid data
-    # print('Load cloudid data')
+    # logger.info('Load cloudid data')
     cloudiddata = Dataset(cloudid_filename, "r")
     cloudid_cloudnumber = cloudiddata["convcold_cloudnumber"][:]
     cloudid_cloudtype = cloudiddata["cloudtype"][:]
@@ -190,7 +189,7 @@ def mapmcs_tb_pf(
     # Get data dimensions
     [timeindex, nlat, nlon] = np.shape(cloudid_cloudnumber)
 
-    # print('Load rain data')
+    # logger.info('Load rain data')
     # if os.path.isfile(irainaccumulationfile):
     #     # Load WRF precip data
     #     rainaccumulationdata = Dataset(irainaccumulationfile, 'r')
@@ -200,13 +199,13 @@ def mapmcs_tb_pf(
 
     #     rapresent = 'Yes'
     # else:
-    #     print('No radar data')
+    #     logger.info('No radar data')
     #     ra_precipitation = np.ones((1, nlat, nlon), dtype=float)*np.nan
     #     rapresent = 'No'
 
     ##############################################################
     # Intiailize track maps
-    # print('Initialize maps')
+    # logger.info('Initialize maps')
     mcstrackmap = np.zeros((1, nlat, nlon), dtype=int)
     mcstrackmap_mergesplit = np.zeros((1, nlat, nlon), dtype=int)
 
@@ -219,7 +218,7 @@ def mapmcs_tb_pf(
     ###############################################################
     # Create map of status and track number for every feature in this file
     if showalltracks == 1:
-        # print('Create maps of all tracks')
+        # logger.info('Create maps of all tracks')
         statusmap = np.ones((1, nlat, nlon), dtype=int) * -9999
         alltrackmap = np.zeros((1, nlat, nlon), dtype=int)
         allmergemap = np.zeros((1, nlat, nlon), dtype=int)
@@ -278,16 +277,16 @@ def mapmcs_tb_pf(
         allsplitmap = allsplitmap.astype(np.int32)
 
     ###############################################################
-    # print('Generate MCS maps')
+    # logger.info('Generate MCS maps')
     # Get tracks
     itrack, itime = np.array(np.where(mcstrackstat_basetime == cloudid_basetime))
     ntimes = len(itime)
     if ntimes > 0:
         ##############################################################
         # Loop over each cloud in this unique file
-        # print('Loop over each cloud in the file')
+        # logger.info('Loop over each cloud in the file')
         for jj in range(0, ntimes):
-            # print(('MCS #: ' + str(int(itrack[jj] + 1))))
+            # logger.info(('MCS #: ' + str(int(itrack[jj] + 1))))
             # Get cloud nummber
             jjcloudnumber = mcstrackstat_cloudnumber[itrack[jj], itime[jj]].astype(
                 np.int32
@@ -311,7 +310,7 @@ def mapmcs_tb_pf(
 
             ###########################################################
             # Find merging clouds
-            # print('Find mergers')
+            # logger.info('Find mergers')
             jjmerge = np.array(
                 np.where(mcstrackstat_mergecloudnumber[itrack[jj], itime[jj], :] > 0)
             )[0, :]
@@ -341,7 +340,7 @@ def mapmcs_tb_pf(
 
             ###########################################################
             # Find splitting clouds
-            # print('Find splits')
+            # logger.info('Find splits')
             jjsplit = np.array(
                 np.where(mcstrackstat_splitcloudnumber[itrack[jj], itime[jj], :] > 0)
             )[0, :]
@@ -371,8 +370,8 @@ def mapmcs_tb_pf(
 
         ####################################################################
         # Create pf and rain accumulation masks
-        # print('Create rain maps')
-        # print('mcstrackmap_mergesplit shape: ', mcstrackmap_mergesplit.shape)
+        # logger.info('Create rain maps')
+        # logger.info('mcstrackmap_mergesplit shape: ', mcstrackmap_mergesplit.shape)
         extra, iymcs, ixmcs = np.array(np.where(mcstrackmap_mergesplit > 0))
         nmcs = len(iymcs)
         if nmcs > 0:
@@ -460,7 +459,7 @@ def mapmcs_tb_pf(
 
     #####################################################################
     # Output maps to netcdf file
-    # print('Writing data')
+    # logger.info('Writing data')
 
     # Create output directories
     if not os.path.exists(mcstracking_path):
@@ -470,7 +469,7 @@ def mapmcs_tb_pf(
     mcstrackmaps_outfile = (
         mcstracking_path + "mcstracks_" + str(filedate) + "_" + str(filetime) + ".nc"
     )
-    # print('mcstrackmaps_outfile: ', mcstrackmaps_outfile)
+    # logger.info('mcstrackmaps_outfile: ', mcstrackmaps_outfile)
 
     # Check if file already exists. If exists, delete
     if os.path.isfile(mcstrackmaps_outfile):
@@ -595,8 +594,8 @@ def mapmcs_tb_pf(
         output_data.pcptracknumber.attrs["units"] = "unitless"
 
         # Write netcdf file
-        print(mcstrackmaps_outfile)
-        # print('')
+        logger.info(mcstrackmaps_outfile)
+        # logger.info('')
 
         output_data.to_netcdf(
             path=mcstrackmaps_outfile,
@@ -756,8 +755,8 @@ def mapmcs_tb_pf(
         # output_data.pcptracknumber.attrs['units'] = 'unitless'
 
         # Write netcdf file
-        print(mcstrackmaps_outfile)
-        print("")
+        logger.info(mcstrackmaps_outfile)
+        logger.info("")
 
         output_data.to_netcdf(
             path=mcstrackmaps_outfile,
@@ -858,7 +857,7 @@ def mapmcs_mergedir(zipped_inputs):
     statistics_file = (
         stats_path + statistics_filebase + "_" + startdate + "_" + enddate + ".nc"
     )
-    print(statistics_file)
+    logger.info(statistics_file)
 
     allstatdata = Dataset(statistics_file, "r")
     trackstat_basetime = allstatdata.variables["basetime"][
@@ -877,7 +876,7 @@ def mapmcs_mergedir(zipped_inputs):
     mcsstatistics_file = (
         stats_path + mcsstats_filebase + startdate + "_" + enddate + ".nc"
     )
-    print(mcsstatistics_file)
+    logger.info(mcsstatistics_file)
 
     allmcsdata = Dataset(mcsstatistics_file, "r")
     mcstrackstat_basetime = allmcsdata.variables["mcs_basetime"][
@@ -915,7 +914,7 @@ def mapmcs_mergedir(zipped_inputs):
         filedate = np.copy(file_datetime[0:8])
         filetime = np.copy(file_datetime[9:14])
         ifile = tracking_path + cloudid_filebase + file_datetime + ".nc"
-        print(ifile)
+        logger.info(ifile)
 
         if os.path.isfile(ifile):
             # Load cloudid data
@@ -955,7 +954,7 @@ def mapmcs_mergedir(zipped_inputs):
             ##############################################################
             # Loop over each cloud in this unique file
             for jj in range(0, ntimes):
-                print(("JJ: " + str(jj)))
+                logger.info(("JJ: " + str(jj)))
                 # Get cloud nummber
                 jjcloudnumber = mcstrackstat_cloudnumber[itrack[jj], itime[jj]]
 
@@ -970,9 +969,9 @@ def mapmcs_mergedir(zipped_inputs):
                     mcstrackmap_mergesplit[jjcloudypixels, jjcloudxpixels] = (
                         itrack[jj] + 1
                     )
-                    print("All")
-                    print(itrack)
-                    print((itrack[jj]))
+                    logger.info("All")
+                    logger.info(itrack)
+                    logger.info((itrack[jj]))
 
                     # statusmap[jjcloudypixels, jjcloudxpixels] = timestatus[jj]
                 else:
@@ -1004,9 +1003,9 @@ def mapmcs_mergedir(zipped_inputs):
                             mcstrackmap_mergesplit[jjmergeypixels, jjmergexpixels] = (
                                 itrack[jj] + 1
                             )
-                            print("Merge")
-                            print(itrack)
-                            print((itrack[jj]))
+                            logger.info("Merge")
+                            logger.info(itrack)
+                            logger.info((itrack[jj]))
                             # statusmap[jjmergeypixels, jjmergexpixels] = mcsmergestatus[itrack[jj], itime[jj], imerge]
                         else:
                             sys.exit("Error: No matching merging cloud pixel found?!")
@@ -1018,12 +1017,12 @@ def mapmcs_mergedir(zipped_inputs):
                         mcstrackstat_splitcloudnumber[itrack[jj], itime[jj], :] > 0
                     )
                 )[0, :]
-                print(jjsplit)
+                logger.info(jjsplit)
 
                 # Loop through splitting clouds if present
                 if len(jjsplit) > 0:
                     for isplit in jjsplit:
-                        print(isplit)
+                        logger.info(isplit)
                         # Find cloud number asosicated with the splitting cloud
                         jjsplitypixels, jjsplitxpixels = np.array(
                             np.where(
@@ -1039,13 +1038,13 @@ def mapmcs_mergedir(zipped_inputs):
                             mcstrackmap_mergesplit[jjsplitypixels, jjsplitxpixels] = (
                                 itrack[jj] + 1
                             )
-                            print("Split")
-                            print(itrack)
-                            print((itrack[jj]))
+                            logger.info("Split")
+                            logger.info(itrack)
+                            logger.info((itrack[jj]))
                             # statusmap[jjsplitypixels, jjsplitxpixels] = mcssplitstatus[itrack[jj], itime[jj], isplit]
                         else:
                             sys.exit("Error: No matching splitting cloud pixel found?!")
-            print("Stop")
+            logger.info("Stop")
 
             #####################################################################
             # Output maps to netcdf file
