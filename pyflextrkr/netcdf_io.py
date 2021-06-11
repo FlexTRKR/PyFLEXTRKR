@@ -165,10 +165,10 @@ def write_cloudid_wrf(
     ds_out.lon.attrs["standard_name"] = "longitude"
     ds_out.lon.attrs["units"] = "degrees_east"
     ds_out.lon.attrs["valid_min"] = geolimits[1]
-    ds_out.lon.attrs["valid_max"] = geolimits[2]
+    ds_out.lon.attrs["valid_max"] = geolimits[3]
 
-    ds_out.clouds.attrs["long_name"] = "number of distict convective cores identified"
-    ds_out.clouds.attrs["units"] = "unitless"
+    ds_out.clouds.attrs["long_name"] = "number of distinct convective cores identified"
+    ds_out.clouds.attrs["units"] = "1"
 
     # ds_out.ndatechar.attrs['long_name'] = 'number of characters in date string'
     # ds_out.ndatechar.attrs['units'] = 'unitless'
@@ -478,7 +478,7 @@ def write_cloudtype_wrf(
     ds_out.lon.attrs["standard_name"] = "longitude"
     ds_out.lon.attrs["units"] = "degrees_east"
     ds_out.lon.attrs["valid_min"] = geolimits[1]
-    ds_out.lon.attrs["valid_max"] = geolimits[2]
+    ds_out.lon.attrs["valid_max"] = geolimits[3]
 
     ds_out.clouds.attrs["long_name"] = "number of distict convective cores identified"
     ds_out.clouds.attrs["units"] = "unitless"
