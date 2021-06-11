@@ -441,7 +441,6 @@ def mapcell_LES(zipped_inputs):
 
         # Write netcdf file
         logger.info(celltrackmaps_outfile)
-        logger.info("")
 
         output_data.to_netcdf(
             path=celltrackmaps_outfile,
@@ -636,7 +635,6 @@ def mapcell_LES(zipped_inputs):
 
         # Write netcdf file
         logger.info(celltrackmaps_outfile)
-        logger.info("")
 
         output_data.to_netcdf(
             path=celltrackmaps_outfile,

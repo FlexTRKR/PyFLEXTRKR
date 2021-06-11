@@ -142,12 +142,12 @@ def mapcell_radar(
                 statusmap[0, jjcloudypixels, jjcloudxpixels] = jjstatus
                 # import pdb; pdb.set_trace()
             else:
-                logger.info(
+                logger.info((
                     "Error: No matching cloud pixel found?! itrack: ",
                     itrack[jj],
                     ", itime: ",
                     itime[jj],
-                )
+                ))
                 # sys.exit('Error: No matching cloud pixel found?!')
 
         # Get cloudnumbers and split cloudnumbers within this time
@@ -389,7 +389,7 @@ def mapcell_radar(
     ds_out.echotop50.attrs["units"] = "km"
 
     # Write netcdf file
-    logger.info("Output celltracking file: ", celltrackmaps_outfile)
+    logger.info(f"Output celltracking file: {celltrackmaps_outfile}")
 
     # Set encoding/compression for all variables
     comp = dict(zlib=True)

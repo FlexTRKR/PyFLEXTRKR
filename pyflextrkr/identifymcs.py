@@ -78,7 +78,7 @@ def identifymcs_tb(
     nmaxlength = (
         np.nanmax(allstatdata["nmaxlength"]) + 1
     )  # Maximum number of features in a given track
-    logger.info(nmaxlength)
+    logger.debug(f"nmaxlength:{nmaxlength}")
     nconv = allstatdata["nconv"][:]
     ncoldanvil = allstatdata["ncoldanvil"][:]
     lifetime = allstatdata["lifetime"][:]
@@ -104,8 +104,8 @@ def identifymcs_tb(
     datadescription = allstatdata.getncattr("description")
     allstatdata.close()
 
-    logger.info("MCS duration threshold: ", duration_thresh)
-    logger.info("MCS CCS area threshold: ", area_thresh)
+    logger.info(f"MCS duration threshold: {duration_thresh}")
+    logger.info(f"MCS CCS area threshold: {area_thresh}")
 
     ####################################################################
     # Set up thresholds
@@ -129,7 +129,7 @@ def identifymcs_tb(
 
     ###################################################################
     # Identify MCSs
-    logger.info("Total number of tracks to check: ", ntracks_all)
+    logger.info(f"Total number of tracks to check: {ntracks_all}")
     for nt in range(0, ntracks_all):
         # Get data for a given track
         track_corearea = np.copy(trackstat_corearea[nt, :])
@@ -148,8 +148,6 @@ def identifymcs_tb(
 
             # Cold cloud shield area requirement
             iccs = np.array(np.where(track_ccsarea > area_thresh))[0, :]
-            # logger.info('nt: ', nt)
-            # logger.info('len iccs: ', len(iccs))
             nccs = len(iccs)
 
             # Find continuous times
@@ -168,8 +166,6 @@ def identifymcs_tb(
                         (groups[t][-1] - groups[t][0] + 1), time_resolution
                     )
                     if duration_group >= duration_thresh:
-                        # if np.multiply(len(groups[t][:]), time_resolution) >= duration_thresh:
-                        # logger.info('Number of times * TIME RESOLUTION GREATER THAN DUR_THRESH')
 
                         # Isolate area and eccentricity for the subperiod
                         subtrack_ccsarea = track_ccsarea[groups[t][:]]
@@ -186,27 +182,19 @@ def identifymcs_tb(
                             # Label as MCS
                             mcstype[nt] = 1
                             mcsstatus[nt, groups[t][:]] = 1
-                            # logger.info('nt: ', nt)
-                            # logger.info('eccentricity met-mcs')
                         else:
                             # Label as squall line
                             mcstype[nt] = 2
                             mcsstatus[nt, groups[t][:]] = 2
                             trackid_sql = np.append(trackid_sql, nt)
-                            # logger.info('nt: ', nt)
-                            # logger.info('eccentricity not met-sl')
                         trackid_mcs = np.append(trackid_mcs, nt)
                     else:
                         # Size requirement met but too short of a period
                         trackid_nonmcs = np.append(trackid_nonmcs, nt)
-                        # logger.info('nt: ', nt)
-                        # logger.info('size met but duration not')
 
             else:
                 # Size requirement not met
                 trackid_nonmcs = np.append(trackid_nonmcs, nt)
-                # logger.info('nt: ', nt)
-                # logger.info('size not met')
 
     ################################################################
     # Check that there are MCSs to continue processing
@@ -217,7 +205,7 @@ def identifymcs_tb(
     # Subset MCS / Squall track index
     trackid = np.array(np.where(mcstype > 0))[0, :]
     nmcs = len(trackid)
-    logger.info("Number of Tb defined MCS: ", nmcs)
+    logger.info(f"Number of Tb defined MCS: {nmcs}")
 
     if nmcs > 0:
         mcsstatus = mcsstatus[trackid, :]
@@ -241,7 +229,6 @@ def identifymcs_tb(
     for imcs in np.arange(0, nmcs):
         ###################################################################################
         # Isolate basetime data
-        # logger.info('')
         if imcs == 0:
             mcsbasetime = basetime[trackid[imcs], :]
             # mcsbasetime = np.array([pd.to_datetime(num2date(basetime[trackid[imcs], :], units=basetime_units, calendar=basetime_calendar))], dtype='datetime64[s]')
@@ -253,11 +240,9 @@ def identifymcs_tb(
 
         ###################################################################################
         # Find mergers
-        # logger.info('Mergers')
         [mergefile, mergefeature] = np.array(
             np.where(mergecloudnumbers == mcstracknumbers[imcs])
         )
-        # logger.info((len(mergefile)))
         for imerger in range(0, len(mergefile)):
             additionalmergefile, additionalmergefeature = np.array(
                 np.where(mergecloudnumbers == mergefile[imerger] + 1)
@@ -300,20 +285,14 @@ def identifymcs_tb(
 
                 # Loop through each timestep in the MCS track
                 for t in np.arange(0, mcslength[imcs]):
-                    # logger.info('t: ', t)
 
                     # Find merging cloud times that match current mcs track time
                     timematch = np.where(mergingbasetime == imcsbasetime[int(t)])
-                    # logger.info('timematch: ', timematch)
 
                     if np.shape(timematch)[1] > 0:
 
                         # save cloud number of small mergers
                         nmergers = np.shape(timematch)[1]
-                        # logger.info('IMCS: ', imcs)
-                        # logger.info('INT (T): ', int(t))
-                        # logger.info('NMERGERS SHAPE: ', np.shape(timematch)[1])
-                        # logger.info('MERGING CLOUD NUMBER TIMEMATCH: ', mergingcloudnumber[timematch])
                         mcsmergecloudnumber[
                             imcs, int(t), 0:nmergers
                         ] = mergingcloudnumber[timematch]
@@ -564,7 +543,6 @@ def identifymcs_tb(
 
     # Write netcdf file
     logger.info(mcstrackstatistics_outfile)
-    logger.info("")
 
     output_data.to_netcdf(
         path=mcstrackstatistics_outfile,

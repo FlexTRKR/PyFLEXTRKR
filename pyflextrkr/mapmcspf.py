@@ -125,7 +125,6 @@ def mapmcs_tb_pf(
     mcsstatistics_file = (
         stats_path + mcsstats_filebase + startdate + "_" + enddate + ".nc"
     )
-    # logger.info(mcsstatistics_file)
 
     allmcsdata = Dataset(mcsstatistics_file, "r")
     mcstrackstat_basetime = allmcsdata["base_time"][
@@ -162,12 +161,8 @@ def mapmcs_tb_pf(
     file_datetime = time.strftime("%Y%m%d_%H%M", time.gmtime(np.copy(filebasetime)))
     filedate = np.copy(file_datetime[0:8])
     filetime = np.copy(file_datetime[9:14])
-    # irainaccumulationfile = rainaccumulation_path + rainaccumulation_filebase + str(filedate) + '.' + str(filetime) + '00.nc'
-    # logger.info(('cloudid file: ' + cloudid_filename))
-    # logger.info(('rain accumulation file: ' + irainaccumulationfile))
 
     # Load cloudid data
-    # logger.info('Load cloudid data')
     cloudiddata = Dataset(cloudid_filename, "r")
     cloudid_cloudnumber = cloudiddata["convcold_cloudnumber"][:]
     cloudid_cloudtype = cloudiddata["cloudtype"][:]
@@ -188,20 +183,6 @@ def mapmcs_tb_pf(
 
     # Get data dimensions
     [timeindex, nlat, nlon] = np.shape(cloudid_cloudnumber)
-
-    # logger.info('Load rain data')
-    # if os.path.isfile(irainaccumulationfile):
-    #     # Load WRF precip data
-    #     rainaccumulationdata = Dataset(irainaccumulationfile, 'r')
-    #     ra_precipitation = rainaccumulationdata['rainrate'][:] # rainrate (mm/hr)
-    #     #ra_pf_number = rainaccumulatationdata['pf_number'][:]
-    #     rainaccumulationdata.close()
-
-    #     rapresent = 'Yes'
-    # else:
-    #     logger.info('No radar data')
-    #     ra_precipitation = np.ones((1, nlat, nlon), dtype=float)*np.nan
-    #     rapresent = 'No'
 
     ##############################################################
     # Intiailize track maps
@@ -969,9 +950,6 @@ def mapmcs_mergedir(zipped_inputs):
                     mcstrackmap_mergesplit[jjcloudypixels, jjcloudxpixels] = (
                         itrack[jj] + 1
                     )
-                    logger.info("All")
-                    logger.info(itrack)
-                    logger.info((itrack[jj]))
 
                     # statusmap[jjcloudypixels, jjcloudxpixels] = timestatus[jj]
                 else:
