@@ -42,12 +42,14 @@ def identifycell_LES_xarray(statistics_filebase, stats_path, startdate, enddate,
     import xarray as xr
     import pandas as pd
     import time
+    import logging
     np.set_printoptions(threshold=np.inf)
+    logger = logging.getLogger(__name__)
 
     ##########################################################################
     # Load statistics file
     statistics_file = stats_path + statistics_filebase + '_' + startdate + '_' + enddate + '.nc'
-    print(statistics_file)
+    logger.info(statistics_file)
 
     #allstatdata = xr.open_dataset(statistics_file, autoclose=True)
     allstatdata = xr.open_dataset(statistics_file)
@@ -89,10 +91,10 @@ def identifycell_LES_xarray(statistics_filebase, stats_path, startdate, enddate,
     cellsplitstatus = np.ones((nmaincell, int(nmaxlength), nmaxmerge), dtype=int)*-9999
 
     # Loop through each cell and link small clouds merging in
-    print(('Number of main cells: ' + str(int(nmaincell))))
+    logger.info(('Number of main cells: ' + str(int(nmaincell))))
     for icell in np.arange(0, nmaincell):
-        print('')
-        print(icell)
+        logger.info('')
+        logger.info(icell)
         # Some cell length exceeds nmaxlength, take the smaller of the two
         imaincelllength = int(np.min([maincelllength[icell], nmaxlength]))
 
@@ -104,15 +106,15 @@ def identifycell_LES_xarray(statistics_filebase, stats_path, startdate, enddate,
         else:
             cellbasetime = np.concatenate((cellbasetime, np.array([pd.to_datetime(allstatdata['basetime'][maincelltrackid[icell], :].data, unit='s')])), axis=0)
 
-#        print('Determining Base Time')
+#        logger.info('Determining Base Time')
 
         ###################################################################################
         # Find mergers
-#        print('Determining mergers')
+#        logger.info('Determining mergers')
         [mergefile, mergefeature] = np.array(np.where(np.copy(allstatdata['mergenumbers'].data) == maincelltracknumbers[icell]))
 
         # Loop through all merging tracks, if present
-        print((len(mergefile)))
+        logger.info((len(mergefile)))
         if len(mergefile) > 0:
             # Isolate merging cases that have short duration
             mergefeature = mergefeature[trackstat_duration[mergefile] < merge_duration]
@@ -157,11 +159,11 @@ def identifycell_LES_xarray(statistics_filebase, stats_path, startdate, enddate,
 
         ############################################################
         # Find splits
-        print('Determining splits')
+        logger.info('Determining splits')
         [splitfile, splitfeature] = np.array(np.where(np.copy(allstatdata['splitnumbers'].data) == maincelltracknumbers[icell]))
 
         # Loop through all splitting tracks, if present
-        print((len(splitfile)))
+        logger.info((len(splitfile)))
         if len(splitfile) > 0:
             # Isolate splitting cases that have short duration
             splitfeature = splitfeature[trackstat_duration[splitfile] < split_duration]
@@ -327,8 +329,8 @@ def identifycell_LES_xarray(statistics_filebase, stats_path, startdate, enddate,
     output_data.cell_splitcloudnumber.attrs['units'] = 'unitless'
 
     # Write netcdf file
-    print(celltrackstatistics_outfile)
-    print('')
+    logger.info(celltrackstatistics_outfile)
+    logger.info('')
 
     output_data.to_netcdf(path=celltrackstatistics_outfile, mode='w', format='NETCDF4_CLASSIC', unlimited_dims='ntracks', \
                           encoding={'cell_basetime': {'zlib':True, 'units': 'seconds since 1970-01-01'}, \
@@ -391,7 +393,7 @@ def identifycell_LES_netcdf4(statistics_filebase, stats_path, startdate, enddate
     ##########################################################################
     # Load statistics file
     statistics_file = stats_path + statistics_filebase + '_' + startdate + '_' + enddate + '.nc'
-    print(statistics_file)
+    logger.info(statistics_file)
 
     allstatdata = Dataset(statistics_file, 'r')
     ntracks_all = np.nanmax(allstatdata['ntracks'][:]) + 1
@@ -450,10 +452,10 @@ def identifycell_LES_netcdf4(statistics_filebase, stats_path, startdate, enddate
     cellsplitstatus = np.ones((nmaincell, int(nmaxlength), nmaxmerge), dtype=int)*-9999
 
     # Loop through each cell and link small clouds merging in
-    print(('Number of main cells: ' + str(int(nmaincell))))
+    logger.info(('Number of main cells: ' + str(int(nmaincell))))
     for icell in np.arange(0, nmaincell):
-        print('')
-        print(icell)
+        logger.info('')
+        logger.info(icell)
 
         ###################################################################################
         # Isolate basetime data
@@ -463,15 +465,15 @@ def identifycell_LES_netcdf4(statistics_filebase, stats_path, startdate, enddate
         else:
             cellbasetime = np.concatenate((cellbasetime, np.array([pd.to_datetime(basetime[maincelltrackid[icell], :].data, unit='s')])), axis=0)
 
-#        print('Determining Base Time')
+#        logger.info('Determining Base Time')
 
         ###################################################################################
         # Find mergers
-#        print('Determining mergers')
+#        logger.info('Determining mergers')
         [mergefile, mergefeature] = np.array(np.where(np.copy(mergenumbers) == maincelltracknumbers[icell]))
 
         # Loop through all merging tracks, if present
-        print((len(mergefile)))
+        logger.info((len(mergefile)))
         if len(mergefile) > 0:
             # Isolate merging cases that have short duration
             mergefeature = mergefeature[trackstat_duration[mergefile] < merge_duration]
@@ -516,11 +518,11 @@ def identifycell_LES_netcdf4(statistics_filebase, stats_path, startdate, enddate
 
         ############################################################
         # Find splits
-        print('Determining splits')
+        logger.info('Determining splits')
         [splitfile, splitfeature] = np.array(np.where(np.copy(splitnumbers == maincelltracknumbers[icell])))
 
         # Loop through all splitting tracks, if present
-        print((len(splitfile)))
+        logger.info((len(splitfile)))
         if len(splitfile) > 0:
             # Isolate splitting cases that have short duration
             splitfeature = splitfeature[trackstat_duration[splitfile] < split_duration]
@@ -686,8 +688,8 @@ def identifycell_LES_netcdf4(statistics_filebase, stats_path, startdate, enddate
     output_data.cell_splitcloudnumber.attrs['units'] = 'unitless'
 
     # Write netcdf file
-    print(celltrackstatistics_outfile)
-    print('')
+    logger.info(celltrackstatistics_outfile)
+    logger.info('')
 
     output_data.to_netcdf(path=celltrackstatistics_outfile, mode='w', format='NETCDF4_CLASSIC', unlimited_dims='ntracks', \
                           encoding={'cell_basetime': {'dtype': 'int64', 'zlib':True, 'units': 'seconds since 1970-01-01'}, \
@@ -752,7 +754,7 @@ def identifycell_LES_netcdf4(statistics_filebase, stats_path, startdate, enddate
     ##########################################################################
     # Load statistics file
     statistics_file = stats_path + statistics_filebase + '_' + startdate + '_' + enddate + '.nc'
-    print(statistics_file)
+    logger.info(statistics_file)
 
     allstatdata = xr.open_dataset(statistics_file, autoclose=True)
     ntracks_all = np.nanmax(allstatdata['ntracks'].data) + 1 # Total number of tracked features
@@ -793,10 +795,10 @@ def identifycell_LES_netcdf4(statistics_filebase, stats_path, startdate, enddate
     cellsplitstatus = np.ones((nmaincell, int(nmaxlength), nmaxmerge), dtype=int)*-9999
 
     # Loop through each cell and link small clouds merging in
-    print(('Number of main cells: ' + str(int(nmaincell))))
+    logger.info(('Number of main cells: ' + str(int(nmaincell))))
     for icell in np.arange(0, nmaincell):
-        print('')
-        print(icell)
+        logger.info('')
+        logger.info(icell)
         # Some cell length exceeds nmaxlength, take the smaller of the two
         imaincelllength = int(np.min([maincelllength[icell], nmaxlength]))
 
@@ -808,15 +810,15 @@ def identifycell_LES_netcdf4(statistics_filebase, stats_path, startdate, enddate
         else:
             cellbasetime = np.concatenate((cellbasetime, np.array([pd.to_datetime(allstatdata['basetime'][maincelltrackid[icell], :].data, unit='s')])), axis=0)
 
-#        print('Determining Base Time')
+#        logger.info('Determining Base Time')
 
         ###################################################################################
         # Find mergers
-#        print('Determining mergers')
+#        logger.info('Determining mergers')
         [mergefile, mergefeature] = np.array(np.where(np.copy(allstatdata['mergenumbers'].data) == maincelltracknumbers[icell]))
 
         # Loop through all merging tracks, if present
-        print((len(mergefile)))
+        logger.info((len(mergefile)))
         if len(mergefile) > 0:
             # Isolate merging cases that have short duration
             mergefeature = mergefeature[trackstat_duration[mergefile] < merge_duration]
@@ -861,11 +863,11 @@ def identifycell_LES_netcdf4(statistics_filebase, stats_path, startdate, enddate
 
         ############################################################
         # Find splits
-        print('Determining splits')
+        logger.info('Determining splits')
         [splitfile, splitfeature] = np.array(np.where(np.copy(allstatdata['splitnumbers'].data) == maincelltracknumbers[icell]))
 
         # Loop through all splitting tracks, if present
-        print((len(splitfile)))
+        logger.info((len(splitfile)))
         if len(splitfile) > 0:
             # Isolate splitting cases that have short duration
             splitfeature = splitfeature[trackstat_duration[splitfile] < split_duration]
@@ -1031,8 +1033,8 @@ def identifycell_LES_netcdf4(statistics_filebase, stats_path, startdate, enddate
     output_data.cell_splitcloudnumber.attrs['units'] = 'unitless'
 
     # Write netcdf file
-    print(celltrackstatistics_outfile)
-    print('')
+    logger.info(celltrackstatistics_outfile)
+    logger.info('')
 
     output_data.to_netcdf(path=celltrackstatistics_outfile, mode='w', format='NETCDF4_CLASSIC', unlimited_dims='ntracks', \
                           encoding={'cell_basetime': {'zlib':True, 'units': 'seconds since 1970-01-01'}, \
@@ -1095,7 +1097,7 @@ def identifycell_WRF_netcdf4(statistics_filebase, stats_path, startdate, enddate
     ##########################################################################
     # Load statistics file
     statistics_file = stats_path + statistics_filebase + '_' + startdate + '_' + enddate + '.nc'
-    print(statistics_file)
+    logger.info(statistics_file)
 
     allstatdata = Dataset(statistics_file, 'r')
     ntracks_all = np.nanmax(allstatdata['ntracks'][:]) + 1
@@ -1154,10 +1156,10 @@ def identifycell_WRF_netcdf4(statistics_filebase, stats_path, startdate, enddate
     cellsplitstatus = np.ones((nmaincell, int(nmaxlength), nmaxmerge), dtype=int)*-9999
 
     # Loop through each cell and link small clouds merging in
-    print(('Number of main cells: ' + str(int(nmaincell))))
+    logger.info(('Number of main cells: ' + str(int(nmaincell))))
     for icell in np.arange(0, nmaincell):
-        print('')
-        print(icell)
+        logger.info('')
+        logger.info(icell)
 
         ###################################################################################
         # Isolate basetime data
@@ -1167,15 +1169,15 @@ def identifycell_WRF_netcdf4(statistics_filebase, stats_path, startdate, enddate
         else:
             cellbasetime = np.concatenate((cellbasetime, np.array([pd.to_datetime(basetime[maincelltrackid[icell], :].data, unit='s')])), axis=0)
 
-#        print('Determining Base Time')
+#        logger.info('Determining Base Time')
 
         ###################################################################################
         # Find mergers
-#        print('Determining mergers')
+#        logger.info('Determining mergers')
         [mergefile, mergefeature] = np.array(np.where(np.copy(mergenumbers) == maincelltracknumbers[icell]))
 
         # Loop through all merging tracks, if present
-        print((len(mergefile)))
+        logger.info((len(mergefile)))
         if len(mergefile) > 0:
             # Isolate merging cases that have short duration
             mergefeature = mergefeature[trackstat_duration[mergefile] < merge_duration]
@@ -1220,11 +1222,11 @@ def identifycell_WRF_netcdf4(statistics_filebase, stats_path, startdate, enddate
 
         ############################################################
         # Find splits
-        print('Determining splits')
+        logger.info('Determining splits')
         [splitfile, splitfeature] = np.array(np.where(np.copy(splitnumbers == maincelltracknumbers[icell])))
 
         # Loop through all splitting tracks, if present
-        print((len(splitfile)))
+        logger.info((len(splitfile)))
         if len(splitfile) > 0:
             # Isolate splitting cases that have short duration
             splitfeature = splitfeature[trackstat_duration[splitfile] < split_duration]
@@ -1390,8 +1392,8 @@ def identifycell_WRF_netcdf4(statistics_filebase, stats_path, startdate, enddate
     output_data.cell_splitcloudnumber.attrs['units'] = 'unitless'
 
     # Write netcdf file
-    print(celltrackstatistics_outfile)
-    print('')
+    logger.info(celltrackstatistics_outfile)
+    logger.info('')
 
     output_data.to_netcdf(path=celltrackstatistics_outfile, mode='w', format='NETCDF4_CLASSIC', unlimited_dims='ntracks', \
                           encoding={'cell_basetime': {'dtype': 'int64', 'zlib':True, 'units': 'seconds since 1970-01-01'}, \

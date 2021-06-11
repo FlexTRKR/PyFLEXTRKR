@@ -29,6 +29,9 @@ def trackstats_radar(
     import time
     import gc
     from pyflextrkr import netcdf_io_trackstats as net
+    import logging
+    logger = logging.getLogger(__name__)
+
 
     np.set_printoptions(threshold=np.inf)
 
@@ -50,8 +53,8 @@ def trackstats_radar(
     dster.close()
 
     # Load track data
-    print("Loading gettracks data")
-    print((time.ctime()))
+    logger.info("Loading gettracks data")
+    logger.info((time.ctime()))
     cloudtrack_file = (
         stats_path + tracknumbers_filebase + "_" + startdate + "_" + enddate + ".nc"
     )
@@ -93,8 +96,8 @@ def trackstats_radar(
 
     ###############################################################
     # to calculate the statistic after having the number of tracks with cells
-    print("Initiailizinng matrices")
-    print((time.ctime()))
+    logger.info("Initiailizinng matrices")
+    logger.info((time.ctime()))
 
     finaltrack_tracklength = np.zeros(numtracks, dtype=np.int32)
     finaltrack_cloudnumber = np.full(
@@ -196,8 +199,8 @@ def trackstats_radar(
 
     #########################################################################################
     # loop over files. Calculate statistics and organize matrices by tracknumber and cloud
-    print("Looping over files and calculating statistics for each file")
-    print((time.ctime()))
+    logger.info("Looping over files and calculating statistics for each file")
+    logger.info((time.ctime()))
     for nf in range(0, nfiles):
 
         # Get all track numbers in the file
@@ -209,11 +212,11 @@ def trackstats_radar(
         if np.nanmax(file_tracknumbers) > 0:
 
             # fname = ''.join(chartostring(cloudidfiles[nf]))
-            print(nf, fname)
+            logger.info(nf, fname)
 
             # Load cloudid file
             cloudid_file = tracking_inpath + fname
-            # print(cloudid_file)
+            # logger.info(cloudid_file)
 
             file_cloudiddata = Dataset(cloudid_file, "r")
             file_dbz = file_cloudiddata["comp_ref"][:]
@@ -251,7 +254,7 @@ def trackstats_radar(
             uniquetracknumbers = uniquetracknumbers[uniquetracknumbers > 0].astype(int)
 
             # Loop over unique tracknumbers
-            # print('Loop over tracks in file')
+            # logger.info('Loop over tracks in file')
             for itrack in uniquetracknumbers:
 
                 # Find cloud number that belongs to the current track in this file
@@ -416,16 +419,16 @@ def trackstats_radar(
                                 rangemask[dilatecellarea[0], dilatecellarea[1]]
                             )
                     else:
-                        print(itrack, " greater than max track length")
+                        logger.info(itrack, " greater than max track length")
                 else:
-                    print(cloudnumber, " cloudnumber not found in idcloud file")
+                    logger.info(cloudnumber, " cloudnumber not found in idcloud file")
         else:
-            print(fname, " has no tracks in idcloud file")
+            logger.info(fname, " has no tracks in idcloud file")
 
     ###############################################################
     ## Remove tracks that have no cells. These tracks are short.
-    print("Removing tracks with no cells")
-    print((time.ctime()))
+    logger.info("Removing tracks with no cells")
+    logger.info((time.ctime()))
     gc.collect()
 
     cloudindexpresent = np.array(np.where(finaltrack_tracklength > 0))[0, :]
@@ -483,7 +486,7 @@ def trackstats_radar(
 
     #######################################################
     # Correct merger and split track numbers
-    print("Correcting mergers and splits")
+    logger.info("Correcting mergers and splits")
 
     # Initialize adjusted matrices
     adjusted_finaltrack_mergenumber = (
@@ -492,7 +495,7 @@ def trackstats_radar(
     adjusted_finaltrack_splitnumber = (
         np.ones(np.shape(finaltrack_mergenumber)) * fillval
     )
-    print(("total tracks: " + str(numtracks)))
+    logger.info(("total tracks: " + str(numtracks)))
 
     # Create adjustor
     indexcloudnumber = np.copy(cloudindexpresent) + 1
@@ -521,11 +524,11 @@ def trackstats_radar(
         adjusted_finaltrack_splitnumber, np.shape(finaltrack_splitnumber)
     )
 
-    print("Merge and split adjustments done")
+    logger.info("Merge and split adjustments done")
 
     #########################################################################
     # Record starting and ending status
-    print("Isolating starting and ending status")
+    logger.info("Isolating starting and ending status")
 
     # Starting status
     finaltrack_startstatus = np.copy(finaltrack_status[:, 0])
@@ -586,9 +589,9 @@ def trackstats_radar(
                             itrack
                         ] = finaltrack_cloudnumber[imerge_idx, match_timeidx + 1]
                     else:
-                        print(f"Merge time occur after track ends??")
+                        logger.info(f"Merge time occur after track ends??")
                 else:
-                    print(
+                    logger.info(
                         f"Error: track {itrack} has no matching time in the track it merges with!"
                     )
                     # import pdb; pdb.set_trace()
@@ -614,19 +617,19 @@ def trackstats_radar(
                             itrack
                         ] = finaltrack_cloudnumber[isplit_idx, match_timeidx - 1]
                     else:
-                        print(f"Split time occur before track starts??")
+                        logger.info(f"Split time occur before track starts??")
                 else:
-                    print(
+                    logger.info(
                         f"Error: track {itrack} has no matching time in the track it splits from!"
                     )
                     sys.exit(itrack)
 
     #######################################################################
     # Write to netcdf
-    print("Writing trackstats netcdf")
-    print((time.ctime()))
-    print(trackstats_outfile)
-    print("")
+    logger.info("Writing trackstats netcdf")
+    logger.info((time.ctime()))
+    logger.info(trackstats_outfile)
+    logger.info("")
 
     # Check if file already exists. If exists, delete
     if os.path.isfile(trackstats_outfile):

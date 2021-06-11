@@ -27,10 +27,12 @@ def mapcell_radar(
     import numpy as np
     import time
     import os
+    import logging
     import xarray as xr
     from netCDF4 import Dataset
 
     np.set_printoptions(threshold=np.inf)
+    logger = logging.getLogger(__name__)
 
     ######################################################################
     # define constants
@@ -60,7 +62,7 @@ def mapcell_radar(
     file_datetime = time.strftime("%Y%m%d_%H%M", time.gmtime(np.copy(filebasetime)))
     filedate = np.copy(file_datetime[0:8])
     filetime = np.copy(file_datetime[9:14])
-    # print(('cloudid file: ' + cloudid_filename))
+    # logger.info(('cloudid file: ' + cloudid_filename))
 
     # Load cloudid data
     cloudiddata = Dataset(cloudid_filename, "r")
@@ -109,7 +111,7 @@ def mapcell_radar(
 
     ################################################################
     # Create map of status and track number for every feature in this file
-    print("Create maps of all tracks")
+    logger.info("Create maps of all tracks")
     fillval = -9999
     statusmap = np.ones((1, ny, nx), dtype=int) * fillval
     trackmap = np.zeros((1, ny, nx), dtype=int)
@@ -140,7 +142,7 @@ def mapcell_radar(
                 statusmap[0, jjcloudypixels, jjcloudxpixels] = jjstatus
                 # import pdb; pdb.set_trace()
             else:
-                print(
+                logger.info(
                     "Error: No matching cloud pixel found?! itrack: ",
                     itrack[jj],
                     ", itime: ",
@@ -387,7 +389,7 @@ def mapcell_radar(
     ds_out.echotop50.attrs["units"] = "km"
 
     # Write netcdf file
-    print("Output celltracking file: ", celltrackmaps_outfile)
+    logger.info("Output celltracking file: ", celltrackmaps_outfile)
 
     # Set encoding/compression for all variables
     comp = dict(zlib=True)

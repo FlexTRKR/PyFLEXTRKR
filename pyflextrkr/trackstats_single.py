@@ -31,18 +31,20 @@ def calc_stats_single(
     import datetime
     import xarray as xr
     import pandas as pd
+    import logging
 
     file_tracknumbers = tracknumbers
+    logger = logging.getLogger(__name__)
 
     # Only process file if that file contains a track
     if np.nanmax(file_tracknumbers) > 0:
 
         fname = "".join(chartostring(cloudidfiles))
-        print(fname)
+        logger.debug(fname)
 
         # Load cloudid file
         cloudid_file = tracking_inpath + fname
-        # print(cloudid_file)
+        # logger.info(cloudid_file)
 
         file_cloudiddata = Dataset(cloudid_file, "r")
         file_tb = file_cloudiddata["tb"][:]
@@ -115,11 +117,11 @@ def calc_stats_single(
         )
 
         # Loop over unique tracknumbers
-        # print('Loop over tracks in file')
+        # logger.info('Loop over tracks in file')
         # for itrack in uniquetracknumbers:
         for itrack in range(numtracks):
-            # print(('Unique track number: ' + str(itrack)))
-            # print('itrack: ', itrack)
+            # logger.info(('Unique track number: ' + str(itrack)))
+            # logger.info('itrack: ', itrack)
 
             # Find cloud number that belongs to the current track in this file
             cloudnumber = (
@@ -346,7 +348,7 @@ def calc_stats_single(
                         trackreset[cloudindex]
                     )
 
-                    # print('shape of finaltrack_corecold_status: ', finaltrack_corecold_status.shape)
+                    # logger.info('shape of finaltrack_corecold_status: ', finaltrack_corecold_status.shape)
 
                     ####################################################################
                     # Calculate mean brightness temperature for core

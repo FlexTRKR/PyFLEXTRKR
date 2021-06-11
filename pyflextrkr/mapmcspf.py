@@ -67,8 +67,10 @@ def mapmcs_tb_pf(
     import pandas as pd
     import time, datetime, calendar
     from netCDF4 import Dataset, num2date
+    import logging
 
     np.set_printoptions(threshold=np.inf)
+    logger = logging.getLogger(__name__)
 
     # Separate inputs
     # cloudid_filename = zipped_inputs[0]

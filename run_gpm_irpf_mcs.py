@@ -6,6 +6,7 @@ import sys
 import time
 from itertools import repeat
 from multiprocessing import Pool
+import logging
 
 import numpy as np
 from pytz import utc
@@ -151,6 +152,9 @@ if __name__ == '__main__':
     pfdata_filebase = 'merg_'
     rainaccumulation_filebase = 'merg_'
     root_path = os.environ['FLEXTRKR_BASE_DATA_PATH']
+    logger = logging.getLogger()
+    logging.basicConfig(format='%(asctime)s - %(levelname)s - %(message)s', level=logging.DEBUG)
+
 
     print(f'ROOT PATH IS {root_path}')
 
@@ -294,10 +298,8 @@ if __name__ == '__main__':
         print((time.ctime()))
 
         # Isolate all possible files
-        allcloudidfiles = fnmatch.filter(os.listdir(tracking_outpath), cloudid_filebase +'*')
+        allcloudidfiles = sorted(fnmatch.filter(os.listdir(tracking_outpath), cloudid_filebase +'*'))
 
-        # Put in temporal order
-        allcloudidfiles = sorted(allcloudidfiles)
 
         # Loop through files, identifying files within the startdate - enddate interval
         nleadingchar = np.array(len(cloudid_filebase)).astype(int)

@@ -62,6 +62,8 @@ def gettracknumbers(
     import sys
     import xarray as xr
     import pandas as pd
+    import logging
+    logger = logging.getLogger(__name__)
 
     np.set_printoptions(threshold=np.inf)
 
@@ -72,143 +74,7 @@ def gettracknumbers(
         dataoutpath + tracknumbers_filebase + "_" + startdate + "_" + enddate + ".nc"
     )
 
-    ##################################################################################
-    # Get single track files sort
-    print("Determining which files will be processed")
-    print((time.ctime()))
-    print(singletrack_filebase)
-    singletrackfiles = fnmatch.filter(
-        os.listdir(datainpath), singletrack_filebase + "*"
-    )
-    # Put in temporal order
-    singletrackfiles = sorted(singletrackfiles)
-
-    ################################################################################
-    # Get date/time from filenames
-    nfiles = len(singletrackfiles)
-    print("nfiles: ", nfiles)
-    year = np.empty(nfiles, dtype=int)
-    month = np.empty(nfiles, dtype=int)
-    day = np.empty(nfiles, dtype=int)
-    hour = np.empty(nfiles, dtype=int)
-    minute = np.empty(nfiles, dtype=int)
-    basetime = np.empty(nfiles, dtype="datetime64[s]")
-    filedate = np.empty(nfiles)
-    filetime = np.empty(nfiles)
-
-    header = np.array(len(singletrack_filebase)).astype(int)
-    for filestep, ifiles in enumerate(singletrackfiles):
-        year[filestep] = int(ifiles[header : header + 4])
-        month[filestep] = int(ifiles[header + 4 : header + 6])
-        day[filestep] = int(ifiles[header + 6 : header + 8])
-        hour[filestep] = int(ifiles[header + 9 : header + 11])
-        minute[filestep] = int(ifiles[header + 11 : header + 13])
-
-        TEMP_fulltime = calendar.timegm(
-            datetime.datetime(
-                year[filestep],
-                month[filestep],
-                day[filestep],
-                hour[filestep],
-                minute[filestep],
-                0,
-                0,
-            ).timetuple()
-        )
-        basetime[filestep] = np.datetime64(
-            np.array(
-                [pd.to_datetime(TEMP_fulltime, unit="s")][0], dtype="datetime64[s]"
-            )
-        )
-
-    #############################################################################
-    # Keep only files and date/times within start - end time interval
-    # Put start and end dates in base time
-    TEMP_starttime = calendar.timegm(
-        datetime.datetime(
-            int(startdate[0:4]),
-            int(startdate[4:6]),
-            int(startdate[6:8]),
-            int(startdate[9:11]),
-            int(startdate[11:13]),
-            0,
-        ).timetuple()
-    )
-    start_basetime = np.datetime64(
-        np.array([pd.to_datetime(TEMP_starttime, unit="s")][0], dtype="datetime64[s]")
-    )
-
-    TEMP_endtime = calendar.timegm(
-        datetime.datetime(
-            int(enddate[0:4]),
-            int(enddate[4:6]),
-            int(enddate[6:8]),
-            int(enddate[9:11]),
-            int(enddate[11:13]),
-            0,
-        ).timetuple()
-    )
-    end_basetime = np.datetime64(
-        np.array([pd.to_datetime(TEMP_endtime, unit="s")][0], dtype="datetime64[s]")
-    )
-
-    # Identify files within the start-end date interval
-    acceptdates = np.array(
-        np.where((basetime >= start_basetime) & (basetime <= end_basetime))
-    )[0, :]
-    # Isolate files and times with start-end date interval
-    basetime = basetime[acceptdates]
-
-    files = [None] * len(acceptdates)
-
-    filedate = [None] * len(acceptdates)
-    filetime = [None] * len(acceptdates)
-    filesyear = np.zeros(len(acceptdates), dtype=int)
-    filesmonth = np.zeros(len(acceptdates), dtype=int)
-    filesday = np.zeros(len(acceptdates), dtype=int)
-    fileshour = np.zeros(len(acceptdates), dtype=int)
-    filesminute = np.zeros(len(acceptdates), dtype=int)
-
-    for filestep, ifiles in enumerate(acceptdates):
-        files[filestep] = singletrackfiles[ifiles]
-        filedate[filestep] = (
-            str(year[ifiles]) + str(month[ifiles]).zfill(2) + str(day[ifiles]).zfill(2)
-        )
-        filetime[filestep] = str(hour[ifiles]).zfill(2) + str(minute[ifiles]).zfill(2)
-        filesyear[filestep] = int(year[ifiles])
-        filesmonth[filestep] = int(month[ifiles])
-        filesday[filestep] = int(day[ifiles])
-        fileshour[filestep] = int(hour[ifiles])
-        filesminute[filestep] = int(minute[ifiles])
-
-    #########################################################################
-    # Determine number of gaps in dataset
-    gap = 0
-    for ifiles in range(1, len(acceptdates)):
-        newtime = datetime.datetime(
-            filesyear[ifiles],
-            filesmonth[ifiles],
-            filesday[ifiles],
-            fileshour[ifiles],
-            filesminute[ifiles],
-            0,
-            0,
-            tzinfo=utc,
-        )
-        referencetime = datetime.datetime(
-            filesyear[ifiles - 1],
-            filesmonth[ifiles - 1],
-            filesday[ifiles - 1],
-            fileshour[ifiles - 1],
-            filesminute[ifiles - 1],
-            0,
-            0,
-            tzinfo=utc,
-        )
-
-        cutofftime = newtime - datetime.timedelta(minutes=timegap * 60)
-        if cutofftime > referencetime:
-            gap = gap + 1
+    files, gap = filter_filelisting(datainpath, enddate, singletrack_filebase, startdate, timegap)
 
     # import pdb; pdb.set_trace()
     # KB HARDCODED GAP
@@ -228,10 +94,10 @@ def gettracknumbers(
 
     ############################################################################
     # Load first file
-    print("Processing first file")
-    #    print((time.ctime()))
-    print("datainpath: ", datainpath)
-    print("files[0]: ", files[0])
+    logger.info("Processing first file")
+    #    logger.info((time.ctime()))
+    logger.debug(f"datainpath: {datainpath}")
+    logger.debug(f"files[0]: {files[0]}")
     singletracking_data = Dataset(datainpath + files[0], "r")  # Open file
 
     nclouds_reference = int(
@@ -250,9 +116,7 @@ def gettracknumbers(
         )
 
     # Isolate file name and add it to the filelist
-    # basetime[0] = np.array([pd.to_datetime(num2date(basetime_ref, units=basetime_units, calendar=basetime_calendar))], dtype='datetime64[s]')[0, 0]
     basetime[0] = basetime_ref.item()
-    # import pdb; pdb.set_trace()
 
     temp_referencefile = os.path.basename(ref_file)
     strlength = len(temp_referencefile)
@@ -268,23 +132,20 @@ def gettracknumbers(
     # Rocord that the tracks are being reset / initialized
     trackreset[0, 0, :] = 1
 
-    # for ifile in range(0,nfiles):
-    #     print(ifile, (files[ifile]))
-    # import pdb; pdb.set_trace()
     ###########################################################################
     # Loop over files and generate tracks
-    print("Loop through the rest of the files")
-    print(("Number of files: " + str(nfiles)))
-    print((time.ctime()))
+    logger.info("Loop through the rest of the files")
+    logger.info(("Number of files: " + str(nfiles)))
+    logger.info((time.ctime()))
     ifill = 0
     for ifile in range(0, nfiles):
-        print((files[ifile]))
-        # print((time.ctime()))
+        logger.info((files[ifile]))
+        # logger.info((time.ctime()))
 
         ######################################################################
         # Load single track file
-        # print('Load track data')
-        # print((time.ctime()))
+        # logger.info('Load track data')
+        # logger.info((time.ctime()))
         singletracking_data = Dataset(datainpath + files[ifile], "r")  # Open file
         nclouds_reference = int(
             np.nanmax(singletracking_data["nclouds_ref"][:]) + 1
@@ -321,8 +182,8 @@ def gettracknumbers(
 
         ########################################################################
         # Load cloudid files
-        # print('Load cloudid files')
-        # print((time.ctime()))
+        # logger.info('Load cloudid files')
+        # logger.info((time.ctime()))
         # Reference cloudid file
         referencecloudid_data = Dataset(ref_file, "r")
         npix_reference = referencecloudid_data[npxname][:]
@@ -339,8 +200,8 @@ def gettracknumbers(
 
         ########################################################################
         # Check time gap between consecutive track files
-        # print('Checking if time gap between files satisfactory')
-        # print((time.ctime()))
+        # logger.info('Checking if time gap between files satisfactory')
+        # logger.info((time.ctime()))
 
         # Set previous and new times
         if ifile < 1:
@@ -352,10 +213,10 @@ def gettracknumbers(
         if ifile > 0:
             hour_diff = np.array([time_new - time_prev]).astype(float)
             if hour_diff > (timegap * 3.6 * 10 ** 12):
-                print(("Track terminates on: " + ref_date))
-                print(("Time difference: " + str(hour_diff)))
-                print(("Maximum timegap allowed: " + str(timegap)))
-                print(("New track starts on: " + new_date))
+                logger.info(("Track terminates on: " + ref_date))
+                logger.info(("Time difference: " + str(hour_diff)))
+                logger.info(("Maximum timegap allowed: " + str(timegap)))
+                logger.info(("New track starts on: " + new_date))
 
                 # Flag the previous file as the last file
                 trackreset[0, ifill, :] = 2
@@ -383,19 +244,19 @@ def gettracknumbers(
         ########################################################################################
         # Compare forward and backward single track matirces to link new and reference clouds
         # Intiailize matrix for this time period
-        # print('Generating tracks')
-        # print((time.ctime()))
+        # logger.info('Generating tracks')
+        # logger.info((time.ctime()))
         trackfound = np.ones(nclouds_reference + 1, dtype=int) * -9999
 
         # Loop over all reference clouds
-        # print('Looping over all clouds in the reference file')
-        # print(('Number of clouds to process: ' + str(nclouds_reference)))
-        # print((time.ctime()))
+        # logger.info('Looping over all clouds in the reference file')
+        # logger.info(('Number of clouds to process: ' + str(nclouds_reference)))
+        # logger.info((time.ctime()))
         for ncr in np.arange(
             1, nclouds_reference + 1
         ):  # Looping over each reference cloud. Start at 1 since clouds numbered starting at 1.
-            # print(('Reference cloud #: ' + str(ncr)))
-            # print((time.ctime()))
+            # logger.info(('Reference cloud #: ' + str(ncr)))
+            # logger.info((time.ctime()))
             if trackfound[ncr - 1] < 1:
 
                 # Find all clouds (both forward and backward) associated with this reference cloud
@@ -404,8 +265,8 @@ def gettracknumbers(
                 temp_referenceclouds = [ncr]
 
                 trackpresent = 0
-                # print('Finding all associated clouds')
-                # print((time.ctime()))
+                # logger.info('Finding all associated clouds')
+                # logger.info((time.ctime()))
                 while ntemp_referenceclouds > nreferenceclouds:
                     associated_referenceclouds = np.copy(temp_referenceclouds).astype(
                         int
@@ -413,8 +274,8 @@ def gettracknumbers(
                     nreferenceclouds = ntemp_referenceclouds
 
                     for nr in range(0, nreferenceclouds):
-                        # print(('Processing cloud #: ' + str(nr)))
-                        # print((time.ctime()))
+                        # logger.info(('Processing cloud #: ' + str(nr)))
+                        # logger.info((time.ctime()))
                         tempncr = associated_referenceclouds[nr]
 
                         # Find indices of forward linked clouds.
@@ -492,8 +353,7 @@ def gettracknumbers(
 
                 #################################################################
                 # Now get the track status
-                # print('Determining status of clouds in track')
-                # print((time.ctime()))
+
                 if nnewclouds > 0:
                     ############################################################
                     # Find the largest reference and new clouds
@@ -518,18 +378,18 @@ def gettracknumbers(
                         largestnewindex
                     ]  # Cloud numberof the largest new cloud
 
-                    # print(associated_referenceclouds)
-                    # print(associated_newclouds)
+                    # logger.info(associated_referenceclouds)
+                    # logger.info(associated_newclouds)
 
                     if nnewclouds == 1 and nreferenceclouds == 1:
                         ############################################################
                         # Simple continuation
-                        # print('Simple continuation')
-                        # print((time.ctime()))
+                        # logger.info('Simple continuation')
+                        # logger.info((time.ctime()))
 
                         # Check trackstatus already has a valid value. This will prtrack splits from a previous step being overwritten
 
-                        # print(trackstatus[ifill,ncr-1])
+                        # logger.info(trackstatus[ifill,ncr-1])
                         referencetrackstatus[ifill, ncr - 1] = 1
                         trackfound[ncr - 1] = 1
                         tracknumber[0, ifill + 1, associated_newclouds - 1] = np.copy(
@@ -540,14 +400,15 @@ def gettracknumbers(
                         ##############################################################
                         # Merging only
 
-                        # Loop through the reference clouds and assign th track to the largestst one, the rest just go away
+                        # Loop through the reference clouds and assign the track to the largest one, the rest just go
+                        # away
                         if nnewclouds == 1:
-                            # print('Merge only')
-                            # print((time.ctime()))
+                            # logger.info('Merge only')
+                            # logger.info((time.ctime()))
                             for tempreferencecloud in associated_referenceclouds:
                                 trackfound[tempreferencecloud - 1] = 1
 
-                                # print(trackstatus[ifill,tempreferencecloud-1])
+                                # logger.info(trackstatus[ifill,tempreferencecloud-1])
 
                                 # If this reference cloud is the largest fragment of the merger, label this reference time (file) as the larger part of merger (2) and merging at the next time (ifile + 1)
                                 if tempreferencecloud == largest_referencecloud:
@@ -577,8 +438,8 @@ def gettracknumbers(
                         #################################################################
                         # Merging and spliting
                         else:
-                            # print('Merging and splitting')
-                            # print((time.ctime()))
+                            # logger.info('Merging and splitting')
+                            # logger.info((time.ctime()))
 
                             # Loop over the reference clouds and assign the track the largest one
                             for tempreferencecloud in associated_referenceclouds:
@@ -642,8 +503,8 @@ def gettracknumbers(
                     #####################################################################
                     # Splitting only
                     elif nnewclouds > 1:
-                        # print('Splitting only')
-                        # print((time.ctime()))
+                        # logger.info('Splitting only')
+                        # logger.info((time.ctime()))
                         # Label reference cloud as a pure split
                         referencetrackstatus[ifill, ncr - 1] = 13
                         tracknumber[0, ifill, ncr - 1] = np.copy(
@@ -677,8 +538,7 @@ def gettracknumbers(
                 ######################################################################################
                 # No new clouds. Track dissipated
                 else:
-                    # print('Track ending')
-                    # print((time.ctime()))
+
 
                     trackfound[ncr - 1] = 1
 
@@ -686,8 +546,7 @@ def gettracknumbers(
 
         ##############################################################################
         # Find any clouds in the new track that don't have a track number. These are new clouds this file
-        # print('Identifying new tracks')
-        # print((time.ctime()))
+
         for ncn in range(1, int(nclouds_new) + 1):
             if tracknumber[0, ifill + 1, ncn - 1] < 0:
                 tracknumber[0, ifill + 1, ncn - 1] = itrack
@@ -698,7 +557,7 @@ def gettracknumbers(
         #############################################################################
         # Flag the last file in the dataset
         if ifile == nfiles - 2:
-            print("WE ARE AT THE LAST FILE")
+            logger.info("WE ARE AT THE LAST FILE")
             for ncn in range(1, int(nclouds_new) + 1):
                 trackreset[0, ifill + 1, :] = 2
             break
@@ -712,7 +571,7 @@ def gettracknumbers(
     )
     trackstatus[np.isnan(trackstatus)] = -9999
 
-    print("Tracking Done")
+    logger.info("Tracking Done")
 
     #################################################################
     # Create histograms of the values in tracknumber. This effectively counts the number of times each track number appaers in tracknumber, which is equivalent to calculating the length of the track.
@@ -724,8 +583,8 @@ def gettracknumbers(
 
     #################################################################
     # Remove all tracks that have only one cloud.
-    print("Removing short tracks")
-    # print((time.ctime()))
+    logger.info("Removing short tracks")
+    # logger.info((time.ctime()))
 
     # Identify single cloud tracks
     singletracks = np.array(np.where(tracklengths <= 1))[0, :]
@@ -735,14 +594,12 @@ def gettracknumbers(
     # Loop over single cloudtracks
     nsingleremove = 0
     for strack in singletracks:
-        # print(('single track: ' + str(strack+1)))
-        # print('Getting track index')
+
         # Indentify clouds in this track
         cloudindex = np.array(
             np.where(tracknumber[0, :, :] == int(strack + 1))
         )  # Need to add one since singletracks lists the index in the matrix, which starts at zero. Track number starts at one.
 
-        # print('Filtering data')
         # Only remove single track if it is not small merger or small split. This is only done if keepsingletrack == 1. This is the default.
         if keepsingletrack == 1:
             if (
@@ -763,10 +620,10 @@ def gettracknumbers(
 
     #######################################################################
     # Save file
-    print("Writing all track statistics file")
-    print((time.ctime()))
-    print(tracknumbers_outfile)
-    print("")
+    logger.info("Writing all track statistics file")
+    logger.info((time.ctime()))
+    logger.info(tracknumbers_outfile)
+    logger.info("")
 
     # Check if file already exists. If exists, delete
     if os.path.isfile(tracknumbers_outfile):
@@ -887,3 +744,135 @@ def gettracknumbers(
             "track_reset": {"dtype": "int", "zlib": True, "_FillValue": -9999},
         },
     )
+
+
+def filter_filelisting(datainpath, enddate, singletrack_filebase, startdate, timegap):
+    ##################################################################################
+    # Get single track files sort
+    logger.info("Determining which files will be processed")
+    logger.info((time.ctime()))
+    logger.info(singletrack_filebase)
+    singletrackfiles = fnmatch.filter(
+        os.listdir(datainpath), singletrack_filebase + "*"
+    )
+    # Put in temporal order
+    singletrackfiles = sorted(singletrackfiles)
+    ################################################################################
+    # Get date/time from filenames
+    nfiles = len(singletrackfiles)
+    logger.info("nfiles: ", nfiles)
+    year = np.empty(nfiles, dtype=int)
+    month = np.empty(nfiles, dtype=int)
+    day = np.empty(nfiles, dtype=int)
+    hour = np.empty(nfiles, dtype=int)
+    minute = np.empty(nfiles, dtype=int)
+    basetime = np.empty(nfiles, dtype="datetime64[s]")
+    filedate = np.empty(nfiles)
+    filetime = np.empty(nfiles)
+    header = np.array(len(singletrack_filebase)).astype(int)
+    for filestep, ifiles in enumerate(singletrackfiles):
+        year[filestep] = int(ifiles[header: header + 4])
+        month[filestep] = int(ifiles[header + 4: header + 6])
+        day[filestep] = int(ifiles[header + 6: header + 8])
+        hour[filestep] = int(ifiles[header + 9: header + 11])
+        minute[filestep] = int(ifiles[header + 11: header + 13])
+
+        TEMP_fulltime = calendar.timegm(
+            datetime.datetime(
+                year[filestep],
+                month[filestep],
+                day[filestep],
+                hour[filestep],
+                minute[filestep],
+                0,
+                0,
+            ).timetuple()
+        )
+        basetime[filestep] = np.datetime64(
+            np.array(
+                [pd.to_datetime(TEMP_fulltime, unit="s")][0], dtype="datetime64[s]"
+            )
+        )
+    #############################################################################
+    # Keep only files and date/times within start - end time interval
+    # Put start and end dates in base time
+    TEMP_starttime = calendar.timegm(
+        datetime.datetime(
+            int(startdate[0:4]),
+            int(startdate[4:6]),
+            int(startdate[6:8]),
+            int(startdate[9:11]),
+            int(startdate[11:13]),
+            0,
+        ).timetuple()
+    )
+    start_basetime = np.datetime64(
+        np.array([pd.to_datetime(TEMP_starttime, unit="s")][0], dtype="datetime64[s]")
+    )
+    TEMP_endtime = calendar.timegm(
+        datetime.datetime(
+            int(enddate[0:4]),
+            int(enddate[4:6]),
+            int(enddate[6:8]),
+            int(enddate[9:11]),
+            int(enddate[11:13]),
+            0,
+        ).timetuple()
+    )
+    end_basetime = np.datetime64(
+        np.array([pd.to_datetime(TEMP_endtime, unit="s")][0], dtype="datetime64[s]")
+    )
+    # Identify files within the start-end date interval
+    acceptdates = np.array(
+        np.where((basetime >= start_basetime) & (basetime <= end_basetime))
+    )[0, :]
+    # Isolate files and times with start-end date interval
+    basetime = basetime[acceptdates]
+    files = [None] * len(acceptdates)
+    filedate = [None] * len(acceptdates)
+    filetime = [None] * len(acceptdates)
+    filesyear = np.zeros(len(acceptdates), dtype=int)
+    filesmonth = np.zeros(len(acceptdates), dtype=int)
+    filesday = np.zeros(len(acceptdates), dtype=int)
+    fileshour = np.zeros(len(acceptdates), dtype=int)
+    filesminute = np.zeros(len(acceptdates), dtype=int)
+    for filestep, ifiles in enumerate(acceptdates):
+        files[filestep] = singletrackfiles[ifiles]
+        filedate[filestep] = (
+                str(year[ifiles]) + str(month[ifiles]).zfill(2) + str(day[ifiles]).zfill(2)
+        )
+        filetime[filestep] = str(hour[ifiles]).zfill(2) + str(minute[ifiles]).zfill(2)
+        filesyear[filestep] = int(year[ifiles])
+        filesmonth[filestep] = int(month[ifiles])
+        filesday[filestep] = int(day[ifiles])
+        fileshour[filestep] = int(hour[ifiles])
+        filesminute[filestep] = int(minute[ifiles])
+    #########################################################################
+    # Determine number of gaps in dataset
+    gap = 0
+    for ifiles in range(1, len(acceptdates)):
+        newtime = datetime.datetime(
+            filesyear[ifiles],
+            filesmonth[ifiles],
+            filesday[ifiles],
+            fileshour[ifiles],
+            filesminute[ifiles],
+            0,
+            0,
+            tzinfo=utc,
+        )
+        referencetime = datetime.datetime(
+            filesyear[ifiles - 1],
+            filesmonth[ifiles - 1],
+            filesday[ifiles - 1],
+            fileshour[ifiles - 1],
+            filesminute[ifiles - 1],
+            0,
+            0,
+            tzinfo=utc,
+        )
+
+        cutofftime = newtime - datetime.timedelta(minutes=timegap * 60)
+        if cutofftime > referencetime:
+            gap = gap + 1
+    return files, gap

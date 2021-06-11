@@ -69,6 +69,7 @@ def idclouds_gpmmergir(
 
     from netCDF4 import Dataset
     import os
+    import logging
     import numpy as np
     import xarray as xr
     from scipy.signal import medfilt2d
@@ -76,6 +77,7 @@ def idclouds_gpmmergir(
     from pyflextrkr import netcdf_io as net
 
     np.set_printoptions(threshold=np.inf)
+    logger = logging.getLogger(__name__)
 
     ##########################################################
     # Separate inputs
@@ -142,7 +144,7 @@ def idclouds_gpmmergir(
     # Brightness temperature data.
     # get date and time of each file. file name formate is "irdata_yyyymmdd_hhmm.nc" thus yyyymmdd=7:15, hhmm=16:20
     if (datasource == "gpmmergir") | (datasource == "gpmirimerg"):
-        print(datafilepath)
+        logger.info(datafilepath)
 
         # load brighttness temperature data. automatically removes missing values
         # rawdata = xr.open_dataset(datafilepath)                            # open file
@@ -270,7 +272,7 @@ def idclouds_gpmmergir(
                         # file_basetime = np.array([iTime.data], dtype='datetime64[ns]')
                         # file_datestring = iTime.dt.strftime("%Y%m%d").data.item()
                         # file_timestring = iTime.dt.strftime("%H%M").data.item()
-                        # print(file_basetime)
+                        # logger.info(file_basetime)
 
                         # call idclouds subroutine
                         if cloudidmethod == "futyan3":
@@ -284,9 +286,9 @@ def idclouds_gpmmergir(
                                 warmanvilexpansion,
                             )
                         elif cloudidmethod == "futyan4":
-                            from pyflextrkr.futyan4 import futyan4
+                            from pyflextrkr.label_and_grow_cold_clouds import label_and_grow_cold_clouds
 
-                            clouddata = futyan4(
+                            clouddata = label_and_grow_cold_clouds(
                                 out_ir,
                                 pixel_radius,
                                 cloudtb_threshs,
@@ -441,7 +443,7 @@ def idclouds_gpmmergir(
                                 + file_timestring
                                 + ".nc"
                             )
-                            print("outcloudidfile: ", cloudid_outfile)
+                            logger.info("outcloudidfile: ", cloudid_outfile)
 
                             # Check if file exists, if it does delete it
                             if os.path.isfile(cloudid_outfile):
@@ -481,14 +483,14 @@ def idclouds_gpmmergir(
                             )
 
                         else:
-                            print(datafilepath)
-                            print("No clouds")
+                            logger.info(datafilepath)
+                            logger.info("No clouds")
 
                     else:
-                        print(datafilepath)
-                        print("To much missing data")
+                        logger.info(datafilepath)
+                        logger.info("To much missing data")
                 else:
-                    print(datafilepath)
-                    print(
+                    logger.info(datafilepath)
+                    logger.info(
                         "data not within latitude, longitude range. check specified geographic range"
                     )

@@ -27,6 +27,9 @@ def matchtbpf_singlefile(
     import xarray as xr
     import sys
     from pyflextrkr.ftfunctions import sort_renumber
+    import logging
+
+    logger = logging.getLogger(__name__)
 
     # Read landmask file
     if landmask_file is not None:
@@ -47,10 +50,10 @@ def matchtbpf_singlefile(
     # if os.path.isfile(cloudid_filename) and os.path.isfile(rainaccumulation_filename):
     if os.path.isfile(cloudid_filename):
         count = 0
-        print("Data Present")
+        logger.info("Data Present")
         # Load cloudid data
-        print("Loading cloudid data")
-        print(cloudid_filename)
+        logger.info("Loading cloudid data")
+        logger.info(cloudid_filename)
         cloudiddata = Dataset(cloudid_filename, "r")
         cloudnumbermap = cloudiddata["cloudnumber"][:]
         rawrainratemap = cloudiddata["precipitation"][:]
@@ -63,8 +66,8 @@ def matchtbpf_singlefile(
         cloudiddata.close()
 
         # # Read precipitation data
-        # print('Loading precip data')
-        # print(rainaccumulation_filename)
+        # logger.info('Loading precip data')
+        # logger.info(rainaccumulation_filename)
         # pfdata = Dataset(rainaccumulation_filename, 'r')
         # rawrainratemap = pfdata['precipitationCal'][:] # map of rain rate
         # lon1d = pfdata['lon'][:]
@@ -134,7 +137,7 @@ def matchtbpf_singlefile(
                 #########################################################################
                 # Intialize matrices for only MCS data
                 filteredrainratemap = np.ones((ydim, xdim), dtype=float) * np.nan
-                print(
+                logger.info(
                     "filteredrainratemap allocation size: ", filteredrainratemap.shape
                 )
 
@@ -146,10 +149,10 @@ def matchtbpf_singlefile(
                 ncloudpix = len(icloudlocationy)
 
                 if ncloudpix > 0:
-                    print("IR Clouds Present")
+                    logger.info("IR Clouds Present")
                     ######################################################################
                     # Check if any small clouds merge
-                    print("Finding mergers")
+                    logger.info("Finding mergers")
                     idmergecloudnumber = np.array(np.where(ittmergecloudnumber > 0))[
                         0, :
                     ]
@@ -182,7 +185,7 @@ def matchtbpf_singlefile(
 
                     ######################################################################
                     # Check if any small clouds split
-                    print("Finding splits")
+                    logger.info("Finding splits")
                     idsplitcloudnumber = np.array(np.where(ittsplitcloudnumber > 0))[
                         0, :
                     ]
@@ -215,7 +218,7 @@ def matchtbpf_singlefile(
 
                     ########################################################################
                     # Fill matrices with mcs data
-                    print("Fill map with data")
+                    logger.info("Fill map with data")
                     filteredrainratemap[icloudlocationy, icloudlocationx] = np.copy(
                         rawrainratemap[
                             icloudlocationt, icloudlocationy, icloudlocationx
@@ -224,7 +227,7 @@ def matchtbpf_singlefile(
 
                     ########################################################################
                     ## Isolate small region of cloud data around mcs at this time
-                    print("Calculate new shape statistics")
+                    logger.info("Calculate new shape statistics")
 
                     ## Set edges of boundary
                     miny = np.nanmin(icloudlocationy)
@@ -271,7 +274,7 @@ def matchtbpf_singlefile(
 
                     ######################################################   !!!!!!!!!!!!!!! Slow Step !!!!!!!!1
                     # Derive precipitation feature statistics
-                    print("Calculating precipitation statistics")
+                    logger.info("Calculating precipitation statistics")
                     # rawrainratemap = np.squeeze(rawrainratemap, axis = 0)
                     # ipfy, ipfx = np.array(np.where(rawrainratemap > rr_min))
                     ipfy, ipfx = np.array(np.where(subrainratemap > rr_min))
@@ -289,11 +292,11 @@ def matchtbpf_singlefile(
                                     sublandmask[ipfy, ipfx] <= landfrac_thresh
                                 )
                             else:
-                                print(
+                                logger.info(
                                     "Error, unknown precipdatasource: "
                                     + precipdatasource
                                 )
-                                print("Must define how to calculate landfrac.")
+                                logger.info("Must define how to calculate landfrac.")
 
                             if npix_land > 0:
                                 pf_landfrac[imatchcloud] = float(npix_land) / float(
@@ -333,7 +336,7 @@ def matchtbpf_singlefile(
                         # if npf_new > 0:
                         if numpf > 0:
                             npf_save = np.nanmin([nmaxpf, numpf])
-                            print("PFs present, initializing matrices")
+                            logger.info("PFs present, initializing matrices")
 
                             ##############################################
                             # Initialize matrices
@@ -364,10 +367,10 @@ def matchtbpf_singlefile(
                             pfaccumrain = np.ones(npf_save, dtype=float) * np.nan
                             pfaccumrainheavy = np.ones(npf_save, dtype=float) * np.nan
 
-                            print(
+                            logger.info(
                                 "Looping through each feature to calculate statistics"
                             )
-                            print(("Number of PFs " + str(numpf)))
+                            logger.info(("Number of PFs " + str(numpf)))
                             ###############################################
                             # Loop through each feature
                             for ipf in range(1, npf_save + 1):
@@ -425,9 +428,9 @@ def matchtbpf_singlefile(
                                         )
 
                                     ## Count number of pixel rainrate greater than specified threshold
-                                    # print('subrainratemap_size: ', subrainratemap.shape)
+                                    # logger.info('subrainratemap_size: ', subrainratemap.shape)
                                     # iirry, iirrx = np.array(np.where(subrainratemap > 8))
-                                    # print('size of iirry:', iirry.shape)
+                                    # logger.info('size of iirry:', iirry.shape)
                                     # if iirry > 0:
                                     # pf8mm[ipf-1] = iirry
 
@@ -493,7 +496,7 @@ def matchtbpf_singlefile(
                                         pfxweightedcentroid[ipf - 1] + minx
                                     )
 
-                            print("Loop done")
+                            logger.info("Loop done")
 
                             ###################################################
                             # Save precipitation feature statisitcs
