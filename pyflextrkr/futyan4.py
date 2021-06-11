@@ -105,11 +105,9 @@ def futyan4(
             labelcorecold_npix = np.copy(sortedcore_npix)
             keepspreading = 1
             # Keep looping through dilating code as long as at least one feature is growing. At this point limit it to 20 dilations. Remove this once use real data.
-            spread_list = np.ones(ncores + 1)  # 1 indexing...eww
-            spread_list[0] = 0  # just to avoid jumping to here somehow.
 
             # We set everything we don't want to process to -1
-            cold_threshold_map = ir > thresh_cold
+            cold_threshold_map = np.logical_or(ir > thresh_cold, np.isnan(ir))
             temp_storage = labelcorecold_number2d[cold_threshold_map]
             labelcorecold_number2d[cold_threshold_map] = -1
 
@@ -118,6 +116,7 @@ def futyan4(
 
             #Then just to match before we put back old labels.
             labelcorecold_number2d[cold_threshold_map] = temp_storage  # We put these back how we found them
+                                                                    # This is probably not necessary though.
 
             # Update the cloud sizes
             cloud_indices, cloud_sizes = np.unique(labelcorecold_number2d, return_counts=True)
