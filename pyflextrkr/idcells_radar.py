@@ -44,10 +44,11 @@ def idcell_csapr(
     import numpy as np
     import time
     import xarray as xr
+    import logging
     from pyflextrkr.ftfunctions import sort_renumber
 
     np.set_printoptions(threshold=np.inf)
-
+    logger.getLogger(__name__)
     ##########################################################
 
     # Read input data
@@ -116,7 +117,7 @@ def idcell_csapr(
         + file_timestring
         + ".nc"
     )
-    print("outcloudidfile: ", cloudid_outfile)
+    logger.info("outcloudidfile: ", cloudid_outfile)
 
     # Check if file exists, if it does delete it
     if os.path.isfile(cloudid_outfile):
@@ -320,8 +321,8 @@ def idcell_csapr(
     )
 
     # else:
-    #     print(input_filename)
-    #     print('No clouds')
+    #     logger.info(input_filename)
+    #     logger.info('No clouds')
 
     # import pdb; pdb.set_trace()
 

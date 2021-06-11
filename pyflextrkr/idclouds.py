@@ -50,7 +50,7 @@ def idclouds_wrf(zipped_inputs):
     import os
     import numpy as np
     import pandas as pd
-
+    import logging
     # from scipy import signal
     # import scipy as sp
     # import numpy.ma as ma
@@ -58,6 +58,7 @@ def idclouds_wrf(zipped_inputs):
     from pyflextrkr import netcdf_io as net
 
     np.set_printoptions(threshold=np.inf)
+    logger = logging.getLogger(__name__)
 
     ########################################################
     # Separate inputs
@@ -133,7 +134,7 @@ def idclouds_wrf(zipped_inputs):
     ########################################################
     # load data:
     if datasource == "WRF":
-        print(datafilepath)
+        logger.info(datafilepath)
 
         # load brighttness temperature data. automatically removes missing values
         rawdata = Dataset(datafilepath, "r")  # open file
@@ -141,7 +142,7 @@ def idclouds_wrf(zipped_inputs):
         original_lat = rawdata["lat2d"][:]
         original_lon = rawdata["lon2d"][:]
         # original_precip = rawdata['rainrate'][:]
-        # print('original_precip shape: ', original_precip.shape)
+        # logger.info('original_precip shape: ', original_precip.shape)
         original_basetime = rawdata["time"][:]
         basetime_units = rawdata["time"].units
         rawdata.close()
@@ -218,7 +219,7 @@ def idclouds_wrf(zipped_inputs):
 
             #            # Deal with missing data
             #            in_ir = np.squeeze(original_ir,axis=0)
-            #            print('in_ir shape: ', in_ir.shape)
+            #            logger.info('in_ir shape: ', in_ir.shape)
             #            df_tb = pd.DataFrame(in_ir)
             #            df_tb.fillna(method ='bfill', inplace = True)
             #            df_tb.fillna(method ='ffill', inplace = True)
@@ -339,10 +340,10 @@ def idclouds_wrf(zipped_inputs):
                     #                    final_nwarmpix = clouddata['final_nwarmpix']
                     #                    final_cloudtype = clouddata['final_cloudtype']
 
-                    #                    print('final_ncoldpix shape: ', final_ncoldpix.shape)
-                    #                    print('final_ncorecoldpix shape: ', final_ncorecoldpix.shape)
-                    #                    print('final_nwarmpix shape: ', final_nwarmpix.shape)
-                    #                    print('final_ncorepix shape: ', final_ncorepix.shape)
+                    #                    logger.info('final_ncoldpix shape: ', final_ncoldpix.shape)
+                    #                    logger.info('final_ncorecoldpix shape: ', final_ncorecoldpix.shape)
+                    #                    logger.info('final_nwarmpix shape: ', final_nwarmpix.shape)
+                    #                    logger.info('final_ncorepix shape: ', final_ncorepix.shape)
 
                     # if (final_nclouds == 0):
 
@@ -399,7 +400,7 @@ def idclouds_wrf(zipped_inputs):
                                 area_thresh / pixel_radius ** 2,
                             )
 
-                            print("npix_convcold_linkpf:", npix_convcold_linkpf.shape)
+                            logger.info("npix_convcold_linkpf:", npix_convcold_linkpf.shape)
                             # Get number of clouds from the sorted linkpf clouds
                             nclouds_linkpf = np.nanmax(pf_convcold_cloudnumber_sorted)
 
@@ -455,7 +456,7 @@ def idclouds_wrf(zipped_inputs):
                             + file_timestring
                             + ".nc"
                         )
-                        print("outcloudfile: ", cloudid_outfile)
+                        logger.info("outcloudfile: ", cloudid_outfile)
 
                         # Check if file exists, if it does delete it
                         if os.path.isfile(cloudid_outfile):
@@ -495,15 +496,15 @@ def idclouds_wrf(zipped_inputs):
                         )
 
                     else:
-                        print(datafilepath)
-                        print("No clouds")
+                        logger.info(datafilepath)
+                        logger.info("No clouds")
 
                 else:
-                    print(datafilepath)
-                    print("To much missing data")
+                    logger.info(datafilepath)
+                    logger.info("To much missing data")
             else:
-                print(datafilepath)
-                print(
+                logger.info(datafilepath)
+                logger.info(
                     "data not within latitude, longitude range. check specified geographic range"
                 )
 
@@ -608,7 +609,7 @@ def idclouds_mergedir(zipped_inputs):
     # Brightness temperature data.
     # get date and time of each file. file name formate is "irdata_yyyymmdd_hhmm.nc" thus yyyymmdd=7:15, hhmm=16:20
     if datasource == "mergedir":
-        print(datafilepath)
+        logger.info(datafilepath)
 
         # load brighttness temperature data. automatically removes missing values
         rawdata = xr.open_dataset(datafilepath, autoclose=True)  # open file
@@ -740,7 +741,7 @@ def idclouds_mergedir(zipped_inputs):
                     ).timetuple()
                 )
                 file_basetime = pd.to_datetime(TEMP_basetime, unit="s")
-                print((np.array([file_basetime], dtype="datetime64[ns]")))
+                logger.info((np.array([file_basetime], dtype="datetime64[ns]")))
 
                 # call idclouds subroutine
                 if cloudidmethod == "futyan3":
@@ -1011,8 +1012,8 @@ def idclouds_mergedir(zipped_inputs):
                     output_data.nwarmpix.attrs["units"] = "unitless"
 
                     # Write netCDF file
-                    print(cloudid_outfile)
-                    print("")
+                    logger.info(cloudid_outfile)
+                    logger.info("")
 
                     output_data.to_netcdf(
                         path=cloudid_outfile,
@@ -1074,15 +1075,15 @@ def idclouds_mergedir(zipped_inputs):
                     )
 
                 else:
-                    print(datafilepath)
-                    print("No clouds")
+                    logger.info(datafilepath)
+                    logger.info("No clouds")
 
             else:
-                print(datafilepath)
-                print("To much missing data")
+                logger.info(datafilepath)
+                logger.info("To much missing data")
         else:
-            print(datafilepath)
-            print(
+            logger.info(datafilepath)
+            logger.info(
                 "data not within latitude, longitude range. check specified geographic range"
             )
 
@@ -1190,7 +1191,7 @@ def idclouds_LES(zipped_inputs):
 
     # LWP data.
     if datasource == "LES":
-        print(datafilepath)
+        logger.info(datafilepath)
 
         # load brighttness temperature data. automatically removes missing values
         in_lwp = np.loadtxt(datafilepath, dtype=float)
@@ -1516,8 +1517,8 @@ def idclouds_LES(zipped_inputs):
                     output_data.nwarmpix.attrs["units"] = "unitless"
 
                     # Write netCDF file
-                    print(cloudid_outfile)
-                    print("")
+                    logger.info(cloudid_outfile)
+                    logger.info("")
 
                     output_data.to_netcdf(
                         path=cloudid_outfile,
@@ -1578,15 +1579,15 @@ def idclouds_LES(zipped_inputs):
                     )
 
                 else:
-                    print(datafilepath)
-                    print("No clouds")
+                    logger.info(datafilepath)
+                    logger.info("No clouds")
 
             else:
-                print(datafilepath)
-                print("To much missing data")
+                logger.info(datafilepath)
+                logger.info("To much missing data")
         else:
-            print(datafilepath)
-            print(
+            logger.info(datafilepath)
+            logger.info(
                 "data not within latitude, longitude range. check specified geographic range"
             )
 
@@ -1713,7 +1714,7 @@ def idclouds_ct(zipped_inputs):
     ########################################################
     # load data:
     if datasource == "WRF":
-        print(datafilepath)
+        logger.info(datafilepath)
 
         # load brightness temperature data. automatically removes missing values
         rawdata = Dataset(datafilepath, "r")  # open file
@@ -1721,7 +1722,7 @@ def idclouds_ct(zipped_inputs):
         original_lon = rawdata["lon2d"][:]
         original_cloudtype = rawdata["cldtype"][:]
         # original_precip = rawdata['rainrate'][:]
-        # print('original_precip shape: ', original_precip.shape)
+        # logger.info('original_precip shape: ', original_precip.shape)
         original_basetime = rawdata["time"][:]
         basetime_units = rawdata["time"].units
         rawdata.close()
@@ -1840,7 +1841,7 @@ def idclouds_ct(zipped_inputs):
                     + file_timestring
                     + ".nc"
                 )
-                print("outcloudfile: ", cloudid_outfile)
+                logger.info("outcloudfile: ", cloudid_outfile)
 
                 # Check if file exists, if it does delete it
                 if os.path.isfile(cloudid_outfile):
@@ -1879,5 +1880,5 @@ def idclouds_ct(zipped_inputs):
                 )
 
             else:
-                print(datafilepath)
-                print("No clouds")
+                logger.info(datafilepath)
+                logger.info("No clouds")

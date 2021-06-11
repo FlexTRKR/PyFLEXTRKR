@@ -90,6 +90,10 @@ def trackstats_tb(
     import time
     import gc
     import pandas as pd
+    import logging
+    
+    logger = logging.getLogger(__name__)
+
 
     np.set_printoptions(threshold=np.inf)
 
@@ -114,8 +118,8 @@ def trackstats_tb(
 
     ###################################################################################
     # # Load latitude and longitude grid. These were created in subroutine_idclouds and is saved in each file.
-    # print('Determining which files will be processed')
-    # print((time.ctime()))
+    # logger.info('Determining which files will be processed')
+    # logger.info((time.ctime()))
 
     # # Find filenames of idcloud files
     # temp_cloudidfiles = fnmatch.filter(os.listdir(tracking_inpath), cloudid_filebase +'*')
@@ -137,8 +141,8 @@ def trackstats_tb(
 
     #############################################################################
     # Load track data
-    print("Loading gettracks data")
-    print((time.ctime()))
+    logger.info("Loading gettracks data")
+    logger.info((time.ctime()))
     cloudtrack_file = (
         stats_path + tracknumbers_filebase + "_" + startdate + "_" + enddate + ".nc"
     )
@@ -171,8 +175,8 @@ def trackstats_tb(
 
     ############################################################################
     # Initialize grids
-    print("Initiailizinng matrices")
-    print((time.ctime()))
+    logger.info("Initiailizinng matrices")
+    logger.info((time.ctime()))
 
     nmaxclouds = max(lengthrange)
 
@@ -282,12 +286,12 @@ def trackstats_tb(
 
     #########################################################################################
     # loop over files. Calculate statistics and organize matrices by tracknumber and cloud
-    print("Looping over files and calculating statistics for each file")
-    print((time.ctime()))
+    logger.info("Looping over files and calculating statistics for each file")
+    logger.info((time.ctime()))
     for nf in range(0, nfiles - 1):
         # for nf in range(0, 2):
-        # print(('File #: ' + str(nf)))
-        # print((time.ctime()))
+        # logger.info(('File #: ' + str(nf)))
+        # logger.info((time.ctime()))
 
         file_tracknumbers = tracknumbers[0, nf, :]
 
@@ -295,11 +299,11 @@ def trackstats_tb(
         if np.nanmax(file_tracknumbers) > 0:
 
             fname = "".join(chartostring(cloudidfiles[nf]))
-            print(nf, fname)
+            logger.info(nf, fname)
 
             # Load cloudid file
             cloudid_file = tracking_inpath + fname
-            # print(cloudid_file)
+            # logger.info(cloudid_file)
 
             file_cloudiddata = Dataset(cloudid_file, "r")
             file_tb = file_cloudiddata["tb"][:]
@@ -321,10 +325,10 @@ def trackstats_tb(
             uniquetracknumbers = uniquetracknumbers[uniquetracknumbers > 0].astype(int)
 
             # Loop over unique tracknumbers
-            # print('Loop over tracks in file')
+            # logger.info('Loop over tracks in file')
             for itrack in uniquetracknumbers:
-                # print(('Unique track number: ' + str(itrack)))
-                # print('itrack: ', itrack)
+                # logger.info(('Unique track number: ' + str(itrack)))
+                # logger.info('itrack: ', itrack)
 
                 # Find cloud number that belongs to the current track in this file
                 cloudnumber = (
@@ -333,17 +337,17 @@ def trackstats_tb(
                 cloudindex = cloudnumber - 1  # Index within the matrice of this cloud.
 
                 # if itrack == 4771:
-                # print('itrack = 4771 and cloud number = ', cloudnumber)
-                # print('length of cloud number: ', len(cloudnumber))
-                # print('count of file core cold cloudnumber equal to cloud number: ', np.count_nonzero(file_corecold_cloudnumber == cloudnumber))
+                # logger.info('itrack = 4771 and cloud number = ', cloudnumber)
+                # logger.info('length of cloud number: ', len(cloudnumber))
+                # logger.info('count of file core cold cloudnumber equal to cloud number: ', np.count_nonzero(file_corecold_cloudnumber == cloudnumber))
                 # if len(cloudnumber) == 1:
-                # print('THE LENGTH OF CLOUD NUMBER IS 1')
+                # logger.info('THE LENGTH OF CLOUD NUMBER IS 1')
                 # else:
-                # print('THE LENGTH OF CLOUD NUMBER IS NOT 1')
+                # logger.info('THE LENGTH OF CLOUD NUMBER IS NOT 1')
                 # if len(cloudnumber) == 1:
-                # print('THE IF STATEMENT IS SATISFIED')
+                # logger.info('THE IF STATEMENT IS SATISFIED')
                 # else:
-                # print('THE IF STATEMENT FAILED')
+                # logger.info('THE IF STATEMENT FAILED')
 
                 if (
                     len(cloudnumber) == 1
@@ -356,7 +360,7 @@ def trackstats_tb(
                         )
                     )
                     # if itrack == 4771:
-                    # print('itrack = 4771 and corearea = ', corearea)
+                    # logger.info('itrack = 4771 and corearea = ', corearea)
                     ncorepix = np.shape(corearea)[1]
 
                     coldarea = np.array(
@@ -613,7 +617,7 @@ def trackstats_tb(
                                 itrack - 1
                             ] = np.copy(trackreset[0, nf, cloudindex])
 
-                            # print('shape of finaltrack_corecold_status: ', finaltrack_corecold_status.shape)
+                            # logger.info('shape of finaltrack_corecold_status: ', finaltrack_corecold_status.shape)
 
                             ####################################################################
                             # Calculate mean brightness temperature for core
@@ -636,18 +640,18 @@ def trackstats_tb(
 
     ###############################################################
     ## Remove tracks that have no cells. These tracks are short.
-    print("Removing tracks with no cells")
-    print((time.ctime()))
+    logger.info("Removing tracks with no cells")
+    logger.info((time.ctime()))
     gc.collect()
 
-    # print('finaltrack_tracklength shape at line 385: ', finaltrack_tracklength.shape)
-    # print('finaltrack_tracklength(4771): ', finaltrack_tracklength[4770])
+    # logger.info('finaltrack_tracklength shape at line 385: ', finaltrack_tracklength.shape)
+    # logger.info('finaltrack_tracklength(4771): ', finaltrack_tracklength[4770])
     cloudindexpresent = np.array(np.where(finaltrack_tracklength != -9999))[0, :]
     numtracks = len(cloudindexpresent)
-    # print('length of cloudindex present: ', len(cloudindexpresent))
+    # logger.info('length of cloudindex present: ', len(cloudindexpresent))
 
     maxtracklength = np.nanmax(finaltrack_tracklength)
-    # print('maxtracklength: ', maxtracklength)
+    # logger.info('maxtracklength: ', maxtracklength)
 
     finaltrack_tracklength = finaltrack_tracklength[cloudindexpresent]
     finaltrack_corecold_boundary = finaltrack_corecold_boundary[cloudindexpresent]
@@ -750,9 +754,9 @@ def trackstats_tb(
     adjusted_finaltrack_corecold_splitnumber = (
         np.ones(np.shape(finaltrack_corecold_mergenumber)) * -9999
     )
-    print(("total tracks: " + str(numtracks)))
-    print("Correcting mergers and splits")
-    print((time.ctime()))
+    logger.info(("total tracks: " + str(numtracks)))
+    logger.info("Correcting mergers and splits")
+    logger.info((time.ctime()))
 
     # Create adjustor
     indexcloudnumber = np.copy(cloudindexpresent) + 1
@@ -793,8 +797,8 @@ def trackstats_tb(
 
     #########################################################################
     # Record starting and ending status
-    print("Determine starting and ending status")
-    print((time.ctime()))
+    logger.info("Determine starting and ending status")
+    logger.info((time.ctime()))
 
     # Starting status
     finaltrack_corecold_startstatus = finaltrack_corecold_status[:, 0]
@@ -811,10 +815,10 @@ def trackstats_tb(
 
     #######################################################################
     # Write to netcdf
-    print("Writing trackstat netcdf")
-    print((time.ctime()))
-    print(trackstats_outfile)
-    print("")
+    logger.info("Writing trackstat netcdf")
+    logger.info((time.ctime()))
+    logger.info(trackstats_outfile)
+    logger.info("")
 
     # Check if file already exists. If exists, delete
     if os.path.isfile(trackstats_outfile):
@@ -1033,7 +1037,7 @@ def trackstats_LES(
     # Determine dimensions of data
     nfiles = len(cloudidfiles)
     ny, nx = np.shape(latitude)
-    print(f"nfiles_cloudid:{nfiles}")
+    logger.info(f"nfiles_cloudid:{nfiles}")
 
     ############################################################################
     # Initialize grids
@@ -1054,7 +1058,7 @@ def trackstats_LES(
     #########################################################################################
     # loop over files. Calculate the tracknumbers of cell tracks
 
-    print(f"numtracks from previous step:{numtracks}")
+    logger.info(f"numtracks from previous step:{numtracks}")
     numtracks_old = numtracks
 
     for nf in range(0, nfiles):
@@ -1064,12 +1068,12 @@ def trackstats_LES(
         if np.nanmax(file_tracknumbers) > 0:
 
             fname = "".join(chartostring(cloudidfiles[nf]))
-            print(nf, fname)
+            logger.info(nf, fname)
 
             # Find unique track numbers
             uniquetracknumbers = np.unique(file_tracknumbers)
             uniquetracknumbers = uniquetracknumbers[uniquetracknumbers > 0].astype(int)
-            # print(f'uniquetracknumbers:{uniquetracknumbers}')
+            # logger.info(f'uniquetracknumbers:{uniquetracknumbers}')
 
             # Loop over unique tracknumbers
             for itrack in uniquetracknumbers:
@@ -1087,7 +1091,7 @@ def trackstats_LES(
                     lengthindex = np.array(
                         np.where(finaltrack_corecold_cloudnumber[itrack - 1, :] > 0)
                     )
-                    # print(f'lengthindex:{np.shape(lengthindex)[1]}')
+                    # logger.info(f'lengthindex:{np.shape(lengthindex)[1]}')
 
                     if np.shape(lengthindex)[1] > 0:
                         nc = np.nanmax(lengthindex) + 1
@@ -1100,7 +1104,7 @@ def trackstats_LES(
                     if nc < nmaxclouds:
                         finaltrack_corecold_cloudnumber[itrack - 1, nc] = cloudnumber
                     else:
-                        print(
+                        logger.info(
                             (
                                 "Track: "
                                 + str(itrack)
@@ -1132,11 +1136,11 @@ def trackstats_LES(
             :, :nmaxclouds
         ]
 
-    print(("Number of Tracks:" + str(int(len(finaltrack_tracklength)))))
-    print(f"numtracks:      {numtracks}")
-    print(f"maxtracklength: {maxtracklength}")
-    # print(f'cloudindexpresent: {cloudindexpresent}')
-    print("Tracks with no cells NOT included")
+    logger.info(("Number of Tracks:" + str(int(len(finaltrack_tracklength)))))
+    logger.info(f"numtracks:      {numtracks}")
+    logger.info(f"maxtracklength: {maxtracklength}")
+    # logger.info(f'cloudindexpresent: {cloudindexpresent}')
+    logger.info("Tracks with no cells NOT included")
 
     ###############################################################
     # to calculate the statistic after having the number of tracks with cells
@@ -1241,7 +1245,7 @@ def trackstats_LES(
         if np.nanmax(file_tracknumbers) > 0:
 
             fname = "".join(chartostring(cloudidfiles[nf]))
-            print(nf, fname)
+            logger.info(nf, fname)
 
             # Load cloudid file
             cloudid_file = tracking_inpath + fname
@@ -1269,8 +1273,8 @@ def trackstats_LES(
 
                 # define the index in shortened array
                 icelltrack = np.where(cloudindexpresent == itrack - 1)[0][0]
-                # print(f'itrack:{itrack}')
-                # print(f'icelltrack:{icelltrack}')
+                # logger.info(f'itrack:{itrack}')
+                # logger.info(f'icelltrack:{icelltrack}')
                 if not np.size(icelltrack):
                     continue
 
@@ -1346,7 +1350,7 @@ def trackstats_LES(
                         )[0, 0]
                         # finaltrack_basetime[icelltrack, nc] = np.datetime64(pd.to_datetime(file_cloudiddata['basetime'].data)[0])
                         finaltrack_corecold_cloudnumber[itrack - 1, nc] = cloudnumber
-                        # print(f'nc:{nc}')
+                        # logger.info(f'nc:{nc}')
                         finaltrack_cloudidfile[icelltrack][nc][:] = fname
                         #                        finaltrack_cloudidfile[icelltrack][nc][:] = list(cloudidfiles[nf])
                         finaltrack_datetimestring[int(icelltrack)][int(nc)][
@@ -1548,7 +1552,7 @@ def trackstats_LES(
                         finaltrack_core_meanlwp[icelltrack, nc] = np.nanmean(corelwp)
 
                     else:
-                        print(
+                        logger.info(
                             (
                                 "Track: "
                                 + str(itrack)
@@ -1574,7 +1578,7 @@ def trackstats_LES(
 
     ########################################################
     # Correct merger and split cloud numbers
-    print("Correcting merger and split numbers")
+    logger.info("Correcting merger and split numbers")
 
     # Initialize adjusted matrices
     adjusted_finaltrack_corecold_mergenumber = (
@@ -1583,7 +1587,7 @@ def trackstats_LES(
     adjusted_finaltrack_corecold_splitnumber = (
         np.ones(np.shape(finaltrack_corecold_mergenumber)) * -9999
     )
-    print(("total tracks: " + str(numtracks)))
+    logger.info(("total tracks: " + str(numtracks)))
 
     # Create adjustor
     indexcloudnumber = np.copy(cloudindexpresent) + 1
@@ -1622,11 +1626,11 @@ def trackstats_LES(
         np.shape(finaltrack_corecold_splitnumber),
     )
 
-    print("Adjustment done")
+    logger.info("Adjustment done")
 
     #########################################################################
     # Record starting and ending status
-    print("Isolating starting and ending status")
+    logger.info("Isolating starting and ending status")
 
     # Starting status
     finaltrack_corecold_startstatus = np.copy(finaltrack_corecold_status[:, 0])
@@ -1650,9 +1654,9 @@ def trackstats_LES(
     # Write to netcdf
     gc.collect()
 
-    print("Writing trackstat netcdf")
-    print(trackstats_outfile)
-    print("")
+    logger.info("Writing trackstat netcdf")
+    logger.info(trackstats_outfile)
+    logger.info("")
 
     # Check if file already exists. If exists, delete
     if os.path.isfile(trackstats_outfile):
@@ -2211,7 +2215,7 @@ def trackstats_WRF(
     # Determine dimensions of data
     nfiles = len(cloudidfiles)
     ny, nx = np.shape(latitude)
-    print(nfiles)
+    logger.info(nfiles)
 
     ############################################################################
     # Initialize grids
@@ -2322,8 +2326,8 @@ def trackstats_WRF(
         # Only process file if that file contains a track
         if np.nanmax(file_tracknumbers) > 0:
             fname = "".join(chartostring(cloudidfiles[nf]))
-            #            print((''.join(cloudidfiles[nf])))
-            print(nf, fname)
+            #            logger.info((''.join(cloudidfiles[nf])))
+            logger.info(nf, fname)
 
             # Load cloudid file
             #            cloudid_file = tracking_inpath + ''.join(cloudidfiles[nf])
@@ -2628,7 +2632,7 @@ def trackstats_WRF(
                         finaltrack_core_meantb[itrack - 1, nc] = np.nanmean(coretb)
 
                     else:
-                        print(
+                        logger.info(
                             (
                                 "Track: "
                                 + str(itrack)
@@ -2649,7 +2653,7 @@ def trackstats_WRF(
     ###############################################################
     ## Remove tracks that have no cells. These tracks are short.
 
-    print("Removing tracks with no cells")
+    logger.info("Removing tracks with no cells")
     gc.collect()
 
     cloudindexpresent = np.array(np.where(finaltrack_tracklength != -9999))[0, :]
@@ -2747,12 +2751,12 @@ def trackstats_WRF(
     ]
 
     gc.collect()
-    print("Tracks with no cells removed")
-    print(("Number of Tracks:" + str(int(len(finaltrack_tracklength)))))
+    logger.info("Tracks with no cells removed")
+    logger.info(("Number of Tracks:" + str(int(len(finaltrack_tracklength)))))
 
     ########################################################
     # Correct merger and split cloud numbers
-    print("Correcting merger and split numbers")
+    logger.info("Correcting merger and split numbers")
 
     # Initialize adjusted matrices
     adjusted_finaltrack_corecold_mergenumber = (
@@ -2761,7 +2765,7 @@ def trackstats_WRF(
     adjusted_finaltrack_corecold_splitnumber = (
         np.ones(np.shape(finaltrack_corecold_mergenumber)) * -9999
     )
-    print(("total tracks: " + str(numtracks)))
+    logger.info(("total tracks: " + str(numtracks)))
 
     # Create adjustor
     indexcloudnumber = np.copy(cloudindexpresent) + 1
@@ -2800,11 +2804,11 @@ def trackstats_WRF(
         np.shape(finaltrack_corecold_splitnumber),
     )
 
-    print("Adjustment done")
+    logger.info("Adjustment done")
 
     #########################################################################
     # Record starting and ending status
-    print("Isolating starting and ending status")
+    logger.info("Isolating starting and ending status")
 
     # Starting status
     finaltrack_corecold_startstatus = np.copy(finaltrack_corecold_status[:, 0])
@@ -2828,9 +2832,9 @@ def trackstats_WRF(
     # Write to netcdf
     gc.collect()
 
-    print("Writing trackstat netcdf")
-    print(trackstats_outfile)
-    print("")
+    logger.info("Writing trackstat netcdf")
+    logger.info(trackstats_outfile)
+    logger.info("")
 
     # Check if file already exists. If exists, delete
     if os.path.isfile(trackstats_outfile):
@@ -3348,8 +3352,8 @@ def trackstats_ct(
 
     ###################################################################################
     # # Load latitude and longitude grid. These were created in subroutine_idclouds and is saved in each file.
-    # print('Determining which files will be processed')
-    # print((time.ctime()))
+    # logger.info('Determining which files will be processed')
+    # logger.info((time.ctime()))
 
     # # Find filenames of idcloud files
     # temp_cloudidfiles = fnmatch.filter(os.listdir(tracking_inpath), cloudid_filebase +'*')
@@ -3371,8 +3375,8 @@ def trackstats_ct(
 
     #############################################################################
     # Load track data
-    print("Loading gettracks data")
-    print((time.ctime()))
+    logger.info("Loading gettracks data")
+    logger.info((time.ctime()))
     cloudtrack_file = (
         stats_path + tracknumbers_filebase + "_" + startdate + "_" + enddate + ".nc"
     )
@@ -3405,8 +3409,8 @@ def trackstats_ct(
 
     ############################################################################
     # Initialize grids
-    print("Initiailizinng matrices")
-    print((time.ctime()))
+    logger.info("Initiailizinng matrices")
+    logger.info((time.ctime()))
 
     nmaxclouds = max(lengthrange)
 
@@ -3510,12 +3514,12 @@ def trackstats_ct(
 
     #########################################################################################
     # loop over files. Calculate statistics and organize matrices by tracknumber and cloud
-    print("Looping over files and calculating statistics for each file")
-    print((time.ctime()))
+    logger.info("Looping over files and calculating statistics for each file")
+    logger.info((time.ctime()))
     for nf in range(0, nfiles - 1):
         # for nf in range(0, 2):
-        # print(('File #: ' + str(nf)))
-        # print((time.ctime()))
+        # logger.info(('File #: ' + str(nf)))
+        # logger.info((time.ctime()))
 
         file_tracknumbers = tracknumbers[0, nf, :]
 
@@ -3523,11 +3527,11 @@ def trackstats_ct(
         if np.nanmax(file_tracknumbers) > 0:
 
             fname = "".join(chartostring(cloudidfiles[nf]))
-            print(nf, fname)
+            logger.info(nf, fname)
 
             # Load cloudid file
             cloudid_file = tracking_inpath + fname
-            # print(cloudid_file)
+            # logger.info(cloudid_file)
 
             file_cloudiddata = Dataset(cloudid_file, "r")
             file_ct = file_cloudiddata["ct"][:]
@@ -3548,10 +3552,10 @@ def trackstats_ct(
             uniquetracknumbers = uniquetracknumbers[uniquetracknumbers > 0].astype(int)
 
             # Loop over unique tracknumbers
-            # print('Loop over tracks in file')
+            # logger.info('Loop over tracks in file')
             for itrack in uniquetracknumbers:
-                # print(('Unique track number: ' + str(itrack)))
-                # print('itrack: ', itrack)
+                # logger.info(('Unique track number: ' + str(itrack)))
+                # logger.info('itrack: ', itrack)
 
                 # Find cloud number that belongs to the current track in this file
                 cloudnumber = (
@@ -3801,7 +3805,7 @@ def trackstats_ct(
                                 itrack - 1
                             ] = np.copy(trackreset[0, nf, cloudindex])
 
-                            # print('shape of finaltrack_corecold_status: ', finaltrack_corecold_status.shape)
+                            # logger.info('shape of finaltrack_corecold_status: ', finaltrack_corecold_status.shape)
 
                     else:
                         sys.exit(
@@ -3818,18 +3822,18 @@ def trackstats_ct(
 
     ###############################################################
     ## Remove tracks that have no cells. These tracks are short.
-    print("Removing tracks with no cells")
-    print((time.ctime()))
+    logger.info("Removing tracks with no cells")
+    logger.info((time.ctime()))
     gc.collect()
 
-    # print('finaltrack_tracklength shape at line 385: ', finaltrack_tracklength.shape)
-    # print('finaltrack_tracklength(4771): ', finaltrack_tracklength[4770])
+    # logger.info('finaltrack_tracklength shape at line 385: ', finaltrack_tracklength.shape)
+    # logger.info('finaltrack_tracklength(4771): ', finaltrack_tracklength[4770])
     cloudindexpresent = np.array(np.where(finaltrack_tracklength != -9999))[0, :]
     numtracks = len(cloudindexpresent)
-    # print('length of cloudindex present: ', len(cloudindexpresent))
+    # logger.info('length of cloudindex present: ', len(cloudindexpresent))
 
     maxtracklength = np.nanmax(finaltrack_tracklength)
-    # print('maxtracklength: ', maxtracklength)
+    # logger.info('maxtracklength: ', maxtracklength)
 
     finaltrack_tracklength = finaltrack_tracklength[cloudindexpresent]
     finaltrack_corecold_boundary = finaltrack_corecold_boundary[cloudindexpresent]
@@ -3930,9 +3934,9 @@ def trackstats_ct(
     adjusted_finaltrack_corecold_splitnumber = (
         np.ones(np.shape(finaltrack_corecold_mergenumber)) * -9999
     )
-    print(("total tracks: " + str(numtracks)))
-    print("Correcting mergers and splits")
-    print((time.ctime()))
+    logger.info(("total tracks: " + str(numtracks)))
+    logger.info("Correcting mergers and splits")
+    logger.info((time.ctime()))
 
     # Create adjustor
     indexcloudnumber = np.copy(cloudindexpresent) + 1
@@ -3973,8 +3977,8 @@ def trackstats_ct(
 
     #########################################################################
     # Record starting and ending status
-    print("Determine starting and ending status")
-    print((time.ctime()))
+    logger.info("Determine starting and ending status")
+    logger.info((time.ctime()))
 
     # Starting status
     finaltrack_corecold_startstatus = finaltrack_corecold_status[:, 0]
@@ -3991,10 +3995,10 @@ def trackstats_ct(
 
     #######################################################################
     # Write to netcdf
-    print("Writing trackstat netcdf")
-    print((time.ctime()))
-    print(trackstats_outfile)
-    print("")
+    logger.info("Writing trackstat netcdf")
+    logger.info((time.ctime()))
+    logger.info(trackstats_outfile)
+    logger.info("")
 
     # Check if file already exists. If exists, delete
     if os.path.isfile(trackstats_outfile):

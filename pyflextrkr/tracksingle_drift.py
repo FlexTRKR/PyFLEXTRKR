@@ -43,12 +43,16 @@ def trackclouds(zipped_inputs):
     import pandas as pd
     import time
     import scipy.ndimage as ndi
+    import logging
+    
+    logger = logging.getLogger(__name__)
+
 
     # Separate inputs
     firstcloudidfilename = zipped_inputs[0]
-    print("firstcloudidfilename: ", firstcloudidfilename)
+    logger.info("firstcloudidfilename: ", firstcloudidfilename)
     secondcloudidfilename = zipped_inputs[1]
-    print("secondcloudidfilename: ", secondcloudidfilename)
+    logger.info("secondcloudidfilename: ", secondcloudidfilename)
     firstdatestring = zipped_inputs[2]
     seconddatestring = zipped_inputs[3]
     firsttimestring = zipped_inputs[4]
@@ -76,24 +80,24 @@ def trackclouds(zipped_inputs):
     new_datestring = seconddatestring
     new_timestring = secondtimestring
     new_basetime = secondbasetime
-    print("new basetime: ", new_basetime)
+    logger.info("new basetime: ", new_basetime)
     new_filedatetime = str(new_datestring) + "_" + str(new_timestring)
 
     reference_file = firstcloudidfilename
     reference_datestring = firstdatestring
     reference_timestring = firsttimestring
     reference_basetime = firstbasetime
-    print("ref basetime: ", reference_basetime)
+    logger.info("ref basetime: ", reference_basetime)
     reference_filedatetime = str(reference_datestring) + "_" + str(reference_timestring)
 
     # Check that new and reference files differ by less than timegap in hours. Use base time (which is the seconds since 01-Jan-1970 00:00:00). Divide base time difference between the files by 3600 to get difference in hours
     hour_diff = (np.subtract(new_basetime, reference_basetime)) / float(3600)
     if hour_diff < timegap and hour_diff > 0:
-        print("Linking:")
+        logger.info("Linking:")
 
         ##############################################################
         # Load cloudid file from before, called reference file
-        print(reference_filedatetime)
+        logger.info(reference_filedatetime)
 
         reference_data = xr.open_dataset(reference_file)  # Open file
         reference_convcold_cloudnumber = reference_data[
@@ -109,7 +113,7 @@ def trackclouds(zipped_inputs):
 
         ##########################################################
         # Load next cloudid file, called new file
-        print("new_filedattime: ", new_filedatetime)
+        logger.info("new_filedattime: ", new_filedatetime)
 
         new_data = xr.open_dataset(new_file)  # Open file
         new_convcold_cloudnumber = new_data[
@@ -129,11 +133,11 @@ def trackclouds(zipped_inputs):
             # Shift the reference cloudnumber and replace the original
             reference_convcold_cloudnumber = ndi.shift(reference_convcold_cloudnumber, [0, ydrift, xdrift])
         else:
-            print(
+            logger.info(
                 "Warning: datetime_drift does NOT match reference_filedatetime! No shifting is applied."
             )
-            print("reference_filedatetime: " + reference_filedatetime)
-            print("datetime_drift: " + datetime_drift)
+            logger.info("reference_filedatetime: " + reference_filedatetime)
+            logger.info("datetime_drift: " + datetime_drift)
 
         # import pdb; pdb.set_trace()
 
@@ -187,8 +191,8 @@ def trackclouds(zipped_inputs):
 
                 if sizematch / float(sizeref) > othresh:
                     if forward_nmatch > nmaxlinks:
-                        print(("reference: " + number_filepath + files[ifile - 1]))
-                        print(("new: " + number_filepath + files[ifile]))
+                        logger.info(("reference: " + number_filepath + files[ifile - 1]))
+                        logger.info(("new: " + number_filepath + files[ifile]))
                         sys.exit(
                             "More than "
                             + str(int(nmaxlinks))
@@ -238,8 +242,8 @@ def trackclouds(zipped_inputs):
 
                 if sizematch / float(sizenew) > othresh:
                     if backward_nmatch > nmaxlinks:
-                        print(("reference: " + number_filepath + files[ifile - 1]))
-                        print(("new: " + number_filepath + files[ifile]))
+                        logger.info(("reference: " + number_filepath + files[ifile - 1]))
+                        logger.info(("new: " + number_filepath + files[ifile]))
                         sys.exit(
                             "More than "
                             + str(int(nmaxlinks))
@@ -269,9 +273,9 @@ def trackclouds(zipped_inputs):
         if os.path.isfile(track_outfile):
             os.remove(track_outfile)
 
-        print("Writing single tracks")
-        print(track_outfile)
-        print("")
+        logger.info("Writing single tracks")
+        logger.info(track_outfile)
+        logger.info("")
 
         # Define xarracy dataset
         output_data = xr.Dataset(

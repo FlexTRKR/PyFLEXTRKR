@@ -298,10 +298,8 @@ if __name__ == '__main__':
         print((time.ctime()))
 
         # Isolate all possible files
-        allcloudidfiles = fnmatch.filter(os.listdir(tracking_outpath), cloudid_filebase +'*')
+        allcloudidfiles = sorted(fnmatch.filter(os.listdir(tracking_outpath), cloudid_filebase +'*'))
 
-        # Put in temporal order
-        allcloudidfiles = sorted(allcloudidfiles)
 
         # Loop through files, identifying files within the startdate - enddate interval
         nleadingchar = np.array(len(cloudid_filebase)).astype(int)

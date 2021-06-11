@@ -21,6 +21,9 @@ def label_and_grow_cold_clouds(
     from scipy.ndimage import label, binary_dilation, generate_binary_structure, filters
     from scipy.interpolate import RectBivariateSpline
     from astropy.convolution import Box2DKernel, convolve, convolve_fft
+    import logging
+
+    logger = logging.getLogger(__name__)
 
     ######################################################################
 

@@ -30,6 +30,10 @@ def calc_stats_radar(
     import time
     import gc
     import datetime
+    import logging
+    
+    logger = logging.getLogger(__name__)
+
 
     # import xarray as xr
     import pandas as pd
@@ -40,11 +44,11 @@ def calc_stats_radar(
     if np.nanmax(file_tracknumbers) > 0:
 
         fname = "".join(chartostring(cloudidfiles))
-        print(fname)
+        logger.info(fname)
 
         # Load cloudid file
         cloudid_file = tracking_inpath + fname
-        # print(cloudid_file)
+        # logger.info(cloudid_file)
 
         file_cloudiddata = Dataset(cloudid_file, "r")
         file_dbz = file_cloudiddata["comp_ref"][:]
@@ -119,7 +123,7 @@ def calc_stats_radar(
         finaltrack_cell_rangeflag = np.full(numtracks, fillval, dtype=np.int)
 
         # Loop over unique tracknumbers
-        # print('Loop over tracks in file')
+        # logger.info('Loop over tracks in file')
         for itrack in range(numtracks):
 
             # Find cloud number that belongs to the current track in this file
@@ -254,12 +258,12 @@ def calc_stats_radar(
                     )
 
             elif len(cloudnumber) > 1:
-                print(
+                logger.info(
                     "Error: cloudnumber "
                     + str(cloudnumber)
                     + " clouds linked to more than one track!"
                 )
-                print(
+                logger.info(
                     "Each track should only be linked to one cloud in each file in the track_number array. "
                     + "The track_number variable only tracks the largest cell in mergers and splits. "
                     + "The small clouds in tracks and mergers should only be listed in the "

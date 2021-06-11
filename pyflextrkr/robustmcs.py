@@ -74,8 +74,11 @@ def filtermcs_wrf_rain(
     import time
     import warnings
     import pandas as pd
+    import logging
 
     np.set_printoptions(threshold=np.inf)
+    logger = logging.getLogger(__name__)
+
 
     ######################################################
     # Load mergedir mcs and pf data
@@ -117,7 +120,7 @@ def filtermcs_wrf_rain(
     ###################################################
     # Loop through each track
     for nt in range(0, ntracks):
-        print(("Track # " + str(nt)))
+        logger.info(("Track # " + str(nt)))
 
         ############################################
         # Isolate data from this track
@@ -169,7 +172,7 @@ def filtermcs_wrf_rain(
 
                         # Label this period as an mcs
                         pf_mcsstatus[nt, igroup_indices] = 1
-                        print("MCS")
+                        logger.info("MCS")
 
                         ## Determine type of mcs (squall or non-squall)
                         # isquall = np.array(np.where(igroup_ccaspectratio > aspectratiothresh))[0, :]
@@ -184,14 +187,14 @@ def filtermcs_wrf_rain(
                         #    pf_mcstype[nt] = 2
                         #    pf_cctype[nt, igroup_indices[isquall]] = 2
                     else:
-                        print("Not MCS")
+                        logger.info("Not MCS")
 
             # Group does not satistfy duration threshold
             else:
                 trackid_nonmcs = np.append(trackid_nonmcs, nt)
-                print("Not NCS")
+                logger.info("Not NCS")
         else:
-            print("Not MCS")
+            logger.info("Not MCS")
 
     # Isolate tracks that have robust MCS
     TEMP_mcsstatus = np.copy(pf_mcsstatus).astype(float)
@@ -203,7 +206,7 @@ def filtermcs_wrf_rain(
     if nmcs == 0:
         sys.exit("No MCS found!")
     else:
-        print(("Number of robust MCS: " + str(int(nmcs))))
+        logger.info(("Number of robust MCS: " + str(int(nmcs))))
 
     # Isolate data associated with robust MCS
     ir_tracklength = ir_tracklength[trackid_mcs]
@@ -793,8 +796,8 @@ def filtermcs_wrf_rain(
     output_data.lifecycle_stage.attrs["units"] = "unitless"
 
     # Write netcdf file
-    print("")
-    print(statistics_outfile)
+    logger.info("")
+    logger.info(statistics_outfile)
 
     output_data.to_netcdf(
         path=statistics_outfile,

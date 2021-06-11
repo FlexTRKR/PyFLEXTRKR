@@ -26,6 +26,10 @@ def calc_stats_single(
     import datetime
     import xarray as xr
     import pandas as pd
+    import logging
+    
+    logger = logging.getLogger(__name__)
+
 
     file_tracknumbers = tracknumbers
 
@@ -33,16 +37,16 @@ def calc_stats_single(
     if np.nanmax(file_tracknumbers) > 0:
 
         fname = "".join(chartostring(cloudidfiles))
-        print(fname)
+        logger.info(fname)
 
         # Load cloudid file
         cloudid_file = tracking_inpath + fname
-        # print(cloudid_file)
+        # logger.info(cloudid_file)
 
         file_cloudiddata = Dataset(cloudid_file, "r")
         # file_tb = file_cloudiddata['tb'][:]
         file_cloudtype = file_cloudiddata["ct"][:]
-        print("shape file_cloudtype: ", file_cloudtype.shape)
+        logger.info("shape file_cloudtype: ", file_cloudtype.shape)
         # file_all_cloudnumber = file_cloudiddata['cloudnumber'][:]
         file_corecold_cloudnumber = file_cloudiddata["convcold_cloudnumber"][:]
         file_basetime = file_cloudiddata["basetime"][:]
@@ -107,11 +111,11 @@ def calc_stats_single(
         finaltrack_cloudtype_deep = np.ones(int(numtracks), dtype=np.int32) * -9999
 
         # Loop over unique tracknumbers
-        # print('Loop over tracks in file')
+        # logger.info('Loop over tracks in file')
         # for itrack in uniquetracknumbers:
         for itrack in range(numtracks):
-            # print(('Unique track number: ' + str(itrack)))
-            # print('itrack: ', itrack)
+            # logger.info(('Unique track number: ' + str(itrack)))
+            # logger.info('itrack: ', itrack)
 
             # Find cloud number that belongs to the current track in this file
             cloudnumber = (
@@ -164,7 +168,7 @@ def calc_stats_single(
                 n_deeppix = np.count_nonzero(cloudtype_track == 4)
 
                 ## Find current length of the track. Use for indexing purposes. Also, record the current length the given track.
-                # print('finaltrack_corecold_cloudnumber.shape: ',finaltrack_corecold_cloudnumber.shape)
+                # logger.info('finaltrack_corecold_cloudnumber.shape: ',finaltrack_corecold_cloudnumber.shape)
                 # lengthindex = np.array(np.where(finaltrack_corecold_cloudnumber[itrack-1] > 0))
                 # if np.shape(lengthindex)[1] > 0:
                 # nc = np.nanmax(lengthindex) + 1
@@ -270,7 +274,7 @@ def calc_stats_single(
                     # Turn cloud map to binary
                     isolatedcloudnumber[isolatedcloudnumber != cloudnumber] = 0
                     isolatedcloudnumber[isolatedcloudnumber == cloudnumber] = 1
-                    # print(isolatedcloudnumber)
+                    # logger.info(isolatedcloudnumber)
 
                     # Calculate major axis, orientation, eccentricity
                     # cloudproperities = regionprops(isolatedcloudnumber, intensity_image=None)
@@ -304,7 +308,7 @@ def calc_stats_single(
                         trackreset[cloudindex]
                     )
 
-                    # print('shape of finaltrack_corecold_status: ', finaltrack_corecold_status.shape)
+                    # logger.info('shape of finaltrack_corecold_status: ', finaltrack_corecold_status.shape)
 
             elif len(cloudnumber) > 1:
                 sys.exit(

@@ -65,7 +65,7 @@ def gettracknumbers(
     import logging
     logger = logging.getLogger(__name__)
 
-    np.set_logger.infooptions(threshold=np.inf)
+    np.set_printoptions(threshold=np.inf)
 
     #############################################################################
     # Set track numbers output file name
