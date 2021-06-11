@@ -284,9 +284,9 @@ def idclouds_gpmmergir(
                                 warmanvilexpansion,
                             )
                         elif cloudidmethod == "futyan4":
-                            from pyflextrkr.futyan4 import futyan4
+                            from pyflextrkr.label_and_grow_cold_clouds import label_and_grow_cold_clouds
 
-                            clouddata = futyan4(
+                            clouddata = label_and_grow_cold_clouds(
                                 out_ir,
                                 pixel_radius,
                                 cloudtb_threshs,

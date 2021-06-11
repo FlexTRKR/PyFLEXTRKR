@@ -6,7 +6,7 @@ from scipy.interpolate import RectBivariateSpline
 from astropy.convolution import Box2DKernel, convolve, convolve_fft
 
 
-def futyan4(
+def label_and_grow_cold_clouds(
     ir,
     pixel_radius,
     tb_threshs,

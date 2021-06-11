@@ -6,6 +6,7 @@ import sys
 import time
 from itertools import repeat
 from multiprocessing import Pool
+import logging
 
 import numpy as np
 from pytz import utc
@@ -151,6 +152,9 @@ if __name__ == '__main__':
     pfdata_filebase = 'merg_'
     rainaccumulation_filebase = 'merg_'
     root_path = os.environ['FLEXTRKR_BASE_DATA_PATH']
+    logger = logging.getLogger()
+    logging.basicConfig(format='%(asctime)s - %(levelname)s - %(message)s', level=logging.DEBUG)
+
 
     print(f'ROOT PATH IS {root_path}')
 
