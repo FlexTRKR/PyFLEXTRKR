@@ -93,15 +93,17 @@ def match_tbpf_tracks(
     import xarray as xr
     import time
     import glob
+    import logging
     from multiprocessing import Pool
     from pyflextrkr.matchtbpf_single import matchtbpf_singlefile
 
     np.set_printoptions(threshold=np.inf)
+    logger = logging.getLogger(__name__)
 
     #########################################################
     # Load MCS track stats
-    print("Loading IR data")
-    print((time.ctime()))
+    logger.info("Loading IR data")
+    logger.info((time.ctime()))
     mcsirstatistics_file = (
         stats_path + mcsstats_filebase + startdate + "_" + enddate + ".nc"
     )
@@ -110,11 +112,11 @@ def match_tbpf_tracks(
     ir_ntracks = np.nanmax(mcsirstatdata["ntracks"]) + 1
     ir_nmaxlength = np.nanmax(mcsirstatdata["ntimes"]) + 1
     ir_basetime = mcsirstatdata["mcs_basetime"][:]
-    # print(ir_basetime)
+    # logger.info(ir_basetime)
     basetime_units = mcsirstatdata["mcs_basetime"].units
-    # print(basetime_units)
+    # logger.info(basetime_units)
     # basetime_calendar = mcsirstatdata['mcs_basetime'].calendar
-    # print(basetime_calendar)
+    # logger.info(basetime_calendar)
     ir_datetimestring = mcsirstatdata["mcs_datetimestring"][:]
     ir_cloudnumber = mcsirstatdata["mcs_cloudnumber"][:]
     ir_mergecloudnumber = mcsirstatdata["mcs_mergecloudnumber"][:]
@@ -144,8 +146,8 @@ def match_tbpf_tracks(
     pfn_lmap = []
     ###################################################################
     # Intialize precipitation statistic matrices
-    print("Initializing matrices")
-    print((time.ctime()))
+    logger.info("Initializing matrices")
+    logger.info((time.ctime()))
 
     # Variables for each precipitation feature
     missing_val = -9999
@@ -195,12 +197,12 @@ def match_tbpf_tracks(
 
     ##############################################################
     # Find precipitation feature in each mcs
-    print(("Total Number of Tracks:" + str(ir_ntracks)))
+    logger.info(("Total Number of Tracks:" + str(ir_ntracks)))
 
     # Loop over each track
-    print("Looping over each track")
-    print((time.ctime()))
-    print(ir_ntracks)
+    logger.info("Looping over each track")
+    logger.info((time.ctime()))
+    logger.info(ir_ntracks)
 
     statistics_outfile = (
         stats_path + "mcs_tracks_pf_" + startdate + "_" + enddate + ".nc"
@@ -333,8 +335,8 @@ def match_tbpf_tracks(
 
     ###################################
     # Convert number of pixels to area
-    print("Converting pixels to area")
-    print((time.ctime()))
+    logger.info("Converting pixels to area")
+    logger.info((time.ctime()))
 
     pf_pfarea = np.multiply(pf_pfnpix, np.square(pixel_radius))
     pf_pfarea[np.where(pf_pfarea < 0)] = np.nan
@@ -342,8 +344,8 @@ def match_tbpf_tracks(
 
     ##################################
     # Save output to netCDF file
-    print("Saving data")
-    print((time.ctime()))
+    logger.info("Saving data")
+    logger.info((time.ctime()))
 
     # Check if file already exists. If exists, delete
     if os.path.isfile(statistics_outfile):
@@ -697,8 +699,8 @@ def match_tbpf_tracks(
     ] = heavy_rainrate_thresh
 
     # Write netcdf file
-    print("")
-    print(statistics_outfile)
+    logger.info("")
+    logger.info(statistics_outfile)
     output_data.to_netcdf(
         path=statistics_outfile,
         mode="w",

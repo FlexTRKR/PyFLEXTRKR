@@ -59,6 +59,7 @@ def identifymcs_tb(
     import sys
     import xarray as xr
     import pandas as pd
+    import logging
 
     np.set_printoptions(threshold=np.inf)
 
@@ -67,7 +68,8 @@ def identifymcs_tb(
     statistics_file = (
         stats_path + statistics_filebase + "_" + startdate + "_" + enddate + ".nc"
     )
-    print(statistics_file)
+    logger = logging.getLogger(__name__)
+    logger.debug(statistics_file)
 
     allstatdata = Dataset(statistics_file, "r")
     ntracks_all = (
@@ -76,7 +78,7 @@ def identifymcs_tb(
     nmaxlength = (
         np.nanmax(allstatdata["nmaxlength"]) + 1
     )  # Maximum number of features in a given track
-    print(nmaxlength)
+    logger.debug(f"nmaxlength:{nmaxlength}")
     nconv = allstatdata["nconv"][:]
     ncoldanvil = allstatdata["ncoldanvil"][:]
     lifetime = allstatdata["lifetime"][:]
@@ -102,15 +104,15 @@ def identifymcs_tb(
     datadescription = allstatdata.getncattr("description")
     allstatdata.close()
 
-    print("MCS duration threshold: ", duration_thresh)
-    print("MCS CCS area threshold: ", area_thresh)
+    logger.info(f"MCS duration threshold: {duration_thresh}")
+    logger.info(f"MCS CCS area threshold: {area_thresh}")
 
     ####################################################################
     # Set up thresholds
 
     # Cold Cloud Shield (CCS) area
     trackstat_corearea = np.multiply(nconv, pixelradius ** 2)
-    trackstat_ccsarea = nconv + np.multiply(ncoldanvil, pixelradius ** 2)
+    trackstat_ccsarea =  np.multiply(ncoldanvil+nconv, pixelradius ** 2)
 
     # Convert path duration to time
     trackstat_duration = np.multiply(lifetime, time_resolution)
@@ -127,7 +129,7 @@ def identifymcs_tb(
 
     ###################################################################
     # Identify MCSs
-    print("Total number of tracks to check: ", ntracks_all)
+    logger.info(f"Total number of tracks to check: {ntracks_all}")
     for nt in range(0, ntracks_all):
         # Get data for a given track
         track_corearea = np.copy(trackstat_corearea[nt, :])
@@ -146,8 +148,6 @@ def identifymcs_tb(
 
             # Cold cloud shield area requirement
             iccs = np.array(np.where(track_ccsarea > area_thresh))[0, :]
-            # print('nt: ', nt)
-            # print('len iccs: ', len(iccs))
             nccs = len(iccs)
 
             # Find continuous times
@@ -166,8 +166,6 @@ def identifymcs_tb(
                         (groups[t][-1] - groups[t][0] + 1), time_resolution
                     )
                     if duration_group >= duration_thresh:
-                        # if np.multiply(len(groups[t][:]), time_resolution) >= duration_thresh:
-                        # print('Number of times * TIME RESOLUTION GREATER THAN DUR_THRESH')
 
                         # Isolate area and eccentricity for the subperiod
                         subtrack_ccsarea = track_ccsarea[groups[t][:]]
@@ -184,38 +182,30 @@ def identifymcs_tb(
                             # Label as MCS
                             mcstype[nt] = 1
                             mcsstatus[nt, groups[t][:]] = 1
-                            # print('nt: ', nt)
-                            # print('eccentricity met-mcs')
                         else:
                             # Label as squall line
                             mcstype[nt] = 2
                             mcsstatus[nt, groups[t][:]] = 2
                             trackid_sql = np.append(trackid_sql, nt)
-                            # print('nt: ', nt)
-                            # print('eccentricity not met-sl')
                         trackid_mcs = np.append(trackid_mcs, nt)
                     else:
                         # Size requirement met but too short of a period
                         trackid_nonmcs = np.append(trackid_nonmcs, nt)
-                        # print('nt: ', nt)
-                        # print('size met but duration not')
 
             else:
                 # Size requirement not met
                 trackid_nonmcs = np.append(trackid_nonmcs, nt)
-                # print('nt: ', nt)
-                # print('size not met')
 
     ################################################################
     # Check that there are MCSs to continue processing
     if trackid_mcs == []:
-        print("There are no MCSs in the domain, the code will crash")
+        logger.info("There are no MCSs in the domain, the code will crash")
 
     ################################################################
     # Subset MCS / Squall track index
     trackid = np.array(np.where(mcstype > 0))[0, :]
     nmcs = len(trackid)
-    print("Number of Tb defined MCS: ", nmcs)
+    logger.info(f"Number of Tb defined MCS: {nmcs}")
 
     if nmcs > 0:
         mcsstatus = mcsstatus[trackid, :]
@@ -239,7 +229,6 @@ def identifymcs_tb(
     for imcs in np.arange(0, nmcs):
         ###################################################################################
         # Isolate basetime data
-        # print('')
         if imcs == 0:
             mcsbasetime = basetime[trackid[imcs], :]
             # mcsbasetime = np.array([pd.to_datetime(num2date(basetime[trackid[imcs], :], units=basetime_units, calendar=basetime_calendar))], dtype='datetime64[s]')
@@ -251,11 +240,9 @@ def identifymcs_tb(
 
         ###################################################################################
         # Find mergers
-        # print('Mergers')
         [mergefile, mergefeature] = np.array(
             np.where(mergecloudnumbers == mcstracknumbers[imcs])
         )
-        # print((len(mergefile)))
         for imerger in range(0, len(mergefile)):
             additionalmergefile, additionalmergefeature = np.array(
                 np.where(mergecloudnumbers == mergefile[imerger] + 1)
@@ -298,20 +285,14 @@ def identifymcs_tb(
 
                 # Loop through each timestep in the MCS track
                 for t in np.arange(0, mcslength[imcs]):
-                    # print('t: ', t)
 
                     # Find merging cloud times that match current mcs track time
                     timematch = np.where(mergingbasetime == imcsbasetime[int(t)])
-                    # print('timematch: ', timematch)
 
                     if np.shape(timematch)[1] > 0:
 
                         # save cloud number of small mergers
                         nmergers = np.shape(timematch)[1]
-                        # print('IMCS: ', imcs)
-                        # print('INT (T): ', int(t))
-                        # print('NMERGERS SHAPE: ', np.shape(timematch)[1])
-                        # print('MERGING CLOUD NUMBER TIMEMATCH: ', mergingcloudnumber[timematch])
                         mcsmergecloudnumber[
                             imcs, int(t), 0:nmergers
                         ] = mergingcloudnumber[timematch]
@@ -561,8 +542,7 @@ def identifymcs_tb(
     output_data.mcs_splitcloudnumber.attrs["units"] = "unitless"
 
     # Write netcdf file
-    print(mcstrackstatistics_outfile)
-    print("")
+    logger.info(mcstrackstatistics_outfile)
 
     output_data.to_netcdf(
         path=mcstrackstatistics_outfile,

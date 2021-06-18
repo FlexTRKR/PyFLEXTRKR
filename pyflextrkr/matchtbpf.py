@@ -94,8 +94,10 @@ def identifypf_wrf_rain(
     import xarray as xr
     import pandas as pd
     import time
+    import logging
 
     np.set_printoptions(threshold=np.inf)
+    logger = logging.getLogger(__name__)
 
     #########################################################
     # Load MCS track stats

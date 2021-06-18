@@ -55,13 +55,14 @@ def maptracks_wrf_pf(zipped_inputs):
     import time
     import os
     import sys
+    import logging
     import xarray as xr
     import pandas as pd
     import time, datetime, calendar
     from netCDF4 import Dataset, num2date
 
     np.set_printoptions(threshold=np.inf)
-
+    logger = logging.getLogger(__name__)
     # Separate inputs
     cloudid_filename = zipped_inputs[0]
     filebasetime = zipped_inputs[1]
@@ -86,11 +87,11 @@ def maptracks_wrf_pf(zipped_inputs):
     ##################################################################
     # Load all track stat file
     if showalltracks == 1:
-        print("Loading track data")
+        logger.info("Loading track data")
         statistics_file = (
             stats_path + statistics_filebase + "_" + startdate + "_" + enddate + ".nc"
         )
-        print(statistics_file)
+        logger.info(statistics_file)
 
         allstatdata = Dataset(statistics_file, "r")
         trackstat_basetime = allstatdata["basetime"][
@@ -110,7 +111,7 @@ def maptracks_wrf_pf(zipped_inputs):
 
     #########################################################################
     # Get cloudid file associated with this time
-    print("Determine corresponding cloudid file and rain accumlation file")
+    logger.info("Determine corresponding cloudid file and rain accumlation file")
     file_datetime = time.strftime("%Y%m%d_%H%M", time.gmtime(np.copy(filebasetime)))
     filedate = np.copy(file_datetime[0:8])
     filetime = np.copy(file_datetime[9:14])
@@ -122,11 +123,11 @@ def maptracks_wrf_pf(zipped_inputs):
         + str(filetime)
         + "00.nc"
     )
-    print(("cloudid file: " + cloudid_filename))
-    print(("rain accumulation file: " + irainaccumulationfile))
+    logger.info(("cloudid file: " + cloudid_filename))
+    logger.info(("rain accumulation file: " + irainaccumulationfile))
 
     # Load cloudid data
-    print("Load cloudid data")
+    logger.info("Load cloudid data")
     cloudiddata = Dataset(cloudid_filename, "r")
     cloudid_cloudnumber = cloudiddata["convcold_cloudnumber"][:]
     cloudid_cloudtype = cloudiddata["cloudtype"][:]
@@ -146,9 +147,9 @@ def maptracks_wrf_pf(zipped_inputs):
 
     # Get data dimensions
     [timeindex, nlat, nlon] = np.shape(cloudid_cloudnumber)
-    print("np.shape(cloudid_cloudnumber:", np.shape(cloudid_cloudnumber))
+    logger.info("np.shape(cloudid_cloudnumber:", np.shape(cloudid_cloudnumber))
 
-    print("Load rain data")
+    logger.info("Load rain data")
     if os.path.isfile(irainaccumulationfile):
         # Load WRF precip data
         rainaccumulationdata = Dataset(irainaccumulationfile, "r")
@@ -158,13 +159,13 @@ def maptracks_wrf_pf(zipped_inputs):
 
         rapresent = "Yes"
     else:
-        print("No radar data")
+        logger.info("No radar data")
         ra_precipitation = np.ones((1, nlat, nlon), dtype=float) * np.nan
         rapresent = "No"
 
     ##############################################################
     # Intiailize track maps
-    print("Initialize maps")
+    logger.info("Initialize maps")
     trackmap = np.zeros((1, nlat, nlon), dtype=int)
     trackmap_mergesplit = np.zeros((1, nlat, nlon), dtype=int)
 
@@ -250,7 +251,7 @@ def maptracks_wrf_pf(zipped_inputs):
         allsplitmap = allsplitmap.astype(np.int32)
 
     #    if showalltracks == 1:
-    #        print('Create maps of all tracks')
+    #        logger.info('Create maps of all tracks')
     #        statusmap = np.ones((1, nlat, nlon), dtype=int)*-9999
     #        alltrackmap = np.zeros((1, nlat, nlon), dtype=int)
     #        allmergemap = np.zeros((1, nlat, nlon), dtype=int)
@@ -287,7 +288,7 @@ def maptracks_wrf_pf(zipped_inputs):
 
     #####################################################################
     # Output maps to netcdf file
-    print("Writing data")
+    logger.info("Writing data")
 
     # Create output directories
     if not os.path.exists(tracking_path):
@@ -297,7 +298,7 @@ def maptracks_wrf_pf(zipped_inputs):
     trackmaps_outfile = (
         tracking_path + "tracks_" + str(filedate) + "_" + str(filetime) + ".nc"
     )
-    print("trackmaps_outfile: ", trackmaps_outfile)
+    logger.info("trackmaps_outfile: ", trackmaps_outfile)
 
     # Check if file already exists. If exists, delete
     if os.path.isfile(trackmaps_outfile):
@@ -415,8 +416,8 @@ def maptracks_wrf_pf(zipped_inputs):
         # output_data.pcptracknumber.attrs['units'] = 'unitless'
 
         # Write netcdf file
-        print(trackmaps_outfile)
-        print("")
+        logger.info(trackmaps_outfile)
+        logger.info("")
 
         output_data.to_netcdf(
             path=trackmaps_outfile,

@@ -8,6 +8,7 @@ from itertools import repeat
 from multiprocessing import Pool
 import logging
 
+
 import numpy as np
 from pytz import utc
 
@@ -32,6 +33,8 @@ print('Code Started')
 print((time.ctime()))
 if __name__ == '__main__':
 ##################################################################################################
+    logger = logging.getLogger(__name__)
+    logging.basicConfig(format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO)
     # Set variables describing data, file structure, and tracking thresholds
 
     # Specify which sets of code to run. (1 = run code, 0 = don't run code)
@@ -48,10 +51,10 @@ if __name__ == '__main__':
     cloudidmethod = 'futyan4'   # Option: futyan3 = identify cores and cold anvils and expand to get warm anvil, futyan4=identify core and expand for cold and warm anvils
     keep_singlemergesplit = 1   # Options: 0=All short tracks are removed, 1=Only short tracks without mergers or splits are removed
     show_alltracks = 0          # Options: 0=Maps of all tracks are not created, 1=Maps of all tracks are created (much slower!)
-    run_parallel = 0            # Options: 0-run serially, 1-run parallel (uses Pool from Multiprocessing)
-    nprocesses = 3             # Number of processors to use if run_parallel is set to 1
+    run_parallel = 1            # Options: 0-run serially, 1-run parallel (uses Pool from Multiprocessing)
+    nprocesses =  32            # Number of processors to use if run_parallel is set to 1
     idclouds_hourly = 1         # 0 = No, 1 = Yes
-    idclouds_minute = 0         # 00 = 00min, 30 = 30min
+    idclouds_minute = 30         # 00 = 00min, 30 = 30min
 
     # Specify version of code using
     cloudid_version = 'v1.0'
@@ -64,9 +67,11 @@ if __name__ == '__main__':
     curr_tracknumbers_version = 'v1.0'
 
     # Specify days to run, (YYYYMMDD.hhmm)
-    startdate = '20150000.0000'
-    enddate = '20160001.2300'
+    #startdate = '20150101.0000'
+    #enddate = '20160101.2300'
 
+    startdate = '20190122.0000'
+    enddate = '20190126.2300'
     # Specify cloud tracking parameters
     geolimits = np.array([-90, -360, 90, 360])  # 4-element array with plotting boundaries [lat_min, lon_min, lat_max, lon_max]
     pixel_radius = 10.0                         # km
@@ -79,12 +84,13 @@ if __name__ == '__main__':
     cloudtb_cloud = 261.                       # K
     othresh = 0.5                              # overlap percentage threshold
     lengthrange = np.array([2,200])            # A vector [minlength,maxlength] to specify the lifetime range for the tracks
-    nmaxlinks = 24                             # Maximum number of clouds that any single cloud can be linked to
-    nmaxclouds = 1000                          # Maximum number of clouds allowed to be in one track
+    nmaxlinks = 200                             # Maximum number of clouds that any single cloud can be linked to
+    nmaxclouds = 3000                          # Maximum number of clouds allowed to be in one track
     absolutetb_threshs = np.array([160, 330])   # k A vector [min, max] brightness temperature allowed. Brightness temperatures outside this range are ignored.
     warmanvilexpansion = 0                     # If this is set to one, then the cold anvil is spread laterally until it exceeds the warm anvil threshold
     mincoldcorepix = 4                         # Minimum number of pixels for the cold core, needed for futyan version 4 cloud identification code. Not used if use futyan version 3.
-    smoothwindowdimensions = 10                # Dimension of the boxcar filter used for futyan version 4. Not used in futyan version 3
+    smoothwindowdimensions = 3                # Dimension of the boxcar filter used for futyan version 4. Not used in futyan version 3
+    #smoothwindowdimensions = 10                # Dimension of the boxcar filter used for futyan version 4. Not used in futyan version 3
     # medfiltsize = 5                            # Window size to perform medfilt2d to fill missing IR pixels, must be an odd number
 
     # Specify MCS parameters
@@ -152,18 +158,18 @@ if __name__ == '__main__':
     pfdata_filebase = 'merg_'
     rainaccumulation_filebase = 'merg_'
     root_path = os.environ['FLEXTRKR_BASE_DATA_PATH']
-    logger = logging.getLogger()
-    logging.basicConfig(format='%(asctime)s - %(levelname)s - %(message)s', level=logging.DEBUG)
-
 
     print(f'ROOT PATH IS {root_path}')
 
-    clouddata_path = root_path + 'input/'
-    pfdata_path = root_path + 'input/'
+    #clouddata_path = root_path + '2015/' # Global
+    #pfdata_path = root_path + '2015/' # Global
+    clouddata_path = root_path + 'data_in/'
+    pfdata_path = root_path + 'data_in/'
     print(f'Clouddatapath: {clouddata_path}, pfdata_path: {pfdata_path}')
 
     rainaccumulation_path = pfdata_path
-    landmask_file = root_path+'map_data/IMERG_landmask_eus.nc'
+    #landmask_file = root_path+'map_data/IMERG_landmask_global.nc'
+    landmask_file = root_path+'map_data/IMERG_landmask_saag.nc'
 
     # Specify data structure
     datatimeresolution = 1     # hours
@@ -298,8 +304,10 @@ if __name__ == '__main__':
         print((time.ctime()))
 
         # Isolate all possible files
-        allcloudidfiles = sorted(fnmatch.filter(os.listdir(tracking_outpath), cloudid_filebase +'*'))
+        allcloudidfiles = fnmatch.filter(os.listdir(tracking_outpath), cloudid_filebase +'*')
 
+        # Put in temporal order
+        allcloudidfiles = sorted(allcloudidfiles)
 
         # Loop through files, identifying files within the startdate - enddate interval
         nleadingchar = np.array(len(cloudid_filebase)).astype(int)
@@ -381,7 +389,7 @@ if __name__ == '__main__':
         print(time.ctime())
         gettracknumbers(irdatasource, datadescription, tracking_outpath, stats_outpath, startdate, enddate, \
                         timegap, nmaxclouds, cloudid_filebase, npxname, tracknumber_version, singletrack_filebase, \
-                        keepsingletrack=keep_singlemergesplit, removestartendtracks=1)
+                        keepsingletrack=keep_singlemergesplit, removestartendtracks=0)
         tracknumbers_filebase = 'tracknumbers' + tracknumber_version
 
     ############################################################

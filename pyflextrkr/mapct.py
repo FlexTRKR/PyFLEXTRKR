@@ -42,8 +42,10 @@ def map_ct(zipped_inputs):
     import xarray as xr
     import pandas as pd
     from netCDF4 import Dataset, num2date
+    import logging
 
     np.set_printoptions(threshold=np.inf)
+    logger = logging.getLogger(__name__)
 
     # Separate inputs
     cloudid_filename = zipped_inputs[0]
@@ -87,7 +89,7 @@ def map_ct(zipped_inputs):
     file_datetime = time.strftime("%Y%m%d_%H%M", time.gmtime(np.copy(filebasetime)))
     filedate = np.copy(file_datetime[0:8])
     filetime = np.copy(file_datetime[9:14])
-    print(("cloudid file: " + cloudid_filename))
+    logger.info(("cloudid file: " + cloudid_filename))
 
     # Load cloudid data
     cloudiddata = Dataset(cloudid_filename, "r")
@@ -120,7 +122,7 @@ def map_ct(zipped_inputs):
     ################################################################
     # Create map of status and track number for every feature in this file
     if showalltracks == 0:
-        print("Create maps of all tracks")
+        logger.info("Create maps of all tracks")
         statusmap = np.ones((1, nlat, nlon), dtype=int) * -9999
         trackmap = np.zeros((1, nlat, nlon), dtype=int)
         allmergemap = np.zeros((1, nlat, nlon), dtype=int)
@@ -187,10 +189,10 @@ def map_ct(zipped_inputs):
     if os.path.isfile(celltrackmaps_outfile):
         os.remove(celltrackmaps_outfile)
 
-    # print(nclouds)
+    # logger.info(nclouds)
 
     # nclouds_tot = np.max(nclouds)
-    # print(nclouds_tot)
+    # logger.info(nclouds_tot)
 
     # Define xarray dataset
     if showalltracks == 0:
@@ -284,8 +286,8 @@ def map_ct(zipped_inputs):
         output_data.cttracknumber.attrs["units"] = "unitless"
 
         # Write netcdf file
-        print(celltrackmaps_outfile)
-        print("")
+        logger.info(celltrackmaps_outfile)
+        logger.info("")
 
         output_data.to_netcdf(
             path=celltrackmaps_outfile,
@@ -462,8 +464,8 @@ def map_ct(zipped_inputs):
         )
 
         # Write netcdf file
-        print(celltrackmaps_outfile)
-        print("")
+        logger.info(celltrackmaps_outfile)
+        logger.info("")
 
         output_data.to_netcdf(
             path=celltrackmaps_outfile,

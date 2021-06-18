@@ -30,11 +30,13 @@ def trackstats_radar(
     from math import pi
     import time
     import gc
+    import logging
     from multiprocessing import Pool
     from pyflextrkr import netcdf_io_trackstats as net
     from pyflextrkr.trackstats_radar_func import calc_stats_radar
 
     np.set_printoptions(threshold=np.inf)
+    logger = logging.getLogger(__name__)
 
     t0_step4 = time.time()
 
@@ -56,8 +58,8 @@ def trackstats_radar(
     dster.close()
 
     # Load track data
-    print("Loading gettracks data")
-    # print((time.ctime()))
+    logger.info("Loading gettracks data")
+    # logger.info((time.ctime()))
     cloudtrack_file = (
         stats_path + tracknumbers_filebase + "_" + startdate + "_" + enddate + ".nc"
     )
@@ -90,8 +92,8 @@ def trackstats_radar(
 
     ############################################################################
     # Initialize grids
-    print("Initiailizinng matrices")
-    # print((time.ctime()))
+    logger.info("Initiailizinng matrices")
+    # logger.info((time.ctime()))
 
     fillval = -9999
     # nmaxclouds = max(lengthrange)
@@ -200,7 +202,7 @@ def trackstats_radar(
 
     #########################################################################################
     # loop over files. Calculate statistics and organize matrices by tracknumber and cloud
-    print("Looping over files and calculating statistics for each file")
+    logger.info("Looping over files and calculating statistics for each file")
     t0_files = time.time()
 
     # for nf in range(0, nfiles):
@@ -403,12 +405,12 @@ def trackstats_radar(
                     ] = tmp[37][iitrack]
 
     t1_files = (time.time() - t0_files) / 60.0
-    print("Files processing time (min): ", t1_files)
-    print("Finish collecting track statistics")
+    logger.info("Files processing time (min): ", t1_files)
+    logger.info("Finish collecting track statistics")
 
     ###############################################################
     ## Remove tracks that have no cells. These tracks are short.
-    print("Removing tracks with no cells")
+    logger.info("Removing tracks with no cells")
     gc.collect()
 
     cloudindexpresent = np.array(np.where(finaltrack_tracklength > 0))[0, :]
@@ -468,7 +470,7 @@ def trackstats_radar(
 
     ########################################################
     # Correct merger and split cloud numbers
-    print("Correcting mergers and splits")
+    logger.info("Correcting mergers and splits")
     t0_ms = time.time()
 
     # Initialize adjusted matrices
@@ -478,7 +480,7 @@ def trackstats_radar(
     adjusted_finaltrack_splitnumber = (
         np.ones(np.shape(finaltrack_mergenumber)) * fillval
     )
-    print(("total tracks: " + str(numtracks)))
+    logger.info(("total tracks: " + str(numtracks)))
 
     # Create adjustor
     indexcloudnumber = np.copy(cloudindexpresent) + 1
@@ -511,12 +513,12 @@ def trackstats_radar(
     )
 
     t1_ms = (time.time() - t0_ms) / 60.0
-    print("Correct merge/split processing time (min): ", t1_ms)
-    print("Merge and split adjustments done")
+    logger.info("Correct merge/split processing time (min): ", t1_ms)
+    logger.info("Merge and split adjustments done")
 
     #########################################################################
     # Record starting and ending status
-    print("Isolating starting and ending status")
+    logger.info("Isolating starting and ending status")
     t0_status = time.time()
 
     # Starting status
@@ -578,9 +580,9 @@ def trackstats_radar(
                             itrack
                         ] = finaltrack_cloudnumber[imerge_idx, match_timeidx + 1]
                     else:
-                        print(f"Merge time occur after track ends??")
+                        logger.info(f"Merge time occur after track ends??")
                 else:
-                    print(
+                    logger.info(
                         f"Error: track {itrack} has no matching time in the track it merges with!"
                     )
                     # import pdb; pdb.set_trace()
@@ -605,7 +607,7 @@ def trackstats_radar(
                     match_timeidx = np.where(ibasetime == ibasetime[len(ibasetime)-1])[0] #zhixiao
                     if len(match_timeidx) == 1:
                         match_timeidx = match_timeidx + 1
-                        print(
+                        logger.info(
                         f"Note: Track {itrack} splits from transient parent cell!"
                         )
                 
@@ -617,21 +619,21 @@ def trackstats_radar(
                             itrack
                         ] = finaltrack_cloudnumber[isplit_idx, match_timeidx - 1]
                     else:
-                        print(f"Split time occur before track starts??")
+                        logger.info(f"Split time occur before track starts??")
                 else:
-                    print(
+                    logger.info(
                         f"Error: track {itrack} has no matching time in the track it splits from!"
                     )
                     
                     sys.exit(itrack)
 
     t1_status = (time.time() - t0_status) / 60.0
-    print("Start/end status processing time (min): ", t1_status)
-    print("Starting and ending status done")
+    logger.info("Start/end status processing time (min): ", t1_status)
+    logger.info("Starting and ending status done")
 
     #######################################################################
     # Write to netcdf
-    print("Writing trackstats netcdf ... ")
+    logger.info("Writing trackstats netcdf ... ")
     t0_write = time.time()
 
     # Check if file already exists. If exists, delete
@@ -712,8 +714,8 @@ def trackstats_radar(
     )
 
     t1_write = (time.time() - t0_write) / 60.0
-    print("Writing file time (min): ", t1_write)
-    print((time.ctime()))
-    print("Output saved as: ", trackstats_outfile)
+    logger.info("Writing file time (min): ", t1_write)
+    logger.info((time.ctime()))
+    logger.info("Output saved as: ", trackstats_outfile)
     t1_step4 = (time.time() - t0_step4) / 60.0
-    print("Step 4 processing time (min): ", t1_step4)
+    logger.info("Step 4 processing time (min): ", t1_step4)

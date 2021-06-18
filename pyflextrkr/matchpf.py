@@ -111,6 +111,7 @@ def identifypf_wrf_rain(
     # pf_coreavgdbz40 - average height of the 40 dBZ echo contour in convective cores
 
     import numpy as np
+    import logging
     import os.path
     from netCDF4 import Dataset, num2date, chartostring
     from scipy.ndimage import label, binary_dilation, generate_binary_structure
@@ -123,15 +124,15 @@ def identifypf_wrf_rain(
     import time, datetime, calendar
 
     np.set_printoptions(threshold=np.inf)
-
+    logger = logging.getLogger(__name__)
     #########################################################
     # Load MCS track stats
-    print("Loading IR data")
-    print((time.ctime()))
+    logger.info("Loading IR data")
+    logger.info((time.ctime()))
     mcsirstatistics_file = (
         stats_path + mcsstats_filebase + startdate + "_" + enddate + ".nc"
     )
-    print(mcsirstatistics_file)
+    logger.info(mcsirstatistics_file)
 
     mcsirstatdata = Dataset(mcsirstatistics_file, "r")
     ir_ntracks = np.nanmax(mcsirstatdata["ntracks"]) + 1
@@ -162,8 +163,8 @@ def identifypf_wrf_rain(
 
     ###################################################################
     # Intialize precipitation statistic matrices
-    print("Initializing matrices")
-    print((time.ctime()))
+    logger.info("Initializing matrices")
+    logger.info((time.ctime()))
 
     # Variables for each precipitation feature
     radar_npf = np.ones((ir_ntracks, ir_nmaxlength), dtype=int) * -9999
@@ -270,14 +271,14 @@ def identifypf_wrf_rain(
 
     ##############################################################
     # Find precipitation feature in each mcs
-    print(("Total Number of Tracks:" + str(ir_ntracks)))
+    logger.info(("Total Number of Tracks:" + str(ir_ntracks)))
 
     # Loop over each track
-    print("Looping over each track")
-    print((time.ctime()))
+    logger.info("Looping over each track")
+    logger.info((time.ctime()))
     for it in range(0, ir_ntracks):
-        print(("Processing track " + str(int(it))))
-        print((time.ctime()))
+        logger.info(("Processing track " + str(int(it))))
+        logger.info((time.ctime()))
 
         # Isolate ir statistics about this track
         itbasetime = np.copy(ir_basetime[it, :])
@@ -298,10 +299,10 @@ def identifypf_wrf_rain(
         )
         # Loop through each time in the track
         irindices = np.array(np.where(itcloudnumber > 0))[0, :]
-        print("Looping through each time step")
-        print(("Number of time steps: " + str(len(irindices))))
+        logger.info("Looping through each time step")
+        logger.info(("Number of time steps: " + str(len(irindices))))
         for itt in irindices:
-            print(("Time step #: " + str(itt)))
+            logger.info(("Time step #: " + str(itt)))
             # Isolate the data at this time
             radar_basetime[it, itt] = np.array(
                 [
@@ -352,17 +353,17 @@ def identifypf_wrf_rain(
 
                 # Load cloudid and precip feature data
                 if os.path.isfile(cloudid_filename) and os.path.isfile(radar_filename):
-                    print("Data Present")
+                    logger.info("Data Present")
                     # Load cloudid data
-                    print("Loading cloudid data")
-                    print(cloudid_filename)
+                    logger.info("Loading cloudid data")
+                    logger.info(cloudid_filename)
                     cloudiddata = Dataset(cloudid_filename, "r")
                     cloudnumbermap = cloudiddata["cloudnumber"][:]
                     cloudiddata.close()
 
                     # Read precipitation data
-                    print("Loading radar data")
-                    print(radar_filename)
+                    logger.info("Loading radar data")
+                    logger.info(radar_filename)
                     pfdata = Dataset(radar_filename, "r")
                     rawdbzmap = pfdata["dbz_convsf"][:]  # map of reflectivity
                     rawdbz10map = pfdata["dbz10_height"][:]  # map of 10 dBZ ETHs
@@ -386,8 +387,8 @@ def identifypf_wrf_rain(
                     pfdata.close()
 
                     # Load accumulation data is available. If not present fill array with fill value
-                    print("Loading accumulation data")
-                    print(rainaccumulation_filename)
+                    logger.info("Loading accumulation data")
+                    logger.info(rainaccumulation_filename)
                     if os.path.isfile(rainaccumulation_filename):
                         rainaccumulationdata = Dataset(rainaccumulation_filename, "r")
                         rawrainaccumulationmap = rainaccumulationdata["precipitation"][
@@ -425,10 +426,10 @@ def identifypf_wrf_rain(
                     ncloudpix = len(icloudlocationy)
 
                     if ncloudpix > 0:
-                        print("IR Clouds Present")
+                        logger.info("IR Clouds Present")
                         ######################################################################
                         # Check if any small clouds merge
-                        print("Finding mergers")
+                        logger.info("Finding mergers")
                         idmergecloudnumber = np.array(
                             np.where(ittmergecloudnumber > 0)
                         )[0, :]
@@ -461,7 +462,7 @@ def identifypf_wrf_rain(
 
                         ######################################################################
                         # Check if any small clouds split
-                        print("Finding splits")
+                        logger.info("Finding splits")
                         idsplitcloudnumber = np.array(
                             np.where(ittsplitcloudnumber > 0)
                         )[0, :]
@@ -494,7 +495,7 @@ def identifypf_wrf_rain(
 
                         ########################################################################
                         # Fill matrices with mcs data
-                        print("Fill map with data")
+                        logger.info("Fill map with data")
                         filteredrainratemap[icloudlocationy, icloudlocationx] = np.copy(
                             rawrainratemap[
                                 icloudlocationt, icloudlocationy, icloudlocationx
@@ -539,7 +540,7 @@ def identifypf_wrf_rain(
 
                         ########################################################################
                         # isolate small region of cloud data around mcs at this time
-                        print("Calculate new shape statistics")
+                        logger.info("Calculate new shape statistics")
 
                         # Set edges of boundary
                         miny = np.nanmin(icloudlocationy)
@@ -590,7 +591,7 @@ def identifypf_wrf_rain(
 
                         #####################################################
                         # Get convective core statistics
-                        print("Checking for convective cores")
+                        logger.info("Checking for convective cores")
                         icy, icx = np.array(np.where(subcsamap == 6))
                         nc = len(icy)
 
@@ -603,7 +604,7 @@ def identifypf_wrf_rain(
 
                             # If convective cores exist calculate statistics
                             if ncc > 0:
-                                print("Convective cores present, getting statistics")
+                                logger.info("Convective cores present, getting statistics")
                                 # Initialize matrices
                                 cclon = np.ones(ncc, dtype=float) * np.nan
                                 cclat = np.ones(ncc, dtype=float) * np.nan
@@ -628,7 +629,7 @@ def identifypf_wrf_rain(
                                 ccavgdbz40 = np.ones(ncc, dtype=float) * np.nan
 
                                 # Loop over each core
-                                print(
+                                logger.info(
                                     (
                                         "Looping through each convective core: "
                                         + str(ncc)
@@ -728,7 +729,7 @@ def identifypf_wrf_rain(
 
                                 ####################################################
                                 # Sort based on size, largest to smallest
-                                print("Sorting convective cores by size")
+                                logger.info("Sorting convective cores by size")
                                 order = np.argsort(ccnpix)
                                 order = order[::-1]
 
@@ -848,7 +849,7 @@ def identifypf_wrf_rain(
 
                             ######################################################   !!!!!!!!!!!!!!! Slow Step !!!!!!!!1
                             # Derive precipitation feature statistics
-                            print("Calculating precipitation statistics")
+                            logger.info("Calculating precipitation statistics")
                             ipfy, ipfx = np.array(
                                 np.where(
                                     ((filteredcsamap == 5) | (filteredcsamap == 6))
@@ -877,10 +878,10 @@ def identifypf_wrf_rain(
 
                                 # Label precipitation features
                                 pfnumberlabelmap, numpf = label(dilatedbinarypfmap)
-                                print(numpf)
+                                logger.info(numpf)
 
                                 if numpf > 0:
-                                    print("PFs present, initializing matrices")
+                                    logger.info("PFs present, initializing matrices")
 
                                     ##############################################
                                     # Initialize matrices
@@ -920,14 +921,14 @@ def identifypf_wrf_rain(
                                     pfsfnpix = np.ones(numpf, dtype=int) * -9999
                                     pfsfrainrate = np.ones(numpf, dtype=float) * np.nan
 
-                                    print(
+                                    logger.info(
                                         "Looping through each feature to calculate statistics"
                                     )
-                                    print(("Number of PFs " + str(numpf)))
+                                    logger.info(("Number of PFs " + str(numpf)))
                                     ###############################################
                                     # Loop through each feature
                                     for ipf in range(1, numpf + 1):
-                                        print(ipf)
+                                        logger.info(ipf)
 
                                         #######################################
                                         # Find associated indices
@@ -1085,10 +1086,10 @@ def identifypf_wrf_rain(
                                                 )[0, :]
                                             )
 
-                                    print("Loop done")
+                                    logger.info("Loop done")
                                     ##############################################################
                                     # Sort precipitation features by size, large to small
-                                    print("Sorting PFs by size")
+                                    logger.info("Sorting PFs by size")
                                     pforder = np.argsort(pfnpix)
                                     pforder = pforder[::-1]
 
@@ -1166,7 +1167,7 @@ def identifypf_wrf_rain(
 
                                     ####################################################
                                     # Average the first two largest precipitation features to represent the cloud system
-                                    print(
+                                    logger.info(
                                         "Calculating statistics for the few largest convective and stratiform components"
                                     )
                                     radar_ccavgnpix[it, itt] = np.nansum(
@@ -1210,7 +1211,7 @@ def identifypf_wrf_rain(
                                         )
 
                 else:
-                    print(
+                    logger.info(
                         (
                             "One or both files do not exist: "
                             + cloudid_filename
@@ -1220,13 +1221,13 @@ def identifypf_wrf_rain(
                     )
 
             else:
-                print(ittdatetimestring)
-                print(("Half-hourly data ?!:" + str(ittdatetimestring)))
+                logger.info(ittdatetimestring)
+                logger.info(("Half-hourly data ?!:" + str(ittdatetimestring)))
 
     ###################################
     # Convert number of pixels to area
-    print("Converting pixels to area")
-    print((time.ctime()))
+    logger.info("Converting pixels to area")
+    logger.info((time.ctime()))
 
     radar_pfdbz40area = np.multiply(radar_pfdbz40npix, np.square(pixel_radius))
     radar_pfdbz45area = np.multiply(radar_pfdbz45npix, np.square(pixel_radius))
@@ -1240,8 +1241,8 @@ def identifypf_wrf_rain(
 
     ##################################
     # Save output to netCDF file
-    print("Saving data")
-    print((time.ctime()))
+    logger.info("Saving data")
+    logger.info((time.ctime()))
 
     # Check if file already exists. If exists, delete
     if os.path.isfile(statistics_outfile):
@@ -1705,8 +1706,8 @@ def identifypf_wrf_rain(
     output_data.pf_coreavgdbz40.attrs["units"] = "km"
 
     # Write netcdf file
-    print("")
-    print(statistics_outfile)
+    logger.info("")
+    logger.info(statistics_outfile)
     output_data.to_netcdf(
         path=statistics_outfile,
         mode="w",
