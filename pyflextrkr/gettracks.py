@@ -745,6 +745,9 @@ def gettracknumbers(
 
 
 def filter_filelisting(datainpath, enddate, singletrack_filebase, startdate, timegap):
+    import time
+    import logging
+    logger = logging.getLogger(__name__)
     ##################################################################################
     # Get single track files sort
     logger = logging.getLogger(__name__)
