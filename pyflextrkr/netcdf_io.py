@@ -437,7 +437,7 @@ def write_cloudtype_wrf(
         + " UTC",
         "institution": "Pacific Northwest National Laboratory",
         "convections": "CF-1.6",
-        "contact": "Katelyn Barber: katelyn.barber@pnnl.gov",
+        "contact": "Zhe Feng <zhe.feng@pnnl.gov>",
         "created_on": time.ctime(time.time()),
         "cloudid_cloud_version": cloudid_version,
         "minimum_cloud_area": area_thresh,
