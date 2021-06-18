@@ -34,17 +34,17 @@ print((time.ctime()))
 if __name__ == '__main__':
 ##################################################################################################
     logger = logging.getLogger(__name__)
-    logging.basicConfig(format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.DEBUG)
+    logging.basicConfig(format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO)
     # Set variables describing data, file structure, and tracking thresholds
 
     # Specify which sets of code to run. (1 = run code, 0 = don't run code)
-    run_idclouds = 0        # Segment and identify cloud systems
-    run_tracksingle = 0     # Track single consecutive cloudid files
-    run_gettracks = 0       # Run trackig for all files
-    run_finalstats = 0      # Calculate final statistics
-    run_identifymcs = 0     # Isolate MCSs
-    run_matchpf = 0         # Identify precipitation features with MCSs
-    run_robustmcs = 0       # Filter potential mcs cases using nmq radar variables
+    run_idclouds = 1        # Segment and identify cloud systems
+    run_tracksingle = 1     # Track single consecutive cloudid files
+    run_gettracks = 1       # Run trackig for all files
+    run_finalstats = 1      # Calculate final statistics
+    run_identifymcs = 1     # Isolate MCSs
+    run_matchpf = 1         # Identify precipitation features with MCSs
+    run_robustmcs = 1       # Filter potential mcs cases using nmq radar variables
     run_labelmcs = 1        # Create maps of MCSs
 
     # Set version ofcode
@@ -67,9 +67,11 @@ if __name__ == '__main__':
     curr_tracknumbers_version = 'v1.0'
 
     # Specify days to run, (YYYYMMDD.hhmm)
-    startdate = '20150101.0000'
-    enddate = '20160101.2300'
+    #startdate = '20150101.0000'
+    #enddate = '20160101.2300'
 
+    startdate = '20190122.0000'
+    enddate = '20190126.2300'
     # Specify cloud tracking parameters
     geolimits = np.array([-90, -360, 90, 360])  # 4-element array with plotting boundaries [lat_min, lon_min, lat_max, lon_max]
     pixel_radius = 10.0                         # km
@@ -87,7 +89,8 @@ if __name__ == '__main__':
     absolutetb_threshs = np.array([160, 330])   # k A vector [min, max] brightness temperature allowed. Brightness temperatures outside this range are ignored.
     warmanvilexpansion = 0                     # If this is set to one, then the cold anvil is spread laterally until it exceeds the warm anvil threshold
     mincoldcorepix = 4                         # Minimum number of pixels for the cold core, needed for futyan version 4 cloud identification code. Not used if use futyan version 3.
-    smoothwindowdimensions = 10                # Dimension of the boxcar filter used for futyan version 4. Not used in futyan version 3
+    smoothwindowdimensions = 3                # Dimension of the boxcar filter used for futyan version 4. Not used in futyan version 3
+    #smoothwindowdimensions = 10                # Dimension of the boxcar filter used for futyan version 4. Not used in futyan version 3
     # medfiltsize = 5                            # Window size to perform medfilt2d to fill missing IR pixels, must be an odd number
 
     # Specify MCS parameters
@@ -158,12 +161,15 @@ if __name__ == '__main__':
 
     print(f'ROOT PATH IS {root_path}')
 
-    clouddata_path = root_path + '2015/'
-    pfdata_path = root_path + '2015/'
+    #clouddata_path = root_path + '2015/' # Global
+    #pfdata_path = root_path + '2015/' # Global
+    clouddata_path = root_path + 'data_in/'
+    pfdata_path = root_path + 'data_in/'
     print(f'Clouddatapath: {clouddata_path}, pfdata_path: {pfdata_path}')
 
     rainaccumulation_path = pfdata_path
-    landmask_file = root_path+'map_data/IMERG_landmask_global.nc'
+    #landmask_file = root_path+'map_data/IMERG_landmask_global.nc'
+    landmask_file = root_path+'map_data/IMERG_landmask_saag.nc'
 
     # Specify data structure
     datatimeresolution = 1     # hours
@@ -383,7 +389,7 @@ if __name__ == '__main__':
         print(time.ctime())
         gettracknumbers(irdatasource, datadescription, tracking_outpath, stats_outpath, startdate, enddate, \
                         timegap, nmaxclouds, cloudid_filebase, npxname, tracknumber_version, singletrack_filebase, \
-                        keepsingletrack=keep_singlemergesplit, removestartendtracks=1)
+                        keepsingletrack=keep_singlemergesplit, removestartendtracks=0)
         tracknumbers_filebase = 'tracknumbers' + tracknumber_version
 
     ############################################################
