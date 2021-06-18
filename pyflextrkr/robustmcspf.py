@@ -92,7 +92,7 @@ def define_robust_mcs_pf(
     mergedirpf_statistics_file = (
         stats_path + pfstats_filebase + startdate + "_" + enddate + ".nc"
     )
-    logger.info("mergedirpf_statistics_file: ", mergedirpf_statistics_file)
+    logger.info(("mergedirpf_statistics_file: ", mergedirpf_statistics_file))
 
     data = xr.open_dataset(mergedirpf_statistics_file, decode_times=False)
     ntracks = np.nanmax(data.coords["tracks"])
