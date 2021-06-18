@@ -49,9 +49,9 @@ def trackclouds(zipped_inputs):
 
     # Separate inputs
     firstcloudidfilename = zipped_inputs[0]
-    logger.info("firstcloudidfilename: ", firstcloudidfilename)
+    logger.info(f"firstcloudidfilename: {firstcloudidfilename}")
     secondcloudidfilename = zipped_inputs[1]
-    logger.info("secondcloudidfilename: ", secondcloudidfilename)
+    logger.info(f"secondcloudidfilename: {secondcloudidfilename}")
     firstdatestring = zipped_inputs[2]
     seconddatestring = zipped_inputs[3]
     firsttimestring = zipped_inputs[4]
@@ -76,14 +76,14 @@ def trackclouds(zipped_inputs):
     new_datestring = seconddatestring
     new_timestring = secondtimestring
     new_basetime = secondbasetime
-    logger.info("new basetime: ", new_basetime)
+    logger.info(f"new basetime: {new_basetime}")
     new_filedatetime = str(new_datestring) + "_" + str(new_timestring)
 
     reference_file = firstcloudidfilename
     reference_datestring = firstdatestring
     reference_timestring = firsttimestring
     reference_basetime = firstbasetime
-    logger.info("ref basetime: ", reference_basetime)
+    logger.info(f"ref basetime: {reference_basetime}")
     reference_filedatetime = str(reference_datestring) + "_" + str(reference_timestring)
 
     # Check that new and reference files differ by less than timegap in hours. Use base time (which is the seconds since 01-Jan-1970 00:00:00). Divide base time difference between the files by 3600 to get difference in hours
@@ -104,7 +104,7 @@ def trackclouds(zipped_inputs):
 
         ##########################################################
         # Load next cloudid file, called new file
-        logger.info("new_filedattime: ", new_filedatetime)
+        logger.info(f"new_filedattime: {new_filedatetime}")
 
         new_data = xr.open_dataset(new_file)  # Open file
         new_convcold_cloudnumber = new_data[
