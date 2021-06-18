@@ -747,6 +747,7 @@ def gettracknumbers(
 def filter_filelisting(datainpath, enddate, singletrack_filebase, startdate, timegap):
     import time
     import logging
+    import pandas as pd
     logger = logging.getLogger(__name__)
     ##################################################################################
     # Get single track files sort
@@ -762,7 +763,7 @@ def filter_filelisting(datainpath, enddate, singletrack_filebase, startdate, tim
     ################################################################################
     # Get date/time from filenames
     nfiles = len(singletrackfiles)
-    logger.info("nfiles: ", nfiles)
+    logger.info(("nfiles: ", nfiles))
     year = np.empty(nfiles, dtype=int)
     month = np.empty(nfiles, dtype=int)
     day = np.empty(nfiles, dtype=int)
