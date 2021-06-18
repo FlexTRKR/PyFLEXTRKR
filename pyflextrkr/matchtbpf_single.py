@@ -65,17 +65,6 @@ def matchtbpf_singlefile(
         lat = cloudiddata["latitude"][:]
         cloudiddata.close()
 
-        # # Read precipitation data
-        # logger.info('Loading precip data')
-        # logger.info(rainaccumulation_filename)
-        # pfdata = Dataset(rainaccumulation_filename, 'r')
-        # rawrainratemap = pfdata['precipitationCal'][:] # map of rain rate
-        # lon1d = pfdata['lon'][:]
-        # lat1d = pfdata['lat'][:]
-        # pfdata.close()
-
-        # lon, lat = np.meshgrid(lon1d, lat1d, indexing='xy')
-
         ##########################################################################
         # Get dimensions of data. Data should be preprocesses so that their latittude and longitude dimensions are the same
         ydim, xdim = np.shape(lat)
@@ -426,17 +415,6 @@ def matchtbpf_singlefile(
                                                 iipfy_heavy[:], iipfx_heavy[:]
                                             ]
                                         )
-
-                                    ## Count number of pixel rainrate greater than specified threshold
-                                    # logger.info('subrainratemap_size: ', subrainratemap.shape)
-                                    # iirry, iirrx = np.array(np.where(subrainratemap > 8))
-                                    # logger.info('size of iirry:', iirry.shape)
-                                    # if iirry > 0:
-                                    # pf8mm[ipf-1] = iirry
-
-                                    # iirry10 = np.array(np.where(subrainratemap > 10))
-                                    # if iirry10 > 0:
-                                    # pf10mm[ipf-1] = iirry
 
                                     # Generate map of convective core
                                     iipfflagmap = np.zeros(
