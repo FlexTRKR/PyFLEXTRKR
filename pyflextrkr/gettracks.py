@@ -3,6 +3,9 @@
 # Author: IDL version written by Sally A. McFarlane (sally.mcfarlane@pnnl.gov) and revised by Zhe Feng (zhe.feng@pnnl.gov). Python version written by Hannah C. Barnes (hannah.barnes@pnnl.gov)
 
 # Define function to track clouds that were identified in merged ir data
+import logging
+
+
 def gettracknumbers(
     datasource,
     datadescription,
@@ -740,6 +743,7 @@ def gettracknumbers(
 def filter_filelisting(datainpath, enddate, singletrack_filebase, startdate, timegap):
     ##################################################################################
     # Get single track files sort
+    logger = logging.getLogger(__name__)
     logger.info("Determining which files will be processed")
     logger.info((time.ctime()))
     logger.info(singletrack_filebase)
