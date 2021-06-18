@@ -359,7 +359,7 @@ def matchtbpf_singlefile(
                             logger.debug(
                                 "Looping through each feature to calculate statistics"
                             )
-                            logger.info(("Number of PFs " + str(numpf)))
+                            logger.debug(("Number of PFs " + str(numpf)))
                             ###############################################
                             # Loop through each feature
                             for ipf in range(1, npf_save + 1):
@@ -474,7 +474,7 @@ def matchtbpf_singlefile(
                                         pfxweightedcentroid[ipf - 1] + minx
                                     )
 
-                            logger.info("Loop done")
+                            logger.debug("Loop done")
 
                             ###################################################
                             # Save precipitation feature statisitcs
