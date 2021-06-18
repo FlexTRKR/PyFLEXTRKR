@@ -280,6 +280,8 @@ def work_for_time_loop(datafile, ntracks, lifetime, cell_bt, cell_lon, cell_lat,
         lon_tn, lat_tn, xx_tn, yy_tn, tnconv_unique = calc_cell_center(tnconv, longitude, latitude, xx, yy)
 
         comp_ref = ds.comp_ref.squeeze()
+        # Filter reflectivity outside of tracked cells (for plotting purpose only)
+        # comp_ref = comp_ref.where(tn > 0)
 
         cmaps = 'gist_ncar'
         levels = np.arange(-10, 60.1, 5)
@@ -330,6 +332,7 @@ if __name__ == "__main__":
  
     # Output figure directory
     figdir = f'{rootdir}celltracking/quicklooks_trackpaths/'
+    # figdir = f'{rootdir}celltracking/quicklooks_trackpaths_filter/'
     os.makedirs(figdir, exist_ok=True)
 
     # Create a timedelta threshold in minutes
