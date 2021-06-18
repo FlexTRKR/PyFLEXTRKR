@@ -50,10 +50,10 @@ def matchtbpf_singlefile(
     # if os.path.isfile(cloudid_filename) and os.path.isfile(rainaccumulation_filename):
     if os.path.isfile(cloudid_filename):
         count = 0
-        logger.info("Data Present")
+        logger.debug("Data Present")
         # Load cloudid data
-        logger.info("Loading cloudid data")
-        logger.info(cloudid_filename)
+        logger.debug("Loading cloudid data")
+        logger.debug(cloudid_filename)
         cloudiddata = Dataset(cloudid_filename, "r")
         cloudnumbermap = cloudiddata["cloudnumber"][:]
         rawrainratemap = cloudiddata["precipitation"][:]
@@ -137,7 +137,7 @@ def matchtbpf_singlefile(
                 #########################################################################
                 # Intialize matrices for only MCS data
                 filteredrainratemap = np.ones((ydim, xdim), dtype=float) * np.nan
-                logger.info((
+                logger.debug((
                     "filteredrainratemap allocation size: ", filteredrainratemap.shape
                 ))
 
@@ -149,10 +149,10 @@ def matchtbpf_singlefile(
                 ncloudpix = len(icloudlocationy)
 
                 if ncloudpix > 0:
-                    logger.info("IR Clouds Present")
+                    logger.debug("IR Clouds Present")
                     ######################################################################
                     # Check if any small clouds merge
-                    logger.info("Finding mergers")
+                    logger.debug("Finding mergers")
                     idmergecloudnumber = np.array(np.where(ittmergecloudnumber > 0))[
                         0, :
                     ]
@@ -185,7 +185,7 @@ def matchtbpf_singlefile(
 
                     ######################################################################
                     # Check if any small clouds split
-                    logger.info("Finding splits")
+                    logger.debug("Finding splits")
                     idsplitcloudnumber = np.array(np.where(ittsplitcloudnumber > 0))[
                         0, :
                     ]
@@ -218,7 +218,7 @@ def matchtbpf_singlefile(
 
                     ########################################################################
                     # Fill matrices with mcs data
-                    logger.info("Fill map with data")
+                    logger.debug("Fill map with data")
                     filteredrainratemap[icloudlocationy, icloudlocationx] = np.copy(
                         rawrainratemap[
                             icloudlocationt, icloudlocationy, icloudlocationx
@@ -227,7 +227,7 @@ def matchtbpf_singlefile(
 
                     ########################################################################
                     ## Isolate small region of cloud data around mcs at this time
-                    logger.info("Calculate new shape statistics")
+                    logger.debug("Calculate new shape statistics")
 
                     ## Set edges of boundary
                     miny = np.nanmin(icloudlocationy)
@@ -274,7 +274,7 @@ def matchtbpf_singlefile(
 
                     ######################################################   !!!!!!!!!!!!!!! Slow Step !!!!!!!!1
                     # Derive precipitation feature statistics
-                    logger.info("Calculating precipitation statistics")
+                    logger.debug("Calculating precipitation statistics")
                     # rawrainratemap = np.squeeze(rawrainratemap, axis = 0)
                     # ipfy, ipfx = np.array(np.where(rawrainratemap > rr_min))
                     ipfy, ipfx = np.array(np.where(subrainratemap > rr_min))
@@ -292,11 +292,11 @@ def matchtbpf_singlefile(
                                     sublandmask[ipfy, ipfx] <= landfrac_thresh
                                 )
                             else:
-                                logger.info((
+                                logger.warning((
                                     "Error, unknown precipdatasource: "
                                     + precipdatasource
                                 ))
-                                logger.info("Must define how to calculate landfrac.")
+                                logger.debug("Must define how to calculate landfrac.")
 
                             if npix_land > 0:
                                 pf_landfrac[imatchcloud] = float(npix_land) / float(
@@ -336,7 +336,7 @@ def matchtbpf_singlefile(
                         # if npf_new > 0:
                         if numpf > 0:
                             npf_save = np.nanmin([nmaxpf, numpf])
-                            logger.info("PFs present, initializing matrices")
+                            logger.debug("PFs present, initializing matrices")
 
                             ##############################################
                             # Initialize matrices
@@ -367,7 +367,7 @@ def matchtbpf_singlefile(
                             pfaccumrain = np.ones(npf_save, dtype=float) * np.nan
                             pfaccumrainheavy = np.ones(npf_save, dtype=float) * np.nan
 
-                            logger.info(
+                            logger.debug(
                                 "Looping through each feature to calculate statistics"
                             )
                             logger.info(("Number of PFs " + str(numpf)))

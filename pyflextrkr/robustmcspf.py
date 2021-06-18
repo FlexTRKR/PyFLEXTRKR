@@ -161,9 +161,6 @@ def define_robust_mcs_pf(
             )
         )[0, :]
         nipfmcs = len(ipfmcs)
-        # logger.info(nipfmcs)
-        # logger.info(nipfmcs*time_res)
-        # logger.info(mcs_pf_durationthresh)
 
         if nipfmcs > 0:
             # Apply duration threshold to entire time period
@@ -232,7 +229,7 @@ def define_robust_mcs_pf(
                         ):
                             # Label this period as an mcs
                             pf_mcsstatus[nt, igroup_indices] = 1
-                            logger.info("MCS")
+                            logger.debug("MCS")
                         else:
                             trackid_nonmcs = np.append(trackid_nonmcs, int(nt))
                         # import pdb; pdb.set_trace()
@@ -250,12 +247,12 @@ def define_robust_mcs_pf(
                         #    pf_mcstype[nt] = 2
                         #    pf_cctype[nt, igroup_indices[isquall]] = 2
                     else:
-                        logger.info("Not MCS")
+                        logger.debug("Not MCS")
 
             # Group does not satistfy duration threshold
             else:
                 trackid_nonmcs = np.append(trackid_nonmcs, int(nt))
-                logger.info("Not NCS")
+                logger.debug("Not MCS")
         else:
             logger.info("Not MCS")
 
