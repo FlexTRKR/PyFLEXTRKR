@@ -10,3 +10,6 @@ dask>=2.9
 scikit-image>=0.16
 joblib>=0.14
 ipython>=7.0
+setuptools~=49.6.0
+yaml~=0.2.5
+pyyaml~=5.3.1

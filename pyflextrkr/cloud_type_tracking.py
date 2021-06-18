@@ -3,6 +3,9 @@ def cloud_type_tracking(ct, pixel_radius, area_thresh, smoothsize, mincorecoldpi
     # Import modules
     import numpy as np
     from scipy.ndimage import label, binary_dilation, generate_binary_structure, filters
+    import logging
+
+    logger = logging.getLogger(__name__)
 
     ######################################################################
 
@@ -26,7 +29,7 @@ def cloud_type_tracking(ct, pixel_radius, area_thresh, smoothsize, mincorecoldpi
     core_flag = np.zeros((ny, nx), dtype=int)
     core_indices = np.where(ct == thresh_core)
     ncorepix = np.shape(core_indices)[1]
-    print("ncorepix at 1503: ", ncorepix)
+    logger.debug("ncorepix at 1503: ", ncorepix)
     if ncorepix > 0:
         core_flag[core_indices] = 1
         final_cloudid[core_indices] = 1
@@ -53,7 +56,6 @@ def cloud_type_tracking(ct, pixel_radius, area_thresh, smoothsize, mincorecoldpi
 
     core_indices = np.where(smoothct == thresh_core)
     ncorepix = np.shape(core_indices)[1]
-    print("ncorepix at 1530: ", ncorepix)
     if ncorepix > 0:
         smooth_cloudid[core_indices] = 1
 
@@ -81,7 +83,7 @@ def cloud_type_tracking(ct, pixel_radius, area_thresh, smoothsize, mincorecoldpi
 
     # Check is any cores have been identified
     if nlabelcores > 0:
-        print("entered nlabelcores > 0 loop")
+        logger.info("entered nlabelcores > 0 loop")
 
         #############################################################
         # Check if cores satisfy size threshold
@@ -217,7 +219,7 @@ def cloud_type_tracking(ct, pixel_radius, area_thresh, smoothsize, mincorecoldpi
         #############################################################
         # Create blank core and cold anvil arrays if no cores present
         elif ncores == 0:
-            print("ncores was equal to 0 at line 1677")
+            logger.info("ncores was equal to 0 at line 1677")
             labelcorecold_number2d = np.zeros((ny, nx), dtype=int)
             labelcorecold_npix = []
             sortedcore_npix = []
@@ -357,7 +359,7 @@ def cloud_type_tracking(ct, pixel_radius, area_thresh, smoothsize, mincorecoldpi
     ######################################################################
     # If no core is found, use cold anvil threshold to identify features
     else:
-        print("there was no core found line 1795")
+        logger.info("there was no core found line 1795")
         #################################################
         # Label regions with cold anvils and cores
         corecold_flag = core_flag + coldanvil_flag
@@ -439,7 +441,7 @@ def cloud_type_tracking(ct, pixel_radius, area_thresh, smoothsize, mincorecoldpi
 
             final_ncorecoldpix = final_ncorepix + final_ncoldpix
 
-            print("final_cloudid.shape: ", final_cloudid.shape)
+            logger.info(f"final_cloudid.shape:  {final_cloudid.shape}")
 
     ##################################################################
     # Output data. Only done if core-cold exist in this file

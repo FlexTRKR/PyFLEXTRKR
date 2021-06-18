@@ -39,11 +39,13 @@ def mapcell_LES(zipped_inputs):
     import time
     import os
     import sys
+    import logging
     import xarray as xr
     import pandas as pd
     from netCDF4 import Dataset, num2date
 
     np.set_printoptions(threshold=np.inf)
+    logger = logging.getLogger(__name__)
 
     # Separate inputs
     cloudid_filename = zipped_inputs[0]
@@ -91,7 +93,7 @@ def mapcell_LES(zipped_inputs):
     cellstatistics_file = (
         stats_path + cellstats_filebase + startdate + "_" + enddate + ".nc"
     )
-    print(cellstatistics_file)
+    logger.info(cellstatistics_file)
 
     allcelldata = Dataset(cellstatistics_file, "r")
     celltrackstat_basetime = allcelldata["cell_basetime"][
@@ -121,7 +123,7 @@ def mapcell_LES(zipped_inputs):
     file_datetime = time.strftime("%Y%m%d_%H%M", time.gmtime(np.copy(filebasetime)))
     filedate = np.copy(file_datetime[0:8])
     filetime = np.copy(file_datetime[9:14])
-    print(("cloudid file: " + cloudid_filename))
+    logger.info(("cloudid file: " + cloudid_filename))
 
     # Load cloudid data
     cloudiddata = Dataset(cloudid_filename, "r")
@@ -155,7 +157,7 @@ def mapcell_LES(zipped_inputs):
     ################################################################
     # Create map of status and track number for every feature in this file
     if showalltracks == 0:
-        print("Create maps of all tracks")
+        logger.info("Create maps of all tracks")
         statusmap = np.ones((1, nlat, nlon), dtype=int) * -9999
         trackmap = np.zeros((1, nlat, nlon), dtype=int)
         allmergemap = np.zeros((1, nlat, nlon), dtype=int)
@@ -438,8 +440,7 @@ def mapcell_LES(zipped_inputs):
         )
 
         # Write netcdf file
-        print(celltrackmaps_outfile)
-        print("")
+        logger.info(celltrackmaps_outfile)
 
         output_data.to_netcdf(
             path=celltrackmaps_outfile,
@@ -633,8 +634,7 @@ def mapcell_LES(zipped_inputs):
         )
 
         # Write netcdf file
-        print(celltrackmaps_outfile)
-        print("")
+        logger.info(celltrackmaps_outfile)
 
         output_data.to_netcdf(
             path=celltrackmaps_outfile,
@@ -774,7 +774,7 @@ def mapcell_WRF(zipped_inputs):
     cellstatistics_file = (
         stats_path + cellstats_filebase + startdate + "_" + enddate + ".nc"
     )
-    print(cellstatistics_file)
+    logger.info(cellstatistics_file)
 
     allcelldata = Dataset(cellstatistics_file, "r")
     celltrackstat_basetime = allcelldata["cell_basetime"][
@@ -804,7 +804,7 @@ def mapcell_WRF(zipped_inputs):
     file_datetime = time.strftime("%Y%m%d_%H%M", time.gmtime(np.copy(filebasetime)))
     filedate = np.copy(file_datetime[0:8])
     filetime = np.copy(file_datetime[9:14])
-    print(("cloudid file: " + cloudid_filename))
+    logger.info(("cloudid file: " + cloudid_filename))
 
     # Load cloudid data
     cloudiddata = Dataset(cloudid_filename, "r")
@@ -838,7 +838,7 @@ def mapcell_WRF(zipped_inputs):
     ################################################################
     # Create map of status and track number for every feature in this file
     if showalltracks == 0:
-        print("Create maps of all tracks")
+        logger.info("Create maps of all tracks")
         statusmap = np.ones((1, nlat, nlon), dtype=int) * -9999
         trackmap = np.zeros((1, nlat, nlon), dtype=int)
         allmergemap = np.zeros((1, nlat, nlon), dtype=int)
@@ -1121,8 +1121,8 @@ def mapcell_WRF(zipped_inputs):
         )
 
         # Write netcdf file
-        print(celltrackmaps_outfile)
-        print("")
+        logger.info(celltrackmaps_outfile)
+        logger.info("")
 
         output_data.to_netcdf(
             path=celltrackmaps_outfile,
@@ -1316,8 +1316,8 @@ def mapcell_WRF(zipped_inputs):
         )
 
         # Write netcdf file
-        print(celltrackmaps_outfile)
-        print("")
+        logger.info(celltrackmaps_outfile)
+        logger.info("")
 
         output_data.to_netcdf(
             path=celltrackmaps_outfile,

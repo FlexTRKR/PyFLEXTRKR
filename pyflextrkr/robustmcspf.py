@@ -80,16 +80,19 @@ def define_robust_mcs_pf(
     import sys
     import time
     import warnings
+    import logging
     import pandas as pd
 
     np.set_printoptions(threshold=np.inf)
+    logger = logging.getLogger(__name__)
+
 
     ######################################################
     # Load mergedir mcs and pf data
     mergedirpf_statistics_file = (
         stats_path + pfstats_filebase + startdate + "_" + enddate + ".nc"
     )
-    print("mergedirpf_statistics_file: ", mergedirpf_statistics_file)
+    logger.info(("mergedirpf_statistics_file: ", mergedirpf_statistics_file))
 
     data = xr.open_dataset(mergedirpf_statistics_file, decode_times=False)
     ntracks = np.nanmax(data.coords["tracks"])
@@ -106,7 +109,7 @@ def define_robust_mcs_pf(
     time_res = float(data.attrs["time_resolution_hour"])
     # if time_res > 5:
     #     time_res = (time_res)/60 # puts time res into hr
-    # print(time_res)
+    # logger.info(time_res)
     mcs_ir_areathresh = float(data.attrs["MCS_IR_area_thresh_km2"])
     mcs_ir_durationthresh = float(data.attrs["MCS_IR_duration_thresh_hr"])
     mcs_ir_eccentricitythresh = float(data.attrs["MCS_IR_eccentricity_thres"])
@@ -128,7 +131,7 @@ def define_robust_mcs_pf(
     ###################################################
     # Loop through each track
     for nt in range(0, ntracks):
-        print(("Track # " + str(nt)))
+        logger.info(("Track # " + str(nt)))
 
         ############################################
         # Isolate data from this track
@@ -143,8 +146,8 @@ def define_robust_mcs_pf(
         ifp_volrainheavy = np.copy(pf_volrain_heavy[nt, 0:ilength])
         # import pdb; pdb.set_trace()
 
-        # print(ipf_majoraxis)
-        # print(ipf_rainrate)
+        # logger.info(ipf_majoraxis)
+        # logger.info(ipf_rainrate)
 
         ######################################################
         # Apply precip defined MCS criteria
@@ -158,9 +161,6 @@ def define_robust_mcs_pf(
             )
         )[0, :]
         nipfmcs = len(ipfmcs)
-        # print(nipfmcs)
-        # print(nipfmcs*time_res)
-        # print(mcs_pf_durationthresh)
 
         if nipfmcs > 0:
             # Apply duration threshold to entire time period
@@ -229,7 +229,7 @@ def define_robust_mcs_pf(
                         ):
                             # Label this period as an mcs
                             pf_mcsstatus[nt, igroup_indices] = 1
-                            print("MCS")
+                            logger.debug("MCS")
                         else:
                             trackid_nonmcs = np.append(trackid_nonmcs, int(nt))
                         # import pdb; pdb.set_trace()
@@ -247,14 +247,14 @@ def define_robust_mcs_pf(
                         #    pf_mcstype[nt] = 2
                         #    pf_cctype[nt, igroup_indices[isquall]] = 2
                     else:
-                        print("Not MCS")
+                        logger.debug("Not MCS")
 
             # Group does not satistfy duration threshold
             else:
                 trackid_nonmcs = np.append(trackid_nonmcs, int(nt))
-                print("Not NCS")
+                logger.debug("Not MCS")
         else:
-            print("Not MCS")
+            logger.info("Not MCS")
 
     # Isolate tracks that are robust MCS
     TEMP_mcsstatus = np.copy(pf_mcsstatus).astype(float)
@@ -266,7 +266,7 @@ def define_robust_mcs_pf(
     if nmcs == 0:
         sys.exit("No MCS found!")
     else:
-        print(("Number of robust MCS: " + str(int(nmcs))))
+        logger.info(("Number of robust MCS: " + str(int(nmcs))))
 
     # Isolate data associated with robust MCS
     ir_tracklength = ir_tracklength[trackid_mcs]
@@ -297,14 +297,14 @@ def define_robust_mcs_pf(
     nlongmcs = len(ilongmcs)
 
     if nlongmcs > 0:
-        # print('ENTERED NLONGMCS IF STATEMENT LINES 214')
+        # logger.info('ENTERED NLONGMCS IF STATEMENT LINES 214')
         # Initialize arrays
         cycle_complete = np.ones(nmcs, dtype=int) * missing_val
         cycle_stage = np.ones((nmcs, ntimes), dtype=int) * missing_val
         cycle_index = np.ones((nmcs, 5), dtype=int) * missing_val
 
         # mcs_basetime = np.empty((nmcs, ntimes), dtype='datetime64[s]')
-        # print(mcs_basetime)
+        # logger.info(mcs_basetime)
 
         # Loop through each mcs
         for ilm in range(0, nlongmcs):
@@ -742,8 +742,8 @@ def define_robust_mcs_pf(
     # output_data.lifecycle_stage.attrs['units'] = 'unitless'
 
     # Write netcdf file
-    print("")
-    print(statistics_outfile)
+    logger.info("")
+    logger.info(statistics_outfile)
 
     output_data.to_netcdf(
         path=statistics_outfile,
