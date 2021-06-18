@@ -112,7 +112,7 @@ def identifymcs_tb(
 
     # Cold Cloud Shield (CCS) area
     trackstat_corearea = np.multiply(nconv, pixelradius ** 2)
-    trackstat_ccsarea = nconv + np.multiply(ncoldanvil, pixelradius ** 2)
+    trackstat_ccsarea =  np.multiply(ncoldanvil+nconv, pixelradius ** 2)
 
     # Convert path duration to time
     trackstat_duration = np.multiply(lifetime, time_resolution)

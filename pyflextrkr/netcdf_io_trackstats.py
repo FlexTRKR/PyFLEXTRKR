@@ -242,33 +242,21 @@ def write_trackstats_tb(
         "long_name"
     ] = "Number of pixels in the core + cold anvil for each cloud in a track"
     output_data.npix.attrs["units"] = "unitless"
-    output_data.npix.attrs["valid_min"] = int(
-        areathresh / float(np.square(pixel_radius))
-    )
 
     output_data.nconv.attrs[
         "long_name"
     ] = "Number of pixels in the core for each cloud in a track"
     output_data.nconv.attrs["units"] = "unitless"
-    output_data.nconv.attrs["valid_min"] = int(
-        areathresh / float(np.square(pixel_radius))
-    )
 
     output_data.ncoldanvil.attrs[
         "long_name"
     ] = "Number of pixels in the cold anvil for each cloud in a track"
     output_data.ncoldanvil.attrs["units"] = "unitless"
-    output_data.ncoldanvil.attrs["valid_min"] = int(
-        areathresh / float(np.square(pixel_radius))
-    )
 
     output_data.nwarmanvil.attrs[
         "long_name"
     ] = "Number of pixels in the warm anvil for each cloud in a track"
     output_data.nwarmanvil.attrs["units"] = "unitless"
-    output_data.nwarmanvil.attrs["valid_min"] = int(
-        areathresh / float(np.square(pixel_radius))
-    )
 
     output_data.cloudnumber.attrs[
         "long_name"
