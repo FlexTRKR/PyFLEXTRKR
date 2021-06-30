@@ -1,0 +1,17 @@
+---
+# Global GPM based tracking configuration file
+
+# Processing steps:
+# Maybe worth nesting these in sets of dictionaries
+run_idclouds : true  # Segment and identify cloud systems
+run_tracksingle : true  # Track single consecutive cloudid files
+run_gettracks : true  # Run trackig for all files
+run_finalstats : true  # Calculate final statistics
+run_identifymcs : true  # Isolate MCSs
+run_matchpf : true  # Identify precipitation features with MCSs
+run_robustmcs : true  # Filter potential mcs cases using nmq radar variables
+run_labelmcs : true  # Create maps of MCSs
+
+# Cores, parallel, etc
+
+
