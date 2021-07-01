@@ -35,13 +35,10 @@ print((time.ctime()))
 if __name__ == "__main__":
     ##################################################################################################
     logger = logging.getLogger(__name__)
-    logging.basicConfig(format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.DEBUG)
+    logging.basicConfig(format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO)
     # Set variables describing data, file structure, and tracking thresholds
     config_filename = os.environ.get("FLEXTRKR_CONFIG_FILE", "./config/global_config.yml")
     config = yaml.load(open(config_filename), Loader=yaml.FullLoader)
-
-    print(config)
-    sys.exit()
 
     # Set version ofcode
     cloudidmethod = "futyan4"  # Option: futyan3 = identify cores and cold anvils and expand to get warm anvil, futyan4=identify core and expand for cold and warm anvils
@@ -65,11 +62,11 @@ if __name__ == "__main__":
     curr_tracknumbers_version = "v1.0"
 
     # Specify days to run, (YYYYMMDD.hhmm)
-    # startdate = '20150101.0000'
-    # enddate = '20160101.2300'
+    startdate = '20150101.0000'
+    enddate = '20160101.2300'
 
-    startdate = "20190122.0000"
-    enddate = "20190126.2300"
+    #startdate = "20190122.0000"
+    #enddate = "20190126.2300"
     # Specify cloud tracking parameters
     geolimits = np.array(
         [-90, -360, 90, 360]
@@ -176,8 +173,8 @@ if __name__ == "__main__":
     logger.info(f'Clouddatapath: {clouddata_path}, pfdata_path: {pfdata_path}')
 
     rainaccumulation_path = pfdata_path
-    # landmask_file = root_path+'map_data/IMERG_landmask_global.nc'
-    landmask_file = root_path + "map_data/IMERG_landmask_saag.nc"
+    landmask_file = root_path+'map_data/IMERG_landmask_global.nc'
+    #landmask_file = root_path + "map_data/IMERG_landmask_saag.nc"
 
     # Specify data structure
     datatimeresolution = 1  # hours
@@ -497,7 +494,7 @@ if __name__ == "__main__":
     # Call function
     if config['run_gettracks']:
         # Call function
-                logger.info('Getting track numbers')
+        logger.info('Getting track numbers')
         gettracknumbers(irdatasource, datadescription, tracking_outpath, stats_outpath, startdate, enddate, \
                         timegap, nmaxclouds, cloudid_filebase, npxname, tracknumber_version, singletrack_filebase, \
                         keepsingletrack=keep_singlemergesplit, removestartendtracks=0)
@@ -545,7 +542,7 @@ if __name__ == "__main__":
         logger.info("Track stats already done")
         trackstats_filebase = "stats_tracknumbers" + curr_tracknumbers_version
 
-    if not config['run_identifymcs']:
+    if config['run_identifymcs']:
         logger.info("Identifying MCSs")
         # Call satellite version of function
         identifymcs_tb(
@@ -568,7 +565,7 @@ if __name__ == "__main__":
     # Step 6. Match preciptation features with MCS cloud shields
 
     # Determine if identify mcs portion of code ran. If not set file name
-    if config['run_identifymcs']:
+    if not config['run_identifymcs']:
         logger.info("MCSs already identified")
         mcsstats_filebase = "mcs_tracks_"
 
