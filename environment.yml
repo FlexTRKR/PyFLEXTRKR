@@ -1,4 +1,4 @@
-name: flextrkr
+name: base
 channels:
   - conda-forge
 dependencies:

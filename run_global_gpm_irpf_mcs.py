@@ -35,10 +35,7 @@ print((time.ctime()))
 if __name__ == "__main__":
     ##################################################################################################
     logger = logging.getLogger(__name__)
-    logging.basicConfig(
-        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-        level=logging.INFO,
-    )
+    logging.basicConfig(format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.DEBUG)
     # Set variables describing data, file structure, and tracking thresholds
     config_filename = os.environ.get("FLEXTRKR_CONFIG_FILE", "./config/global_config.yml")
     config = yaml.load(open(config_filename), Loader=yaml.FullLoader)
@@ -160,23 +157,23 @@ if __name__ == "__main__":
     # coefs_heavyratio = [8.389616, 0.5079337]  # 25%
 
     # Specify filenames and locations
-    datavariablename = "Tb"
-    irdatasource = "gpmirimerg"
-    pfdatasource = "imerg"
-    datadescription = "EUS"
-    databasename = "merg_"
-    label_filebase = "cloudtrack_"
-    pfdata_filebase = "merg_"
-    rainaccumulation_filebase = "merg_"
-    root_path = os.environ["FLEXTRKR_BASE_DATA_PATH"]
+    datavariablename = 'Tb'
+    irdatasource = 'gpmirimerg'
+    pfdatasource = 'imerg'
+    datadescription = 'EUS'
+    databasename = 'merg_'
+    label_filebase = 'cloudtrack_'
+    pfdata_filebase = 'merg_'
+    rainaccumulation_filebase = 'merg_'
+    root_path = os.environ['FLEXTRKR_BASE_DATA_PATH']
 
-    print(f"ROOT PATH IS {root_path}")
+    print(f'ROOT PATH IS {root_path}')
 
-    # clouddata_path = root_path + '2015/' # Global
-    # pfdata_path = root_path + '2015/' # Global
-    clouddata_path = root_path + "data_in/"
-    pfdata_path = root_path + "data_in/"
-    print(f"Clouddatapath: {clouddata_path}, pfdata_path: {pfdata_path}")
+    #clouddata_path = root_path + '2015/' # Global
+    #pfdata_path = root_path + '2015/' # Global
+    clouddata_path = root_path + 'data_in/'
+    pfdata_path = root_path + 'data_in/'
+    logger.info(f'Clouddatapath: {clouddata_path}, pfdata_path: {pfdata_path}')
 
     rainaccumulation_path = pfdata_path
     # landmask_file = root_path+'map_data/IMERG_landmask_global.nc'
@@ -257,7 +254,7 @@ if __name__ == "__main__":
     if config['run_idclouds']:
         ######################################################################
         # Identify files to process
-        logger.info("Identifying raw data files to process.")
+        logger.info('Identifying raw data files to process.')
 
         # Isolate all possible files
         allrawdatafiles = fnmatch.filter(os.listdir(clouddata_path), databasename + "*")
@@ -359,8 +356,7 @@ if __name__ == "__main__":
                 )
         elif run_parallel == 1:
             # Parallel version
-            print("Identifying clouds")
-            print((time.ctime()))
+            logger.info('Identifying clouds')
             pool = Pool(nprocesses)
             # pool.map(idclouds_gpmmergir, idclouds_input)
             pool.starmap(idclouds_gpmmergir, idclouds_input)
@@ -377,7 +373,7 @@ if __name__ == "__main__":
 
     # Determine if identification portion of the code run. If not, set the version name and filename using names specified in the constants section
     elif not config['run_idclouds']:
-        print("Cloud already identified")
+        logger.info("Cloud already identified")
         cloudid_filebase = (
             irdatasource + "_" + datadescription + "_cloudid" + curr_id_version + "_"
         )
@@ -386,7 +382,7 @@ if __name__ == "__main__":
     if config['run_tracksingle']:
         ################################################################
         # Identify files to process
-        logger.info("Identifying cloudid files to process")
+        logger.info('Identifying cloudid files to process')
 
         # Isolate all possible files
         allcloudidfiles = fnmatch.filter(
@@ -452,8 +448,7 @@ if __name__ == "__main__":
         list_enddate = [enddate] * (cloudidfilestep - 1)
 
         # Call function
-        print("Tracking clouds between single files")
-        print((time.ctime()))
+        logger.info('Tracking clouds between single files')
 
         trackclouds_input = list(
             zip(
@@ -496,30 +491,17 @@ if __name__ == "__main__":
 
     # Determine if single file tracking code ran. If not, set the version name and filename using names specified in the constants section
     if not config['run_tracksingle']:
-        print("Single file tracks already determined")
+        logger.info("Single file tracks already determined")
         singletrack_filebase = "track" + curr_track_version + "_"
 
     # Call function
     if config['run_gettracks']:
         # Call function
-        logger.info("Getting track numbers")
-        gettracknumbers(
-            irdatasource,
-            datadescription,
-            tracking_outpath,
-            stats_outpath,
-            startdate,
-            enddate,
-            timegap,
-            nmaxclouds,
-            cloudid_filebase,
-            npxname,
-            tracknumber_version,
-            singletrack_filebase,
-            keepsingletrack=keep_singlemergesplit,
-            removestartendtracks=0,
-        )
-        tracknumbers_filebase = "tracknumbers" + tracknumber_version
+                logger.info('Getting track numbers')
+        gettracknumbers(irdatasource, datadescription, tracking_outpath, stats_outpath, startdate, enddate, \
+                        timegap, nmaxclouds, cloudid_filebase, npxname, tracknumber_version, singletrack_filebase, \
+                        keepsingletrack=keep_singlemergesplit, removestartendtracks=0)
+        tracknumbers_filebase = 'tracknumbers' + tracknumber_version
 
     ############################################################
     # Step 4. Calculate cloud statistics
@@ -566,7 +548,6 @@ if __name__ == "__main__":
     if not config['run_identifymcs']:
         logger.info("Identifying MCSs")
         # Call satellite version of function
-        print((time.ctime()))
         identifymcs_tb(
             trackstats_filebase,
             stats_outpath,
@@ -583,7 +564,6 @@ if __name__ == "__main__":
             timegap=1,
         )
         mcsstats_filebase = "mcs_tracks_"
-
     #############################################################
     # Step 6. Match preciptation features with MCS cloud shields
 
@@ -623,7 +603,6 @@ if __name__ == "__main__":
             landfrac_thresh=landfrac_thresh,
         )
         pfstats_filebase = "mcs_tracks_pf_"
-
     ##############################################################
     # Step 7. Identify robust MCS using precipitation feature statistics
 
@@ -656,7 +635,6 @@ if __name__ == "__main__":
             max_pf_majoraxis_thresh=max_pf_majoraxis_thresh,
         )
         robustmcs_filebase = "robust_mcs_tracks_"
-
     ############################################################
     # Step 8. Create pixel files with MCS tracks
 
@@ -759,7 +737,7 @@ if __name__ == "__main__":
 
             # cProfile.run('mapmcs_pf(robustmcsmap_input[200])')
         elif run_parallel == 1:
-            logger.info("Creating maps of tracked MCSs")
+            logger.info('Creating maps of tracked MCSs')
             pool = Pool(nprocesses)
             pool.starmap(mapmcs_tb_pf, robustmcsmap_input)
             pool.close()
