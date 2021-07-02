@@ -211,7 +211,7 @@ def calc_stats_single(
                     ast_corecoldarea[0:cumulative_counts_corecoldarea[idx][0]],
                     file_corecold_cloudnumber.shape[1:]))
 
-    ncorecoldpix = np.shape(corecoldarea)[1]
+            ncorecoldpix = np.shape(corecoldarea)[1]
 
 
             # Find current length of the track. Use for indexing purposes. Also, record the current length the given track.
