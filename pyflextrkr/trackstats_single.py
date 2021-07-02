@@ -162,15 +162,15 @@ def calc_stats_single(
         if len(idx > 0):
             ncoldpix_m[tracknum] = coldarea_v[idx]
 
-        # Handle meantb while we're here.
-        # We use this to know where to index into the sorted list
-        if idx>0:
-            indices = np.unravel_index(ast_coldarea[cumulative_counts_coldarea[idx-1][0]:cumulative_counts_coldarea[idx][0]], file_corecold_cloudnumber.shape)
-        else:
-            indices = np.unravel_index(ast_coldarea[0:cumulative_counts_coldarea[idx][0]], file_corecold_cloudnumber.shape)
+            # Handle meantb while we're here.
+            # We use this to know where to index into the sorted list
+            if idx>0:
+                indices = np.unravel_index(ast_coldarea[cumulative_counts_coldarea[idx-1][0]:cumulative_counts_coldarea[idx][0]], file_corecold_cloudnumber.shape)
+            else:
+                indices = np.unravel_index(ast_coldarea[0:cumulative_counts_coldarea[idx][0]], file_corecold_cloudnumber.shape)
 
 
-        coretb[tracknum] = np.nanmean(file_tb[indices[0], indices[1], indices[2]])
+            coretb[tracknum] = np.nanmean(file_tb[indices[0], indices[1], indices[2]])
 
         idx = np.where(cloudnumber_map[tracknum] == warmarea_m)[0]
         if len(idx > 0):
