@@ -167,7 +167,7 @@ def calc_stats_single(
         if idx>0:
             indices = np.unravel_index(ast_coldarea[cumulative_counts_coldarea[idx-1][0]:cumulative_counts_coldarea[idx][0]], file_corecold_cloudnumber.shape)
         else:
-            indices = np.unravel_index(0:cumulative_counts_coldarea[idx][0]], file_corecold_cloudnumber.shape)
+            indices = np.unravel_index(ast_coldarea[0:cumulative_counts_coldarea[idx][0]], file_corecold_cloudnumber.shape)
 
 
         coretb[tracknum] = np.nanmean(file_tb[indices[0], indices[1], indices[2]])
@@ -204,11 +204,11 @@ def calc_stats_single(
             idx = np.where(cloudnumber_map[itrack] == corecoldarea_m)[0]
             if idx >0:
                 corecoldarea = np.array(np.unravel_index(
-                    0:cumulative_counts_corecoldarea[idx ][0]],
+                    ast_corecoldarea[cumulative_counts_corecoldarea[idx-1][0]:cumulative_counts_corecoldarea[idx ][0]],
                     file_corecold_cloudnumber.shape[1:]))
             else:
                 corecoldarea = np.array(np.unravel_index(
-                    ast_corecoldarea[cumulative_counts_corecoldarea[idx - 1][0]:cumulative_counts_corecoldarea[idx][0]],
+                    ast_corecoldarea[0:cumulative_counts_corecoldarea[idx][0]],
                     file_corecold_cloudnumber.shape[1:]))
 
     ncorecoldpix = np.shape(corecoldarea)[1]
