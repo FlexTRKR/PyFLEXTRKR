@@ -117,9 +117,7 @@ def calc_stats_single(
         np.ones(int(numtracks), dtype=float) * -9999
     )
 
-    # Loop over unique tracknumbers
-    # logger.info('Loop over tracks in file')
-    # for itrack in uniquetracknumbers:
+
     cloudnumber_map = np.array(np.zeros(numtracks))
 
     for itrack in range(numtracks):
@@ -166,8 +164,12 @@ def calc_stats_single(
 
         # Handle meantb while we're here.
         # We use this to know where to index into the sorted list
-        indices = np.unravel_index(ast_coldarea[cumulative_counts_coldarea[idx-1][0]:cumulative_counts_coldarea[idx][0]], file_corecold_cloudnumber.shape)
-        # vals = file_corecold_cloudnumber[indices[0], indices[1], indices[2]]
+        if idx>0:
+            indices = np.unravel_index(ast_coldarea[cumulative_counts_coldarea[idx-1][0]:cumulative_counts_coldarea[idx][0]], file_corecold_cloudnumber.shape)
+        else:
+            indices = np.unravel_index(0:cumulative_counts_coldarea[idx][0]], file_corecold_cloudnumber.shape)
+
+
         coretb[tracknum] = np.nanmean(file_tb[indices[0], indices[1], indices[2]])
 
         idx = np.where(cloudnumber_map[tracknum] == warmarea_m)[0]
@@ -178,14 +180,7 @@ def calc_stats_single(
         if len(idx > 0):
             ncorecoldpix_m[tracknum] = corecoldarea_v[idx]
 
-        # indices = np.unravel_index(ast_corecoldarea[cumulative_counts_corecoldarea[idx][0]:cumulative_counts_corecoldarea[idx+1][0]], file_corecold_cloudnumber.shape)
-        # # vals = file_corecold_cloudnumber[indices[0], indices[1], indices[2]]
-        # coretb[tracknum] = np.nanmean(file_tb[indices[0], indices[1], indices[2]])
-
-
-
-
-
+    finaltrack_core_meantb = coretb
     finaltrack_ncoldpix = ncoldpix_m
     finaltrack_ncorepix = ncorepix_m
     finaltrack_nwarmpix = nwarmpix_m
@@ -207,14 +202,16 @@ def calc_stats_single(
         ):  # Should only be one cloud number. In mergers and split, the associated clouds should be listed in the file_splittracknumbers and file_mergetracknumbers
 
             idx = np.where(cloudnumber_map[itrack] == corecoldarea_m)[0]
+            if idx >0:
+                corecoldarea = np.array(np.unravel_index(
+                    0:cumulative_counts_corecoldarea[idx ][0]],
+                    file_corecold_cloudnumber.shape[1:]))
+            else:
+                corecoldarea = np.array(np.unravel_index(
+                    ast_corecoldarea[cumulative_counts_corecoldarea[idx - 1][0]:cumulative_counts_corecoldarea[idx][0]],
+                    file_corecold_cloudnumber.shape[1:]))
 
-
-            corecoldarea = np.array(np.unravel_index(
-                ast_corecoldarea[cumulative_counts_corecoldarea[idx-1][0]:cumulative_counts_corecoldarea[idx ][0]],
-                file_corecold_cloudnumber.shape[1:]))
-
-
-            ncorecoldpix = np.shape(corecoldarea)[1]
+    ncorecoldpix = np.shape(corecoldarea)[1]
 
 
             # Find current length of the track. Use for indexing purposes. Also, record the current length the given track.
