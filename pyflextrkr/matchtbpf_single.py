@@ -126,9 +126,9 @@ def matchtbpf_singlefile(
                 #########################################################################
                 # Intialize matrices for only MCS data
                 filteredrainratemap = np.ones((ydim, xdim), dtype=float) * np.nan
-                logger.debug((
-                    "filteredrainratemap allocation size: ", filteredrainratemap.shape
-                ))
+                logger.debug(
+                    ("filteredrainratemap allocation size: ", filteredrainratemap.shape)
+                )
 
                 ############################################################################
                 # Find matching cloud number
@@ -281,10 +281,12 @@ def matchtbpf_singlefile(
                                     sublandmask[ipfy, ipfx] <= landfrac_thresh
                                 )
                             else:
-                                logger.warning((
-                                    "Error, unknown precipdatasource: "
-                                    + precipdatasource
-                                ))
+                                logger.warning(
+                                    (
+                                        "Error, unknown precipdatasource: "
+                                        + precipdatasource
+                                    )
+                                )
                                 logger.debug("Must define how to calculate landfrac.")
 
                             if npix_land > 0:

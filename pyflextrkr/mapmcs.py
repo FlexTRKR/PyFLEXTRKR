@@ -153,7 +153,9 @@ def mapmcs_pf(zipped_inputs):
 
     #########################################################################
     # Get cloudid file associated with this time
-    logger.info("Determine corresponding cloudid file, radar file, and rain accumlation file")
+    logger.info(
+        "Determine corresponding cloudid file, radar file, and rain accumlation file"
+    )
     file_datetime = time.strftime("%Y%m%d_%H%M", time.gmtime(np.copy(filebasetime)))
     filedate = np.copy(file_datetime[0:8])
     filetime = np.copy(file_datetime[9:14])

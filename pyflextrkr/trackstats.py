@@ -91,9 +91,8 @@ def trackstats_tb(
     import gc
     import pandas as pd
     import logging
-    
-    logger = logging.getLogger(__name__)
 
+    logger = logging.getLogger(__name__)
 
     np.set_printoptions(threshold=np.inf)
 
@@ -2291,7 +2290,7 @@ def trackstats_WRF(
     ]
     finaltrack_cloudidfile = np.chararray(
         (int(numtracks), int(nmaxclouds), int(numcharfilename))
-    ) #TODO: JOE: Refactor all of this
+    )  # TODO: JOE: Refactor all of this
     finaltrack_corecold_majoraxis = (
         np.ones((int(numtracks), int(nmaxclouds)), dtype=float) * np.nan
     )

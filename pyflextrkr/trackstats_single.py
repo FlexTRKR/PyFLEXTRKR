@@ -91,18 +91,10 @@ def calc_stats_single(
     finaltrack_corecold_trackinterruptions = (
         np.ones(int(numtracks), dtype=np.int32) * -9999
     )
-    finaltrack_corecold_mergenumber = (
-        np.ones(int(numtracks), dtype=np.int32) * -9999
-    )
-    finaltrack_corecold_splitnumber = (
-        np.ones(int(numtracks), dtype=np.int32) * -9999
-    )
-    finaltrack_corecold_cloudnumber = (
-        np.ones(int(numtracks), dtype=np.int32) * -9999
-    )
-    finaltrack_datetimestring = [
-        ["" for x in range(13)] for z in range(int(numtracks))
-    ]
+    finaltrack_corecold_mergenumber = np.ones(int(numtracks), dtype=np.int32) * -9999
+    finaltrack_corecold_splitnumber = np.ones(int(numtracks), dtype=np.int32) * -9999
+    finaltrack_corecold_cloudnumber = np.ones(int(numtracks), dtype=np.int32) * -9999
+    finaltrack_datetimestring = [["" for x in range(13)] for z in range(int(numtracks))]
     finaltrack_cloudidfile = np.chararray((int(numtracks), int(numcharfilename)))
     finaltrack_corecold_majoraxis = np.ones(int(numtracks), dtype=float) * np.nan
     finaltrack_corecold_orientation = np.ones(int(numtracks), dtype=float) * np.nan
@@ -110,44 +102,46 @@ def calc_stats_single(
     finaltrack_corecold_perimeter = np.ones(int(numtracks), dtype=float) * np.nan
     finaltrack_corecold_xcenter = np.ones(int(numtracks), dtype=float) * -9999
     finaltrack_corecold_ycenter = np.ones(int(numtracks), dtype=float) * -9999
-    finaltrack_corecold_xweightedcenter = (
-        np.ones(int(numtracks), dtype=float) * -9999
-    )
-    finaltrack_corecold_yweightedcenter = (
-        np.ones(int(numtracks), dtype=float) * -9999
-    )
-
+    finaltrack_corecold_xweightedcenter = np.ones(int(numtracks), dtype=float) * -9999
+    finaltrack_corecold_yweightedcenter = np.ones(int(numtracks), dtype=float) * -9999
 
     cloudnumber_map = np.array(np.zeros(numtracks))
 
     for itrack in range(numtracks):
-        cloudnumber_map[itrack] =( # TODO: Joe: I really want to rewrite this later.
-            np.array(np.where(file_tracknumbers == uniquetracknumbers[itrack]))[
-                0, :
-            ]
+        cloudnumber_map[itrack] = (  # TODO: Joe: I really want to rewrite this later.
+            np.array(np.where(file_tracknumbers == uniquetracknumbers[itrack]))[0, :]
             + 1
         )
     cloudindex_map = cloudnumber_map - 1
 
-    corearea_m, corearea_v = np.unique(file_corecold_cloudnumber * (file_cloudtype[0, :, :] ==1),
-                                       return_counts=True)
+    corearea_m, corearea_v = np.unique(
+        file_corecold_cloudnumber * (file_cloudtype[0, :, :] == 1), return_counts=True
+    )
 
     ncorepix_m = np.zeros(numtracks, dtype=int)
-    coldarea_m, coldarea_v = np.unique(file_corecold_cloudnumber * (file_cloudtype[0, :, :] == 2),
-                                       return_counts=True)
+    coldarea_m, coldarea_v = np.unique(
+        file_corecold_cloudnumber * (file_cloudtype[0, :, :] == 2), return_counts=True
+    )
     ncoldpix_m = np.zeros(numtracks, dtype=int)
     coretb = np.zeros(numtracks)
 
-    ast_coldarea = np.argsort(file_corecold_cloudnumber * (file_cloudtype[0, :, :] == 2), axis=None)
+    ast_coldarea = np.argsort(
+        file_corecold_cloudnumber * (file_cloudtype[0, :, :] == 2), axis=None
+    )
     cumulative_counts_coldarea = np.cumsum(coldarea_v)
 
-    warmarea_m, warmarea_v = np.unique(file_corecold_cloudnumber * (file_cloudtype[0, :, :] == 3),
-                                       return_counts=True)
+    warmarea_m, warmarea_v = np.unique(
+        file_corecold_cloudnumber * (file_cloudtype[0, :, :] == 3), return_counts=True
+    )
     nwarmpix_m = np.zeros(numtracks, dtype=int)
 
     fct_is_1_or_2 = (file_cloudtype[0, :, :] == 1) | (file_cloudtype[0, :, :] == 2)
-    corecoldarea_m, corecoldarea_v = np.unique(file_corecold_cloudnumber[0, :, :] * fct_is_1_or_2, return_counts=True)
-    ast_corecoldarea = np.argsort(file_corecold_cloudnumber[0, :, :] * fct_is_1_or_2, axis=None)
+    corecoldarea_m, corecoldarea_v = np.unique(
+        file_corecold_cloudnumber[0, :, :] * fct_is_1_or_2, return_counts=True
+    )
+    ast_corecoldarea = np.argsort(
+        file_corecold_cloudnumber[0, :, :] * fct_is_1_or_2, axis=None
+    )
     cumulative_counts_corecoldarea = np.cumsum(corecoldarea_v)
     ncorecoldpix_m = np.zeros(numtracks, dtype=int)
 
@@ -164,11 +158,20 @@ def calc_stats_single(
 
             # Handle meantb while we're here.
             # We use this to know where to index into the sorted list
-            if idx>0:
-                indices = np.unravel_index(ast_coldarea[cumulative_counts_coldarea[idx-1][0]:cumulative_counts_coldarea[idx][0]], file_corecold_cloudnumber.shape)
+            if idx > 0:
+                indices = np.unravel_index(
+                    ast_coldarea[
+                        cumulative_counts_coldarea[idx - 1][
+                            0
+                        ] : cumulative_counts_coldarea[idx][0]
+                    ],
+                    file_corecold_cloudnumber.shape,
+                )
             else:
-                indices = np.unravel_index(ast_coldarea[0:cumulative_counts_coldarea[idx][0]], file_corecold_cloudnumber.shape)
-
+                indices = np.unravel_index(
+                    ast_coldarea[0 : cumulative_counts_coldarea[idx][0]],
+                    file_corecold_cloudnumber.shape,
+                )
 
             coretb[tracknum] = np.nanmean(file_tb[indices[0], indices[1], indices[2]])
 
@@ -190,9 +193,7 @@ def calc_stats_single(
 
         # Find cloud number that belongs to the current track in this file
         cloudnumber = (
-            np.array(np.where(file_tracknumbers == uniquetracknumbers[itrack]))[
-                0, :
-            ]
+            np.array(np.where(file_tracknumbers == uniquetracknumbers[itrack]))[0, :]
             + 1
         )  # Finds cloud numbers associated with that track. Need to add one since tells index, which starts at 0, and we want the number, which starts at one
         cloudindex = cloudnumber - 1  # Index within the matrice of this cloud.
@@ -202,17 +203,26 @@ def calc_stats_single(
         ):  # Should only be one cloud number. In mergers and split, the associated clouds should be listed in the file_splittracknumbers and file_mergetracknumbers
 
             idx = np.where(cloudnumber_map[itrack] == corecoldarea_m)[0]
-            if idx >0:
-                corecoldarea = np.array(np.unravel_index(
-                    ast_corecoldarea[cumulative_counts_corecoldarea[idx-1][0]:cumulative_counts_corecoldarea[idx ][0]],
-                    file_corecold_cloudnumber.shape[1:]))
+            if idx > 0:
+                corecoldarea = np.array(
+                    np.unravel_index(
+                        ast_corecoldarea[
+                            cumulative_counts_corecoldarea[idx - 1][
+                                0
+                            ] : cumulative_counts_corecoldarea[idx][0]
+                        ],
+                        file_corecold_cloudnumber.shape[1:],
+                    )
+                )
             else:
-                corecoldarea = np.array(np.unravel_index(
-                    ast_corecoldarea[0:cumulative_counts_corecoldarea[idx][0]],
-                    file_corecold_cloudnumber.shape[1:]))
+                corecoldarea = np.array(
+                    np.unravel_index(
+                        ast_corecoldarea[0 : cumulative_counts_corecoldarea[idx][0]],
+                        file_corecold_cloudnumber.shape[1:],
+                    )
+                )
 
             ncorecoldpix = np.shape(corecoldarea)[1]
-
 
             # Find current length of the track. Use for indexing purposes. Also, record the current length the given track.
             # lengthindex = np.array(np.where(finaltrack_corecold_cloudnumber[itrack-1,:] > 0))
@@ -247,19 +257,12 @@ def calc_stats_single(
 
                 # Determine if core+cold touches of the boundaries of the domain
                 if (
-                    np.absolute(finaltrack_corecold_minlat[itrack] - geolimits[0])
+                    np.absolute(finaltrack_corecold_minlat[itrack] - geolimits[0]) < 0.1
+                    or np.absolute(finaltrack_corecold_maxlat[itrack] - geolimits[2])
                     < 0.1
-                    or np.absolute(
-                        finaltrack_corecold_maxlat[itrack] - geolimits[2]
-                    )
+                    or np.absolute(finaltrack_corecold_minlon[itrack] - geolimits[1])
                     < 0.1
-                    or np.absolute(
-                        finaltrack_corecold_minlon[itrack] - geolimits[1]
-                    )
-                    < 0.1
-                    or np.absolute(
-                        finaltrack_corecold_maxlon[itrack] - geolimits[3]
-                    )
+                    or np.absolute(finaltrack_corecold_maxlon[itrack] - geolimits[3])
                     < 0.1
                 ):
                     finaltrack_corecold_boundary[itrack] = 1
@@ -332,9 +335,7 @@ def calc_stats_single(
                 [
                     finaltrack_corecold_ycenter[itrack],
                     finaltrack_corecold_xcenter[itrack],
-                ] = np.add(
-                    [temp_ycenter, temp_xcenter], [minyindex, minxindex]
-                ).astype(
+                ] = np.add([temp_ycenter, temp_xcenter], [minyindex, minxindex]).astype(
                     int
                 )
                 [temp_yweightedcenter, temp_xweightedcenter] = cloudproperties[
@@ -376,9 +377,7 @@ def calc_stats_single(
                 # finaltrack_corecold_histtb[itrack,:], usedtbbins = np.histogram(corecoldtb, range=(mintb_thresh, maxtb_thresh), bins=tbbins)
 
                 # Save track information. Need to subtract one since cloudnumber gives the number of the cloud (which starts at one), but we are looking for its index (which starts at zero)
-                finaltrack_corecold_status[itrack] = np.copy(
-                    trackstatus[cloudindex]
-                )
+                finaltrack_corecold_status[itrack] = np.copy(trackstatus[cloudindex])
                 # finaltrack_corecold_status[itrack] = trackstatus[cloudindex]
                 finaltrack_corecold_mergenumber[itrack] = np.copy(
                     trackmerge[cloudindex]
@@ -394,7 +393,7 @@ def calc_stats_single(
 
                 ####################################################################
                 # Calculate mean brightness temperature for core
-                #TODO: JOE: Uncomment out next few lines
+                # TODO: JOE: Uncomment out next few lines
                 # coretb = np.copy(file_tb[0, coldarea[0], coldarea[1]])
                 #
                 # finaltrack_core_meantb[itrack] = np.nanmean(coretb)

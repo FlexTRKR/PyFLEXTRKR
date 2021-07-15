@@ -604,7 +604,9 @@ def identifypf_wrf_rain(
 
                             # If convective cores exist calculate statistics
                             if ncc > 0:
-                                logger.info("Convective cores present, getting statistics")
+                                logger.info(
+                                    "Convective cores present, getting statistics"
+                                )
                                 # Initialize matrices
                                 cclon = np.ones(ncc, dtype=float) * np.nan
                                 cclat = np.ones(ncc, dtype=float) * np.nan

@@ -112,7 +112,7 @@ def identifymcs_tb(
 
     # Cold Cloud Shield (CCS) area
     trackstat_corearea = np.multiply(nconv, pixelradius ** 2)
-    trackstat_ccsarea =  np.multiply(ncoldanvil+nconv, pixelradius ** 2)
+    trackstat_ccsarea = np.multiply(ncoldanvil + nconv, pixelradius ** 2)
 
     # Convert path duration to time
     trackstat_duration = np.multiply(lifetime, time_resolution)
@@ -244,7 +244,7 @@ def identifymcs_tb(
 
         ###################################################################################
         # Find mergers
-        mergefile = np.where(merger_col ==mcstracknumbers[imcs])[0]
+        mergefile = np.where(merger_col == mcstracknumbers[imcs])[0]
 
         for imerger in range(0, len(mergefile)):
             additionalmergefile = np.where(merger_col == mergefile[imerger] + 1)[0]
@@ -300,7 +300,9 @@ def identifymcs_tb(
 
         ############################################################
         # Find splits
-        splitfile = np.where(split_col ==mcstracknumbers[imcs])[0] # Need to verify these work
+        splitfile = np.where(split_col == mcstracknumbers[imcs])[
+            0
+        ]  # Need to verify these work
 
         # Loop through all splitting tracks, if present
         if len(splitfile) > 0:

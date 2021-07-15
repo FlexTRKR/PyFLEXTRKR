@@ -4,7 +4,7 @@ import numpy as np
 def sort_renumber(labelcell_number2d, min_cellpix):
     """
     Sorts 2D labeled cells by size, and removes cells smaller than min_cellpix.
-    
+
     Args:
         labelcell_number2d: np.ndarray()
             Labeled cell number array in 2D.
@@ -85,7 +85,7 @@ def sort_renumber2vars(labelcell_number2d, labelcell2_number2d, min_cellpix):
     """
     Sorts 2D labeled cells by size, and removes cells smaller than min_cellpix.
     This version renumbers two variables using the same size sorting from labelcell_number2d.
-    
+
     Args:
         labelcell_number2d: np.ndarray()
             Labeled cell number array in 2D.
@@ -174,12 +174,12 @@ def sort_renumber2vars(labelcell_number2d, labelcell2_number2d, min_cellpix):
 def link_pf_tb(convcold_cloudnumber, cloudnumber, pf_number, tb, tb_thresh):
     """
     Renumbers separated clouds over the same PF to one cloud, using the largest cloud number.
-    
+
     Args:
         convcold_cloudnumber: np.ndarray(int)
-            Convective-coldanvil cloud number 
+            Convective-coldanvil cloud number
         cloudnumber: np.ndarray(int)
-            Cloud number 
+            Cloud number
         pf_number: np.ndarray(int)
             PF number
         tb: np.ndarray(float)
@@ -187,7 +187,7 @@ def link_pf_tb(convcold_cloudnumber, cloudnumber, pf_number, tb, tb_thresh):
         tb_thresh: float
             Temperature threshold to label PFs that have not been labeled in pf_number.
             Currently this threshold is NOT used.
-    
+
     Returns:
         pf_convcold_cloudnumber: np.ndarray(int)
             Renumbered convective-coldanvil cloud number

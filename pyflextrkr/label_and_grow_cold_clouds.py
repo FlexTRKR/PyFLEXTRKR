@@ -46,23 +46,31 @@ def label_and_grow_cold_clouds(
 
     ######################################################################
     # Use thresholds identify pixels containing cold core, cold anvil, and warm anvil. Also create arrays with a flag for each type and fill in cloudid array. Cores = 1. Cold anvils = 2. Warm anvils = 3. Other = 4. Clear = 5. Areas do not overlap
-    coldanvil_flag, core_flag, final_cloudid = generate_pixel_identification_from_threshold(ir, nx, ny, thresh_cloud,
-                                                                                            thresh_cold, thresh_core,
-                                                                                            thresh_warm)
+    (
+        coldanvil_flag,
+        core_flag,
+        final_cloudid,
+    ) = generate_pixel_identification_from_threshold(
+        ir, nx, ny, thresh_cloud, thresh_cold, thresh_core, thresh_warm
+    )
 
     #################################################################
-    ncorepix, smoothir = smooth_and_identify_indices(ir, nx, ny, smoothsize, thresh_cloud, thresh_cold, thresh_core,
-                                                     thresh_warm)
+    ncorepix, smoothir = smooth_and_identify_indices(
+        ir, nx, ny, smoothsize, thresh_cloud, thresh_cold, thresh_core, thresh_warm
+    )
 
-    labelcore_number2d, nlabelcores = find_and_label_cold_cores(ncorepix, nx, ny, smoothir, thresh_core)
+    labelcore_number2d, nlabelcores = find_and_label_cold_cores(
+        ncorepix, nx, ny, smoothir, thresh_core
+    )
 
     # Check is any cores have been identified
     if nlabelcores > 0:
 
-
         # Check if cores satisfy size threshold
         labelcore_npix = np.ones(nlabelcores, dtype=int) * -9999
-        temp_labelcore_idx, temp_labelcore_counts = np.unique(labelcore_number2d, return_counts=True)
+        temp_labelcore_idx, temp_labelcore_counts = np.unique(
+            labelcore_number2d, return_counts=True
+        )
 
         for ilabelcore in temp_labelcore_idx:
             if ilabelcore < 1 or ilabelcore > nlabelcores:
@@ -100,8 +108,6 @@ def label_and_grow_cold_clouds(
                     corestep = corestep + 1
                     sortedcore_number2d[sortedcore_indices] = np.copy(corestep)
 
-
-                    
             #####################################################
             # Spread cold cores outward until reach cold anvil threshold. Generates cold anvil.
             labelcorecold_number2d = np.copy(sortedcore_number2d)
@@ -114,15 +120,19 @@ def label_and_grow_cold_clouds(
             temp_storage = labelcorecold_number2d[cold_threshold_map]
             labelcorecold_number2d[cold_threshold_map] = -1
 
-            #Then we grow out seed points
+            # Then we grow out seed points
             labelcorecold_number2d = grow_cells(labelcorecold_number2d)
 
-            #Then just to match before we put back old labels.
-            labelcorecold_number2d[cold_threshold_map] = temp_storage  # We put these back how we found them
-                                                                    # This is probably not necessary though.
+            # Then just to match before we put back old labels.
+            labelcorecold_number2d[
+                cold_threshold_map
+            ] = temp_storage  # We put these back how we found them
+            # This is probably not necessary though.
 
             # Update the cloud sizes
-            cloud_indices, cloud_sizes = np.unique(labelcorecold_number2d, return_counts=True)
+            cloud_indices, cloud_sizes = np.unique(
+                labelcorecold_number2d, return_counts=True
+            )
             for index in cloud_indices:
                 if index == 0:
                     continue
@@ -163,10 +173,10 @@ def label_and_grow_cold_clouds(
             labelisolated_npix = np.ones(nlabelisolated, dtype=int) * -9999
             idxs, idx_counts = np.unique(labelisolated_number2d, return_counts=True)
             for idx in idxs:
-                if idx<1 or idx > nlabelisolated+1:
+                if idx < 1 or idx > nlabelisolated + 1:
                     continue
-                if idx_counts[idx]>nthresh:
-                    labelisolated_npix[idx-1] = idx_counts[idx]
+                if idx_counts[idx] > nthresh:
+                    labelisolated_npix[idx - 1] = idx_counts[idx]
 
             ###############################################################
             # Check if any of the features are retained
@@ -243,14 +253,17 @@ def label_and_grow_cold_clouds(
         final_nwarmpix = np.ones(ncorecoldisolated, dtype=int) * -9999
         featurecount = 0
         for ifeature in range(0, ncorecoldisolated):
-#             feature_indices = np.where( # Find pixels that have matching #
-#                 labelcorecoldisolated_number2d
-#                 == sortedcorecoldisolated_number1d[ifeature]
-#             )
-#             nfeatureindices = np.shape(feature_indices)[1]
-            feature_indices = labelcorecoldisolated_number2d == sortedcorecoldisolated_number1d[ifeature]
+            #             feature_indices = np.where( # Find pixels that have matching #
+            #                 labelcorecoldisolated_number2d
+            #                 == sortedcorecoldisolated_number1d[ifeature]
+            #             )
+            #             nfeatureindices = np.shape(feature_indices)[1]
+            feature_indices = (
+                labelcorecoldisolated_number2d
+                == sortedcorecoldisolated_number1d[ifeature]
+            )
             nfeatureindices = np.count_nonzero(feature_indices)
-        
+
             if nfeatureindices == sortedcorecoldisolated_npix[ifeature]:
                 featurecount = featurecount + 1
                 sortedcorecoldisolated_number2d[feature_indices] = featurecount
@@ -498,7 +511,9 @@ def find_and_label_cold_cores(ncorepix, nx, ny, smoothir, thresh_core):
     return labelcore_number2d, nlabelcores
 
 
-def smooth_and_identify_indices(ir, nx, ny, smoothsize, thresh_cloud, thresh_cold, thresh_core, thresh_warm):
+def smooth_and_identify_indices(
+    ir, nx, ny, smoothsize, thresh_cloud, thresh_cold, thresh_core, thresh_warm
+):
     # Smooth IR data prior to identifying cores using a boxcar filter. Along the edges the boundary elements come from the nearest edge pixel
     # smoothir = filters.uniform_filter(ir, size=smoothsize, mode='nearest')
     kernel = Box2DKernel(smoothsize)
@@ -529,8 +544,10 @@ def smooth_and_identify_indices(ir, nx, ny, smoothsize, thresh_cloud, thresh_col
     return ncorepix, smoothir
 
 
-def generate_pixel_identification_from_threshold(ir, nx, ny, thresh_cloud, thresh_cold, thresh_core, thresh_warm):
-    """ Use thresholds identify pixels containing cold core, cold anvil, and warm anvil.
+def generate_pixel_identification_from_threshold(
+    ir, nx, ny, thresh_cloud, thresh_cold, thresh_core, thresh_warm
+):
+    """Use thresholds identify pixels containing cold core, cold anvil, and warm anvil.
     Also create arrays with a flag for each type and fill in cloudid array.
     Cores = 1. Cold anvils = 2. Warm anvils = 3. Other = 4. Clear = 5. Areas do not overlap
 
@@ -571,36 +588,51 @@ def generate_pixel_identification_from_threshold(ir, nx, ny, thresh_cloud, thres
 
 # There are a few ways to speed this up. I could use some more hardcoded values. Bigger setting domain, etc.
 def get_neighborhood(point, grid):
-    """ Given a grid of labeled points with 0=unlabeled, -1 to be processed, other # to be  proccesed. """
+    """Given a grid of labeled points with 0=unlabeled, -1 to be processed, other # to be  proccesed."""
     shape = grid.shape
-    point_grid = [[x+point[0],y+point[1]] for x in range(-1,2) for y in range(-1,2)]
+    point_grid = [
+        [x + point[0], y + point[1]] for x in range(-1, 2) for y in range(-1, 2)
+    ]
     next_points = []
-    
-    for idx, i_point in enumerate(point_grid):        
-        if i_point[0] <0 or i_point[0] >= shape[0]:
+
+    for idx, i_point in enumerate(point_grid):
+        if i_point[0] < 0 or i_point[0] >= shape[0]:
             continue
-        if i_point[1] <0 or i_point[1] >= shape[1]:
+        if i_point[1] < 0 or i_point[1] >= shape[1]:
             continue
         if i_point[0] == point[0] and i_point[1] == point[1]:
             continue
-        else: # We're good
-            if grid[i_point[0], i_point[1]] ==0:
+        else:  # We're good
+            if grid[i_point[0], i_point[1]] == 0:
                 next_points.append([i_point[0], i_point[1]])
-    return next_points # Would probably be faster to pass in deque and directly add rather than a sublist. 
+    return next_points  # Would probably be faster to pass in deque and directly add rather than a sublist.
+
 
 def grow_cells(grid):
-    seed_points = np.where(grid>0)
-    point_que = deque([[seed_points[0][i], seed_points[1][i]] for i in range(np.count_nonzero(seed_points[0]))])
-    while len(point_que)>0:
+    seed_points = np.where(grid > 0)
+    point_que = deque(
+        [
+            [seed_points[0][i], seed_points[1][i]]
+            for i in range(np.count_nonzero(seed_points[0]))
+        ]
+    )
+    while len(point_que) > 0:
         current_pt = point_que.popleft()
-        neighbor_values = grid[max(current_pt[0]-1,0):current_pt[0]+2, max(0,current_pt[1]-1):current_pt[1]+2]
+        neighbor_values = grid[
+            max(current_pt[0] - 1, 0) : current_pt[0] + 2,
+            max(0, current_pt[1] - 1) : current_pt[1] + 2,
+        ]
         neighbors = get_neighborhood(current_pt, grid)
 
         for point in neighbors:
             grid[point[0], point[1]] = -1
             point_que.append(point)
-        if grid[current_pt[0], current_pt[1]] <1: #Lets not reclassify currently classified points grabbed in beginning selection
-            counts_v, counts_i = np.unique(neighbor_values[neighbor_values>0], return_counts=True)
+        if (
+            grid[current_pt[0], current_pt[1]] < 1
+        ):  # Lets not reclassify currently classified points grabbed in beginning selection
+            counts_v, counts_i = np.unique(
+                neighbor_values[neighbor_values > 0], return_counts=True
+            )
             mode_val = counts_v[np.argmax(counts_i)]
-            grid[current_pt[0], current_pt[1]] =mode_val
+            grid[current_pt[0], current_pt[1]] = mode_val
     return grid
