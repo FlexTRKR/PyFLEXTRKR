@@ -74,7 +74,7 @@ if __name__ == "__main__":
     pixel_radius = 10.0  # km
     timegap = 3.1  # hour
     area_thresh = 800  # km^2
-    miss_thresh = 0.2  # Missing data threshold. If missing data in the domain from this file is greater than this value, this file is considered corrupt and is ignored. (0.1 = 10%)
+    miss_thresh = 0.35  # JOE WAS 0.2 # Missing data threshold. If missing data in the domain from this file is greater than this value, this file is considered corrupt and is ignored. (0.1 = 10%)
     cloudtb_core = 225.0  # K
     cloudtb_cold = 241.0  # K
     cloudtb_warm = 261.0  # K
