@@ -405,7 +405,7 @@ def trackstats_radar(
                     ] = tmp[37][iitrack]
 
     t1_files = (time.time() - t0_files) / 60.0
-    logger.info("Files processing time (min): ", t1_files)
+    logger.info(("Files processing time (min): ", t1_files))
     logger.info("Finish collecting track statistics")
 
     ###############################################################
@@ -513,7 +513,7 @@ def trackstats_radar(
     )
 
     t1_ms = (time.time() - t0_ms) / 60.0
-    logger.info("Correct merge/split processing time (min): ", t1_ms)
+    logger.info(("Correct merge/split processing time (min): ", t1_ms))
     logger.info("Merge and split adjustments done")
 
     #########################################################################
@@ -628,7 +628,7 @@ def trackstats_radar(
                     sys.exit(itrack)
 
     t1_status = (time.time() - t0_status) / 60.0
-    logger.info("Start/end status processing time (min): ", t1_status)
+    logger.info(("Start/end status processing time (min): ", t1_status))
     logger.info("Starting and ending status done")
 
     #######################################################################
@@ -714,8 +714,8 @@ def trackstats_radar(
     )
 
     t1_write = (time.time() - t0_write) / 60.0
-    logger.info("Writing file time (min): ", t1_write)
+    logger.info(("Writing file time (min): ", t1_write))
     logger.info((time.ctime()))
-    logger.info("Output saved as: ", trackstats_outfile)
+    logger.info(("Output saved as: ", trackstats_outfile))
     t1_step4 = (time.time() - t0_step4) / 60.0
-    logger.info("Step 4 processing time (min): ", t1_step4)
+    logger.info(("Step 4 processing time (min): ", t1_step4))
