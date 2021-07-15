@@ -44,9 +44,8 @@ def trackclouds(zipped_inputs):
     import time
     import scipy.ndimage as ndi
     import logging
-    
-    logger = logging.getLogger(__name__)
 
+    logger = logging.getLogger(__name__)
 
     # Separate inputs
     firstcloudidfilename = zipped_inputs[0]
@@ -105,11 +104,13 @@ def trackclouds(zipped_inputs):
         ].data  # Load cloud id map
         nreference = reference_data["nclouds"].data  # Load number of clouds / features
         reference_data.close()  # Close file
-        
-        # Modifed by Zhixiao: Return value from reference_data["convcold_cloudnumber"].data is FLOAT. 
+
+        # Modifed by Zhixiao: Return value from reference_data["convcold_cloudnumber"].data is FLOAT.
         # reference_convcold_cloudnumber must be converted to INT for avoiding systematic errors while using np.unique, ndi.shift and selecting DCC by specific int cloudnumber.
-        reference_convcold_cloudnumber[np.isnan(reference_convcold_cloudnumber)] = 0 # Replace NAN with 0 for the cloudnumber before convert it to INT
-        reference_convcold_cloudnumber = reference_convcold_cloudnumber.astype('int32')
+        reference_convcold_cloudnumber[
+            np.isnan(reference_convcold_cloudnumber)
+        ] = 0  # Replace NAN with 0 for the cloudnumber before convert it to INT
+        reference_convcold_cloudnumber = reference_convcold_cloudnumber.astype("int32")
 
         ##########################################################
         # Load next cloudid file, called new file
@@ -119,11 +120,11 @@ def trackclouds(zipped_inputs):
         new_convcold_cloudnumber = new_data[
             "convcold_cloudnumber"
         ].data  # Load cloud id map
-        
+
         # Modifed by Zhixiao: Similar as reference_convcold_cloudnumber, we convert float to int for new_convcold_cloudnumber
         new_convcold_cloudnumber[np.isnan(new_convcold_cloudnumber)] = 0
-        new_convcold_cloudnumber = new_convcold_cloudnumber.astype('int32')
-        
+        new_convcold_cloudnumber = new_convcold_cloudnumber.astype("int32")
+
         nnew = new_data["nclouds"].data  # Load number of clouds / features
         new_data.close()  # Close file
 
@@ -131,7 +132,9 @@ def trackclouds(zipped_inputs):
         if reference_filedatetime == datetime_drift:
 
             # Shift the reference cloudnumber and replace the original
-            reference_convcold_cloudnumber = ndi.shift(reference_convcold_cloudnumber, [0, ydrift, xdrift])
+            reference_convcold_cloudnumber = ndi.shift(
+                reference_convcold_cloudnumber, [0, ydrift, xdrift]
+            )
         else:
             logger.info(
                 "Warning: datetime_drift does NOT match reference_filedatetime! No shifting is applied."
@@ -158,7 +161,9 @@ def trackclouds(zipped_inputs):
         reference_forward_size = (
             np.ones((1, int(nreference), int(nmaxlinks)), dtype=int) * fillval
         )
-        new_backward_index = np.ones((1, int(nnew), int(nmaxlinks)), dtype=int) * fillval
+        new_backward_index = (
+            np.ones((1, int(nnew), int(nmaxlinks)), dtype=int) * fillval
+        )
         new_backward_size = np.ones((1, int(nnew), int(nmaxlinks)), dtype=int) * fillval
 
         ######################################################
@@ -191,7 +196,9 @@ def trackclouds(zipped_inputs):
 
                 if sizematch / float(sizeref) > othresh:
                     if forward_nmatch > nmaxlinks:
-                        logger.info(("reference: " + number_filepath + files[ifile - 1]))
+                        logger.info(
+                            ("reference: " + number_filepath + files[ifile - 1])
+                        )
                         logger.info(("new: " + number_filepath + files[ifile]))
                         sys.exit(
                             "More than "
@@ -221,11 +228,11 @@ def trackclouds(zipped_inputs):
                 (new_convcold_cloudnumber == newindex)
                 & (reference_convcold_cloudnumber != 0)
             )
-            
+
             # Get the convcold_cloudnumber of the clouds in the reference file that overlap the cloud in the new file
             backward_refindex = reference_convcold_cloudnumber[backward_matchindices]
             unique_backwardrefindex = np.unique(backward_refindex)
-            
+
             # Calculate size of reference cloud in terms of number of pixels
             sizenew = len(
                 np.extract(
@@ -242,7 +249,9 @@ def trackclouds(zipped_inputs):
 
                 if sizematch / float(sizenew) > othresh:
                     if backward_nmatch > nmaxlinks:
-                        logger.info(("reference: " + number_filepath + files[ifile - 1]))
+                        logger.info(
+                            ("reference: " + number_filepath + files[ifile - 1])
+                        )
                         logger.info(("new: " + number_filepath + files[ifile]))
                         sys.exit(
                             "More than "
@@ -253,7 +262,7 @@ def trackclouds(zipped_inputs):
                         new_backward_index[
                             0, int(newindex) - 1, backward_nmatch
                         ] = matchindex
-                        
+
                         new_backward_size[0, int(newindex) - 1, backward_nmatch] = len(
                             np.extract(
                                 reference_convcold_cloudnumber == matchindex,

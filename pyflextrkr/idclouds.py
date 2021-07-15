@@ -51,6 +51,7 @@ def idclouds_wrf(zipped_inputs):
     import numpy as np
     import pandas as pd
     import logging
+
     # from scipy import signal
     # import scipy as sp
     # import numpy.ma as ma
@@ -308,7 +309,9 @@ def idclouds_wrf(zipped_inputs):
                             warmanvilexpansion,
                         )
                     elif cloudidmethod == "futyan4":
-                        from pyflextrkr.label_and_grow_cold_clouds import label_and_grow_cold_clouds
+                        from pyflextrkr.label_and_grow_cold_clouds import (
+                            label_and_grow_cold_clouds,
+                        )
 
                         clouddata = label_and_grow_cold_clouds(
                             out_ir,
@@ -400,7 +403,9 @@ def idclouds_wrf(zipped_inputs):
                                 area_thresh / pixel_radius ** 2,
                             )
 
-                            logger.info(f"npix_convcold_linkpf:{npix_convcold_linkpf.shape}")
+                            logger.info(
+                                f"npix_convcold_linkpf:{npix_convcold_linkpf.shape}"
+                            )
                             # Get number of clouds from the sorted linkpf clouds
                             nclouds_linkpf = np.nanmax(pf_convcold_cloudnumber_sorted)
 
@@ -1142,7 +1147,7 @@ def idclouds_LES(zipped_inputs):
     import pandas as pd
     import logging
 
-    logger=logging.getLogger(__name__)
+    logger = logging.getLogger(__name__)
 
     ########################################################
     # Separate inputs

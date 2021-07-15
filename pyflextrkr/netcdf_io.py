@@ -30,21 +30,21 @@ def write_cloudid_wrf(
 ):
 
     """
-        Writes cloudid variables to netCDF file.
+    Writes cloudid variables to netCDF file.
 
-        **kwargs: 
-        Expects these optional arguments:
-                precipitation: np.ndarray(float)
-                reflectivity: np.ndarray(float) 
-                pf_number: np.ndarray(int)
-                convcold_cloudnumber_orig: np.ndarray(int)
-                cloudnumber_orig: np.ndarray(int)
-                linkpf: int
-                pf_smooth_window: int
-                pf_dbz_thresh: float
-                pf_link_area_thresh: float
+    **kwargs:
+    Expects these optional arguments:
+            precipitation: np.ndarray(float)
+            reflectivity: np.ndarray(float)
+            pf_number: np.ndarray(int)
+            convcold_cloudnumber_orig: np.ndarray(int)
+            cloudnumber_orig: np.ndarray(int)
+            linkpf: int
+            pf_smooth_window: int
+            pf_dbz_thresh: float
+            pf_link_area_thresh: float
 
-        """
+    """
     #         missing_value_int = -9999
 
     # print('final_ncoldpix shape io: ', ncoldpix.shape)
@@ -344,21 +344,21 @@ def write_cloudtype_wrf(
     **kwargs
 ):
     """
-        Writes cloudid variables to netCDF file.
+    Writes cloudid variables to netCDF file.
 
-        **kwargs: 
-        Expects these optional arguments:
-                precipitation: np.ndarray(float)
-                reflectivity: np.ndarray(float) 
-                pf_number: np.ndarray(int)
-                convcold_cloudnumber_orig: np.ndarray(int)
-                cloudnumber_orig: np.ndarray(int)
-                linkpf: int
-                pf_smooth_window: int
-                pf_dbz_thresh: float
-                pf_link_area_thresh: float
+    **kwargs:
+    Expects these optional arguments:
+            precipitation: np.ndarray(float)
+            reflectivity: np.ndarray(float)
+            pf_number: np.ndarray(int)
+            convcold_cloudnumber_orig: np.ndarray(int)
+            cloudnumber_orig: np.ndarray(int)
+            linkpf: int
+            pf_smooth_window: int
+            pf_dbz_thresh: float
+            pf_link_area_thresh: float
 
-        """
+    """
     #         missing_value_int = -9999
 
     # Define variable list
@@ -690,8 +690,8 @@ def write_trackstats_tb(
     finaltrack_corecold_yweightedcenter,
 ):
     """
-        Writes Tb trackstats variables to netCDF file.
-        """
+    Writes Tb trackstats variables to netCDF file.
+    """
 
     # Define variable list
     varlist = {
@@ -1144,8 +1144,8 @@ def write_trackstats_ct(
 ):
 
     """
-        Writes Tb cloudtype trackstats variables to netCDF file.
-        """
+    Writes Tb cloudtype trackstats variables to netCDF file.
+    """
 
     # Define variable list
     varlist = {

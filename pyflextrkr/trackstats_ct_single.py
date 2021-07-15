@@ -27,9 +27,8 @@ def calc_stats_single(
     import xarray as xr
     import pandas as pd
     import logging
-    
-    logger = logging.getLogger(__name__)
 
+    logger = logging.getLogger(__name__)
 
     file_tracknumbers = tracknumbers
 

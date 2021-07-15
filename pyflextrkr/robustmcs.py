@@ -79,7 +79,6 @@ def filtermcs_wrf_rain(
     np.set_printoptions(threshold=np.inf)
     logger = logging.getLogger(__name__)
 
-
     ######################################################
     # Load mergedir mcs and pf data
     mergedirpf_statistics_file = (

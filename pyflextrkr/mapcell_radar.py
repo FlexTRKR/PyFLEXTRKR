@@ -51,7 +51,7 @@ def mapcell_radar(
     # Flag indicating the status of the cloud
     trackstat_status = allstatdata["status"][:]
     # Track number that it merges into
-    trackstat_mergenumbers = allstatdata["merge_tracknumbers"][:]  
+    trackstat_mergenumbers = allstatdata["merge_tracknumbers"][:]
     trackstat_splitnumbers = allstatdata["split_tracknumbers"][:]
     datasource = allstatdata.getncattr("source")
     datadescription = allstatdata.getncattr("description")
@@ -142,12 +142,14 @@ def mapcell_radar(
                 statusmap[0, jjcloudypixels, jjcloudxpixels] = jjstatus
                 # import pdb; pdb.set_trace()
             else:
-                logger.info((
-                    "Error: No matching cloud pixel found?! itrack: ",
-                    itrack[jj],
-                    ", itime: ",
-                    itime[jj],
-                ))
+                logger.info(
+                    (
+                        "Error: No matching cloud pixel found?! itrack: ",
+                        itrack[jj],
+                        ", itime: ",
+                        itime[jj],
+                    )
+                )
                 # sys.exit('Error: No matching cloud pixel found?!')
 
         # Get cloudnumbers and split cloudnumbers within this time
@@ -394,8 +396,8 @@ def mapcell_radar(
     # Set encoding/compression for all variables
     comp = dict(zlib=True)
     encodelist = {var: comp for var in ds_out.data_vars}
-    encodelist["longitude"] = dict(zlib=True, dtype='float32')
-    encodelist["latitude"] = dict(zlib=True, dtype='float32')
+    encodelist["longitude"] = dict(zlib=True, dtype="float32")
+    encodelist["latitude"] = dict(zlib=True, dtype="float32")
 
     # Write to netCDF file
     ds_out.to_netcdf(

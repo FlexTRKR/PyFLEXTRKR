@@ -31,9 +31,8 @@ def calc_stats_radar(
     import gc
     import datetime
     import logging
-    
-    logger = logging.getLogger(__name__)
 
+    logger = logging.getLogger(__name__)
 
     # import xarray as xr
     import pandas as pd

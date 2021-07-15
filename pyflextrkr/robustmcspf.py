@@ -86,7 +86,6 @@ def define_robust_mcs_pf(
     np.set_printoptions(threshold=np.inf)
     logger = logging.getLogger(__name__)
 
-
     ######################################################
     # Load mergedir mcs and pf data
     mergedirpf_statistics_file = (
