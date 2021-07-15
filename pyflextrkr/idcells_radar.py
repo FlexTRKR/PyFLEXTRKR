@@ -44,12 +44,11 @@ def idcell_csapr(
     import numpy as np
     import time
     import xarray as xr
-    import logging as logger
+    import logging
     from pyflextrkr.ftfunctions import sort_renumber
     
     np.set_printoptions(threshold=np.inf)
-    #logger = logging.getLogger(__name__)
-    logger.getLogger(__name__)
+    logger = logging.getLogger(__name__)
     ##########################################################
 
     # Read input data
