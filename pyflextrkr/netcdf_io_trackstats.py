@@ -61,8 +61,8 @@ def write_trackstats_tb(
     finaltrack_corecold_yweightedcenter,
 ):
     """
-        Writes Tb trackstats variables to netCDF file.
-        """
+    Writes Tb trackstats variables to netCDF file.
+    """
 
     # Define variable list
     varlist = {

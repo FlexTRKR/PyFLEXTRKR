@@ -12,7 +12,7 @@ def idcell_csapr(
     pixel_radius,
     area_thresh,
     miss_thresh,
-    **kwargs
+    **kwargs,
 ):
     """
     Identifies convective cells from CSAPR data.
@@ -34,7 +34,7 @@ def idcell_csapr(
     enddate - data to stop processing in yyyymmdd format
     pixel_radius - radius of pixels in km
     area_thresh - minimum area thershold to define a feature in km^2
-    miss_thresh - minimum amount of data required in order for the file to not to be considered corrupt. 
+    miss_thresh - minimum amount of data required in order for the file to not to be considered corrupt.
     """
     ##########################################################
     # Load modules
@@ -46,7 +46,7 @@ def idcell_csapr(
     import xarray as xr
     import logging
     from pyflextrkr.ftfunctions import sort_renumber
-    
+
     np.set_printoptions(threshold=np.inf)
     logger = logging.getLogger(__name__)
     ##########################################################
@@ -82,7 +82,9 @@ def idcell_csapr(
 
     # Get the number of pixels for each cell.
     # conv_mask is already sorted so the returned sorted array is not needed, only the pixel count (cell size).
-    tmp, conv_npix = sort_renumber(conv_mask, 0) #Modified by zhixiao, should not remove any single grid cells in coarse resolution wrf
+    tmp, conv_npix = sort_renumber(
+        conv_mask, 0
+    )  # Modified by zhixiao, should not remove any single grid cells in coarse resolution wrf
 
     # conv_mask_noinflate = conv_mask2
     # conv_mask_sorted_noinflate = conv_mask2
@@ -173,7 +175,7 @@ def idcell_csapr(
         "lon": (["lon"], np.squeeze(out_lon[0, :])),
         "clouds": (
             ["clouds"],
-            np.arange(1, nclouds+1),
+            np.arange(1, nclouds + 1),
         ),  # 'ndatechar': (['ndatechar'], np.arange(0, 32)), \
         # 'ntimechar': (['ntimechar'], np.arange(0, 16)), \
     }
@@ -303,7 +305,10 @@ def idcell_csapr(
         "dbz_lowlevel": {"zlib": True},
         "conv_core": {"zlib": True},
         "conv_mask": {"zlib": True},
-        "convcold_cloudnumber": {"zlib": True, "dtype": "int",},
+        "convcold_cloudnumber": {
+            "zlib": True,
+            "dtype": "int",
+        },
         "cloudnumber": {"zlib": True, "dtype": "int"},
         "echotop10": {"zlib": True},
         "echotop20": {"zlib": True},

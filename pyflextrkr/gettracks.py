@@ -70,6 +70,7 @@ def gettracknumbers(
     import xarray as xr
     import pandas as pd
     import logging
+
     logger = logging.getLogger(__name__)
 
     np.set_printoptions(threshold=np.inf)
@@ -81,7 +82,9 @@ def gettracknumbers(
         dataoutpath + tracknumbers_filebase + "_" + startdate + "_" + enddate + ".nc"
     )
 
-    files, gap = filter_filelisting(datainpath, enddate, singletrack_filebase, startdate, timegap)
+    files, gap = filter_filelisting(
+        datainpath, enddate, singletrack_filebase, startdate, timegap
+    )
 
     # import pdb; pdb.set_trace()
     # KB HARDCODED GAP
@@ -385,7 +388,6 @@ def gettracknumbers(
                         largestnewindex
                     ]  # Cloud numberof the largest new cloud
 
-
                     if nnewclouds == 1 and nreferenceclouds == 1:
                         ############################################################
                         # Simple continuation
@@ -408,7 +410,6 @@ def gettracknumbers(
                         if nnewclouds == 1:
                             for tempreferencecloud in associated_referenceclouds:
                                 trackfound[tempreferencecloud - 1] = 1
-
 
                                 # If this reference cloud is the largest fragment of the merger, label this reference time (file) as the larger part of merger (2) and merging at the next time (ifile + 1)
                                 if tempreferencecloud == largest_referencecloud:
@@ -536,7 +537,6 @@ def gettracknumbers(
                 ######################################################################################
                 # No new clouds. Track dissipated
                 else:
-
 
                     trackfound[ncr - 1] = 1
 
@@ -734,7 +734,9 @@ def gettracknumbers(
                 "zlib": True,
                 "units": "seconds since 1970-01-01",
             },
-            "cloudid_files": {"zlib": True,},
+            "cloudid_files": {
+                "zlib": True,
+            },
             "track_numbers": {"dtype": "int", "zlib": True, "_FillValue": -9999},
             "track_status": {"dtype": "int", "zlib": True, "_FillValue": -9999},
             "track_mergenumbers": {"dtype": "int", "zlib": True, "_FillValue": -9999},
@@ -748,6 +750,7 @@ def filter_filelisting(datainpath, enddate, singletrack_filebase, startdate, tim
     import time
     import logging
     import pandas as pd
+
     logger = logging.getLogger(__name__)
     ##################################################################################
     # Get single track files sort
@@ -774,11 +777,11 @@ def filter_filelisting(datainpath, enddate, singletrack_filebase, startdate, tim
     filetime = np.empty(nfiles)
     header = np.array(len(singletrack_filebase)).astype(int)
     for filestep, ifiles in enumerate(singletrackfiles):
-        year[filestep] = int(ifiles[header: header + 4])
-        month[filestep] = int(ifiles[header + 4: header + 6])
-        day[filestep] = int(ifiles[header + 6: header + 8])
-        hour[filestep] = int(ifiles[header + 9: header + 11])
-        minute[filestep] = int(ifiles[header + 11: header + 13])
+        year[filestep] = int(ifiles[header : header + 4])
+        month[filestep] = int(ifiles[header + 4 : header + 6])
+        day[filestep] = int(ifiles[header + 6 : header + 8])
+        hour[filestep] = int(ifiles[header + 9 : header + 11])
+        minute[filestep] = int(ifiles[header + 11 : header + 13])
 
         TEMP_fulltime = calendar.timegm(
             datetime.datetime(
@@ -842,7 +845,7 @@ def filter_filelisting(datainpath, enddate, singletrack_filebase, startdate, tim
     for filestep, ifiles in enumerate(acceptdates):
         files[filestep] = singletrackfiles[ifiles]
         filedate[filestep] = (
-                str(year[ifiles]) + str(month[ifiles]).zfill(2) + str(day[ifiles]).zfill(2)
+            str(year[ifiles]) + str(month[ifiles]).zfill(2) + str(day[ifiles]).zfill(2)
         )
         filetime[filestep] = str(hour[ifiles]).zfill(2) + str(minute[ifiles]).zfill(2)
         filesyear[filestep] = int(year[ifiles])

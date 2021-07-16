@@ -30,8 +30,8 @@ def trackstats_radar(
     import gc
     from pyflextrkr import netcdf_io_trackstats as net
     import logging
-    logger = logging.getLogger(__name__)
 
+    logger = logging.getLogger(__name__)
 
     np.set_printoptions(threshold=np.inf)
 

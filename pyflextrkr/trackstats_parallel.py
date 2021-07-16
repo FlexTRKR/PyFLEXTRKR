@@ -91,9 +91,8 @@ def trackstats_tb(
     from pyflextrkr.trackstats_single import calc_stats_single
     from pyflextrkr import netcdf_io_trackstats as net
     import logging
-    
-    logger = logging.getLogger(__name__)
 
+    logger = logging.getLogger(__name__)
 
     np.set_printoptions(threshold=np.inf)
 

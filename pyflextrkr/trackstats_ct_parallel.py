@@ -89,7 +89,7 @@ def trackstats_ct(
     import gc
     from multiprocessing import Pool
     import logging
-    
+
     np.set_printoptions(threshold=np.inf)
     logger = logging.getLogger(__name__)
 
@@ -500,7 +500,9 @@ def trackstats_ct(
     finaltrack_cloudtype_conghigh = finaltrack_cloudtype_conghigh[
         cloudindexpresent, 0:maxtracklength
     ]
-    logger.info("finaltrack_cloudtype_conghigh.shape: ", finaltrack_cloudtype_conghigh.shape)
+    logger.info(
+        "finaltrack_cloudtype_conghigh.shape: ", finaltrack_cloudtype_conghigh.shape
+    )
     finaltrack_cloudtype_deep = finaltrack_cloudtype_deep[
         cloudindexpresent, 0:maxtracklength
     ]

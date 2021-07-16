@@ -112,7 +112,7 @@ def identifymcs_tb(
 
     # Cold Cloud Shield (CCS) area
     trackstat_corearea = np.multiply(nconv, pixelradius ** 2)
-    trackstat_ccsarea =  np.multiply(ncoldanvil+nconv, pixelradius ** 2)
+    trackstat_ccsarea = np.multiply(ncoldanvil + nconv, pixelradius ** 2)
 
     # Convert path duration to time
     trackstat_duration = np.multiply(lifetime, time_resolution)
@@ -225,6 +225,10 @@ def identifymcs_tb(
     mcssplitcloudnumber = np.ones((nmcs, nmaxlength, nmaxmerge), dtype=np.int32) * -9999
     mcssplitstatus = np.ones((nmcs, nmaxlength, nmaxmerge), dtype=np.int32) * -9999
 
+    # Let's convert 2D to 1D arrays for performance
+    split_col = np.nanmax(splitcloudnumbers, axis=1)
+    merger_col = np.nanmax(mergecloudnumbers, axis=1)
+
     # Loop through each MCS and link small clouds merging in
     for imcs in np.arange(0, nmcs):
         ###################################################################################
@@ -240,21 +244,17 @@ def identifymcs_tb(
 
         ###################################################################################
         # Find mergers
-        [mergefile, mergefeature] = np.array(
-            np.where(mergecloudnumbers == mcstracknumbers[imcs])
-        )
+        mergefile = np.where(merger_col == mcstracknumbers[imcs])[0]
+
         for imerger in range(0, len(mergefile)):
-            additionalmergefile, additionalmergefeature = np.array(
-                np.where(mergecloudnumbers == mergefile[imerger] + 1)
-            )
+            additionalmergefile = np.where(merger_col == mergefile[imerger] + 1)[0]
+
             if len(additionalmergefile) > 0:
                 mergefile = np.concatenate((mergefile, additionalmergefile))
-                mergefeature = np.concatenate((mergefeature, additionalmergefeature))
 
         # Loop through all merging tracks, if present
         if len(mergefile) > 0:
             # Isolate merging cases that have short duration
-            mergefeature = mergefeature[trackstat_duration[mergefile] < merge_duration]
             mergefile = mergefile[trackstat_duration[mergefile] < merge_duration]
 
             # Make sure the merger itself is not an MCS
@@ -265,9 +265,7 @@ def identifymcs_tb(
                         0, :
                     ]
                     mergefile[removemerges] = -9999
-                    mergefeature[removemerges] = -9999
                 mergefile = mergefile[mergefile != -9999].astype(int)
-                mergefeature = mergefeature[mergefeature != -9999].astype(int)
 
             # Continue if mergers satisfy duration and MCS restriction
             if len(mergefile) > 0:
@@ -302,14 +300,13 @@ def identifymcs_tb(
 
         ############################################################
         # Find splits
-        [splitfile, splitfeature] = np.array(
-            np.where(splitcloudnumbers == mcstracknumbers[imcs])
-        )
+        splitfile = np.where(split_col == mcstracknumbers[imcs])[
+            0
+        ]  # Need to verify these work
 
         # Loop through all splitting tracks, if present
         if len(splitfile) > 0:
             # Isolate splitting cases that have short duration
-            splitfeature = splitfeature[trackstat_duration[splitfile] < split_duration]
             splitfile = splitfile[trackstat_duration[splitfile] < split_duration]
 
             # Make sure the spliter itself is not an MCS
@@ -320,9 +317,7 @@ def identifymcs_tb(
                         np.where(splitfile == splittingmcs[iremove])
                     )[0, :]
                     splitfile[removesplits] = -9999
-                    splitfeature[removesplits] = -9999
                 splitfile = splitfile[splitfile != -9999].astype(int)
-                splitfeature = splitfeature[splitfeature != -9999].astype(int)
 
             # Continue if spliters satisfy duration and MCS restriction
             if len(splitfile) > 0:

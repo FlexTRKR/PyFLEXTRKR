@@ -26,7 +26,7 @@ def idclouds_gpmmergir(
     pf_dbz_thresh,
     pf_link_area_thresh,
     pfvarname,
-    **kwargs
+    **kwargs,
 ):
     """
     Identifies convective cloud objects from GPM MERGIR global satellite data.
@@ -49,19 +49,19 @@ def idclouds_gpmmergir(
     enddate - data to stop processing in yyyymmdd format
     pixel_radius - radius of pixels in km
     area_thresh - minimum area thershold to define a feature in km^2
-    cloudtb_threshs - brightness temperature thresholds 
-    miss_thresh - minimum amount of data required in order for the file to not to be considered corrupt. 
+    cloudtb_threshs - brightness temperature thresholds
+    miss_thresh - minimum amount of data required in order for the file to not to be considered corrupt.
     cloudidmethod - flag indiciating which method of cloud classification will be used
     mincoldcorepix - minimum size threshold for a cloud
     smoothsize - how many pixels to dilate as growing the warm (and cold) anvil. only used for futyan4.
-    warmanvilexpansion - flag indicating whether to grow the warm anvil or ignore this step. The warm anvil is not used in tracking. 
+    warmanvilexpansion - flag indicating whether to grow the warm anvil or ignore this step. The warm anvil is not used in tracking.
     processhalfhour
-    idclouds_hourly, 
-    idclouds_minute, 
-    linkpf, 
-    pf_smooth_window, 
-    pf_dbz_thresh, 
-    pf_link_area_thresh, 
+    idclouds_hourly,
+    idclouds_minute,
+    linkpf,
+    pf_smooth_window,
+    pf_dbz_thresh,
+    pf_link_area_thresh,
     pfvarname
     """
     ##########################################################
@@ -286,7 +286,9 @@ def idclouds_gpmmergir(
                                 warmanvilexpansion,
                             )
                         elif cloudidmethod == "futyan4":
-                            from pyflextrkr.label_and_grow_cold_clouds import label_and_grow_cold_clouds
+                            from pyflextrkr.label_and_grow_cold_clouds import (
+                                label_and_grow_cold_clouds,
+                            )
 
                             clouddata = label_and_grow_cold_clouds(
                                 out_ir,

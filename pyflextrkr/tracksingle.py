@@ -43,9 +43,8 @@ def trackclouds(zipped_inputs):
     import pandas as pd
     import time
     import logging
-    
-    logger = logging.getLogger(__name__)
 
+    logger = logging.getLogger(__name__)
 
     # Separate inputs
     firstcloudidfilename = zipped_inputs[0]
@@ -162,7 +161,9 @@ def trackclouds(zipped_inputs):
 
                 if sizematch / float(sizeref) > othresh:
                     if forward_nmatch > nmaxlinks:
-                        logger.debug(("reference: " + number_filepath + files[ifile - 1]))
+                        logger.debug(
+                            ("reference: " + number_filepath + files[ifile - 1])
+                        )
                         logger.debug(("new: " + number_filepath + files[ifile]))
                         sys.exit(
                             "More than "
@@ -213,7 +214,9 @@ def trackclouds(zipped_inputs):
 
                 if sizematch / float(sizenew) > othresh:
                     if backward_nmatch > nmaxlinks:
-                        logger.debug(("reference: " + number_filepath + files[ifile - 1]))
+                        logger.debug(
+                            ("reference: " + number_filepath + files[ifile - 1])
+                        )
                         logger.debug(("new: " + number_filepath + files[ifile]))
                         sys.exit(
                             "More than "
