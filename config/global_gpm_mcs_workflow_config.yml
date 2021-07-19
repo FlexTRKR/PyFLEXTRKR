@@ -1,6 +1,9 @@
 ---
 # Global GPM based tracking configuration file
 
+# Processing configuration to use:
+processing_config: "global_gpm_mcs_processing_config.yml"
+
 # Processing steps:
 # Maybe worth nesting these in sets of dictionaries
 run_idclouds : true  # Segment and identify cloud systems
@@ -13,5 +16,13 @@ run_robustmcs : true  # Filter potential mcs cases using nmq radar variables
 run_labelmcs : true  # Create maps of MCSs
 
 # Cores, parallel, etc
+run_parallel: 1
+nprocesses : 32  # Number of processors to use if run_parallel is set to 1
+
+startdate: '20150101.0000'
+enddate: '20160101.2300'
+
+input_data_directory: "data_in/"
+landmask_filename: "IMERG_landmask_global.nc"
 
 
