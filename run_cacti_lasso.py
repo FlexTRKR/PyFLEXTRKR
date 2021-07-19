@@ -332,6 +332,7 @@ if run_tracksingle == 1:
     list_othresh = np.ones(cloudidfilestep-1)*othresh
     list_startdate = [startdate]*(cloudidfilestep-1)
     list_enddate = [enddate]*(cloudidfilestep-1)
+    list_member = [member]*(cloudidfilestep-1)
     
     # Call function
     logger.info('Tracking clouds between single files')
@@ -342,7 +343,7 @@ if run_tracksingle == 1:
                             cloudidfiles_basetime[0:-1], cloudidfiles_basetime[1::], \
                             list_trackingoutpath, list_trackversion, list_timegap, \
                             list_nmaxlinks, list_othresh, list_startdate, list_enddate, \
-                            datetime_drift_match, xdrifts_match, ydrifts_match, member))
+                            datetime_drift_match, xdrifts_match, ydrifts_match, list_member))
 
     if run_parallel == 0:
         # Serial version
