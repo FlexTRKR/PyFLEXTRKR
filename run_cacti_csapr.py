@@ -11,6 +11,8 @@ from pyflextrkr.idcells_radar import idcell_csapr
 from pyflextrkr.tracksingle_drift import trackclouds
 from pyflextrkr.gettracks import gettracknumbers
 from pyflextrkr.mapcell_radar import mapcell_radar
+import logging
+
 
 # Name: run_cacti_csapr.py
 
@@ -23,6 +25,10 @@ config_file = sys.argv[1]
 # Read configuration from yaml file
 stream = open(config_file, 'r')
 config = yaml.full_load(stream)
+
+logging.basicConfig(format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO)
+logger = logging.getLogger(__name__)
+
 
 run_advection = config['run_advection']
 run_idclouds = config['run_idclouds']
@@ -43,8 +49,8 @@ terrain_file = config['terrain_file']
 if "driftfile" in config:
     driftfile = config['driftfile']
     if os.path.isfile(driftfile):
-        print(f'Drift file already exist: {driftfile}')
-        print('Will be overwritten.')
+        logger.info(f'Drift file already exist: {driftfile}')
+        logger.info('Will be overwritten.')
 
 
 ################################################################################################
@@ -123,7 +129,7 @@ end_basetime = calendar.timegm(TEMP_endtime.timetuple())
 ##########################################################################
 # Domain mean advection
 if run_advection == 1:
-    print('Calculating domain mean advection.')
+    logger.info('Calculating domain mean advection.')
 
     status = calc_mean_advection(
                 clouddata_path, 
@@ -143,7 +149,7 @@ if run_advection == 1:
 if run_idclouds == 1:
     ######################################################################
     # Identify files to process
-    print('Identifying raw data files to process.')
+    logger.info('Identifying raw data files to process.')
 
     # Isolate all possible files
     allrawdatafiles = sorted(fnmatch.filter(os.listdir(clouddata_path), databasename+'*.nc'))
@@ -201,7 +207,7 @@ if run_idclouds == 1:
     elif run_parallel == 1:
         # Parallel version
         if __name__ == '__main__':
-            print('Identifying clouds')
+            logger.info('Identifying clouds')
             pool = Pool(nprocesses)
             pool.starmap(idcell_csapr, idclouds_input)
             pool.close()
@@ -222,7 +228,7 @@ if run_idclouds == 0:
 if run_tracksingle == 1:
     ################################################################
     # Identify files to process
-    print('Identifying cloudid files to process')
+    logger.info('Identifying cloudid files to process')
 
     # Isolate all possible files
     allcloudidfiles = sorted(fnmatch.filter(os.listdir(tracking_outpath), cloudid_filebase +'*'))
@@ -273,9 +279,9 @@ if run_tracksingle == 1:
     try:
         driftfile
     except NameError:
-        print(f"Drift file is not defined. Regular tracksingle procedure is used.")
+        logger.info(f"Drift file is not defined. Regular tracksingle procedure is used.")
     else:
-        print(f"Drift file used: {driftfile}")
+        logger.info(f"Drift file used: {driftfile}")
 
         # Read the drift file
         ds_drift = xr.open_dataset(driftfile)
@@ -307,7 +313,7 @@ if run_tracksingle == 1:
     list_enddate = [enddate]*(cloudidfilestep-1)
     
     # Call function
-    print('Tracking clouds between single files')
+    logger.info('Tracking clouds between single files')
 
     trackclouds_input = list(zip(cloudidfiles[0:-1], cloudidfiles[1::], \
                             cloudidfiles_datestring[0:-1], cloudidfiles_datestring[1::], \
@@ -344,13 +350,13 @@ if run_tracksingle == 0:
 if run_gettracks == 1:
 
     # Call function
-    print('Getting track numbers')
-    print('tracking_out:' + tracking_outpath)
+    logger.info('Getting track numbers')
+    logger.info('tracking_out:' + tracking_outpath)
     gettracknumbers(datasource, datadescription, tracking_outpath, stats_outpath, startdate, enddate, \
                     timegap, maxnclouds, cloudid_filebase, npxname, tracknumber_version, singletrack_filebase, \
                     keepsingletrack=keep_singlemergesplit, removestartendtracks=1)
     tracknumbers_filebase = 'tracknumbers' + tracknumber_version
-    print('tracking_out done')
+    logger.info('tracking_out done')
 
 ############################################################
 # Calculate final statistics
@@ -361,7 +367,7 @@ if run_gettracks == 0:
 
 # Call function
 if run_finalstats == 1:
-    print('Calculating cell statistics')
+    logger.info('Calculating cell statistics')
 
     # 
     if run_parallel == 0:
@@ -414,7 +420,7 @@ if run_finalstats == 0:
     trackstats_filebase = 'stats_tracknumbers' + curr_tracknumbers_version + '_'
 
 if run_labelcell == 1:
-    print('Identifying which pixel level maps to generate for the cell tracks')
+    logger.info('Identifying which pixel level maps to generate for the cell tracks')
 
     ###########################################################
     # Identify files to process
@@ -478,7 +484,7 @@ if run_labelcell == 1:
                         startdate, enddate, celltracking_outpath, celltracking_filebase)
     elif run_parallel == 1:
         if __name__ == '__main__':
-            print('Creating maps of tracked cells')
+            logger.info('Creating maps of tracked cells')
             pool = Pool(nprocesses)
             pool.starmap(mapcell_radar, cellmap_input)
             pool.close()
