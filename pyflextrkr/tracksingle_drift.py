@@ -20,6 +20,7 @@
 # othresh - overlap threshold used to determine if two clouds are linked in time
 # startdate - start date and time of the full dataset
 # enddate - end date and time of the full dataset
+# member - member of LASSO ensemble
 
 # Outputs: (One netcdf output for each pair of cloud files)
 # basetime_new - seconds since 1970-01-01 of the reference (first) file
@@ -68,11 +69,12 @@ def trackclouds(zipped_inputs):
     datetime_drift = zipped_inputs[15]
     xdrift = zipped_inputs[16]
     ydrift = zipped_inputs[17]
+    member = zipped_inputs[18]
 
     ########################################################
     # Set constants
     # Version information
-    outfilebase = "track" + track_version + "_"
+    outfilebase = "track" + track_version + "_" + member + "_"
     ########################################################
     # Isolate new and reference file and base times
     new_file = secondcloudidfilename
