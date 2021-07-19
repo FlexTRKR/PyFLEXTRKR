@@ -12,7 +12,7 @@ from pyflextrkr.tracksingle_drift import trackclouds
 from pyflextrkr.gettracks import gettracknumbers
 from pyflextrkr.mapcell_radar import mapcell_radar
 import logging
-
+import argparse
 
 # Name: run_cacti_csapr.py
 
@@ -20,8 +20,29 @@ import logging
 
 # Author: Zhe Feng (zhe.feng@pnnl.gov)
 
+# Read in paths and files from tasks.txt
+parser=argparse.ArgumentParser()
+parser.add_argument('--avalue','-a', type=str)
+parser.add_argument('--bvalue','-b', type=str)
+parser.add_argument('--cvalue','-c', type=str)
+parser.add_argument('--dvalue','-d', type=str)
+
+args = parser.parse_args()
+
+clouddata_path = args.bvalue
+terrain_file = args.cvalue
+member = args.dvalue
+
+print('member: ', member)
+
+print('terrain_file: ', terrain_file)
+
+terrain_file = clouddata_path+terrain_file
+print('combined terrain file: ', terrain_file)
+
 # Get configuration file name from input
-config_file = sys.argv[1]
+#config_file = sys.argv[1] NON TASKFARMER WAY
+config_file = args.avalue
 # Read configuration from yaml file
 stream = open(config_file, 'r')
 config = yaml.full_load(stream)
@@ -114,7 +135,7 @@ os.makedirs(stats_outpath, exist_ok=True)
 
 # Set default driftfile if not specified in config file
 if "driftfile" not in config:
-    driftfile = f'{stats_outpath}{datasource}_advection_all.nc'
+    driftfile = f'{stats_outpath}{datasource}{member}_advection_all.nc'
 
 ########################################################################
 # Calculate basetime of start and end date
@@ -193,7 +214,7 @@ if run_idclouds == 1:
     # Generate input lists
     idclouds_input = zip(rawdatafiles, files_datestring, files_timestring, files_basetime, \
                         repeat(datasource), repeat(datadescription), repeat(cloudid_version), \
-                        repeat(tracking_outpath), repeat(startdate), repeat(enddate), \
+                        repeat(member), repeat(tracking_outpath), repeat(startdate), repeat(enddate), \
                         repeat(pixel_radius), repeat(area_thresh), repeat(miss_thresh))
     
     ## Call function
@@ -202,7 +223,7 @@ if run_idclouds == 1:
         for ifile in range(0, filestep):
             idcell_csapr(rawdatafiles[ifile], files_datestring[ifile], files_timestring[ifile], files_basetime[ifile], \
                             datasource, datadescription, cloudid_version, \
-                            tracking_outpath, startdate, enddate, \
+                            member, tracking_outpath, startdate, enddate, \
                             pixel_radius, area_thresh, miss_thresh)
     elif run_parallel == 1:
         # Parallel version
@@ -215,14 +236,14 @@ if run_idclouds == 1:
     else:
         sys.exit('Valid parallelization flag not provided')
 
-    cloudid_filebase = datasource + '_' + datadescription + '_cloudid' + cloudid_version + '_'
+    cloudid_filebase = datasource + '_' + datadescription + '_' + member + '_cloudid' + cloudid_version + '_'
 
 ###################################################################
 # Link clouds/ features in time adjacent files (single file tracking), if necessary
 
 # Determine if identification portion of the code run. If not, set the version name and filename using names specified in the constants section
 if run_idclouds == 0:
-    cloudid_filebase =  datasource + '_' + datadescription + '_cloudid' + curr_id_version + '_'
+    cloudid_filebase =  datasource + '_' + datadescription + '_' + member + '_cloudid' + curr_id_version + '_'
 
 # Call function
 if run_tracksingle == 1:

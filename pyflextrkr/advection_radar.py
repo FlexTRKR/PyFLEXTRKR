@@ -91,6 +91,10 @@ def movement_of_storm_fft(
     field_1 = np.squeeze(dset_1["dbz_comp"].values)
     field_2 = np.squeeze(dset_2["dbz_comp"].values)
 
+    # SUBSETTING WHOLE DOMAIN TO JUST DO THE RADAR DOMAIN ADVECTION SPEED
+    field_1 = field_1[120:230,75:150]
+    field_2 = field_2[120:230,75:150]
+
     y_lag = np.zeros((cuts, cuts))
     x_lag = np.zeros((cuts, cuts))
 

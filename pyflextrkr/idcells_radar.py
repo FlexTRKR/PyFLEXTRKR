@@ -6,6 +6,7 @@ def idcell_csapr(
     datasource,
     datadescription,
     cloudid_version,
+    member,
     dataoutpath,
     startdate,
     enddate,
@@ -111,6 +112,8 @@ def idcell_csapr(
         + datasource
         + "_"
         + datadescription
+        + "_"
+        + member
         + "_cloudid"
         + cloudid_version
         + "_"
