@@ -598,7 +598,7 @@ def trackstats_radar(
                         f"Error: track {itrack} has no matching time in the track it merges with!"
                     )
                     # import pdb; pdb.set_trace()
-                    sys.exit(itrack)
+                    #sys.exit(itrack)
 
             # If start split tracknumber exists, this track starts from a split
             if finaltrack_startsplit_tracknumber[itrack] >= 0:

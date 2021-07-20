@@ -12,6 +12,7 @@ def mapcell_radar(
     enddate,
     out_path,
     out_filebase,
+    member,
 ):
     # Inputs:
     # cloudid_filebase - file header of the cloudid file create in the first step
@@ -21,6 +22,7 @@ def mapcell_radar(
     # stats_path - directory that contains the statistics files
     # startdate - starting date and time of the full dataset
     # enddate - ending date and time of the full dataset
+    # member - ensemble member
 
     #######################################################################
     # Import modules
@@ -205,7 +207,7 @@ def mapcell_radar(
 
     # Define output fileame
     celltrackmaps_outfile = (
-        out_path + out_filebase + str(filedate) + "_" + str(filetime) + ".nc"
+        out_path + out_filebase + member + "_" + str(filedate) + "_" + str(filetime) + ".nc"
     )
 
     # Check if file already exists. If exists, delete

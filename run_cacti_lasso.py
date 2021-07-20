@@ -494,7 +494,8 @@ if run_labelcell == 1:
     # cellmap_input = list(zip(cloudidfiles, cloudidfiles_basetime, list_cellstat_filebase, list_trackstat_filebase, \
     #                     list_celltracking_path, list_stats_path, list_startdate, list_enddate, list_showalltracks))
     cellmap_input = zip(cloudidfiles, cloudidfiles_basetime, repeat(stats_outpath), repeat(trackstats_filebase), \
-                        repeat(startdate), repeat(enddate), repeat(celltracking_outpath), repeat(celltracking_filebase))
+                        repeat(startdate), repeat(enddate), repeat(celltracking_outpath), repeat(celltracking_filebase), \
+                        repeat(member))
 
     ## Call function
     if run_parallel == 0:
@@ -503,7 +504,7 @@ if run_labelcell == 1:
         for iunique in range(0, cloudidfilestep):
             # mapcell_radar(cellmap_input[iunique])
             mapcell_radar(cloudidfiles[iunique], cloudidfiles_basetime[iunique], stats_outpath, trackstats_filebase, \
-                        startdate, enddate, celltracking_outpath, celltracking_filebase)
+                        startdate, enddate, celltracking_outpath, celltracking_filebase, member)
     elif run_parallel == 1:
         if __name__ == '__main__':
             logger.info('Creating maps of tracked cells')
