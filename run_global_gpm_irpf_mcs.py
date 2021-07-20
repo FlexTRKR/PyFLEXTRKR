@@ -27,7 +27,7 @@ from pyflextrkr.trackstats_parallel import trackstats_tb
 # The code does not need to run through each step each time. The code can be run starting at any step, as long as those previous codes have been run and their output is availiable.
 
 # Author: Orginial IDL version written by Sally McFarlane and Zhe Feng (zhe.feng@pnnl.gov). Adapted to Python by Hannah Barnes (hannah.barnes@pnnl.gov)
-from pyflextrkr.workflow import load_config_and_paths
+from pyflextrkr.workflow_manager import load_config_and_paths
 
 
 if __name__ == "__main__":
@@ -44,6 +44,7 @@ if __name__ == "__main__":
     # clouddata_path = root_path + '2015/' # Global
     # pfdata_path = root_path + '2015/' # Global
     # TODO: JOE:  Move these into config reading part as well
+    # TODO: Update these to full paths rather than relative.
     clouddata_path = config['clouddata_path']
     pfdata_path = config['pfdata_path']
     # Specify additional file locations

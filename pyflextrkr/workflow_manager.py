@@ -13,26 +13,39 @@ class WorkflowManager(object):
         self.datasets = {}
         self.config = load_config_and_paths(config_file=config_filename)
 
+        logging.basicConfig(format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO)
+        self.logger = logging.getLogger(__name__)
+
+
+        # First we register our various datasets. We don't register an input dataset, but all intermediate defaults are registered.
+        # 1. Output of step 1
+        # 2. Stats file
+        # 3. idv files
+        # 4.
+
         # Need to register each of the processing steps
+        # We'll register a default set of processing steps based on config file
 
-        # Set up the various lists of files
 
-        return self
 
-    def register_processing_step(self, input_dataset_name, step_number=-1):
+
+    def register_processing_step(self, input_dataset_name, step_number=-1, enabled=True):
         """ Register a processing step for the workflow
 
         Parameters:
         -----------
         input_dataset_name: string
             Input dataset needed for this processing step
-        step_number: float
+        step_number: float, -1 default
             Position to insert step at. Steps are run in numerical order. To insert a step between
-            1 and 2, one can use 1.5, or 1.2 for instance.
+            1 and 2, one can use 1.5, or 1.2 for instance. -1 adds after last step.
+
+        Note: All processing steps are given the config dictionary and so if more esoteric processing is needed
+        that can be handled within the function.
         """
         pass
 
-    def register_dataset(self, dataset_name, dataset_path, time_conversion_function):
+    def register_dataset(self, dataset_name, dataset_path, time_conversion_function=None):
         """ Register a dataset for availability to processing steps.
 
         Parameters:
@@ -45,6 +58,10 @@ class WorkflowManager(object):
             Function that maps dataset filenames to times (can be used to filter out files). In the case of statistics
             files this can just be an idempotent mapping.
         """
+        # Steps of processing
+        # 1. test if single file or filelist
+        # 2. If single file, add to list of datasets
+        # 3. If directory then pass list of files through time_conversion function, check they are within limits and sort them then store.
         pass
 
     def unregister_processing_step(self, step_number):
@@ -58,6 +75,9 @@ class WorkflowManager(object):
 
     def run_step(self, step_number):
         pass
+
+    def change_enabled_state_of_processing_step(self, step_number, new_state):
+        """ Given a processing step_number, enable or disable it."""
 
 
     def __repr__(self):
@@ -90,7 +110,6 @@ def load_config_and_paths(config_file = None):
     logger.info(f'ROOT DATA PATH IS {root_path}')
 
 
-    # TODO: JOE:  Move these into config reading part as well
     config['clouddata_path'] = root_path + config['input_data_directory']
     config['pfdata_path'] = root_path + config['input_data_directory']
 
@@ -109,6 +128,7 @@ def load_config_and_paths(config_file = None):
     config['landmask_file'] = root_path + 'map/' + config['landmask_filename']
     # landmask_file = root_path + "map_data/IMERG_landmask_saag.nc"
 
+    # TODO: JOE: Move this to the register dataset portion
     if not os.path.exists(config['tracking_outpath']):
         os.makedirs(config['tracking_outpath'])
 
