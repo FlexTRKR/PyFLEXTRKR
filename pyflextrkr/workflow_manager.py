@@ -2,8 +2,10 @@ import calendar
 import logging
 import os
 import yaml
+import numpy as np
 
 from pytz import utc
+import datetime
 
 
 class WorkflowManager(object):
@@ -108,47 +110,6 @@ def load_config_and_paths(config_file = None):
     processing_config = yaml.load(open(config_path + config['processing_config']), Loader=yaml.FullLoader)
     config.update(processing_config)
 
-    # Set up paths
-
-    root_path = os.environ['FLEXTRKR_BASE_DATA_PATH']
-    logger.info(f'ROOT DATA PATH IS {root_path}')
-
-
-    config['clouddata_path'] = root_path + config['input_data_directory']
-    config['pfdata_path'] = root_path + config['input_data_directory']
-
-    # Specify additional file locations
-    config['tracking_outpath'] = root_path + "tracking/"  # Data on individual features being tracked
-
-    config['stats_outpath'] = root_path + "stats/"  # Data on track statistics
-    config['mcstracking_outpath'] = root_path + "mcstracking/" + startdate + "_" + enddate + "/"# Pixel level data for MCSs
-    logger.debug(
-        f"Tracking path is {tracking_outpath}, {stats_outpath}, {mcstracking_outpath}"
-    )
-
-    logger.debug(f'Clouddatapath: {clouddata_path}, pfdata_path: {pfdata_path}')
-
-    config['rainaccumulation_path'] = pfdata_path
-    config['landmask_file'] = root_path + 'map/' + config['landmask_filename']
-    # landmask_file = root_path + "map_data/IMERG_landmask_saag.nc"
-
-    # TODO: JOE: Move this to the register dataset portion
-    if not os.path.exists(config['tracking_outpath']):
-        os.makedirs(config['tracking_outpath'])
-
-    if not os.path.exists(config['stats_outpath']):
-        os.makedirs(config['stats_outpath'])
-
-    config['cloudtb_threshs'] = np.hstack(
-        (config['cloudtb_core'], config['cloudtb_cold'], config['cloudtb_warm'], config['cloudtb_cloud'])
-    )
-
-    if 'absolutetb_threshs' not in config:
-        config['absolute_tb_threshs'] =  np.array([160, 330])
-
-
-
-    # Process time entries
 
     temp_starttime = datetime.datetime(
         int(config['startdate'][0:4]),
@@ -170,6 +131,47 @@ def load_config_and_paths(config_file = None):
         0,
         tzinfo=utc,
     )
-    config['end_basetime'] = calendar.timegm(temp_endtime.timetuple()
+    config['end_basetime'] = calendar.timegm(temp_endtime.timetuple())
+
+
+    # Set up paths
+
+    root_path = os.environ['FLEXTRKR_BASE_DATA_PATH']
+    logger.info(f'ROOT DATA PATH IS {root_path}')
+
+
+    config['clouddata_path'] = root_path + config['input_data_directory']
+    config['pfdata_path'] = root_path + config['input_data_directory']
+
+    # Specify additional file locations
+    config['tracking_outpath'] = root_path + "tracking/"  # Data on individual features being tracked
+
+    config['stats_outpath'] = root_path + "stats/"  # Data on track statistics
+    config['mcstracking_outpath'] = root_path + "mcstracking/" + config['startdate'] + "_" + config['enddate'] + "/"# Pixel level data for MCSs
+
+    logger.debug(f"Clouddatapath: {config['clouddata_path']}, pfdata_path: {config['pfdata_path']}")
+
+    config['rainaccumulation_path'] = config['pfdata_path']
+    config['landmask_file'] = root_path + 'map/' + config['landmask_filename']
+    # landmask_file = root_path + "map_data/IMERG_landmask_saag.nc"
+
+    # TODO: JOE: Move this to the register dataset portion
+    if not os.path.exists(config['tracking_outpath']):
+        os.makedirs(config['tracking_outpath'])
+
+    if not os.path.exists(config['stats_outpath']):
+        os.makedirs(config['stats_outpath'])
+
+    config['cloudtb_threshs'] = np.hstack(
+        (config['cloudtb_core'], config['cloudtb_cold'], config['cloudtb_warm'], config['cloudtb_cloud'])
+    )
+
+    if 'absolutetb_threshs' not in config:
+        config['absolute_tb_threshs'] =  np.array([160, 330])
+
+
+
+    # Process time entries
+
 
     return config
