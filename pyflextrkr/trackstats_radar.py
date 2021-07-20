@@ -40,7 +40,6 @@ def trackstats_radar(
         stats_path
         + "stats_"
         + tracknumbers_filebase
-        + "_"
         + startdate
         + "_"
         + enddate
@@ -49,14 +48,18 @@ def trackstats_radar(
 
     # Read terrain file to get range mask
     dster = Dataset(terrain_file, "r")
-    rangemask = dster["mask110"][:]
+    #rangemask = dster["mask110"][:]
+    rangemask = dster["ZAMSL"][0,:,:]
     dster.close()
+    rangemask = np.ones(rangemask.shape)
+    rangemask = np.squeeze(rangemask,axis=0)
+    print('rangemask.shape: ', rangemask.shape)
 
     # Load track data
     logger.info("Loading gettracks data")
     logger.info((time.ctime()))
     cloudtrack_file = (
-        stats_path + tracknumbers_filebase + "_" + startdate + "_" + enddate + ".nc"
+        stats_path + tracknumbers_filebase + startdate + "_" + enddate + ".nc"
     )
 
     cloudtrackdata = Dataset(cloudtrack_file, "r")
@@ -622,7 +625,7 @@ def trackstats_radar(
                     logger.info(
                         f"Error: track {itrack} has no matching time in the track it splits from!"
                     )
-                    sys.exit(itrack)
+                   # sys.exit(itrack)
 
     #######################################################################
     # Write to netcdf

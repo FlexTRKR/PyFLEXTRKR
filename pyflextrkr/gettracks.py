@@ -23,6 +23,7 @@ def gettracknumbers(
     npxname,
     tracknumbers_version,
     singletrack_filebase,
+    member,
     keepsingletrack=1,
     removestartendtracks=0,
     tdimname="time",
@@ -77,7 +78,7 @@ def gettracknumbers(
 
     #############################################################################
     # Set track numbers output file name
-    tracknumbers_filebase = "tracknumbers" + tracknumbers_version
+    tracknumbers_filebase = "tracknumbers" + tracknumbers_version + "_" + member
     tracknumbers_outfile = (
         dataoutpath + tracknumbers_filebase + "_" + startdate + "_" + enddate + ".nc"
     )
