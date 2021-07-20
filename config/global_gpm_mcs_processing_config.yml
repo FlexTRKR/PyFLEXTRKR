@@ -94,8 +94,8 @@ coefs_heavyratio:  [3.419024, 0.4387090]  # 10% [recommended]
 # coefs_heavyratio:  [8.389616, 0.5079337]  # 25%
 
 # Specify filenames and locations
-datavariablename:  'Tb'
-irdatasource:  'gpmirimerg'
+cloud_variablen_name:  'Tb'
+clouddatasource:  'gpmirimerg'
 pfdatasource:  'imerg'
 datadescription:  'EUS'
 databasename:  'merg_'

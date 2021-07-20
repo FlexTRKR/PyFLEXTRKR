@@ -263,31 +263,7 @@ if __name__ == "__main__":
         # Generate input lists
         idclouds_input = zip(
             rawdatafiles,
-            repeat(irdatasource),
-            repeat(datadescription),
-            repeat(datavariablename),
-            repeat(cloudid_version),
-            repeat(tracking_outpath),
-            repeat(landmask_file),
-            repeat(geolimits),
-            repeat(startdate),
-            repeat(enddate),
-            repeat(pixel_radius),
-            repeat(area_thresh),
-            repeat(cloudtb_threshs),
-            repeat(absolutetb_threshs),
-            repeat(miss_thresh),
-            repeat(cloudidmethod),
-            repeat(mincoldcorepix),
-            repeat(smoothwindowdimensions),
-            repeat(warmanvilexpansion),
-            repeat(idclouds_hourly),
-            repeat(idclouds_minute),
-            repeat(linkpf),
-            repeat(pf_smooth_window),
-            repeat(pf_dbz_thresh),
-            repeat(pf_link_area_thresh),
-            repeat(pfvarname),
+            repeat(config),
         )
         ## Call function
         if run_parallel == 0:
@@ -296,35 +272,11 @@ if __name__ == "__main__":
                 # idclouds_gpmmergir(idclouds_input[ifile])
                 idclouds_gpmmergir(
                     rawdatafiles[ifile],
-                    irdatasource,
-                    datadescription,
-                    datavariablename,
-                    cloudid_version,
-                    tracking_outpath,
-                    landmask_file,
-                    geolimits,
-                    startdate,
-                    enddate,
-                    pixel_radius,
-                    area_thresh,
-                    cloudtb_threshs,
-                    absolutetb_threshs,
-                    miss_thresh,
-                    cloudidmethod,
-                    mincoldcorepix,
-                    smoothwindowdimensions,
-                    warmanvilexpansion,
-                    idclouds_hourly,
-                    idclouds_minute,
-                    linkpf,
-                    pf_smooth_window,
-                    pf_dbz_thresh,
-                    pf_link_area_thresh,
-                    pfvarname,
+                    config
                 )
         elif run_parallel == 1:
             # Parallel version
-            logger.info('Identifying clouds')
+            logger.info('Step 1: Identifying clouds')
             pool = Pool(nprocesses)
             # pool.map(idclouds_gpmmergir, idclouds_input)
             pool.starmap(idclouds_gpmmergir, idclouds_input)

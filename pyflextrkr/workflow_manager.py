@@ -1,6 +1,10 @@
 import calendar
-import os, yaml
 import logging
+import os
+import yaml
+
+from pytz import utc
+
 
 class WorkflowManager(object):
     """ Workflow manager for FlexTRKR workflows. This class handles registering of the processing
@@ -91,7 +95,7 @@ def load_config_and_paths(config_file = None):
         Path to a config file. `None` uses environment variable FLEXTRKR_CONFIG_FILE which is preferred.
     """
     logger = logging.getLogger(__name__)
-    if config_file_path == None:
+    if config_file is None:
         config_path = os.environ.get("FLEXTRKR_CONFIG_FILE", "config/")
         config_filename = os.environ.get("FLEXTRKR_CONFIG_FILE", "config/global_gpm_mcs_workflow_config.yml")
     else:
@@ -135,10 +139,18 @@ def load_config_and_paths(config_file = None):
     if not os.path.exists(config['stats_outpath']):
         os.makedirs(config['stats_outpath'])
 
+    config['cloudtb_threshs'] = np.hstack(
+        (config['cloudtb_core'], config['cloudtb_cold'], config['cloudtb_warm'], config['cloudtb_cloud'])
+    )
+
+    if 'absolutetb_threshs' not in config:
+        config['absolute_tb_threshs'] =  np.array([160, 330])
+
+
 
     # Process time entries
 
-    TEMP_starttime = datetime.datetime(
+    temp_starttime = datetime.datetime(
         int(config['startdate'][0:4]),
         int(config['startdate'][4:6]),
         int(config['startdate'][6:8]),
@@ -147,9 +159,9 @@ def load_config_and_paths(config_file = None):
         0,
         tzinfo=utc,
     )
-    config['start_basetime'] = calendar.timegm(TEMP_starttime.timetuple())
+    config['start_basetime'] = calendar.timegm(temp_starttime.timetuple())
 
-    TEMP_endtime = datetime.datetime(
+    temp_endtime = datetime.datetime(
         int(config['enddate'][0:4]),
         int(config['enddate'][4:6]),
         int(config['enddate'][6:8]),
@@ -158,6 +170,6 @@ def load_config_and_paths(config_file = None):
         0,
         tzinfo=utc,
     )
-    config['end_basetime'] = calendar.timegm(TEMP_endtime.timetuple()
+    config['end_basetime'] = calendar.timegm(temp_endtime.timetuple()
 
     return config
