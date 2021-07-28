@@ -598,7 +598,7 @@ def trackstats_radar(
                         f"Error: track {itrack} has no matching time in the track it merges with!"
                     )
                     # import pdb; pdb.set_trace()
-                    #sys.exit(itrack)
+                    sys.exit(itrack)
 
             # If start split tracknumber exists, this track starts from a split
             if finaltrack_startsplit_tracknumber[itrack] >= 0:
@@ -609,23 +609,23 @@ def trackstats_radar(
                     isplit_idx, 0 : finaltrack_tracklength[isplit_idx]
                 ]
                 # Find the time index matching the time when splitting occurs
-                match_timeidx = np.where(ibasetime == finaltrack_startbasetime[itrack])[
+                match_timeidx = np.where(ibasetime == finaltrack_startbasetime[itrack]-(datatimeresolution*36000))[
                     0
                 ]
                 if len(match_timeidx) == 1:
                     # The time to connect to the track it splits from should be 1 time step prior
                     if (match_timeidx - 1) >= 0:
-                        finaltrack_startsplit_timeindex[itrack] = match_timeidx - 1
+                        finaltrack_startsplit_timeindex[itrack] = match_timeidx
                         finaltrack_startsplit_cloudnumber[
                             itrack
-                        ] = finaltrack_cloudnumber[isplit_idx, match_timeidx - 1]
+                        ] = finaltrack_cloudnumber[isplit_idx, match_timeidx]
                     else:
                         logger.info(f"Split time occur before track starts??")
                 else:
                     logger.info(
                         f"Error: track {itrack} has no matching time in the track it splits from!"
                     )
-                   # sys.exit(itrack)
+                    sys.exit(itrack)
 
     #######################################################################
     # Write to netcdf
