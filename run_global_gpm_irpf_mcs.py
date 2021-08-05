@@ -34,7 +34,7 @@ if __name__ == "__main__":
     ##################################################################################################
     # TODO: JOE: Refactor the config file handling into a function.
     logger = logging.getLogger(__name__)
-    logging.basicConfig(format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO)
+    logging.basicConfig(format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.DEBUG)
 
     config = load_config_and_paths()
 
@@ -63,7 +63,7 @@ if __name__ == "__main__":
 
 
     run_parallel = (
-        1  # Options: 0-run serially, 1-run parallel (uses Pool from Multiprocessing)
+        0  # Options: 0-run serially, 1-run parallel (uses Pool from Multiprocessing)
     )
     nprocesses = 32  # Number of processors to use if run_parallel is set to 1
     idclouds_hourly = 1  # 0 = No, 1 = Yes

@@ -52,6 +52,7 @@ def idclouds_gpmmergir(
 
     np.set_printoptions(threshold=np.inf)
     logger = logging.getLogger(__name__)
+    logger.debug(f"Processing {filename}.")
 
 
     # Set medfilt2d kernel_size, this determines the filter window dimension

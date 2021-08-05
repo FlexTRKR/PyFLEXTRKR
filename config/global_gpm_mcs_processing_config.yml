@@ -94,7 +94,7 @@ coefs_heavyratio:  [3.419024, 0.4387090]  # 10% [recommended]
 # coefs_heavyratio:  [8.389616, 0.5079337]  # 25%
 
 # Specify filenames and locations
-cloud_variablen_name:  'Tb'
+cloud_variable_name:  'Tb'
 clouddatasource:  'gpmirimerg'
 pfdatasource:  'imerg'
 datadescription:  'EUS'
