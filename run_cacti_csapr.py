@@ -1,5 +1,5 @@
 import numpy as np
-import os, fnmatch, sys
+import os, fnmatch, sys, glob
 import datetime, calendar
 from pytz import utc
 import xarray as xr
@@ -143,6 +143,30 @@ if run_advection == 1:
                 nprocesses=nprocesses,
                 )
 
+def get_basetime(clouddata_path, databasename):
+    # Isolate all possible files
+    allrawdatafiles = sorted(fnmatch.filter(os.listdir(clouddata_path), databasename + '*.nc'))
+
+    # Loop through files, identifying files within the startdate - enddate interval
+    nleadingchar = np.array(len(databasename)).astype(int)
+
+    rawdatafiles = [None]*len(allrawdatafiles)
+    files_timestring = [None]*len(allrawdatafiles)
+    files_datestring = [None]*len(allrawdatafiles)
+    # files_basetime = np.ones(len(allrawdatafiles), dtype=int)*-9999
+    files_basetime = np.full(len(allrawdatafiles), -9999, dtype=int)
+    filestep = 0
+    for ii, ifile in enumerate(allrawdatafiles):
+        TEMP_filetime = datetime.datetime(int(ifile[nleadingchar:nleadingchar+4]),
+                                            int(ifile[nleadingchar+4:nleadingchar+6]),
+                                            int(ifile[nleadingchar+6:nleadingchar+8]),
+                                            int(ifile[nleadingchar+9:nleadingchar+11]),
+                                            int(ifile[nleadingchar+11:nleadingchar+13]), 0, tzinfo=utc)
+        files_basetime[ii] = calendar.timegm(TEMP_filetime.timetuple())
+        import pdb;
+        pdb.set_trace()
+
+    return files_basetime
 
 ##########################################################################
 # Identify clouds / features in the data, if neccesary
@@ -151,22 +175,22 @@ if run_idclouds == 1:
     # Identify files to process
     logger.info('Identifying raw data files to process.')
 
-    # Isolate all possible files
-    allrawdatafiles = sorted(fnmatch.filter(os.listdir(clouddata_path), databasename+'*.nc'))
+    files_basetime = get_basetime(clouddata_path, databasename)
+    import pdb; pdb.set_trace()
 
     # Loop through files, identifying files within the startdate - enddate interval
     nleadingchar = np.array(len(databasename)).astype(int)
 
     rawdatafiles = [None]*len(allrawdatafiles)
-    files_timestring = [None]*len(allrawdatafiles) 
+    files_timestring = [None]*len(allrawdatafiles)
     files_datestring = [None]*len(allrawdatafiles)
     files_basetime = np.ones(len(allrawdatafiles), dtype=int)*-9999
     filestep = 0
     for ifile in allrawdatafiles:
-        TEMP_filetime = datetime.datetime(int(ifile[nleadingchar:nleadingchar+4]), 
-                                            int(ifile[nleadingchar+4:nleadingchar+6]), 
-                                            int(ifile[nleadingchar+6:nleadingchar+8]), 
-                                            int(ifile[nleadingchar+9:nleadingchar+11]), 
+        TEMP_filetime = datetime.datetime(int(ifile[nleadingchar:nleadingchar+4]),
+                                            int(ifile[nleadingchar+4:nleadingchar+6]),
+                                            int(ifile[nleadingchar+6:nleadingchar+8]),
+                                            int(ifile[nleadingchar+9:nleadingchar+11]),
                                             int(ifile[nleadingchar+11:nleadingchar+13]), 0, tzinfo=utc)
         TEMP_filebasetime = calendar.timegm(TEMP_filetime.timetuple())
 
@@ -180,13 +204,13 @@ if run_idclouds == 1:
                                             ifile[nleadingchar+11:nleadingchar+13]
             files_basetime[filestep] = np.copy(TEMP_filebasetime)
             filestep = filestep + 1
-    
+
     # Remove extra rows
     rawdatafiles = rawdatafiles[0:filestep]
     files_datestring = files_datestring[0:filestep]
     files_timestring = files_timestring[0:filestep]
     files_basetime = files_basetime[:filestep]
-    
+
     ##########################################################################
     # Process files    
 
