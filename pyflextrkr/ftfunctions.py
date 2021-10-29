@@ -1,5 +1,157 @@
 import numpy as np
+import os, fnmatch, sys, glob
+import datetime, calendar
+from pytz import utc
+import logging
+import xarray as xr
 
+logging.basicConfig(format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+def get_basetime(data_path,
+                 data_basename,
+                 time_format=1):
+    """
+    Calculate base time (Epoch time) from filenames.
+
+    Args:
+        data_path: string
+            Data directory name.
+        data_basename: string
+            Data base name.
+        time_format: int (optional, default=1)
+            Specify file naming format to extract date/time.
+    Returns:
+        data_filenames: list
+            List of data filenames.
+        files_basetime: numpy array
+            Array of file base time.
+        files_datestring: list
+            List of file date string.
+        files_timestring: list
+            List of file time string.
+
+    """
+    # Isolate all possible files
+    filenames = sorted(fnmatch.filter(os.listdir(data_path), data_basename + '*.nc'))
+
+    # Loop through files, identifying files within the startdate - enddate interval
+    nleadingchar = np.array(len(data_basename)).astype(int)
+
+    data_filenames = [None]*len(filenames)
+    files_timestring = [None]*len(filenames)
+    files_datestring = [None]*len(filenames)
+    files_basetime = np.full(len(filenames), -9999, dtype=int)
+    # Loop over each file
+    for ii, ifile in enumerate(filenames):
+        # Filename format: data_basename_yyyymmdd_hhmmss
+        if time_format == 1:
+            year = ifile[nleadingchar:nleadingchar+4]
+            month = ifile[nleadingchar+4:nleadingchar+6]
+            day = ifile[nleadingchar+6:nleadingchar+8]
+            hour = ifile[nleadingchar+9:nleadingchar+11]
+            minute = ifile[nleadingchar+11:nleadingchar+13]
+        TEMP_filetime = datetime.datetime(int(year), int(month), int(day), int(hour), int(minute), 0, tzinfo=utc)
+        files_basetime[ii] = calendar.timegm(TEMP_filetime.timetuple())
+        files_datestring[ii] = year + month + day
+        files_timestring[ii] = hour + minute
+        data_filenames[ii] = data_path + ifile
+    return (data_filenames, files_basetime, files_datestring, files_timestring)
+
+def subset_files_timerange(data_path,
+                            data_basename,
+                            start_basetime,
+                            end_basetime):
+    """
+    Subset files within given start and end time.
+
+    Args:
+        data_path: string
+            Data directory name.
+        data_basename: string
+            Data base name.
+        start_basetime: int
+            Start base time (Epoch time).
+        end_basetime: int
+            End base time (Epoch time).
+
+    Returns:
+        data_filenames: list
+            List of data file names with full path.
+        files_basetime: numpy array
+            Array of file base time.
+        files_datestring: list
+            List of file date string.
+        files_timestring: list
+            List of file time string.
+    """
+    # Get basetime for all files
+    data_filenames, files_basetime, files_datestring, files_timestring = get_basetime(data_path, data_basename)
+
+    # Find basetime within the given range
+    fidx = np.where((files_basetime >= start_basetime) & (files_basetime <= end_basetime))[0]
+    # Subset filenames, dates, times
+    data_filenames = np.array(data_filenames)[fidx].tolist()
+    files_basetime = files_basetime[fidx]
+    files_datestring = np.array(files_datestring)[fidx].tolist()
+    files_timestring = np.array(files_timestring)[fidx].tolist()
+    return (data_filenames, files_basetime, files_datestring, files_timestring)
+
+def match_drift_times(cloudidfiles_datestring,
+                      cloudidfiles_timestring,
+                      driftfile=None):
+    """
+    Match drift file times with cloudid file times.
+
+    Args:
+        cloudidfiles_datestring: list
+            List of cloudid files date string.
+        cloudidfiles_timestring: list
+            List of cloudid files time string.
+        driftfile: string (optional)
+            Drift (advection) file name.
+
+    Returns:
+        datetime_drift_match: numpy array
+            Matched drift file date time strings.
+        xdrifts_match: numpy array
+            Matched drift distance in the x-direction.
+        ydrifts_match: numpy array
+            Matched drift distance in the y-direction.
+
+    """
+    # Create drift variables that match number of reference cloudid files
+    # Number of reference cloudid files (1 less than total cloudid files)
+    ncloudidfiles = len(cloudidfiles_timestring) - 1
+    datetime_drift_match = np.empty(ncloudidfiles, dtype='<U13')
+    xdrifts_match = np.zeros(ncloudidfiles, dtype=int)
+    ydrifts_match = np.zeros(ncloudidfiles, dtype=int)
+    # Test if driftfile is defined
+    try:
+        driftfile
+    except NameError:
+        logger.info(f"Drift file is not defined. Regular tracksingle procedure is used.")
+    else:
+        logger.info(f"Drift file used: {driftfile}")
+
+        # Read the drift file
+        ds_drift = xr.open_dataset(driftfile)
+        bt_drift = ds_drift.basetime
+        xdrifts = ds_drift.x.values
+        ydrifts = ds_drift.y.values
+
+        # Convert dateime64 objects to string array
+        datetime_drift = bt_drift.dt.strftime("%Y%m%d_%H%M").values
+
+        # Loop over each cloudid file time to find matching drfit data
+        for itime in range(0, len(cloudidfiles_timestring) - 1):
+            cloudid_datetime = cloudidfiles_datestring[itime] + '_' + cloudidfiles_timestring[itime]
+            idx = np.where(datetime_drift == cloudid_datetime)[0]
+            if (len(idx) == 1):
+                datetime_drift_match[itime] = datetime_drift[idx[0]]
+                xdrifts_match[itime] = xdrifts[idx]
+                ydrifts_match[itime] = ydrifts[idx]
+    return (datetime_drift_match, xdrifts_match, ydrifts_match)
 
 def sort_renumber(labelcell_number2d, min_cellpix):
     """
