@@ -1,0 +1,78 @@
+---
+# Tracking steps to run
+run_advection: 0
+# Segment and identify clouds 
+run_idclouds: 1
+# Track single consecutive cloudid files
+run_tracksingle: 1
+# Run trackig for all files
+run_gettracks: 1
+# Calculate final statistics
+run_finalstats: 1
+# Create maps of cells
+run_labelcell: 1
+# Start/end date and time
+startdate: '20181111.0000'
+enddate: '20181114.0000'
+# Parallel processing set up
+run_parallel: 1
+nprocesses: 30
+# Data source, description
+datasource: CSAPR2
+datadescription: COR
+databasename: taranis_corcsapr2cfrppiqcM1_convmask.c1.
+# Working directory for the tracking data
+root_path: "/global/cscratch1/sd/feng045/iclass/cacti/arm/csapr/test/"
+# Input files directory
+clouddata_path: "/global/cscratch1/sd/feng045/iclass/cacti/arm/csapr/test/input_data/"
+# Drift (advection) file
+driftfile: "/global/cscratch1/sd/feng045/iclass/cacti/arm/csapr/test/stats/CSAPR2_advection_all.nc"
+# Terrain file 
+terrain_file: "/global/cscratch1/sd/feng045/iclass/cacti/arm/csapr/test/CSAPR2_Taranis_Gridded_500m.Terrain_RangeMask.nc"
+
+# Advection calculation parameters
+DBZ_THRESHOLD: 10       # radar reflectivity threshold [dBZ]
+MED_FILT_LEN: 9         # median filter length for advection speed time seires [number of points]
+MAX_MOVEMENT_MPS: 60    # maximum advection speed allowed [m/s]
+
+# 0=all short tracks removed, 1=only short tracks that are not mergers or splits are removed
+keep_singlemergesplit: 1
+
+# Specify version of code using
+cloudid_version: 'v1.0'
+track_version: 'v1.0'
+tracknumber_version: 'v1.0'
+
+# Specify default code version
+curr_id_version: 'v1.0'
+curr_track_version: 'v1.0'
+curr_tracknumbers_version: 'v1.0'
+
+# Specify cloud tracking parameters
+# 4-element array boundaries [lat_min, lon_min, lat_max, lon_max]
+geolimits: np.array([-90., -180., 90., 180.])
+pixel_radius: 0.5      # km
+timegap: 0.5           # hour
+area_thresh: 4         # km^2
+miss_thresh: 0.2       # Missing data threshold. (0.1 = 10%)
+othresh: 0.3           # overlap percentage threshold
+lengthrange: [2, 60]   # A vector [minlength,maxlength] to specify the lifetime range for the tracks
+maxnclouds: 1000       # Maximum number of clouds in one file
+nmaxlinks: 10          # Maximum number of clouds that any single cloud can be linked to
+
+## Specify cell track parameters
+maincloud_duration: 0.5    # Natural time resolution of data
+merge_duration: 0.5        # Track shorter than this will be labeled as merger
+split_duration: 0.5        # Track shorter than this will be labeled as merger
+
+# Specify data structure
+datatimeresolution: 0.25     # hours
+dimname: 'nclouds'
+numbername: 'convcold_cloudnumber'
+typename: 'cloudtype'
+npxname: 'ncorecoldpix'
+celltracking_filebase: 'celltracks_'
+# datavariablename: 'comp_ref'
+#tdimname: 'time'
+#xdimname: 'Lat_Grid'
+#ydimname: 'Lon_Grid'
