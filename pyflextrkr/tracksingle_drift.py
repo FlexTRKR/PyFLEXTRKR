@@ -1,43 +1,23 @@
-# Purpose: Track clouds in successive pairs of cloudid files. Output netCDF file for each pair of cloudid files.
+def trackclouds(cloudid_filepairs,
+                cloudid_basetimepairs,
+                drift_data,
+                config):
+    """
+    Track clouds in successive pairs of cloudid files.
 
-# Comment: Futyan and DelGenio (2007) - tracking procedure
+    Arguments:
+    cloudid_filepairs: tuple
+        Cloudid filename pairs
+    cloudid_basetimepairs: tuple
+        Cloudid basetime pairs
+    drift_data: tuple
+        Drift data (datetime_string, xdrift, ydrift)
+    config: dictionary
+        Dictionary containing config parameters
+    """
 
-# Authors: IDL version written by Sally A. McFarlane (sally.mcfarlane@pnnl.gov) and revised by Zhe Feng (zhe.feng@pnnl.gov). Python version written by Hannah C. Barnes (hannah.barnes@pnnl.gov)
-
-# Inputs:
-# firstcloudfilename - name of the reference fdata to stop processing in YYYYMMDD formatile
-# secondcloudidfilename - name of the new file
-# firstdatestring - string with year, month, and day of the reference file
-# seconddatestring - string with yearm, month, and day of the new file
-# firsttimestring - string with hour and minute of the reference file
-# secondtimestring - string with hour and minute of the new file
-# firstbasetime - seconds since 1970-01-01 of the first file
-# secondbasetime -seconds since 1970-01-01 of the second file
-# dataoutpath - directory where the output will be stored
-# track_version - flag for saving purposes indicating version of classification. Used when more than one comparison is done on the data.
-# timegap - maximum time gap (missing time) allowed (in hours) between two consecutive files
-# nmaxlinks - maximum number of clouds that any single cloud can be linked to
-# othresh - overlap threshold used to determine if two clouds are linked in time
-# startdate - start date and time of the full dataset
-# enddate - end date and time of the full dataset
-
-# Outputs: (One netcdf output for each pair of cloud files)
-# basetime_new - seconds since 1970-01-01 of the reference (first) file
-# basetime_ref - seconds since 1970-01-01 of the new (second) file
-# newcloud_backward_index - each row represents a cloud in the new file and numbers in each row indicate what cloud in the reference file is linked to that new cloud.
-# newcloud_backward_size - each row represents a cloud in the new file and numbers provide the area of all reference clouds linked to that new cloud
-# refcloud_forward_index - each row represents a cloud in the new file and numbers in each row indicate what cloud in the reference file is linked to that new cloud.
-# refcloud_forward_size - each row represents a cloud in the new file and numbers provide the area of all reference clouds linked to that new cloud
-
-
-def trackclouds(zipped_inputs):
-    ########################################################
     import numpy as np
     import os
-    import re
-    import fnmatch
-    from netCDF4 import Dataset
-    from pytz import timezone, utc
     import sys
     import xarray as xr
     import pandas as pd
@@ -48,31 +28,31 @@ def trackclouds(zipped_inputs):
     logger = logging.getLogger(__name__)
 
     # Separate inputs
-    firstcloudidfilename = zipped_inputs[0]
+    firstcloudidfilename, secondcloudidfilename = cloudid_filepairs[0], cloudid_filepairs[1]
+    firstbasetime, secondbasetime = cloudid_basetimepairs[0], cloudid_basetimepairs[1]
+    firstdatestring = pd.to_datetime(firstbasetime, unit="s").strftime("%Y%m%d")
+    firsttimestring = pd.to_datetime(firstbasetime, unit="s").strftime("%H%M")
+    seconddatestring = pd.to_datetime(secondbasetime, unit="s").strftime("%Y%m%d")
+    secondtimestring = pd.to_datetime(secondbasetime, unit="s").strftime("%H%M")
+    dataoutpath = config["tracking_outpath"]
+    track_version = config["track_version"]
+    timegap = config["timegap"]
+    nmaxlinks = config["nmaxlinks"]
+    othresh = config["othresh"]
+    # startdate = config["startdate"]
+    # enddate = config["enddate"]
+    datetime_drift, xdrift, ydrift = drift_data[0], drift_data[1], drift_data[2]
+
+    # firstcloudidfilename = zipped_inputs[0]
     logger.info(("firstcloudidfilename: ", firstcloudidfilename))
-    secondcloudidfilename = zipped_inputs[1]
+    # secondcloudidfilename = zipped_inputs[1]
     logger.info(("secondcloudidfilename: ", secondcloudidfilename))
-    firstdatestring = zipped_inputs[2]
-    seconddatestring = zipped_inputs[3]
-    firsttimestring = zipped_inputs[4]
-    secondtimestring = zipped_inputs[5]
-    firstbasetime = zipped_inputs[6]
-    secondbasetime = zipped_inputs[7]
-    dataoutpath = zipped_inputs[8]
-    track_version = zipped_inputs[9]
-    timegap = zipped_inputs[10]
-    nmaxlinks = zipped_inputs[11]
-    othresh = zipped_inputs[12]
-    startdate = zipped_inputs[13]
-    enddate = zipped_inputs[14]
-    datetime_drift = zipped_inputs[15]
-    xdrift = zipped_inputs[16]
-    ydrift = zipped_inputs[17]
 
     ########################################################
     # Set constants
     # Version information
-    outfilebase = "track" + track_version + "_"
+    # outfilebase = "track" + track_version + "_"
+    outfilebase = "track_"
     ########################################################
     # Isolate new and reference file and base times
     new_file = secondcloudidfilename

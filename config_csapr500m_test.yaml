@@ -1,28 +1,31 @@
 ---
 # Tracking steps to run
-run_advection: 0
+run_advection: False
 # Segment and identify clouds 
-run_idclouds: 1
+run_idclouds: False
 # Track single consecutive cloudid files
-run_tracksingle: 1
+run_tracksingle: False
 # Run trackig for all files
-run_gettracks: 1
+run_gettracks: True
 # Calculate final statistics
-run_finalstats: 1
+run_finalstats: False
 # Create maps of cells
-run_labelcell: 1
+run_labelcell: False
 # Start/end date and time
 startdate: '20181111.0000'
 enddate: '20181114.0000'
 # Parallel processing set up
 run_parallel: 1
-nprocesses: 30
+nprocesses: 32
 # Data source, description
 datasource: CSAPR2
 datadescription: COR
 databasename: taranis_corcsapr2cfrppiqcM1_convmask.c1.
 # Working directory for the tracking data
-root_path: "/global/cscratch1/sd/feng045/iclass/cacti/arm/csapr/test/"
+#root_path: "/global/cscratch1/sd/feng045/iclass/cacti/arm/csapr/test/"
+tracking_outpath: "/global/cscratch1/sd/feng045/iclass/cacti/arm/csapr/test/tracking/"
+stats_outpath: "/global/cscratch1/sd/feng045/iclass/cacti/arm/csapr/test/stats/"
+celltracking_outpath: "/global/cscratch1/sd/feng045/iclass/cacti/arm/csapr/test/celltracking/"
 # Input files directory
 clouddata_path: "/global/cscratch1/sd/feng045/iclass/cacti/arm/csapr/test/input_data/"
 # Drift (advection) file
@@ -59,6 +62,7 @@ othresh: 0.3           # overlap percentage threshold
 lengthrange: [2, 60]   # A vector [minlength,maxlength] to specify the lifetime range for the tracks
 maxnclouds: 1000       # Maximum number of clouds in one file
 nmaxlinks: 10          # Maximum number of clouds that any single cloud can be linked to
+keepsingletrack: 1     # Keep tracks that has only 1 time
 
 ## Specify cell track parameters
 maincloud_duration: 0.5    # Natural time resolution of data

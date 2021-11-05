@@ -33,12 +33,6 @@ if __name__ == '__main__':
     ################################################################################################
     # Get tracking set up from config file
     ################################################################################################
-    run_advection = config['run_advection']
-    run_idclouds = config['run_idclouds']
-    run_tracksingle = config['run_tracksingle']
-    run_gettracks = config['run_gettracks']
-    run_finalstats = config['run_finalstats']
-    run_labelcell = config['run_labelcell']
     startdate = config['startdate']
     enddate = config['enddate']
     run_parallel = config['run_parallel']
@@ -46,7 +40,7 @@ if __name__ == '__main__':
     databasename = config['databasename']
     datasource = config['datasource']
     datadescription = config['datadescription']
-    root_path = config['root_path']
+    # root_path = config['root_path']
     clouddata_path = config['clouddata_path']
     terrain_file = config['terrain_file']
     if "driftfile" in config:
@@ -83,10 +77,14 @@ if __name__ == '__main__':
     npxname = config['npxname']
     celltracking_filebase = config['celltracking_filebase']
     # Set up tracking output file locations
-    tracking_outpath = root_path + 'tracking/'
-    stats_outpath = root_path + 'stats/'
-    celltracking_outpath = root_path + 'celltracking/' + startdate + '_' + enddate + '/'
+    tracking_outpath = config['tracking_outpath']
+    stats_outpath = config['stats_outpath']
+    celltracking_outpath = config['celltracking_outpath']+ '/' + startdate + '_' + enddate + '/'
 
+    cloudid_filebase = datasource + '_' + datadescription + '_cloudid_'
+    singletrack_filebase = 'track_'
+    tracknumbers_filebase = 'tracknumbers_'
+    trackstats_filebase = 'stats_tracknumbers_'
 
     ################################################################################################
     # Execute tracking scripts
@@ -112,7 +110,7 @@ if __name__ == '__main__':
 
     ################################################################################################
     # Step 0 - Run advection calculation
-    if run_advection == 1:
+    if config['run_advection'] == 1:
         logger.info('Calculating domain mean advection.')
 
         status = calc_mean_advection(
@@ -129,7 +127,7 @@ if __name__ == '__main__':
 
     ################################################################################################
     # Step 1 - Identify clouds / features in the data
-    if run_idclouds == 1:
+    if config['run_idclouds']:
         # Identify files to process
         logger.info('Identifying raw data files to process.')
         rawdatafiles, \
@@ -139,21 +137,16 @@ if __name__ == '__main__':
                                                     databasename,
                                                     start_basetime,
                                                     end_basetime)
+        filestep = len(rawdatafiles)
 
         # Generate input lists
-        idclouds_input = zip(rawdatafiles, files_datestring, files_timestring, files_basetime, \
-                            repeat(datasource), repeat(datadescription), repeat(cloudid_version), \
-                            repeat(tracking_outpath), repeat(startdate), repeat(enddate), \
-                            repeat(pixel_radius), repeat(area_thresh), repeat(miss_thresh))
+        idclouds_input = zip(rawdatafiles, repeat(config))
 
         ## Call function
         if run_parallel == 0:
             # Serial version
             for ifile in range(0, filestep):
-                idcell_csapr(rawdatafiles[ifile], files_datestring[ifile], files_timestring[ifile], files_basetime[ifile], \
-                                datasource, datadescription, cloudid_version, \
-                                tracking_outpath, startdate, enddate, \
-                                pixel_radius, area_thresh, miss_thresh)
+                idcell_csapr(rawdatafiles[ifile], config)
         elif run_parallel == 1:
             # Parallel version
             logger.info('Identifying clouds')
@@ -164,18 +157,18 @@ if __name__ == '__main__':
         else:
             sys.exit('Valid parallelization flag not provided')
 
-        cloudid_filebase = datasource + '_' + datadescription + '_cloudid' + cloudid_version + '_'
+        # cloudid_filebase = datasource + '_' + datadescription + '_cloudid' + cloudid_version + '_'
 
     ################################################################################################
     # Step 2 - Link clouds / features in time adjacent files (single file tracking)
 
     # Determine if identification portion of the code run.
     # If not, set the version name and filename using names specified in the constants section
-    if run_idclouds == 0:
-        cloudid_filebase =  datasource + '_' + datadescription + '_cloudid' + curr_id_version + '_'
+    # if config['run_idclouds'] is False:
+    #     cloudid_filebase = datasource + '_' + datadescription + '_cloudid' + curr_id_version + '_'
 
     # Call function
-    if run_tracksingle == 1:
+    if config['run_tracksingle']:
         ################################################################
         # Identify files to process
         logger.info('Identifying cloudid files to process')
@@ -195,59 +188,65 @@ if __name__ == '__main__':
                                           cloudidfiles_timestring,
                                           driftfile=driftfile)
 
-        # Generate input lists
-        list_trackingoutpath = [tracking_outpath]*(cloudidfilestep-1)
-        list_trackversion = [track_version]*(cloudidfilestep-1)
-        list_timegap = np.ones(cloudidfilestep-1)*timegap
-        list_nmaxlinks = np.ones(cloudidfilestep-1)*nmaxlinks
-        list_othresh = np.ones(cloudidfilestep-1)*othresh
-        list_startdate = [startdate]*(cloudidfilestep-1)
-        list_enddate = [enddate]*(cloudidfilestep-1)
+        # # Generate input lists
+        # list_trackingoutpath = [tracking_outpath]*(cloudidfilestep-1)
+        # list_trackversion = [track_version]*(cloudidfilestep-1)
+        # list_timegap = np.ones(cloudidfilestep-1)*timegap
+        # list_nmaxlinks = np.ones(cloudidfilestep-1)*nmaxlinks
+        # list_othresh = np.ones(cloudidfilestep-1)*othresh
+        # list_startdate = [startdate]*(cloudidfilestep-1)
+        # list_enddate = [enddate]*(cloudidfilestep-1)
 
         # Call function
         logger.info('Tracking clouds between single files')
 
-        trackclouds_input = list(zip(cloudidfiles[0:-1], cloudidfiles[1::], \
-                                cloudidfiles_datestring[0:-1], cloudidfiles_datestring[1::], \
-                                cloudidfiles_timestring[0:-1], cloudidfiles_timestring[1::], \
-                                cloudidfiles_basetime[0:-1], cloudidfiles_basetime[1::], \
-                                list_trackingoutpath, list_trackversion, list_timegap, \
-                                list_nmaxlinks, list_othresh, list_startdate, list_enddate, \
-                                datetime_drift_match, xdrifts_match, ydrifts_match))
+        # Create pairs of input filenames and times
+        cloudid_filepairs = list(zip(cloudidfiles[0:-1], cloudidfiles[1::]))
+        cloudid_basetimepairs = list(zip(cloudidfiles_basetime[0:-1], cloudidfiles_basetime[1::]))
+        # Create matching triplets of drift data
+        drift_data = list(zip(datetime_drift_match, xdrifts_match, ydrifts_match))
+        trackclouds_input = zip(cloudid_filepairs,
+                                cloudid_basetimepairs,
+                                drift_data,
+                                repeat(config))
 
         if run_parallel == 0:
             # Serial version
             for ifile in range(0, cloudidfilestep-1):
-                trackclouds(trackclouds_input[ifile])
+                trackclouds(cloudid_filepairs[ifile],
+                            cloudid_basetimepairs[ifile],
+                            drift_data[ifile],
+                            config)
         elif run_parallel == 1:
             # parallelize version
             pool = Pool(nprocesses)
-            pool.map(trackclouds, trackclouds_input)
+            pool.starmap(trackclouds, trackclouds_input)
             pool.close()
             pool.join()
         else:
             sys.exit('Valid parallelization flag not provided.')
 
-        singletrack_filebase = 'track' + track_version + '_'
+        # singletrack_filebase = 'track' + track_version + '_'
 
     ################################################################################################
     # Step 3 - Track clouds / features through the entire dataset
 
     # Determine if single file tracking code ran.
     # If not, set the version name and filename using names specified in the constants section
-    if run_tracksingle == 0:
-        singletrack_filebase = 'track' + curr_track_version + '_'
+    # if config['run_tracksingle']:
+    #     singletrack_filebase = 'track' + curr_track_version + '_'
 
     # Call function
-    if run_gettracks == 1:
+    if config['run_gettracks']:
 
         # Call function
         logger.info('Getting track numbers')
         logger.info('tracking_out:' + tracking_outpath)
-        gettracknumbers(datasource, datadescription, tracking_outpath, stats_outpath, startdate, enddate, \
-                        timegap, maxnclouds, cloudid_filebase, npxname, tracknumber_version, singletrack_filebase, \
-                        keepsingletrack=keep_singlemergesplit, removestartendtracks=1)
-        tracknumbers_filebase = 'tracknumbers' + tracknumber_version
+        gettracknumbers(config, singletrack_filebase)
+        # gettracknumbers(datasource, datadescription, tracking_outpath, stats_outpath, startdate, enddate, \
+        #                 timegap, maxnclouds, cloudid_filebase, npxname, tracknumber_version, singletrack_filebase, \
+        #                 keepsingletrack=keep_singlemergesplit, removestartendtracks=1)
+        # tracknumbers_filebase = 'tracknumbers' + tracknumber_version
         logger.info('tracking_out done')
 
     ################################################################################################
@@ -255,11 +254,11 @@ if __name__ == '__main__':
 
     # Determine if the tracking portion of the code ran.
     # If not, set teh version name and filename using those specified in the constants section
-    if run_gettracks == 0:
-        tracknumbers_filebase = 'tracknumbers' + curr_tracknumbers_version
+    # if config['run_gettracks'] == 0:
+    #     tracknumbers_filebase = 'tracknumbers' + curr_tracknumbers_version
 
     # Call function
-    if run_finalstats == 1:
+    if config['run_finalstats']:
         logger.info('Calculating cell statistics')
 
         #
@@ -289,10 +288,10 @@ if __name__ == '__main__':
 
     # Determine if final statistics portion ran.
     # If not, set the version name and filename using those specified in the constants section
-    if run_finalstats == 0:
+    if config['run_finalstats']:
         trackstats_filebase = 'stats_tracknumbers' + curr_tracknumbers_version + '_'
 
-    if run_labelcell == 1:
+    if config['run_labelcell']:
         logger.info('Identifying which pixel level maps to generate for the cell tracks')
 
         ###########################################################

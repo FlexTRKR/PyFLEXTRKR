@@ -1,75 +1,41 @@
-# Purpose: Track clouds successively from the single track files produced in previous step.
-
-# Author: IDL version written by Sally A. McFarlane (sally.mcfarlane@pnnl.gov) and revised by Zhe Feng (zhe.feng@pnnl.gov). Python version written by Hannah C. Barnes (hannah.barnes@pnnl.gov)
-
-# Define function to track clouds that were identified in merged ir data
-import logging
 import numpy as np
-import os, fnmatch
 import time, datetime, calendar
 from pytz import utc
-
+import sys, os, fnmatch
+from netCDF4 import Dataset
+import xarray as xr
+import pandas as pd
+import logging
 
 def gettracknumbers(
-    datasource,
-    datadescription,
-    datainpath,
-    dataoutpath,
-    startdate,
-    enddate,
-    timegap,
-    maxnclouds,
-    cloudid_filebase,
-    npxname,
-    tracknumbers_version,
-    singletrack_filebase,
-    keepsingletrack=1,
-    removestartendtracks=0,
-    tdimname="time",
-    xdimname="lon",
-    ydimname="lat",
+        config,
+        singletrack_filebase,
 ):
-    # Inputs:
-    # datasource - source of the data
-    # datadescription - description of data source, included in all output file names
-    # datainpath - location of the single track files
-    # dataoutpath - location where the statistics matrix will be saved
-    # startdate - data to start processing in YYYYMMDD format
-    # enddate - data to stop processing in YYYYMMDD format
-    # timegap - maximum time gap (missing time) allowed (in hours) between two consecutive files
-    # maxnclouds - maximum number of clouds allowed to be in one track
-    # cloudid_filebase - header of the cloudid data files
-    # npxname - variable name of the type of cloud that is being tracked
-    # track_version - Version of track single cloud files that will be used
-    # singletrack_filebase - header of the single track files
+    """
+    Track clouds successively from the single track files.
 
-    # Optional keywords
-    # keepsingletrack - Keep tracks that only have 1 fram but merge/split with others
-    # removestartendtracks - Remove tracks that start at the first file or ends at the last file
-    # tdimname - name of time dimension for the output netcdf file
-    # xdimname - name of the x-dimension for the output netcdf file
-    # ydimname - name of the y-dimentions for the output netcdf
+    Arguments:
+        config: dictionary
+            Dictionary containing config parameters.
+        singletrack_filebase: string
+            Single track file basename.
 
-    # Output: (One netcdf file with statistics about each cloud that is tracked in each file)
-    # ntracks - number of tracks identified
-    # basetimes - seconds since 1970-01-01 of each file
-    # track_numbers - track number associate with a cloud
-    # track_status - flag that indicates how a cloud evolves over time.
-    # track_mergenumbers - track number which a small cloud merges into.
-    # track_splitnumbers - track number which a small cloud splits from.
-    # track_reset - flag indicating when a track starts or ends in a period with continuous data or whether there is a gap in the data.
+    Returns:
+        tracknumbers_outfile: string
+            Track numbers output filename.
+    """
 
-    ################################################################################
-    # Import modules
-    import numpy as np
-    import os, fnmatch
-    import time, datetime, calendar
-    from pytz import utc
-    from netCDF4 import Dataset, num2date
-    import sys
-    import xarray as xr
-    import pandas as pd
-    import logging
+    # Get parameters from config
+    datasource = config["datasource"]
+    datadescription = config["datadescription"]
+    datainpath = config["tracking_outpath"]
+    stats_outpath = config["stats_outpath"]
+    startdate = config["startdate"]
+    enddate = config["enddate"]
+    timegap = config["timegap"]
+    maxnclouds = config["maxnclouds"]
+    npxname = config["npxname"]
+    keepsingletrack = config["keepsingletrack"]
 
     logger = logging.getLogger(__name__)
 
@@ -77,9 +43,10 @@ def gettracknumbers(
 
     #############################################################################
     # Set track numbers output file name
-    tracknumbers_filebase = "tracknumbers" + tracknumbers_version
+    # tracknumbers_filebase = "tracknumbers" + tracknumbers_version
+    tracknumbers_filebase = "tracknumbers_"
     tracknumbers_outfile = (
-        dataoutpath + tracknumbers_filebase + "_" + startdate + "_" + enddate + ".nc"
+        stats_outpath + tracknumbers_filebase + "_" + startdate + "_" + enddate + ".nc"
     )
 
     files, gap = filter_filelisting(
@@ -122,7 +89,7 @@ def gettracknumbers(
     # Make sure number of clouds does not exceed maximum. If does indicates over-segmenting data
     if nclouds_reference > maxnclouds:
         sys.exit(
-            "# of clouds in reference file exceed allowed maximum number of clouds"
+            "Number of clouds in reference file exceed allowed maximum number of clouds"
         )
 
     # Isolate file name and add it to the filelist
@@ -219,7 +186,8 @@ def gettracknumbers(
 
         time_new = np.copy(basetime_new[0])
 
-        # Check if files immediately follow each other. Missing files can exist. If missing files exist need to incrament index and track numbers
+        # Check if files immediately follow each other. Missing files can exist.
+        # If missing files exist need to incrament index and track numbers
         if ifile > 0:
             hour_diff = np.array([time_new - time_prev]).astype(float)
             if hour_diff > (timegap * 3.6 * 10 ** 12):
@@ -235,7 +203,6 @@ def gettracknumbers(
 
                 # Fill tracking matrices with reference data and record that the track ended
                 cloudidfiles[ifill, :] = list(os.path.basename(ref_file))
-                # basetime[ifill] = np.array([pd.to_datetime(num2date(basetime_ref, units=basetime_units, calendar=basetime_calendar))], dtype='datetime64[s]')[0, 0]
                 basetime[ifill] = basetime_ref.item()
 
                 # Record that break in data occurs
@@ -248,7 +215,6 @@ def gettracknumbers(
 
         time_prev = time_new
         cloudidfiles[ifill + 1, :] = list(os.path.basename(new_file))
-        # basetime[ifill + 1] = np.array([pd.to_datetime(num2date(basetime_new, units=basetime_units, calendar=basetime_calendar))], dtype='datetime64[s]')[0, 0]
         basetime[ifill + 1] = basetime_new.item()
 
         ########################################################################################
@@ -368,7 +334,8 @@ def gettracknumbers(
                     ############################################################
                     # Find the largest reference and new clouds
                     # Largest reference cloud
-                    # allreferencepix = npix_reference[0, associated_referenceclouds-1] # Need to subtract one since associated_referenceclouds gives core index and matrix starts at zero
+                    # allreferencepix = npix_reference[0, associated_referenceclouds-1]
+                    # Need to subtract one since associated_referenceclouds gives core index and matrix starts at zero
 
                     allreferencepix = npix_reference[
                         associated_referenceclouds - 1
@@ -646,9 +613,9 @@ def gettracknumbers(
         },
         attrs={
             "Title": "Indicates the track each cloud is linked to. Flags indicate how the clouds transition(evolve) between files.",
-            "Conventions": "CF-1.6",
+            # "Conventions": "CF-1.6",
             "Insitution": "Pacific Northwest National Laboratory",
-            "Contact": "Katelyn Barber: katelyn.barber@pnnl.gov",
+            "Contact": "Zhe Feng: zhe.feng@pnnl.gov",
             "Created": time.ctime(time.time()),
             "source": datasource,
             "description": datadescription,
@@ -744,12 +711,14 @@ def gettracknumbers(
             "track_reset": {"dtype": "int", "zlib": True, "_FillValue": -9999},
         },
     )
+    return tracknumbers_outfile
 
 
 def filter_filelisting(datainpath, enddate, singletrack_filebase, startdate, timegap):
-    import time
-    import logging
-    import pandas as pd
+    # import time, datetime, calendar
+    # import logging
+    # import pandas as pd
+    # import fnmatch
 
     logger = logging.getLogger(__name__)
     ##################################################################################
