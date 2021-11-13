@@ -2,15 +2,15 @@
 # Tracking steps to run
 run_advection: False
 # Segment and identify clouds 
-run_idclouds: False
+run_idclouds: True
 # Track single consecutive cloudid files
-run_tracksingle: False
+run_tracksingle: True
 # Run trackig for all files
 run_gettracks: True
 # Calculate final statistics
-run_finalstats: False
+run_finalstats: True
 # Create maps of cells
-run_labelcell: False
+run_labelcell: True
 # Start/end date and time
 startdate: '20181111.0000'
 enddate: '20181114.0000'
@@ -21,17 +21,23 @@ nprocesses: 32
 datasource: CSAPR2
 datadescription: COR
 databasename: taranis_corcsapr2cfrppiqcM1_convmask.c1.
+# Specify date/time string format in the file name
+# E.g., radar_20181101.011503.nc --> yyyymodd.hhmmss
+# E.g., wrf_2018-11-01_01:15:00 --> yyyy-mo-dd_hh:mm:ss
+time_format: yyyymodd.hhmmss
 # Working directory for the tracking data
 #root_path: "/global/cscratch1/sd/feng045/iclass/cacti/arm/csapr/test/"
 tracking_outpath: "/global/cscratch1/sd/feng045/iclass/cacti/arm/csapr/test/tracking/"
 stats_outpath: "/global/cscratch1/sd/feng045/iclass/cacti/arm/csapr/test/stats/"
-celltracking_outpath: "/global/cscratch1/sd/feng045/iclass/cacti/arm/csapr/test/celltracking/"
+pixeltracking_outpath: "/global/cscratch1/sd/feng045/iclass/cacti/arm/csapr/test/celltracking/"
 # Input files directory
 clouddata_path: "/global/cscratch1/sd/feng045/iclass/cacti/arm/csapr/test/input_data/"
 # Drift (advection) file
-driftfile: "/global/cscratch1/sd/feng045/iclass/cacti/arm/csapr/test/stats/CSAPR2_advection_all.nc"
+#driftfile: "/global/cscratch1/sd/feng045/iclass/cacti/arm/csapr/test/stats/CSAPR2_advection_all.nc"
 # Terrain file 
 terrain_file: "/global/cscratch1/sd/feng045/iclass/cacti/arm/csapr/test/CSAPR2_Taranis_Gridded_500m.Terrain_RangeMask.nc"
+# Range mask variable to use in terrain file
+rangemask_varname: "mask110"
 
 # Advection calculation parameters
 DBZ_THRESHOLD: 10       # radar reflectivity threshold [dBZ]
@@ -75,8 +81,14 @@ dimname: 'nclouds'
 numbername: 'convcold_cloudnumber'
 typename: 'cloudtype'
 npxname: 'ncorecoldpix'
-celltracking_filebase: 'celltracks_'
+pixeltracking_filebase: 'celltracks_'
 # datavariablename: 'comp_ref'
 #tdimname: 'time'
 #xdimname: 'Lat_Grid'
 #ydimname: 'Lon_Grid'
+# Track statistics output file dimension names
+tracks_dimname: 'tracks'
+times_dimname: 'times'
+# Specify types of feature being tracked
+# This adds additional feature-specific statistics to be computed
+feature_type: 'radar_cells'

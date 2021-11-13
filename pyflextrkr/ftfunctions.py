@@ -8,9 +8,11 @@ import xarray as xr
 logging.basicConfig(format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-def get_basetime(data_path,
-                 data_basename,
-                 time_format=1):
+def get_basetime(
+    data_path,
+    data_basename,
+    time_format="yyyymodd_hhmm",
+):
     """
     Calculate base time (Epoch time) from filenames.
 
@@ -19,8 +21,8 @@ def get_basetime(data_path,
             Data directory name.
         data_basename: string
             Data base name.
-        time_format: int (optional, default=1)
-            Specify file naming format to extract date/time.
+        time_format: string (optional, default="yyyymodd_hhmm")
+            Specify file time format to extract date/time.
     Returns:
         data_filenames: list
             List of data filenames.
@@ -36,32 +38,58 @@ def get_basetime(data_path,
     filenames = sorted(fnmatch.filter(os.listdir(data_path), data_basename + '*.nc'))
 
     # Loop through files, identifying files within the startdate - enddate interval
-    nleadingchar = np.array(len(data_basename)).astype(int)
+    nleadingchar = len(data_basename)
 
     data_filenames = [None]*len(filenames)
     files_timestring = [None]*len(filenames)
     files_datestring = [None]*len(filenames)
     files_basetime = np.full(len(filenames), -9999, dtype=int)
+
+    yyyy_idx = time_format.find("yyyy")
+    mo_idx = time_format.find("mo")
+    dd_idx = time_format.find("dd")
+    hh_idx = time_format.find("hh")
+    mm_idx = time_format.find("mm")
+    ss_idx = time_format.find("ss")
+
+    # Add basetime character counts to get the actual date/time string positions
+    yyyy_idx = nleadingchar + yyyy_idx
+    mo_idx = nleadingchar + mo_idx
+    dd_idx = nleadingchar + dd_idx
+    hh_idx = nleadingchar + hh_idx
+    mm_idx = nleadingchar + mm_idx if (mm_idx != -1) else None
+    ss_idx = nleadingchar + ss_idx if (ss_idx != -1) else None
+
     # Loop over each file
     for ii, ifile in enumerate(filenames):
-        # Filename format: data_basename_yyyymmdd_hhmmss
-        if time_format == 1:
-            year = ifile[nleadingchar:nleadingchar+4]
-            month = ifile[nleadingchar+4:nleadingchar+6]
-            day = ifile[nleadingchar+6:nleadingchar+8]
-            hour = ifile[nleadingchar+9:nleadingchar+11]
-            minute = ifile[nleadingchar+11:nleadingchar+13]
-        TEMP_filetime = datetime.datetime(int(year), int(month), int(day), int(hour), int(minute), 0, tzinfo=utc)
+        year = ifile[yyyy_idx:yyyy_idx+4]
+        month = ifile[mo_idx:mo_idx+2]
+        day = ifile[dd_idx:dd_idx+2]
+        hour = ifile[hh_idx:hh_idx+2]
+        # If minute, second is not in time_format, assume 0
+        minute = ifile[mm_idx:mm_idx+2] if (mm_idx is not None) else 0
+        second = ifile[ss_idx:ss_idx+2] if (ss_idx is not None) else 0
+
+        TEMP_filetime = datetime.datetime(int(year), int(month), int(day),
+                                          int(hour), int(minute), int(second), tzinfo=utc)
         files_basetime[ii] = calendar.timegm(TEMP_filetime.timetuple())
         files_datestring[ii] = year + month + day
         files_timestring[ii] = hour + minute
         data_filenames[ii] = data_path + ifile
-    return (data_filenames, files_basetime, files_datestring, files_timestring)
+    return (
+        data_filenames,
+        files_basetime,
+        files_datestring,
+        files_timestring,
+    )
 
-def subset_files_timerange(data_path,
-                            data_basename,
-                            start_basetime,
-                            end_basetime):
+def subset_files_timerange(
+    data_path,
+    data_basename,
+    start_basetime,
+    end_basetime,
+    time_format="yyyymodd_hhmm",
+):
     """
     Subset files within given start and end time.
 
@@ -74,6 +102,8 @@ def subset_files_timerange(data_path,
             Start base time (Epoch time).
         end_basetime: int
             End base time (Epoch time).
+        time_format: string (optional, default="yyyymodd_hhmm")
+            Specify file time format to extract date/time.
 
     Returns:
         data_filenames: list
@@ -86,7 +116,10 @@ def subset_files_timerange(data_path,
             List of file time string.
     """
     # Get basetime for all files
-    data_filenames, files_basetime, files_datestring, files_timestring = get_basetime(data_path, data_basename)
+    data_filenames, files_basetime, \
+    files_datestring, files_timestring = get_basetime(
+        data_path, data_basename, time_format=time_format,
+    )
 
     # Find basetime within the given range
     fidx = np.where((files_basetime >= start_basetime) & (files_basetime <= end_basetime))[0]
@@ -95,11 +128,18 @@ def subset_files_timerange(data_path,
     files_basetime = files_basetime[fidx]
     files_datestring = np.array(files_datestring)[fidx].tolist()
     files_timestring = np.array(files_timestring)[fidx].tolist()
-    return (data_filenames, files_basetime, files_datestring, files_timestring)
+    return (
+        data_filenames,
+        files_basetime,
+        files_datestring,
+        files_timestring,
+    )
 
-def match_drift_times(cloudidfiles_datestring,
-                      cloudidfiles_timestring,
-                      driftfile=None):
+def match_drift_times(
+    cloudidfiles_datestring,
+    cloudidfiles_timestring,
+    driftfile=None
+):
     """
     Match drift file times with cloudid file times.
 
@@ -151,9 +191,16 @@ def match_drift_times(cloudidfiles_datestring,
                 datetime_drift_match[itime] = datetime_drift[idx[0]]
                 xdrifts_match[itime] = xdrifts[idx]
                 ydrifts_match[itime] = ydrifts[idx]
-    return (datetime_drift_match, xdrifts_match, ydrifts_match)
+    return (
+        datetime_drift_match,
+        xdrifts_match,
+        ydrifts_match,
+    )
 
-def sort_renumber(labelcell_number2d, min_cellpix):
+def sort_renumber(
+    labelcell_number2d,
+    min_cellpix,
+):
     """
     Sorts 2D labeled cells by size, and removes cells smaller than min_cellpix.
 
@@ -230,10 +277,17 @@ def sort_renumber(labelcell_number2d, min_cellpix):
         # Return an empty array
         sortedcell_npix = np.zeros(0)
 
-    return sortedlabelcell_number2d, sortedcell_npix
+    return (
+        sortedlabelcell_number2d,
+        sortedcell_npix,
+    )
 
 
-def sort_renumber2vars(labelcell_number2d, labelcell2_number2d, min_cellpix):
+def sort_renumber2vars(
+    labelcell_number2d,
+    labelcell2_number2d,
+    min_cellpix,
+):
     """
     Sorts 2D labeled cells by size, and removes cells smaller than min_cellpix.
     This version renumbers two variables using the same size sorting from labelcell_number2d.
@@ -320,10 +374,20 @@ def sort_renumber2vars(labelcell_number2d, labelcell2_number2d, min_cellpix):
         # Return an empty array
         sortedcell_npix = np.zeros(0)
 
-    return sortedlabelcell_number2d, sortedlabelcell2_number2d, sortedcell_npix
+    return (
+        sortedlabelcell_number2d,
+        sortedlabelcell2_number2d,
+        sortedcell_npix,
+    )
 
 
-def link_pf_tb(convcold_cloudnumber, cloudnumber, pf_number, tb, tb_thresh):
+def link_pf_tb(
+    convcold_cloudnumber,
+    cloudnumber,
+    pf_number,
+    tb,
+    tb_thresh,
+):
     """
     Renumbers separated clouds over the same PF to one cloud, using the largest cloud number.
 
@@ -452,4 +516,7 @@ def link_pf_tb(convcold_cloudnumber, cloudnumber, pf_number, tb, tb_thresh):
         pf_convcold_cloudnumber = np.copy(convcold_cloudnumber)
         pf_cloudnumber = np.copy(cloudnumber)
 
-    return pf_convcold_cloudnumber, pf_cloudnumber
+    return (
+        pf_convcold_cloudnumber,
+        pf_cloudnumber,
+    )

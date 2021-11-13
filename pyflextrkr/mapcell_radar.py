@@ -1,55 +1,51 @@
-# Purpose: Take the cell tracks identified in the previous steps and create pixel level maps of these cells. One netcdf file is create for each time step.
+import numpy as np
+import time
+import os
+import logging
+import xarray as xr
+from netCDF4 import Dataset
 
-# Author: Zhe Feng (zhe.feng@pnnl.gov)
-
-# def mapcell_radar(zipped_inputs):
 def mapcell_radar(
     cloudid_filename,
     filebasetime,
-    stats_path,
-    statistics_filebase,
-    startdate,
-    enddate,
-    out_path,
-    out_filebase,
+    config,
 ):
-    # Inputs:
-    # cloudid_filebase - file header of the cloudid file create in the first step
-    # filebasetime - seconds since 1970-01-01 of the file being processed
-    # statistics_filebase - file header for the all track statistics file generated in the trackstats step
-    # out_path - directory where cell tracks maps generated in this step will be placed
-    # stats_path - directory that contains the statistics files
-    # startdate - starting date and time of the full dataset
-    # enddate - ending date and time of the full dataset
+    """
+    Maps track numbers to pixel level files.
 
-    #######################################################################
-    # Import modules
-    import numpy as np
-    import time
-    import os
-    import logging
-    import xarray as xr
-    from netCDF4 import Dataset
+    Args:
+        cloudid_filename: list
+            Cloudid file name.
+        filebasetime: int
+            Cloudid file base time.
+        config:
+            Dictionary containing config parameters.
+
+    Returns:
+        None
+
+    """
 
     np.set_printoptions(threshold=np.inf)
     logger = logging.getLogger(__name__)
 
-    ######################################################################
-    # define constants
-
     ###################################################################
     # Load track stats file
     statistics_file = (
-        stats_path + statistics_filebase + startdate + "_" + enddate + ".nc"
+        config["stats_outpath"] +
+        config["trackstats_filebase"] +
+        config["startdate"] + "_" +
+        config["enddate"] + ".nc"
     )
 
     allstatdata = Dataset(statistics_file, "r")
     # Time of cloud in seconds since 01/01/1970 00:00
-    trackstat_basetime = allstatdata["basetime"][:]
+    trackstat_basetime = allstatdata["base_time"][:]
     # Number of the corresponding cloudid file
     trackstat_cloudnumber = allstatdata["cloudnumber"][:]
     # Flag indicating the status of the cloud
-    trackstat_status = allstatdata["status"][:]
+    trackstat_status = allstatdata["track_status"][:]
+    track_status_explanation = allstatdata['track_status'].comments
     # Track number that it merges into
     trackstat_mergenumbers = allstatdata["merge_tracknumbers"][:]
     trackstat_splitnumbers = allstatdata["split_tracknumbers"][:]
@@ -121,7 +117,7 @@ def mapcell_radar(
     # Find matching time from the trackstats_basetime
     itrack, itime = np.array(np.where(trackstat_basetime == cloudid_basetime))
     # If a match is found, that means there are tracked cells at this time
-    # Proceed and lebel them
+    # Proceed and label them
     ntimes = len(itime)
     if ntimes > 0:
 
@@ -140,15 +136,9 @@ def mapcell_radar(
             if len(jjcloudypixels) > 0:
                 trackmap[0, jjcloudypixels, jjcloudxpixels] = itrack[jj] + 1
                 statusmap[0, jjcloudypixels, jjcloudxpixels] = jjstatus
-                # import pdb; pdb.set_trace()
             else:
                 logger.info(
-                    (
-                        "Error: No matching cloud pixel found?! itrack: ",
-                        itrack[jj],
-                        ", itime: ",
-                        itime[jj],
-                    )
+                    f"Warning: No matching cloud pixel found?! itrack: {itrack[jj]}, itime: {itime[jj]}"
                 )
                 # sys.exit('Error: No matching cloud pixel found?!')
 
@@ -205,7 +195,10 @@ def mapcell_radar(
 
     # Define output fileame
     celltrackmaps_outfile = (
-        out_path + out_filebase + str(filedate) + "_" + str(filetime) + ".nc"
+        config["pixeltracking_outpath"] +
+        config["pixeltracking_filebase"] +
+        str(filedate) + "_" +
+        str(filetime) + ".nc"
     )
 
     # Check if file already exists. If exists, delete
@@ -214,10 +207,7 @@ def mapcell_radar(
 
     # Define variable list
     varlist = {
-        "basetime": (
-            ["time"],
-            cloudid_basetime,
-        ),
+        "basetime": (["time"], cloudid_basetime),
         "longitude": (["lat", "lon"], longitude),
         "latitude": (["lat", "lon"], latitude),
         "nclouds": (["time"], nclouds),
@@ -228,20 +218,15 @@ def mapcell_radar(
         "tracknumber": (["time", "lat", "lon"], trackmap),
         "tracknumber_cmask2": (["time", "lat", "lon"], trackmap_cmask2),
         "track_status": (["time", "lat", "lon"], statusmap),
-        "cloudnumber": (
-            ["time", "lat", "lon"],
-            cloudid_cloudnumber,
-        ),
+        "cloudnumber": (["time", "lat", "lon"], cloudid_cloudnumber),
         "merge_tracknumber": (["time", "lat", "lon"], allmergemap),
         "split_tracknumber": (["time", "lat", "lon"], allsplitmap),
         "echotop10": (["time", "lat", "lon"], echotop10),
         "echotop20": (["time", "lat", "lon"], echotop20),
         "echotop30": (["time", "lat", "lon"], echotop30),
         "echotop40": (["time", "lat", "lon"], echotop40),
-        "echotop50": (
-            ["time", "lat", "lon"],
-            echotop50,
-        ),  # 'tracknumber': (['time', 'lat', 'lon'], trackmap_mergesplit), \
+        "echotop50": (["time", "lat", "lon"], echotop50),
+        # 'tracknumber': (['time', 'lat', 'lon'], trackmap_mergesplit), \
         # 'cellsplittracknumbers': (['time', 'lat', 'lon'], cellsplitmap), \
         # 'cellmergetracknumbers': (['time', 'lat', 'lon'], cellmergemap), \
     }
@@ -257,7 +242,8 @@ def mapcell_radar(
     gattrlist = {
         "title": "Pixel level of tracked cells",
         "source": datasource,
-        "description": datadescription,  # 'Main_cell_duration_hr': durationthresh, \
+        "description": datadescription,
+        # 'Main_cell_duration_hr': durationthresh, \
         # 'Merger_duration_hr': mergethresh, \
         # 'Split_duration_hr': splitthresh, \
         "contact": "Zhe Feng, zhe.feng@pnnl.gov",
@@ -266,31 +252,6 @@ def mapcell_radar(
 
     # Define xarray dataset
     ds_out = xr.Dataset(varlist, coords=coordlist, attrs=gattrlist)
-
-    # Track status explanation
-    track_status_explanation = (
-        "0: Track stops;  "
-        + "1: Simple track continuation;  "
-        + "2: This is the bigger cloud in simple merger;  "
-        + "3: This is the bigger cloud from a simple split that stops at this time;  "
-        + "4: This is the bigger cloud from a split and this cloud continues to the next time;  "
-        + "5: This is the bigger cloud from a split that subsequently is the big cloud in a merger;  "
-        + "13: This cloud splits at the next time step;  "
-        + "15: This cloud is the bigger cloud in a merge that then splits at the next time step;  "
-        + "16: This is the bigger cloud in a split that then splits at the next time step;  "
-        + "18: Merge-split at same time (big merge, splitter, and big split);  "
-        + "21: This is the smaller cloud in a simple merger;  "
-        + "24: This is the bigger cloud of a split that is then the small cloud in a merger;  "
-        + "31: This is the smaller cloud in a simple split that stops;  "
-        + "32: This is a small split that continues onto the next time step;  "
-        + "33: This is a small split that then is the bigger cloud in a merger;  "
-        + "34: This is the small cloud in a merger that then splits at the next time step;  "
-        + "37: Merge-split at same time (small merge, splitter, big split);  "
-        + "44: This is the smaller cloud in a split that is smaller cloud in a merger at the next time step;  "
-        + "46: Merge-split at same time (big merge, splitter, small split);  "
-        + "52: This is the smaller cloud in a split that is smaller cloud in a merger at the next time step;  "
-        + "65: Merge-split at same time (smaller merge, splitter, small split)"
-    )
 
     # Specify variable attributes
     ds_out.time.attrs[
@@ -403,7 +364,7 @@ def mapcell_radar(
     ds_out.to_netcdf(
         path=celltrackmaps_outfile,
         mode="w",
-        format="NETCDF4_CLASSIC",
+        format="NETCDF4",
         unlimited_dims="time",
         encoding=encodelist,
     )

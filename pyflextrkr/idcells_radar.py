@@ -1,26 +1,30 @@
+import os
+import numpy as np
+import time
+import xarray as xr
+import logging
+from pyflextrkr.ftfunctions import sort_renumber
+
 def idcell_csapr(
-        input_filename, config
+    input_filename,
+    config,
 ):
     """
     Identifies convective cells from CSAPR data.
 
     Arguments:
-    input_filename: string
-        Input data filename
-    config: dictionary
-        Dictionary containing config parameters
-    """
+        input_filename: string
+            Input data filename
+        config: dictionary
+            Dictionary containing config parameters
 
-    import os
-    import numpy as np
-    import time
-    import xarray as xr
-    import logging
-    from pyflextrkr.ftfunctions import sort_renumber
+    Returns:
+        cloudid_outfile: string
+            Cloudid file name.
+    """
 
     np.set_printoptions(threshold=np.inf)
     logger = logging.getLogger(__name__)
-    ##########################################################
 
     # Read input data
     ds = xr.open_dataset(input_filename)
@@ -48,9 +52,8 @@ def idcell_csapr(
 
     # Get the number of pixels for each cell.
     # conv_mask is already sorted so the returned sorted array is not needed, only the pixel count (cell size).
-    tmp, conv_npix = sort_renumber(
-        conv_mask, 0
-    )  # Modified by zhixiao, should not remove any single grid cells in coarse resolution wrf
+    tmp, conv_npix = sort_renumber(conv_mask, 0)
+    # Modified by zhixiao, should not remove any single grid cells in coarse resolution wrf
 
     # conv_mask_noinflate = conv_mask2
     # conv_mask_sorted_noinflate = conv_mask2
@@ -226,4 +229,4 @@ def idcell_csapr(
 
     # import pdb; pdb.set_trace()
 
-    return
+    return cloudid_outfile

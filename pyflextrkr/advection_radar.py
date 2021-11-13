@@ -1,12 +1,12 @@
 import numpy as np
 import xarray as xr
 from netCDF4 import Dataset
-import glob, os, sys
 from scipy.signal import medfilt
-from skimage.feature import masked_register_translation
+from skimage.registration import phase_cross_correlation
 from scipy import ndimage as ndi
-import datetime
-from joblib import Parallel, delayed
+import logging
+import dask
+from pyflextrkr.ftfunctions import subset_files_timerange
 
 
 def offset_to_speed(x, y, time_lag, dx, dy):
@@ -94,17 +94,8 @@ def movement_of_storm_fft(
     y_lag = np.zeros((cuts, cuts))
     x_lag = np.zeros((cuts, cuts))
 
-    # mask_1 = np.logical_or(np.squeeze(dset_1['conv_mask_inflated'].values> 0), field_1>thresh)
-    # mask_2 = np.logical_or(np.squeeze(dset_2['conv_mask_inflated'].values> 0), field_2>thresh)
-
     mask_1 = field_1 > threshold
     mask_2 = field_2 > threshold
-
-    # field_1[field_1 < thresh] = -60
-    # field_2[field_2 < thresh] = -60 # May cause issues with convolution later.
-
-    # field_1[np.logical_not(mask_1)] = thresh
-    # field_2[np.logical_not(mask_2)] = thresh # May cause issues with convolution later.
 
     dimensions = field_1.shape
     x_skip = int(dimensions[0] / cuts)
@@ -123,8 +114,9 @@ def movement_of_storm_fft(
             mask_2[field_2 < -100] = 0
 
             num_points = np.sum(mask > 0)
-            y, x = -1 * masked_register_translation(
-                field_1, field_2, mask_1, mask_2, overlap_ratio=0.7
+            # Updated to use phase_cross_correlation to replace masked_register_translation
+            y, x = -1 * phase_cross_correlation(
+                field_1, field_2, reference_mask=mask_1, moving_mask=mask_2, overlap_ratio=0.7
             )
 
             if plot_subplots:
@@ -140,7 +132,6 @@ def movement_of_storm_fft(
                 plt.figure(figsize=(10, 10))
                 plt.pcolormesh(field_2 * mask_2, vmin=-20, vmax=50, cmap="jet")
                 shifted_field_1 = ndi.shift(mask_1, [int(y), int(x)])
-                #                 plt.contour(mask_2.astype(float)-shifted_field_1, vmin=-1, vmax=1, cmap='seismic', levels=3)
                 plt.contour(shifted_field_1, vmin=-1, vmax=1, cmap="seismic", levels=3)
                 plt.contour(-1 * mask_1, vmin=-1, vmax=1, cmap="seismic", levels=3)
 
@@ -169,25 +160,6 @@ def movement_of_storm_fft(
 
     return y_lag[0, 0], x_lag[0, 0]
 
-
-def get_basetime(filename):
-    """Get basetime from file"""
-
-    filedate, filetime = os.path.basename(filename).split("_")[2].split(".")[2:4]
-    # print(filedate, filetime)
-    basetime = datetime.datetime(
-        year=int(filedate[0:4]),
-        month=int(filedate[4:6]),
-        day=int(filedate[6:]),
-        hour=int(filetime[0:2]),
-        minute=int(filetime[2:4]),
-        second=int(filetime[4:6]),
-        tzinfo=datetime.timezone.utc,
-    )
-    return int(basetime.timestamp()), str(basetime)
-
-
-# def movement_of_storm_fft_l(filenames):
 def movement_of_storm_fft_l(
     filenames, dx, dy, DBZ_THRESHOLD, TIME_RES_SECOND, MAX_MOVEMENT_MPS
 ):
@@ -207,68 +179,60 @@ def movement_of_storm_fft_l(
     return y1, x1
 
 
-def calc_mean_advection(
-    clouddata_path,
-    output_filename,
-    DBZ_THRESHOLD,
-    dx,
-    dy,
-    MED_FILT_LEN,
-    MAX_MOVEMENT_MPS,
-    datatimeresolution,
-    nprocesses=1,
-):
-    """Calculate domain mean advection
-    Parameters:
-    -----------
-    clouddata_path: string
-        Directory of the input data.
-    output_filename: string
-        Output advection file name.
-    DBZ_THRESHOLD: float
-        Reflectivity threshold to filter echoes [dBZ].
-    dx: float
-        Grid spacing in x-direction [km].
-    dy: float
-        Grid spacing in y-direction [km].
-    MED_FILT_LEN: int
-        Median filter window size.
-    datatimeresolution: float
-        Data time resolution [hour].
-    nprocesses: int
-        Number of jobs for parallel processing.
-    Returns:
-    --------
-    status: int
-        A status indicating run is complete.
+def calc_mean_advection(config):
     """
+    Calculate domain mean advection.
 
-    status = 0
+    Args:
+        config: dictionary
+            Dictionary containing config parameters.
 
-    # Find all input files
-    filelist = sorted(glob.glob(f"{clouddata_path}*.nc"))
+    Returns:
+        output_filename: string
+            Advection file name.
+    """
+    logger = logging.getLogger(__name__)
 
-    print(f"Found {len(filelist)} files.")
-    x = np.zeros((len(filelist), 1))
-    y = np.zeros((len(filelist), 1))
+    clouddata_path = config["clouddata_path"]
+    DBZ_THRESHOLD = config["DBZ_THRESHOLD"]
+    dx = config["pixel_radius"]
+    dy = config["pixel_radius"]
+    MED_FILT_LEN = config["MED_FILT_LEN"]
+    MAX_MOVEMENT_MPS = config["MAX_MOVEMENT_MPS"]
+    datatimeresolution = config["datatimeresolution"]
+    run_parallel = config["run_parallel"]
+
+    output_filename = (
+        config["stats_outpath"] +
+        config["datasource"] +
+        "_advection_" +
+        config["startdate"] + "_" +
+        config["enddate"] + ".nc"
+    )
+
+    # Find files within start/end time
+    # filelist = sorted(glob.glob(f"{clouddata_path}*.nc"))
+    filelist, \
+    files_basetime, \
+    files_datestring, \
+    files_timestring = subset_files_timerange(
+        clouddata_path,
+        config["databasename"],
+        config["start_basetime"],
+        config["end_basetime"],
+        time_format=config["time_format"]
+    )
+    logger.info(f"Found {len(filelist)} files.")
+
     # Convert data time resolution from [hour] to [second]
     TIME_RES_SECOND = datatimeresolution * 3600
-    # for test_file_idx in np.arange(0, len(filelist) - 1):
-    #     filename_1 = filelist[test_file_idx]
-    #     filename_2 = filelist[test_file_idx + 1]
 
-    #     dset_1 = xr.open_dataset(filename_1)
-    #     dset_2 = xr.open_dataset(filename_2)
-
-    #     y1, x1 = movement_of_storm_fft(dset_1, dset_2, threshold=10)
-    #     x[test_file_idx, :] = x1.ravel()
-    #     y[test_file_idx, :] = y1.ravel()
-    # import pdb; pdb.set_trace()
-
-    # results = list(Parallel(n_jobs=nprocesses)(delayed(movement_of_storm_fft_l)(i ) for i in zip(filelist[:-1], filelist[1:])))
-    results = list(
-        Parallel(n_jobs=nprocesses)(
-            delayed(movement_of_storm_fft_l)(
+    # Run advection calculation
+    if run_parallel == 0:
+        # Serial version
+        final_results = []
+        for ii in zip(filelist[:-1], filelist[1:]):
+            x_y = movement_of_storm_fft_l(
                 ii,
                 dx=dx,
                 dy=dy,
@@ -276,10 +240,26 @@ def calc_mean_advection(
                 TIME_RES_SECOND=TIME_RES_SECOND,
                 MAX_MOVEMENT_MPS=MAX_MOVEMENT_MPS,
             )
-            for ii in zip(filelist[:-1], filelist[1:])
-        )
-    )
-    x_and_y = np.array(tuple(zip(*results)))
+            final_results.append(x_y)
+
+    if run_parallel == 1:
+        # Parallel version
+        results = []
+        for ii in zip(filelist[:-1], filelist[1:]):
+            x_y = dask.delayed(movement_of_storm_fft_l)(
+                ii,
+                dx=dx,
+                dy=dy,
+                DBZ_THRESHOLD=DBZ_THRESHOLD,
+                TIME_RES_SECOND=TIME_RES_SECOND,
+                MAX_MOVEMENT_MPS=MAX_MOVEMENT_MPS,
+            )
+            results.append(x_y)
+        final_results = dask.compute(*results)
+        dask.distributed.wait(final_results)
+
+    # Zip the (x, y) and convert them into numpy array
+    x_and_y = np.array(tuple(zip(*final_results)))
     y = x_and_y[0]
     x = x_and_y[1]
 
@@ -294,12 +274,10 @@ def calc_mean_advection(
     med_x = (1 / dx) * mag_med * np.cos(np.pi / 180 * (90 - angle_med))
     med_y = (1 / dy) * mag_med * np.sin(np.pi / 180 * (90 - angle_med))
 
-    corrections = zip(
-        map(get_basetime, filelist), zip(med_x, med_y, mag_med, angle_med)
-    )
+    corrections = zip(files_basetime, med_x, med_y, mag_med, angle_med)
     corrections = list(corrections)
-    basetime = np.array([t[0][0] for t in corrections])
-    basedate = [t[0][1] for t in corrections]
+    # basetime = np.array([t[0][0] for t in corrections])
+    # basedate = [t[0][1] for t in corrections]
 
     rootgrp = Dataset(output_filename, "w", format="NETCDF4")
     d_time = rootgrp.createDimension("time", len(corrections))
@@ -310,29 +288,32 @@ def calc_mean_advection(
     v_mag = rootgrp.createVariable("magnitude", "f8", ("time",))
     v_dir = rootgrp.createVariable("direction", "f8", ("time",))
 
-    v_time[:] = [t[0][0] for t in corrections]
+    v_time[:] = [t[0] for t in corrections]
     v_time.units = "Seconds since 1970-1-1 0:00:00 0:00"
-    v_basetime[:] = [t[0][0] for t in corrections]
+    v_basetime[:] = [t[0] for t in corrections]
     v_basetime.units = "Seconds since 1970-1-1 0:00:00 0:00"
-    v_x[:] = [np.round(t[1][0]) for t in corrections]
+    v_x[:] = [np.round(t[1]) for t in corrections]
     v_x.long_name = "Advection in x-direction"
     v_x.units = "Number of grids"
-    v_y[:] = [np.round(t[1][1]) for t in corrections]
+    v_y[:] = [np.round(t[2]) for t in corrections]
     v_y.long_name = "Advection in y-direction"
     v_y.units = "Number of grids"
-    v_mag[:] = [t[1][2] for t in corrections]
+    v_mag[:] = [t[3] for t in corrections]
     v_mag.long_name = "Advection speed magnitude"
     v_mag.units = "m/s"
-    v_dir[:] = [t[1][3] for t in corrections]
+    v_dir[:] = [t[4] for t in corrections]
     v_dir.long_name = "Advection direction"
     v_dir.units = "degree"
+
+    # import pdb;
+    # pdb.set_trace()
 
     rootgrp.dbz_threshold = float(DBZ_THRESHOLD)
     rootgrp.MAX_MOVEMENT_MPS = float(MAX_MOVEMENT_MPS)
     rootgrp.dx = dx
     rootgrp.dy = dy
     rootgrp.close()
-    print(f"Advection file saved: {output_filename}")
+    logger.info(f"Advection file saved: {output_filename}")
 
     status = 1
-    return status
+    return output_filename

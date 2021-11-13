@@ -1,29 +1,35 @@
-def trackclouds(cloudid_filepairs,
-                cloudid_basetimepairs,
-                drift_data,
-                config):
+import numpy as np
+import os
+import sys
+import xarray as xr
+import pandas as pd
+import time
+import scipy.ndimage as ndi
+import logging
+
+def trackclouds(
+    cloudid_filepairs,
+    cloudid_basetimepairs,
+    drift_data,
+    config,
+):
     """
     Track clouds in successive pairs of cloudid files.
 
     Arguments:
-    cloudid_filepairs: tuple
-        Cloudid filename pairs
-    cloudid_basetimepairs: tuple
-        Cloudid basetime pairs
-    drift_data: tuple
-        Drift data (datetime_string, xdrift, ydrift)
-    config: dictionary
-        Dictionary containing config parameters
-    """
+        cloudid_filepairs: tuple
+            Cloudid filename pairs
+        cloudid_basetimepairs: tuple
+            Cloudid basetime pairs
+        drift_data: tuple
+            Drift data (datetime_string, xdrift, ydrift)
+        config: dictionary
+            Dictionary containing config parameters
 
-    import numpy as np
-    import os
-    import sys
-    import xarray as xr
-    import pandas as pd
-    import time
-    import scipy.ndimage as ndi
-    import logging
+    Returns:
+        track_outfile: string
+            Track file name.
+    """
 
     logger = logging.getLogger(__name__)
 
@@ -412,3 +418,4 @@ def trackclouds(cloudid_filepairs,
                 },
             },
         )
+        return track_outfile

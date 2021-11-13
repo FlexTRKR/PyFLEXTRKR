@@ -7,18 +7,13 @@ import xarray as xr
 import pandas as pd
 import logging
 
-def gettracknumbers(
-        config,
-        singletrack_filebase,
-):
+def gettracknumbers(config):
     """
     Track clouds successively from the single track files.
 
     Arguments:
         config: dictionary
             Dictionary containing config parameters.
-        singletrack_filebase: string
-            Single track file basename.
 
     Returns:
         tracknumbers_outfile: string
@@ -26,6 +21,8 @@ def gettracknumbers(
     """
 
     # Get parameters from config
+    singletrack_filebase = config["singletrack_filebase"]
+    tracknumbers_filebase = config["tracknumbers_filebase"]
     datasource = config["datasource"]
     datadescription = config["datadescription"]
     datainpath = config["tracking_outpath"]
@@ -44,9 +41,8 @@ def gettracknumbers(
     #############################################################################
     # Set track numbers output file name
     # tracknumbers_filebase = "tracknumbers" + tracknumbers_version
-    tracknumbers_filebase = "tracknumbers_"
     tracknumbers_outfile = (
-        stats_outpath + tracknumbers_filebase + "_" + startdate + "_" + enddate + ".nc"
+        stats_outpath + tracknumbers_filebase + startdate + "_" + enddate + ".nc"
     )
 
     files, gap = filter_filelisting(
@@ -677,7 +673,7 @@ def gettracknumbers(
 
     output_data.track_reset.attrs[
         "long_name"
-    ] = "flag of track starts and adrupt track stops"
+    ] = "flag of track starts and abrupt track stops"
     output_data.track_reset.attrs[
         "usage"
     ] = "Each row represents a cloudid file. Each column represents a cloud in that file. Numbers indicate if the track started or adruptly ended during this file."
