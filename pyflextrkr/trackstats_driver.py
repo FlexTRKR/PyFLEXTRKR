@@ -26,6 +26,7 @@ def trackstats_driver(config):
     logger = logging.getLogger(__name__)
 
     t0_step4 = time.time()
+    logger.info('Calculating cell statistics')
 
     # Get values from config dictionary
     tracknumbers_filebase = config["tracknumbers_filebase"]
@@ -65,8 +66,8 @@ def trackstats_driver(config):
 
     results = []
 
+    # Serial
     if run_parallel == 0:
-        # Serial
         for nf in range(0, nfiles):
             result = calc_stats_singlefile(
                 tracknumbers[nf, :],
@@ -82,12 +83,8 @@ def trackstats_driver(config):
         # Serial
         final_result = results
 
+    # Parallel
     if run_parallel == 1:
-        # Parallel
-        # Initialize dask
-        # cluster = LocalCluster(n_workers=nprocesses, threads_per_worker=1)
-        # client = Client(cluster)
-
         for nf in range(0, nfiles):
             result = dask.delayed(calc_stats_singlefile)(
                 tracknumbers[nf, :],

@@ -1,16 +1,16 @@
 ---
 # Tracking steps to run
-run_advection: False
-# Segment and identify clouds 
-run_idclouds: True
-# Track single consecutive cloudid files
+run_advection: True
+# Identify features to track
+run_idfeature: True
+# Track single consecutive feature files
 run_tracksingle: True
-# Run trackig for all files
+# Run tracking for all files
 run_gettracks: True
-# Calculate final statistics
-run_finalstats: True
-# Create maps of cells
-run_labelcell: True
+# Calculate feature statistics
+run_trackstats: True
+# Map tracking to pixel files
+run_mapfeature: True
 # Start/end date and time
 startdate: '20181111.0000'
 enddate: '20181114.0000'
@@ -26,14 +26,9 @@ databasename: taranis_corcsapr2cfrppiqcM1_convmask.c1.
 # E.g., wrf_2018-11-01_01:15:00 --> yyyy-mo-dd_hh:mm:ss
 time_format: yyyymodd.hhmmss
 # Working directory for the tracking data
-#root_path: "/global/cscratch1/sd/feng045/iclass/cacti/arm/csapr/test/"
-tracking_outpath: "/global/cscratch1/sd/feng045/iclass/cacti/arm/csapr/test/tracking/"
-stats_outpath: "/global/cscratch1/sd/feng045/iclass/cacti/arm/csapr/test/stats/"
-pixeltracking_outpath: "/global/cscratch1/sd/feng045/iclass/cacti/arm/csapr/test/celltracking/"
+root_path: "/global/cscratch1/sd/feng045/iclass/cacti/arm/csapr/test/"
 # Input files directory
 clouddata_path: "/global/cscratch1/sd/feng045/iclass/cacti/arm/csapr/test/input_data/"
-# Drift (advection) file
-#driftfile: "/global/cscratch1/sd/feng045/iclass/cacti/arm/csapr/test/stats/CSAPR2_advection_all.nc"
 # Terrain file 
 terrain_file: "/global/cscratch1/sd/feng045/iclass/cacti/arm/csapr/test/CSAPR2_Taranis_Gridded_500m.Terrain_RangeMask.nc"
 # Range mask variable to use in terrain file

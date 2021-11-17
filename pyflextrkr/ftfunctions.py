@@ -8,7 +8,28 @@ import xarray as xr
 logging.basicConfig(format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-def get_basetime(
+def get_basetime_from_string(datestring):
+    """
+    Calculate base time (Epoch time) from a string.
+
+    Args:
+        datestring: string (yyyymodd.hhmm)
+            String containing date & time.
+
+    Returns:
+        base_time: int
+            Epoch time in seconds.
+    """
+    TEMP_starttime = datetime.datetime(int(datestring[0:4]),
+                                       int(datestring[4:6]),
+                                       int(datestring[6:8]),
+                                       int(datestring[9:11]),
+                                       int(datestring[11:]),
+                                       0, tzinfo=utc)
+    base_time = calendar.timegm(TEMP_starttime.timetuple())
+    return base_time
+
+def get_basetime_from_filename(
     data_path,
     data_basename,
     time_format="yyyymodd_hhmm",
@@ -117,7 +138,7 @@ def subset_files_timerange(
     """
     # Get basetime for all files
     data_filenames, files_basetime, \
-    files_datestring, files_timestring = get_basetime(
+    files_datestring, files_timestring = get_basetime_from_filename(
         data_path, data_basename, time_format=time_format,
     )
 

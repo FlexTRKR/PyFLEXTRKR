@@ -35,8 +35,11 @@ def gettracknumbers(config):
     keepsingletrack = config["keepsingletrack"]
 
     logger = logging.getLogger(__name__)
-
     np.set_printoptions(threshold=np.inf)
+
+    # Call function
+    logger.info('Getting track numbers')
+    logger.info('tracking_outpath:' + datainpath)
 
     #############################################################################
     # Set track numbers output file name
@@ -707,6 +710,7 @@ def gettracknumbers(config):
             "track_reset": {"dtype": "int", "zlib": True, "_FillValue": -9999},
         },
     )
+    logger.info('Get track numbers done.')
     return tracknumbers_outfile
 
 
