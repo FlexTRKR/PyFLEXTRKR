@@ -3,7 +3,7 @@ import os
 import logging
 import dask
 from dask.distributed import wait
-from pyflextrkr.ftfunctions import subset_files_timerange
+from pyflextrkr.ft_utilities import subset_files_timerange
 from pyflextrkr.mapcell_radar import mapcell_radar
 
 def mapfeature_driver(config):

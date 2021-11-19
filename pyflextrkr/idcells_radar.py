@@ -3,7 +3,6 @@ import numpy as np
 import time
 import xarray as xr
 import logging
-from pyflextrkr.ftfunctions import sort_renumber
 
 def idcell_csapr(
     input_filename,
@@ -26,8 +25,10 @@ def idcell_csapr(
     np.set_printoptions(threshold=np.inf)
     logger = logging.getLogger(__name__)
 
+    fillval = config["fillval"]
+
     # Read input data
-    ds = xr.open_dataset(input_filename)
+    ds = xr.open_dataset(input_filename, mask_and_scale=False)
     time_decode = ds["time"]
     out_x = ds["x"]
     out_y = ds["y"]
@@ -52,25 +53,14 @@ def idcell_csapr(
 
     # Get the number of pixels for each cell.
     # conv_mask is already sorted so the returned sorted array is not needed, only the pixel count (cell size).
-    tmp, conv_npix = sort_renumber(conv_mask, 0)
-    # Modified by zhixiao, should not remove any single grid cells in coarse resolution wrf
+    # tmp, conv_npix = sort_renumber(conv_mask, 0)
 
-    # conv_mask_noinflate = conv_mask2
-    # conv_mask_sorted_noinflate = conv_mask2
-    # conv_mask_sorted = conv_mask_inflated
-    # nclouds = np.nanmax(conv_mask_sorted)
+    # Count number of pixels for each cell
+    cellnum, conv_npix = np.unique(conv_mask, return_counts=True)
+    # Remove background
+    conv_npix = conv_npix[(cellnum > 0)]
 
     nclouds = np.nanmax(conv_mask_inflated)
-
-    # # Multiply the inflated cell number with conv_mask2 to get the actual cell size without inflation
-    # conv_mask_noinflate = (conv_mask_inflated * conv_mask2).astype(int)
-    # # Sort and renumber the cells
-    # # The number of pixels for each cell is calculated from the cellmask without inflation (conv_mask_sorted_noinflate)
-    # # Therefore it is the actual size of the cells, but will be different from the inflated mask that is used for tracking
-    # conv_mask_sorted_noinflate, conv_mask_sorted, conv_npix = sort_renumber2vars(conv_mask_noinflate, conv_mask_inflated, 1)
-
-    # # Get number of cells
-    # nclouds = np.nanmax(conv_mask_sorted)
 
     #######################################################
     # output data to netcdf file, only if clouds present
@@ -79,13 +69,11 @@ def idcell_csapr(
     file_datestring = time_decode.dt.strftime("%Y%m%d").item()
     file_timestring = time_decode.dt.strftime("%H%M").item()
     cloudid_outfile = (
-        # dataoutpath
         config['tracking_outpath']
         + config['datasource']
         + "_"
         + config['datadescription']
         + "_cloudid"
-        # + config['cloudid_version']
         + "_"
         + file_datestring
         + "_"
@@ -157,7 +145,6 @@ def idcell_csapr(
         "created_on": time.ctime(time.time()),
         "dx": dx,
         "dy": dy,
-        "cloudid_cloud_version": config['cloudid_version'],
         "minimum_cloud_area": config['area_thresh'],
     }
 
@@ -197,8 +184,8 @@ def idcell_csapr(
         "y": {"zlib": True, "dtype":"float32"},
         "lon": {"zlib": True, "dtype":"float32"},
         "lat": {"zlib": True, "dtype":"float32"},
-        "longitude": {"zlib": True, "_FillValue": np.nan, "dtype":"float32"},
-        "latitude": {"zlib": True, "_FillValue": np.nan, "dtype":"float32"},
+        "longitude": {"zlib": True, "dtype":"float32"},
+        "latitude": {"zlib": True, "dtype":"float32"},
         "comp_ref": {"zlib": True},
         "dbz_lowlevel": {"zlib": True},
         "conv_core": {"zlib": True},
@@ -211,7 +198,7 @@ def idcell_csapr(
         "echotop40": {"zlib": True},
         "echotop50": {"zlib": True},
         "nclouds": {"dtype": "int", "zlib": True},
-        "ncorecoldpix": {"dtype": "int", "zlib": True},
+        "ncorecoldpix": {"dtype": "int", "zlib": True, "_FillValue":fillval},
     }
 
     # Write netCDF file

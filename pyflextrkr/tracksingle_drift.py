@@ -41,7 +41,7 @@ def trackclouds(
     seconddatestring = pd.to_datetime(secondbasetime, unit="s").strftime("%Y%m%d")
     secondtimestring = pd.to_datetime(secondbasetime, unit="s").strftime("%H%M")
     dataoutpath = config["tracking_outpath"]
-    track_version = config["track_version"]
+    # track_version = config["track_version"]
     timegap = config["timegap"]
     nmaxlinks = config["nmaxlinks"]
     othresh = config["othresh"]
@@ -322,7 +322,7 @@ def trackclouds(
                 "ref_date": reference_filedatetime,
                 "new_file": new_file,
                 "ref_file": reference_file,
-                "tracking_version_number": track_version,
+                # "tracking_version_number": track_version,
                 "overlap_threshold": str(int(othresh * 100)) + "%",
                 "maximum_gap_allowed": str(timegap) + " hr",
             },

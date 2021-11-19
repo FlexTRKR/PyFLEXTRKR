@@ -6,7 +6,7 @@ from skimage.registration import phase_cross_correlation
 from scipy import ndimage as ndi
 import logging
 import dask
-from pyflextrkr.ftfunctions import subset_files_timerange
+from pyflextrkr.ft_utilities import subset_files_timerange
 
 
 def offset_to_speed(x, y, time_lag, dx, dy):

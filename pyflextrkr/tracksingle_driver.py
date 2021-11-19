@@ -2,7 +2,7 @@ import sys
 import logging
 import dask
 from dask.distributed import wait
-from pyflextrkr.ftfunctions import subset_files_timerange, match_drift_times
+from pyflextrkr.ft_utilities import subset_files_timerange, match_drift_times
 from pyflextrkr.tracksingle_drift import trackclouds
 
 def tracksingle_driver(config):
@@ -43,6 +43,8 @@ def tracksingle_driver(config):
     ydrifts_match = match_drift_times(cloudidfiles_datestring,
                                       cloudidfiles_timestring,
                                       driftfile=driftfile)
+    # Create matching triplets of drift data
+    drift_data = list(zip(datetime_drift_match, xdrifts_match, ydrifts_match))
 
     # Call function
     logger.info('Tracking clouds between single files')
@@ -50,8 +52,6 @@ def tracksingle_driver(config):
     # Create pairs of input filenames and times
     cloudid_filepairs = list(zip(cloudidfiles[0:-1], cloudidfiles[1::]))
     cloudid_basetimepairs = list(zip(cloudidfiles_basetime[0:-1], cloudidfiles_basetime[1::]))
-    # Create matching triplets of drift data
-    drift_data = list(zip(datetime_drift_match, xdrifts_match, ydrifts_match))
 
     # Serial version
     if run_parallel == 0:
