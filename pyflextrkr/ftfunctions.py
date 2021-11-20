@@ -29,12 +29,24 @@ def sort_renumber(
     # Check if there is any cells identified
     if nlabelcells > 0:
 
-        # Count number of pixels for each unique cells
-        cellnum, labelcell_npix = np.unique(labelcell_number2d, return_counts=True)
-        # Remove background and cells below size threshold
-        labelcell_npix = labelcell_npix[np.logical_and((cellnum > 0), (labelcell_npix > min_cellpix))]
+        labelcell_npix = np.full(nlabelcells, -999, dtype=int)
+        # Loop over each labeled cell
+        for ilabelcell in range(1, nlabelcells + 1):
+            # Count number of pixels for the cell
+            ilabelcell_npix = np.count_nonzero(labelcell_number2d == ilabelcell)
+            # Check if cell satisfies size threshold
+            if ilabelcell_npix > min_cellpix:
+                labelcell_npix[ilabelcell - 1] = ilabelcell_npix
 
-        # import pdb; pdb.set_trace()
+        # # This faster approach does not work
+        # # Because when labelcell_number2d is not sequentially numbered (e.g., when some cells are removed)
+        # # This approach does not get the same sequence with the above one
+        # # Count number of pixels for each unique cells
+        # cellnum, labelcell_npix = np.unique(labelcell_number2d, return_counts=True)
+        # # Remove background and cells below size threshold
+        # labelcell_npix = labelcell_npix[(cellnum > 0)]
+        # labelcell_npix[(labelcell_npix <= min_cellpix)] = -999
+
         # Check if any of the cells passes the size threshold test
         ivalidcells = np.where(labelcell_npix > 0)[0]
         # ivalidcells = np.array(np.where(labelcell_npix > 0))[0, :]
@@ -47,8 +59,8 @@ def sort_renumber(
             labelcell_npix = labelcell_npix[ivalidcells]
 
             # Sort cells from largest to smallest and get the sorted index
-            order = np.argsort(labelcell_npix)
-            order = order[::-1]  # Reverses the order
+            order = np.argsort(labelcell_npix)[::-1]
+            # order = order[::-1]  # Reverses the order
 
             # Sort the cells by size
             sortedcell_npix = np.copy(labelcell_npix[order])
@@ -119,10 +131,23 @@ def sort_renumber2vars(
     # Check if there is any cells identified
     if nlabelcells > 0:
 
-        # Count number of pixels for each unique cells
-        cellnum, labelcell_npix = np.unique(labelcell_number2d, return_counts=True)
-        # Remove background and cells below size threshold
-        labelcell_npix = labelcell_npix[np.logical_and((cellnum > 0), (labelcell_npix > min_cellpix))]
+        labelcell_npix = np.full(nlabelcells, -999, dtype=int)
+        # Loop over each labeled cell
+        for ilabelcell in range(1, nlabelcells + 1):
+            # Count number of pixels for the cell
+            ilabelcell_npix = np.count_nonzero(labelcell_number2d == ilabelcell)
+            # Check if cell satisfies size threshold
+            if ilabelcell_npix > min_cellpix:
+                labelcell_npix[ilabelcell - 1] = ilabelcell_npix
+
+        # # This faster approach does not work
+        # # Because when labelcell_number2d is not sequentially numbered (e.g., when some cells are removed)
+        # # This approach does not get the same sequence with the above one
+        # # Count number of pixels for each unique cells
+        # cellnum, labelcell_npix2 = np.unique(labelcell_number2d, return_counts=True)
+        # # Remove background and cells below size threshold
+        # labelcell_npix2 = labelcell_npix2[(cellnum > 0)]
+        # labelcell_npix2[(labelcell_npix2 <= min_cellpix)] = -999
 
         # Check if any of the cells passes the size threshold test
         ivalidcells = np.array(np.where(labelcell_npix > 0))[0, :]

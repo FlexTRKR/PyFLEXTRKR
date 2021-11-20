@@ -5,6 +5,7 @@ import dask
 from dask.distributed import wait
 from pyflextrkr.ft_utilities import subset_files_timerange
 from pyflextrkr.idcells_radar import idcell_csapr
+from pyflextrkr.idclouds_sat import idclouds_gpmmergir
 
 def idfeature_driver(config):
     """
@@ -40,6 +41,24 @@ def idfeature_driver(config):
     # Get file list
     rawdatafiles = infiles_info[0]
     nfiles = len(rawdatafiles)
+
+    #######################################################################################
+    # Satellite IR temperature & precipitation
+    if feature_type == "tb_pf":
+        # Serial version
+        if run_parallel == 0:
+            for ifile in range(0, nfiles):
+                idclouds_gpmmergir(rawdatafiles[ifile], config)
+        # Parallel version
+        elif run_parallel == 1:
+            results = []
+            for ifile in range(0, nfiles):
+                result = dask.delayed(idclouds_gpmmergir)(rawdatafiles[ifile], config)
+                results.append(result)
+            final_result = dask.compute(*results)
+            wait(final_result)
+        else:
+            sys.exit('Valid parallelization flag not provided')
 
     #######################################################################################
     # Radar convective cells

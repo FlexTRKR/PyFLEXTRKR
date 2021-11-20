@@ -1,0 +1,154 @@
+---
+# Global GPM based tracking configuration file
+
+# Processing configuration to use:
+processing_config: "global_gpm_mcs_processing_config.yml"
+
+# Processing steps:
+# Maybe worth nesting these in sets of dictionaries
+run_idfeature : true  # Segment and identify cloud systems
+run_tracksingle : False  # Track single consecutive cloudid files
+run_gettracks : False  # Run trackig for all files
+run_trackstats : False  # Calculate feature statistics
+run_identifymcs : False  # Isolate MCSs
+run_matchpf : False  # Identify precipitation features with MCSs
+run_robustmcs : False  # Filter potential mcs cases using nmq radar variables
+run_mapfeature : False  # Create maps of MCSs
+
+# Cores, parallel, etc
+run_parallel: 1
+nprocesses : 32  # Number of processors to use if run_parallel is set to 1
+
+# Start/end date and time
+startdate: '20190122.0000'
+enddate: '20190126.2300'
+# Data source, description
+datasource: gpmirimerg
+datadescription: gpm
+databasename: merg_
+
+# Specify date/time string format in the file name
+# E.g., radar_20181101.011503.nc --> yyyymodd.hhmmss
+# E.g., wrfout_2018-11-01_01:15:00 --> yyyy-mo-dd_hh:mm:ss
+time_format: 'yyyymoddhh'
+# Input files directory
+clouddata_path: '/global/cscratch1/sd/feng045/SAAG/GPM/tb_rr/2019/'
+# Working directory for the tracking data
+root_path: '/global/cscratch1/sd/feng045/SAAG/GPM/pyflex_test/'
+# Working sub-directory names
+tracking_path_name: 'tracking'
+stats_path_name: 'stats'
+pixel_path_name: 'mcstracking'
+
+# Land mask file
+input_data_directory: "data_in/"
+landmask_filename: "IMERG_landmask_global.nc"
+
+# Specify types of feature being tracked
+# This adds additional feature-specific statistics to be computed
+feature_type: 'tb_pf'
+cloudidmethod: "futyan4"  # Option: futyan3:  identify cores and cold anvils and expand to get warm anvil, futyan4=identify core and expand for cold and warm anvils
+keep_singlemergesplit: 1  # Options: 0=All short tracks are removed, 1=Only short tracks without mergers or splits are removed
+
+idclouds_hourly: 1  # 0:  No, 1:  Yes
+idclouds_minute: 30
+
+    # Specify cloud tracking parameters
+geolimits: [-90, -360, 90, 360] # 4-element array with plotting boundaries [lat_min, lon_min, lat_max, lon_max]
+pixel_radius:  10.0  # km
+timegap:  3.1  # hour
+area_thresh:  800  # km^2
+miss_thresh:  0.35  # JOE WAS 0.2 # Missing data threshold. If missing data in the domain from this file is greater than this value, this file is considered corrupt and is ignored. (0.1:  10%)
+cloudtb_core:  225.0  # K
+cloudtb_cold:  241.0  # K
+cloudtb_warm:  261.0  # K
+cloudtb_cloud:  261.0  # K
+othresh:  0.5  # overlap percentage threshold
+lengthrange: [2, 200] # A vector [minlength,maxlength] to specify the lifetime range for the tracks
+nmaxlinks:  200  # Maximum number of clouds that any single cloud can be linked to
+nmaxclouds:  3000  # Maximum number of clouds allowed to be in one track
+absolutetb_threshs: [160, 330]  # k A vector [min, max] brightness temperature allowed. Brightness temperatures outside this range are ignored.
+warmanvilexpansion:  0  # If this is set to one, then the cold anvil is spread laterally until it exceeds the warm anvil threshold
+mincoldcorepix:  4  # Minimum number of pixels for the cold core, needed for futyan version 4 cloud identification code. Not used if use futyan version 3.
+smoothwindowdimensions:  3  # Dimension of the boxcar filter used for futyan version 4. Not used in futyan version 3
+# smoothwindowdimensions:  10                # Dimension of the boxcar filter used for futyan version 4. Not used in futyan version 3
+# medfiltsize:  5                            # Window size to perform medfilt2d to fill missing IR pixels, must be an odd number
+
+# Specify MCS parameters
+mcs_mergedir_areathresh:  4e4  # IR area threshold [km^2]
+mcs_mergedir_durationthresh:  4  # IR minimum length of a mcs [hr]
+mcs_mergedir_eccentricitythresh:  0.7  # IR eccentricity at time of maximum extent
+mcs_mergedir_splitduration:  12  # IR tracks smaller or equal to this length will be included with the MCS splits from
+mcs_mergedir_mergeduration:  12  # IR tracks smaller or equal to this length will be included with the MCS merges into
+
+mcs_pf_majoraxisthresh:  100  # MCS PF major axis length lower limit [km]
+max_pf_majoraxis_thresh:  1800  # MCS PF major axis length upper limit [km]
+mcs_pf_durationthresh:  4  # PF minimum length of mcs [hr]
+mcs_pf_aspectratiothresh:  4  # PF aspect ragio require to define a squall lines
+mcs_pf_lifecyclethresh:  4  # Minimum MCS lifetime required to classify life stages
+mcs_pf_lengththresh:  20  # Minimum size required to classify life stages [km]
+mcs_pf_gap:  1  # Allowable gap in data for subMCS characteristics [hr]
+
+# Specify rain rate parameters
+pf_rr_thres:  2.0  # Rain rate threshold [mm/hr]
+nmaxpf: 3  # Maximum number of precipitation features that can be within a cloud feature
+nmaxcore: 20  # Maximum number of convective cores that can be within a cloud feature
+pcp_thresh:  1.0  # Pixels with hourly precipitation larger than this will be labeled with track number
+heavy_rainrate_thresh:  10.0  # Heavy rain rate threshold [mm/hr]
+
+# Specific parameters to link cloud objects using PF
+linkpf:  1  # Set to 1 to turn on linkpf option; default: 0
+pf_smooth_window:  5  # Smoothing window for identifying PF
+pf_dbz_thresh:  3  # [dBZ] for reflectivity, or [mm/h] for rainrate
+pf_link_area_thresh:  648.0  # [km^2]
+
+# MCS PF parameter coefficients [intercept, slope]
+# These parameters are derived with pf_rr_thres:  2 mm/h
+# coefs_area:  [1962.11, -14.598]      # 1%
+# coefs_area:  [1962.11, 0]           # 1% [changed slope to 0: independent of lifetime]
+# coefs_area:  [2119.02, 61.143]      # 3%
+coefs_area:  [2874.05, 89.825]  # 5% [recommended]
+# coefs_area:  [4160.82, 93.077]      # 7%
+# coefs_area:  [4988.15, 138.172]      # 10%
+
+# coefs_rr:  [2.72873, 0.0008317]      # 1%
+# coefs_rr:  [2.81982, 0.0135463]      # 3%
+coefs_rr:  [3.01657, 0.0144461]  # 5% [recommended]
+# coefs_rr:  [3.14895, 0.0150174]      # 7%
+# coefs_rr:  [3.34859, 0.0172043]      # 10%
+
+# coefs_skew:  [0.036384, 0.0022199]      # 1%
+# coefs_skew:  [0.072809, 0.0104444]      # 3%
+coefs_skew:  [0.194462, 0.0100072]  # 5% [recommended]
+# coefs_skew:  [0.256639, 0.0106527]      # 7%
+# coefs_skew:  [0.376142, 0.0095545]      # 10%
+
+# coefs_heavyratio:  [0.750260, 0.4133300]  # 5%
+coefs_heavyratio:  [3.419024, 0.4387090]  # 10% [recommended]
+# coefs_heavyratio:  [4.753215, 0.4886454]  # 15%
+# coefs_heavyratio:  [4.592209, 0.6107371]  # 20%
+# coefs_heavyratio:  [8.389616, 0.5079337]  # 25%
+
+# Specify filenames and locations
+cloud_variable_name:  'Tb'
+clouddatasource:  'gpmirimerg'
+pfdatasource:  'imerg'
+datadescription:  'EUS'
+databasename:  'merg_'
+label_filebase:  'cloudtrack_'
+pfdata_filebase:  'merg_'
+rainaccumulation_filebase:  'merg_'
+
+# Specify data structure
+datatimeresolution: 1  # hours
+dimname: "nclouds"
+numbername: "convcold_cloudnumber"
+typename: "cloudtype"
+npxname: "ncorecoldpix"
+tdimname: "time"
+xdimname: "lat"
+ydimname: "lon"
+pfvarname: "precipitationCal"
+pcpvarname: "precipitation"
+landvarname: "landseamask"
+landfrac_thresh: 90  # define threshold for land

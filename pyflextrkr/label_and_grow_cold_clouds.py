@@ -1,10 +1,9 @@
 from collections import deque
 import numpy as np
-import numpy as np
 from scipy.ndimage import label, binary_dilation, generate_binary_structure, filters
 from scipy.interpolate import RectBivariateSpline
 from astropy.convolution import Box2DKernel, convolve, convolve_fft
-
+import logging
 
 def label_and_grow_cold_clouds(
     ir,
@@ -15,19 +14,7 @@ def label_and_grow_cold_clouds(
     smoothsize,
     warmanvilexpansion,
 ):
-    ######################################################################
-    # Import modules
-    import numpy as np
-    from scipy.ndimage import label, binary_dilation, generate_binary_structure, filters
-    from scipy.interpolate import RectBivariateSpline
-    from astropy.convolution import Box2DKernel, convolve, convolve_fft
-    import logging
-
     logger = logging.getLogger(__name__)
-
-    ######################################################################
-
-    # Define constants:
 
     # Separate array threshold
     thresh_core = tb_threshs[0]  # Convective core threshold [K]
@@ -45,7 +32,9 @@ def label_and_grow_cold_clouds(
     nthresh = area_thresh / pixel_area
 
     ######################################################################
-    # Use thresholds identify pixels containing cold core, cold anvil, and warm anvil. Also create arrays with a flag for each type and fill in cloudid array. Cores = 1. Cold anvils = 2. Warm anvils = 3. Other = 4. Clear = 5. Areas do not overlap
+    # Use thresholds identify pixels containing cold core, cold anvil, and warm anvil.
+    # Also create arrays with a flag for each type and fill in cloudid array.
+    # Cores = 1. Cold anvils = 2. Warm anvils = 3. Other = 4. Clear = 5. Areas do not overlap
     (
         coldanvil_flag,
         core_flag,
@@ -514,7 +503,8 @@ def find_and_label_cold_cores(ncorepix, nx, ny, smoothir, thresh_core):
 def smooth_and_identify_indices(
     ir, nx, ny, smoothsize, thresh_cloud, thresh_cold, thresh_core, thresh_warm
 ):
-    # Smooth IR data prior to identifying cores using a boxcar filter. Along the edges the boundary elements come from the nearest edge pixel
+    # Smooth IR data prior to identifying cores using a boxcar filter.
+    # Along the edges the boundary elements come from the nearest edge pixel
     # smoothir = filters.uniform_filter(ir, size=smoothsize, mode='nearest')
     kernel = Box2DKernel(smoothsize)
     smoothir = convolve(

@@ -141,8 +141,8 @@ def get_basetime_from_filename(
         day = ifile[dd_idx:dd_idx+2]
         hour = ifile[hh_idx:hh_idx+2]
         # If minute, second is not in time_format, assume 0
-        minute = ifile[mm_idx:mm_idx+2] if (mm_idx is not None) else 0
-        second = ifile[ss_idx:ss_idx+2] if (ss_idx is not None) else 0
+        minute = ifile[mm_idx:mm_idx+2] if (mm_idx is not None) else '00'
+        second = ifile[ss_idx:ss_idx+2] if (ss_idx is not None) else '00'
 
         TEMP_filetime = datetime.datetime(int(year), int(month), int(day),
                                           int(hour), int(minute), int(second), tzinfo=utc)

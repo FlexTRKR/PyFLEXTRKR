@@ -4,7 +4,7 @@ import xarray as xr
 from netCDF4 import Dataset, stringtochar, num2date
 
 
-def write_cloudid_wrf(
+def write_cloudid_tb(
     cloudid_outfile,
     file_basetime,
     file_datestring,
@@ -20,7 +20,6 @@ def write_cloudid_wrf(
     ncoldpix,
     ncorecoldpix,
     nwarmpix,
-    cloudid_version,
     cloudtb_threshs,
     geolimits,
     mintb_thresh,
@@ -47,31 +46,20 @@ def write_cloudid_wrf(
     """
     #         missing_value_int = -9999
 
-    # print('final_ncoldpix shape io: ', ncoldpix.shape)
-    # print('final_ncorecoldpix shape io: ', ncorecoldpix.shape)
-    # print('final_nwarmpix shape io: ', nwarmpix.shape)
-    # print('final_ncorepix shape io: ', ncorepix.shape)
-    # print('final nclouds shape io: ', nclouds)
-
     # Define variable list
     varlist = {
-        "basetime": (
-            ["time"],
-            file_basetime,
-        ),  # 'filedate': (['time', 'ndatechar'], np.array([stringtochar(np.array(file_datestring))])), \
-        # 'filetime': (['time', 'ntimechar'], np.array([stringtochar(np.array(file_timestring))])), \
+        "basetime": (["time"], file_basetime),
         "latitude": (["lat", "lon"], out_lat),
         "longitude": (["lat", "lon"], out_lon),
         "tb": (["time", "lat", "lon"], np.expand_dims(out_ir, axis=0)),
         "cloudtype": (["time", "lat", "lon"], cloudtype),
         "convcold_cloudnumber": (["time", "lat", "lon"], convcold_cloudnumber),
         "cloudnumber": (["time", "lat", "lon"], cloudnumber),
-        "nclouds": (["time"], nclouds),  #'ncorepix': (['clouds'], ncorepix), \
+        "nclouds": (["time"], nclouds),
+        #'ncorepix': (['clouds'], ncorepix), \
         #'ncoldpix': (['clouds'], ncoldpix), \
-        "ncorecoldpix": (
-            ["clouds"],
-            ncorecoldpix,
-        ),  #'nwarmpix': (['clouds'], nwarmpix), \
+        #'nwarmpix': (['clouds'], nwarmpix), \
+        "ncorecoldpix": (["clouds"], ncorecoldpix),
     }
     # Now check for optional arguments, add them to varlist if provided
     if "precipitation" in kwargs:
@@ -96,11 +84,7 @@ def write_cloudid_wrf(
         "time": (["time"], file_basetime),
         "lat": (["lat"], np.squeeze(out_lat[:, 0])),
         "lon": (["lon"], np.squeeze(out_lon[0, :])),
-        "clouds": (
-            ["clouds"],
-            np.arange(1, nclouds + 1),
-        ),  # 'ndatechar': (['ndatechar'], np.arange(0, 32)), \
-        # 'ntimechar': (['ntimechar'], np.arange(0, 16)), \
+        "clouds": (["clouds"], np.arange(1, nclouds + 1),),
     }
 
     # Define global attributes
@@ -115,11 +99,11 @@ def write_cloudid_wrf(
         + file_timestring[0:2]
         + ":"
         + file_timestring[2:4]
-        + " UTC",  # 'institution': 'Pacific Northwest National Laboratory', \
-        # 'convections': 'CF-1.6', \
-        # 'contact': 'Katelyn Barber: katelyn.barber@pnnl.gov', \
+        + " UTC",
+        'institution': 'Pacific Northwest National Laboratory', \
+        'contact': 'Zhe Feng: zhe.feng@pnnl.gov', \
         "created_on": time.ctime(time.time()),
-        "cloudid_cloud_version": cloudid_version,
+        # "cloudid_cloud_version": cloudid_version,
         "tb_threshold_core": cloudtb_threshs[0],
         "tb_threshold_coldanvil": cloudtb_threshs[1],
         "tb_threshold_warmanvil": cloudtb_threshs[2],
@@ -135,14 +119,12 @@ def write_cloudid_wrf(
         gattrlist["pf_dbz_thresh"] = kwargs["pf_dbz_thresh"]
     if "pf_link_area_thresh" in kwargs:
         gattrlist["pf_link_area_thresh"] = kwargs["pf_link_area_thresh"]
-    # import pdb; pdb.set_trace()
     # Define xarray dataset
     ds_out = xr.Dataset(varlist, coords=coordlist, attrs=gattrlist)
 
     # Specify variable attributes
     # ds_out.time.attrs['long_name'] = 'epoch time (seconds since 01/01/1970 00:00) in epoch of file'
 
-    # ds_out.basetime.attrs['long_name'] = 'epoch time (seconds since 01/01/1970 00:00) in epoch of file'
     ds_out.time.attrs["long_name"] = "Base time in Epoch"
     ds_out.time.attrs["units"] = "Seconds since 1970-1-1"
     # ds_out.time.attrs['units'] = 'Seconds since 1970-1-1 0:00:00 0:00'
@@ -169,21 +151,6 @@ def write_cloudid_wrf(
 
     ds_out.clouds.attrs["long_name"] = "number of distinct convective cores identified"
     ds_out.clouds.attrs["units"] = "1"
-
-    # ds_out.ndatechar.attrs['long_name'] = 'number of characters in date string'
-    # ds_out.ndatechar.attrs['units'] = 'unitless'
-
-    # ds_out.ntimechar.attrs['long_name'] = 'number of characters in time string'
-    # ds_out.ntimechar.attrs['units'] = 'unitless'
-
-    # ds_out.basetime.attrs['long_name'] = 'epoch time (seconds since 01/01/1970 00:00) of file'
-    # ds_out.basetime.attrs['standard_name'] = 'time'
-
-    # ds_out.filedate.attrs['long_name'] = 'date string of file (yyyymmdd)'
-    # ds_out.filedate.attrs['units'] = 'unitless'
-
-    # ds_out.filetime.attrs['long_name'] = 'time string of file (hhmm)'
-    # ds_out.filetime.attrs['units'] = 'unitless'
 
     ds_out.latitude.attrs["long_name"] = "cartesian grid of latitude"
     ds_out.latitude.attrs["units"] = "degrees_north"
@@ -277,28 +244,21 @@ def write_cloudid_wrf(
         ds_out.cloudnumber_orig.attrs["_FillValue"] = 0
 
     # Specify encoding list
-    encodelist = {  # 'time': {'zlib':True, 'units': 'seconds since 1970-01-01'}, \
-        # 'basetime': {'dtype':'float', 'zlib':True, 'units': 'seconds since 1970-01-01'}, \
-        "lon": {"zlib": True},
-        "lon": {"zlib": True},
-        "clouds": {"zlib": True},  # 'filedate': {'dtype':'str', 'zlib':True}, \
-        # 'filetime': {'dtype':'str', 'zlib':True}, \
-        "longitude": {"zlib": True, "_FillValue": np.nan},
-        "latitude": {"zlib": True, "_FillValue": np.nan},
+    encodelist = {
+        "lon": {"zlib": True, "dtype":"float32"},
+        "lon": {"zlib": True, "dtype":"float32"},
+        "clouds": {"zlib": True},
+        "longitude": {"zlib": True, "_FillValue": np.nan, "dtype":"float32"},
+        "latitude": {"zlib": True, "_FillValue": np.nan, "dtype":"float32"},
         "tb": {"zlib": True, "_FillValue": np.nan},
         "cloudtype": {"zlib": True},
         "convcold_cloudnumber": {"dtype": "int", "zlib": True},
         "cloudnumber": {"dtype": "int", "zlib": True},
-        "nclouds": {
-            "dtype": "int",
-            "zlib": True,
-        },  #'ncorepix': {'dtype': 'int', 'zlib':True, '_FillValue': -9999},  \
+        "nclouds": {"dtype": "int", "zlib": True},
+        #'ncorepix': {'dtype': 'int', 'zlib':True, '_FillValue': -9999},  \
         #'ncoldpix': {'dtype': 'int', 'zlib':True, '_FillValue': -9999}, \
-        "ncorecoldpix": {
-            "dtype": "int",
-            "zlib": True,
-            "_FillValue": -9999,
-        },  #'nwarmpix': {'dtype': 'int', 'zlib':True, '_FillValue': -9999}, \
+        #'nwarmpix': {'dtype': 'int', 'zlib':True, '_FillValue': -9999}, \
+        "ncorecoldpix": {"dtype":"int", "zlib":True, "_FillValue":-9999},
     }
     # Now check for optional arguments, add them to encodelist if provided
     if "precipitation" in kwargs:
@@ -313,11 +273,9 @@ def write_cloudid_wrf(
         encodelist["cloudnumber_orig"] = {"zlib": True}
 
     # Write netCDF file
-    # ds_out.to_netcdf(path=cloudid_outfile, mode='w', format='NETCDF4_CLASSIC', unlimited_dims='time', encoding=encodelist)
     ds_out.to_netcdf(
-        path=cloudid_outfile, mode="w", format="NETCDF4_CLASSIC", encoding=encodelist
+        path=cloudid_outfile, mode="w", format="NETCDF4", encoding=encodelist
     )
-    # print('Output cloudid file: ' + cloudid_outfile)
 
 
 def write_cloudtype_wrf(
@@ -335,7 +293,6 @@ def write_cloudtype_wrf(
     ncoldpix,
     ncorecoldpix,
     final_cloudtype,
-    cloudid_version,
     cloudtb_threshs,
     geolimits,
     mintb_thresh,
@@ -439,7 +396,6 @@ def write_cloudtype_wrf(
         "convections": "CF-1.6",
         "contact": "Zhe Feng <zhe.feng@pnnl.gov>",
         "created_on": time.ctime(time.time()),
-        "cloudid_cloud_version": cloudid_version,
         "minimum_cloud_area": area_thresh,
     }
     # Now check for optional arguments, add them to gattrlist if provided

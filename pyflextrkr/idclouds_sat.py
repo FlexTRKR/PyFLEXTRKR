@@ -1,59 +1,32 @@
-# def idclouds_gpmmergir(zipped_inputs):
+from netCDF4 import Dataset
+import os
+import logging
+import numpy as np
+import xarray as xr
+from scipy.signal import medfilt2d
+from scipy.ndimage import label, filters
+from pyflextrkr import netcdf_io as net
+
 def idclouds_gpmmergir(
-    filename, config
+    filename,
+    config,
 ):
     """
     Identifies convective cloud objects from GPM MERGIR global satellite data.
 
-    Arguments:
-    filename - path to raw data directory
-    datafiledatestring - string with year, month, and day of data
-    datafiletimestring - string with the hour and minute of thedata
-    datafilebase - header for the raw data file
-    config['clouddatasource'] - source of the raw data
-    config['datadescription'] - description of data source, included in all output file names
-    config['cloud_variable_name'] - name of tb data in raw data file
-    config['cloudid_version'] - version of cloud identification being run, set at the start of the beginning of run_test.py
-    config['tracking_outpath'] - path to destination of the output
-    latlon_file - filename of the file that contains the latitude and longitude data
-    latname - name of latitude variable in raw data file
-    longname - name of longitude variable in raw data file
-    config['geolimits'] - 4-element array with plotting boundaries [lat_min, lon_min, lat_max, lon_max]
-    config['startdate'] - data to start processing in yyyymmdd format
-    config['enddate'] - data to stop processing in yyyymmdd format
-    config['pixel_radius'] - radius of pixels in km
-    area_thresh - minimum area thershold to define a feature in km^2
-    config['cloudtb_threshs'] - brightness temperature thresholds
-    config['miss_thresh'] - minimum amount of data required in order for the file to not to be considered corrupt.
-    config['cloudidmethod'] - flag indiciating which method of cloud classification will be used
-    config['mincoldcorepix'] - minimum size threshold for a cloud
-    config['smoothwindowdimensions'] - how many pixels to dilate as growing the warm (and cold) anvil. only used for futyan4.
-    config['warmanvilexpansion'] - flag indicating whether to grow the warm anvil or ignore this step. The warm anvil is not used in tracking.
-    processhalfhour
-    config['idclouds_hourly'],
-    config['idclouds_minute'],
-    config['linkpf'],
-    config['pf_smooth_window'],
-    config['pf_dbz_thresh'],
-    pf_link_area_thresh,
-    config['pfvarname']
+    Args:
+        filename: string
+            Input data filename
+        config: dictionary
+            Dictionary containing config parameters
+
+    Returns:
+        cloudid_outfile: string
+            Cloudid file name.
     """
-
-    # Load modules
-
-    from netCDF4 import Dataset
-    import os
-    import logging
-    import numpy as np
-    import xarray as xr
-    from scipy.signal import medfilt2d
-    from scipy.ndimage import label, filters
-    from pyflextrkr import netcdf_io as net
-
     np.set_printoptions(threshold=np.inf)
     logger = logging.getLogger(__name__)
     logger.debug(f"Processing {filename}.")
-
 
     # Set medfilt2d kernel_size, this determines the filter window dimension
     medfiltsize = config.get('medfiltsize', 5)
@@ -66,11 +39,13 @@ def idclouds_gpmmergir(
     maxtb_thresh = config['absolutetb_threshs'][1]  # k
 
     # Get Tb thresholds
-    thresh_core = config['cloudtb_threshs'][0]  # Convective core threshold [K]
-    thresh_cold = config['cloudtb_threshs'][1] # Cold anvil threshold [K]
-    thresh_warm = config['cloudtb_threshs'][2] # Warm anvil threshold [K]
-    thresh_cloud = config['cloudtb_threshs'][3]  # Warmest cloud area threshold [K]
+    thresh_core = config['cloudtb_core']
+    thresh_cold = config['cloudtb_cold']
+    thresh_warm = config['cloudtb_warm']
+    thresh_cloud = config['cloudtb_cloud']
+    cloudtb_threshs = [thresh_core, thresh_cold, thresh_warm, thresh_cloud]
 
+    cloudid_outfile = None
     # Brightness temperature data.
     # get date and time of each file. file name formate is "irdata_yyyymmdd_hhmm.nc" thus yyyymmdd=7:15, hhmm=16:20
     if (config['clouddatasource'] == "gpmmergir") | (config['clouddatasource'] == "gpmirimerg"):
@@ -96,7 +71,8 @@ def idclouds_gpmmergir(
             file_timestring = iTime.dt.strftime("%H%M").item()
             iminute = iTime.dt.minute.item()
 
-            # If config['idclouds_hourly'] is set to 1, then check if iminutes is within the allowed difference from config['idclouds_minute']s
+            # If config['idclouds_hourly'] is set to 1, then check if iminutes is within the allowed difference
+            # from config['idclouds_minute']
             # If so proceed, otherwise, skip this time
             if config['idclouds_hourly'] == 1:
                 if np.absolute(iminute - config['idclouds_minute']) < config['idclouds_minute']:
@@ -119,14 +95,14 @@ def idclouds_gpmmergir(
                 # Fill in the missing pixels with the filtered values, retain the rest
                 out_ir[missmask] = ir_filt[missmask]
 
-
                 #####################################################
                 # mask brightness temperatures outside of normal range
                 in_ir[in_ir < mintb_thresh] = np.nan
                 in_ir[in_ir > maxtb_thresh] = np.nan
 
                 #####################################################
-                # determine geographic region of interest is within the data set. if it is proceed and limit the data to that geographic region. if not exit the code.
+                # determine geographic region of interest is within the data set.
+                # if it is proceed and limit the data to that geographic region. if not exit the code.
 
                 # isolate data within lat/lon range set by limit
                 indicesy, indicesx = np.array(
@@ -167,8 +143,6 @@ def idclouds_gpmmergir(
 
                     if np.divide(missingcount, (ny * nx)) < config['miss_thresh']:
                         ######################################################
-
-
                         # call idclouds subroutine
                         if config['cloudidmethod'] == "futyan3":
                             from pyflextrkr.futyan3 import futyan3
@@ -176,7 +150,7 @@ def idclouds_gpmmergir(
                             clouddata = futyan3(
                                 out_ir,
                                 config['pixel_radius'],
-                                config['cloudtb_threshs'],
+                                cloudtb_threshs,
                                 config['area_thresh'],
                                 config['warmanvilexpansion'],
                             )
@@ -188,7 +162,7 @@ def idclouds_gpmmergir(
                             clouddata = label_and_grow_cold_clouds(
                                 out_ir,
                                 config['pixel_radius'],
-                                config['cloudtb_threshs'],
+                                cloudtb_threshs,
                                 config['area_thresh'],
                                 config['mincoldcorepix'],
                                 config['smoothwindowdimensions'],
@@ -227,7 +201,8 @@ def idclouds_gpmmergir(
                                 pcp = rawdata[config['pfvarname']][:]
                                 rawdata.close()
 
-                                # For 'gpmirimerg', precipitation is averaged to 1-hourly and put in first time dimension
+                                # For 'gpmirimerg', precipitation is averaged to 1-hourly
+                                # and put in first time dimension
                                 if config['clouddatasource'] == "gpmirimerg":
                                     pcp = pcp[0, :, :]
 
@@ -242,7 +217,7 @@ def idclouds_gpmmergir(
                                 # Convert PF area threshold to number of pixels
                                 min_npix = np.ceil(
                                     config['pf_link_area_thresh'] / (config['pixel_radius'] ** 2)
-                                )
+                                ).astype(int)
 
                                 # Sort and renumber PFs, and remove small PFs
                                 pf_number, pf_npix = sort_renumber(pf_number, min_npix)
@@ -258,7 +233,8 @@ def idclouds_gpmmergir(
                                     thresh_cloud,
                                 )
 
-                                # Sort and renumber the config['linkpf'] clouds (removes small clouds after renumbering)
+                                # Sort and renumber the config['linkpf'] clouds
+                                # (removes small clouds after renumbering)
                                 (
                                     pf_convcold_cloudnumber_sorted,
                                     pf_cloudnumber_sorted,
@@ -332,7 +308,7 @@ def idclouds_gpmmergir(
                                 + "_"
                                 + config['datadescription']
                                 + "_cloudid"
-                                + config['cloudid_version']
+                                # + config['cloudid_version']
                                 + "_"
                                 + file_datestring
                                 + "_"
@@ -346,7 +322,7 @@ def idclouds_gpmmergir(
                                 os.remove(cloudid_outfile)
 
                             # Write output to netCDF file
-                            net.write_cloudid_wrf(
+                            net.write_cloudid_tb(
                                 cloudid_outfile,
                                 file_basetime,
                                 file_datestring,
@@ -362,8 +338,8 @@ def idclouds_gpmmergir(
                                 final_ncoldpix,
                                 final_ncorecoldpix,
                                 final_nwarmpix,
-                                config['cloudid_version'],
-                                config['cloudtb_threshs'],
+                                # config['cloudid_version'],
+                                cloudtb_threshs,
                                 config['geolimits'],
                                 mintb_thresh,
                                 maxtb_thresh,
@@ -390,3 +366,4 @@ def idclouds_gpmmergir(
                     logger.info(
                         "data not within latitude, longitude range. check specified geographic range"
                     )
+    return cloudid_outfile
