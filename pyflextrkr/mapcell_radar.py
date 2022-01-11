@@ -11,19 +11,19 @@ def mapcell_radar(
     config,
 ):
     """
-    Maps track numbers to pixel level files.
+    Map track numbers to pixel level files.
 
     Args:
-        cloudid_filename: list
+        cloudid_filename: string
             Cloudid file name.
         filebasetime: int
             Cloudid file base time.
-        config:
+        config: dictionary
             Dictionary containing config parameters.
 
     Returns:
-        None
-
+        celltrackmaps_outfile: string
+            Track number pixel-level file name.
     """
 
     np.set_printoptions(threshold=np.inf)
@@ -368,3 +368,4 @@ def mapcell_radar(
         unlimited_dims="time",
         encoding=encodelist,
     )
+    return celltrackmaps_outfile

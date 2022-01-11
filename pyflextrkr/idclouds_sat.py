@@ -154,7 +154,7 @@ def idclouds_gpmmergir(
                                 config['area_thresh'],
                                 config['warmanvilexpansion'],
                             )
-                        elif config['cloudidmethod'] == "futyan4":
+                        elif config['cloudidmethod'] == "label_grow":
                             from pyflextrkr.label_and_grow_cold_clouds import (
                                 label_and_grow_cold_clouds,
                             )

@@ -138,50 +138,50 @@ def write_cloudid_tb(
     ] = "Vector of latitudes, y-coordinate in Cartesian system"
     ds_out.lat.attrs["standard_name"] = "latitude"
     ds_out.lat.attrs["units"] = "degrees_north"
-    ds_out.lat.attrs["valid_min"] = geolimits[0]
-    ds_out.lat.attrs["valid_max"] = geolimits[2]
+    # ds_out.lat.attrs["valid_min"] = geolimits[0]
+    # ds_out.lat.attrs["valid_max"] = geolimits[2]
 
     ds_out.lon.attrs[
         "long_name"
     ] = "Vector of longitudes, x-coordinate in Cartesian system"
     ds_out.lon.attrs["standard_name"] = "longitude"
     ds_out.lon.attrs["units"] = "degrees_east"
-    ds_out.lon.attrs["valid_min"] = geolimits[1]
-    ds_out.lon.attrs["valid_max"] = geolimits[3]
+    # ds_out.lon.attrs["valid_min"] = geolimits[1]
+    # ds_out.lon.attrs["valid_max"] = geolimits[3]
 
     ds_out.clouds.attrs["long_name"] = "number of distinct convective cores identified"
     ds_out.clouds.attrs["units"] = "1"
 
     ds_out.latitude.attrs["long_name"] = "cartesian grid of latitude"
     ds_out.latitude.attrs["units"] = "degrees_north"
-    ds_out.latitude.attrs["valid_min"] = geolimits[0]
-    ds_out.latitude.attrs["valid_max"] = geolimits[2]
+    # ds_out.latitude.attrs["valid_min"] = geolimits[0]
+    # ds_out.latitude.attrs["valid_max"] = geolimits[2]
 
     ds_out.longitude.attrs["long_name"] = "cartesian grid of longitude"
     ds_out.longitude.attrs["units"] = "degrees_east"
-    ds_out.longitude.attrs["valid_min"] = geolimits[1]
-    ds_out.longitude.attrs["valid_max"] = geolimits[3]
+    # ds_out.longitude.attrs["valid_min"] = geolimits[1]
+    # ds_out.longitude.attrs["valid_max"] = geolimits[3]
 
     ds_out.tb.attrs["long_name"] = "brightness temperature"
     ds_out.tb.attrs["units"] = "K"
-    ds_out.tb.attrs["valid_min"] = mintb_thresh
-    ds_out.tb.attrs["valid_max"] = maxtb_thresh
+    # ds_out.tb.attrs["valid_min"] = mintb_thresh
+    # ds_out.tb.attrs["valid_max"] = maxtb_thresh
 
     ds_out.cloudtype.attrs["long_name"] = "grid of cloud classifications"
     ds_out.cloudtype.attrs[
         "values"
     ] = "1 = core, 2 = cold anvil, 3 = warm anvil, 4 = other"
     ds_out.cloudtype.attrs["units"] = "unitless"
-    ds_out.cloudtype.attrs["valid_min"] = 1
-    ds_out.cloudtype.attrs["valid_max"] = 5
+    # ds_out.cloudtype.attrs["valid_min"] = 1
+    # ds_out.cloudtype.attrs["valid_max"] = 5
     ds_out.cloudtype.attrs["_FillValue"] = 5
 
     ds_out.convcold_cloudnumber.attrs[
         "long_name"
     ] = "grid with each classified cloud given a number"
     ds_out.convcold_cloudnumber.attrs["units"] = "unitless"
-    ds_out.convcold_cloudnumber.attrs["valid_min"] = 0
-    ds_out.convcold_cloudnumber.attrs["valid_max"] = nclouds + 1
+    # ds_out.convcold_cloudnumber.attrs["valid_min"] = 0
+    # ds_out.convcold_cloudnumber.attrs["valid_max"] = nclouds + 1
     ds_out.convcold_cloudnumber.attrs[
         "comment"
     ] = "extend of each cloud defined using cold anvil threshold"
@@ -191,8 +191,8 @@ def write_cloudid_tb(
         "long_name"
     ] = "grid with each classified cloud given a number"
     ds_out.cloudnumber.attrs["units"] = "unitless"
-    ds_out.cloudnumber.attrs["valid_min"] = 0
-    ds_out.cloudnumber.attrs["valid_max"] = nclouds + 1
+    # ds_out.cloudnumber.attrs["valid_min"] = 0
+    # ds_out.cloudnumber.attrs["valid_max"] = nclouds + 1
     ds_out.cloudnumber.attrs[
         "comment"
     ] = "extend of each cloud defined using warm anvil threshold"
@@ -246,7 +246,7 @@ def write_cloudid_tb(
     # Specify encoding list
     encodelist = {
         "lon": {"zlib": True, "dtype":"float32"},
-        "lon": {"zlib": True, "dtype":"float32"},
+        "lat": {"zlib": True, "dtype":"float32"},
         "clouds": {"zlib": True},
         "longitude": {"zlib": True, "_FillValue": np.nan, "dtype":"float32"},
         "latitude": {"zlib": True, "_FillValue": np.nan, "dtype":"float32"},
@@ -561,10 +561,8 @@ def write_cloudtype_wrf(
         "nclouds": {"dtype": "int", "zlib": True},
         "ncorepix": {"dtype": "int", "zlib": True, "_FillValue": -9999},
         "ncoldpix": {"dtype": "int", "zlib": True, "_FillValue": -9999},
-        "ncorecoldpix": {
-            "dtype": "int",
-            "zlib": True,
-        },  #                         'nwarmpix': {'dtype': 'int', 'zlib':True, '_FillValue': -9999}, \
+        "ncorecoldpix": {"dtype": "int", "zlib": True},
+        # 'nwarmpix': {'dtype': 'int', 'zlib':True, '_FillValue': -9999}, \
     }
     # Now check for optional arguments, add them to encodelist if provided
     if "precipitation" in kwargs:

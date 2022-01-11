@@ -70,7 +70,8 @@ def calc_stats_singlefile(
         file_corecold_cloudnumber = ds["convcold_cloudnumber"].squeeze().values
         file_basetime = ds["basetime"].squeeze()
 
-        if feature_type == 'radar_cells':
+        # Read feature specific variables
+        if feature_type == "radar_cells":
             # Convert x,y units to [km]
             x_coords = ds["x"] / 1000.
             y_coords = ds["y"] / 1000.
@@ -94,6 +95,10 @@ def calc_stats_singlefile(
                 rangemask = dster[rangemask_varname].values.astype('int8')
                 dster.close()
 
+        if feature_type == "tb_pf":
+            file_tb = ds["tb"].squeeze().values
+            file_cloudtype = ds["cloudtype"].squeeze().values
+
         # ds.close()
 
         # Find unique track numbers
@@ -116,7 +121,8 @@ def calc_stats_singlefile(
         out_splitnumber = np.full(numtracks, fillval, dtype=np.int32)
 
         # Create feature specific variables
-        if feature_type == 'radar_cells':
+        # Radar cells
+        if feature_type == "radar_cells":
             out_core_meanlat = np.full(numtracks, fillval_f, dtype=np.float)
             out_core_meanlon = np.full(numtracks, fillval_f, dtype=np.float)
             out_core_mean_x = np.full(numtracks, fillval_f, dtype=np.float)
@@ -135,6 +141,15 @@ def calc_stats_singlefile(
             out_cell_area = np.full(numtracks, fillval_f, dtype=np.float)
             out_cell_rangeflag = np.full(numtracks, fillval, dtype=np.short)
 
+        # Satellite Tb
+        if feature_type == "tb_pf":
+            out_corecold_mintb = np.full(numtracks, fillval_f, dtype=np.float)
+            out_corecold_meantb = np.full(numtracks, fillval_f, dtype=np.float)
+            out_core_meantb = np.full(numtracks, fillval_f, dtype=np.float)
+            out_core_area = np.full(numtracks, fillval_f, dtype=np.float)
+            out_cold_area = np.full(numtracks, fillval_f, dtype=np.float)
+
+
         # Pre-sort cloudnumber to get location indices
         fcn_gt_0 = file_corecold_cloudnumber > 0
         corecold_cloudnumber_mask = file_corecold_cloudnumber * fcn_gt_0
@@ -151,6 +166,24 @@ def calc_stats_singlefile(
             dilated_cloudnumber_mask = ds["convcold_cloudnumber"].squeeze().values
             dilatednumber1d_uniq, dilatednumber1d_counts, \
             ast_dilatedcellarea, cumcounts_dilatedcellarea = pre_sort_cloudnumber(dilated_cloudnumber_mask)
+
+        if feature_type == "tb_pf":
+            # Pre-sort core number to get location indices
+            core_cloudnumber_mask = file_corecold_cloudnumber * (file_cloudtype == 1)
+            corenumber1d_uniq, corenumber1d_counts, \
+            ast_corearea, cumcounts_corearea = pre_sort_cloudnumber(core_cloudnumber_mask)
+
+            # Pre-sort cold anvil number to get location indices
+            cold_cloudnumber_mask = file_corecold_cloudnumber * (file_cloudtype == 2)
+            coldnumber1d_uniq, coldnumber1d_counts, \
+            ast_coldarea, cumcounts_coldarea = pre_sort_cloudnumber(cold_cloudnumber_mask)
+
+            # import matplotlib.pyplot as plt
+            # Zm = np.ma.masked_where(cold_cloudnumber_mask == 0, cold_cloudnumber_mask)
+            # import pdb;
+            # pdb.set_trace()
+            # plt.pcolormesh(Zm)
+
 
         # Loop over unique tracknumbers
         for itrack in range(numtracks):
@@ -176,6 +209,36 @@ def calc_stats_singlefile(
                 out_meanlon[itrack] = np.nanmean(corecold_lon)
                 out_meanlat[itrack] = np.nanmean(corecold_lat)
 
+                # Calculate feature specific statistics
+                # Satellite Tb
+                if feature_type == "tb_pf":
+                    # Get cold core pixel location indices
+                    core_npix, core_indices = get_loc_indices(
+                        corenumber1d_uniq, corenumber1d_counts,
+                        ast_corearea, cumcounts_corearea,
+                        cloudnumber_map, nx, ny,
+                    )
+
+                    # Get cold anvil pixel location indices
+                    cold_npix, cold_indices = get_loc_indices(
+                        coldnumber1d_uniq, coldnumber1d_counts,
+                        ast_coldarea, cumcounts_coldarea,
+                        cloudnumber_map, nx, ny,
+                    )
+
+                    out_core_area[itrack] = core_npix * pixel_radius ** 2
+                    out_cold_area[itrack] = cold_npix * pixel_radius ** 2
+                    out_corecold_mintb[itrack] = np.nanmin(file_tb[corecold_indices[0], corecold_indices[1]])
+                    out_corecold_meantb[itrack] = np.nanmean(file_tb[corecold_indices[0], corecold_indices[1]])
+                    if core_npix > 0:
+                        out_core_meantb[itrack] = np.nanmean(file_tb[core_indices[0], core_indices[1]])
+
+                    # iy_min, iy_max = np.min(corecold_indices[0]), np.max(corecold_indices[0])
+                    # ix_min, ix_max = np.min(corecold_indices[1]), np.max(corecold_indices[1])
+                    # import pdb; pdb.set_trace()
+
+                # Calculate feature specific statistics
+                # Radar cells
                 if feature_type == "radar_cells":
                     # Get core pixel location indices
                     core_npix, core_indices = get_loc_indices(
@@ -295,195 +358,41 @@ def calc_stats_singlefile(
             + "65: Merge-split at same time (smaller merge, splitter, small split)"
         )
 
-        # Group outputs in dictionaries
-        out_dict = {
-            "uniquetracknumbers": uniquetracknumbers,
-            "numtracks": numtracks,
-            "base_time": out_basetime,
-            "meanlat": out_meanlat,
-            "meanlon": out_meanlon,
-            "area": out_area,
-            "cloudnumber": out_cloudnumber,
-            "track_status": out_status,
-            "track_interruptions": out_trackinterruptions,
-            "merge_tracknumbers": out_mergenumber,
-            "split_tracknumbers": out_splitnumber,
-        }
-        out_dict_attrs = {
-            "uniquetracknumbers":{
-                "long_name": "Unique track numbers in the current time frame",
-                "units": "unitless",
-            },
-            "numtracks": {
-                "long_name": "Number of tracks in the current time frame",
-                "units": "unitless",
-            },
-            "base_time": {
-                "long_name": "Epoch time of a feature",
-                "units": file_basetime.attrs["units"],
-                "_FillValue": fillval,
-            },
-            "meanlat": {
-                "long_name": "Mean latitude of a feature",
-                "units": "degrees_north",
-                "_FillValue": fillval_f,
-            },
-            "meanlon": {
-                "long_name": "Mean longitude of a feature",
-                "units": "degrees_east",
-                "_FillValue": fillval_f,
-            },
-            "area": {
-                "long_name": "Area of a feature",
-                "units": "km^2",
-                "_FillValue": fillval_f,
-            },
-            "cloudnumber": {
-                "long_name": "Corresponding cloud number in cloudid file",
-                "units": "unitless",
-                "_FillValue": fillval,
-            },
-            "track_status": {
-                "long_name": "Flag indicating the status of a track",
-                "units": "unitless",
-                "comments": track_status_explanation,
-                "_FillValue": fillval,
-            },
-            "track_interruptions": {
-                "long_name": "0 = full track available, good data. " + \
-                             "1 = track starts at first file, track cut short by data availability. " + \
-                             "2 = track ends at last file, track cut short by data availability",
-                "units": "unitless",
-                "_FillValue": fillval,
-            },
-            "merge_tracknumbers": {
-                "long_name": "Number of the track that this small cloud merges into",
-                "units": "unitless",
-                "_FillValue": fillval,
-                "comments": "Each row represents a track. Each column represets a cloud in that track. " + \
-                            "Numbers give the track number that this small cloud merged into."
-            },
-            "split_tracknumbers": {
-                "long_name": "Number of the track that this small cloud splits from",
-                "units": "unitless",
-                "_FillValue": fillval,
-                "comments": "Each row represents a track. Each column represets a cloud in that track. " + \
-                            "Numbers give the track number that his msallcloud splits from."
-            },
-        }
+        # Define baseline output variables and attributes dictionary
+        out_dict, \
+        out_dict_attrs = define_base_vars_dict(file_basetime, fillval, fillval_f, numtracks, out_area,
+                                               out_basetime, out_cloudnumber, out_meanlat, out_meanlon,
+                                               out_mergenumber, out_splitnumber, out_status,
+                                               out_trackinterruptions, track_status_explanation,
+                                               uniquetracknumbers)
 
-        if feature_type == "radar_cells":
-            out_dict_extra = {
-                "core_meanlat": out_core_meanlat,
-                "core_meanlon": out_core_meanlon,
-                "core_mean_y": out_core_mean_y,
-                "core_mean_x": out_core_mean_x,
-                "cell_meanlat": out_cell_meanlat,
-                "cell_meanlon": out_cell_meanlon,
-                "cell_mean_y": out_cell_mean_y,
-                "cell_mean_x": out_cell_mean_x,
-                "core_area": out_core_area,
-                "cell_area": out_cell_area,
-                "max_dbz": out_cell_max_dbz,
-                "maxETH_10dbz": out_cell_maxETH10dbz,
-                "maxETH_20dbz": out_cell_maxETH20dbz,
-                "maxETH_30dbz": out_cell_maxETH30dbz,
-                "maxETH_40dbz": out_cell_maxETH40dbz,
-                "maxETH_50dbz": out_cell_maxETH50dbz,
-                "maxrange_flag": out_cell_rangeflag,
-            }
-            out_dict_attrs_extra = {
-                "core_meanlat": {
-                    "long_name": "Mean latitude of a convective core",
-                    "units": "degrees_north",
-                    "_FillValue": fillval_f,
-                },
-                "core_meanlon": {
-                    "long_name": "Mean longitude of a convective core",
-                    "units": "degrees_east",
-                    "_FillValue": fillval_f,
-                },
-                "core_mean_y": {
-                    "long_name": "Mean y-distance to radar for a convective core",
-                    "units": "km",
-                    "_FillValue": fillval_f,
-                },
-                "core_mean_x": {
-                    "long_name": "Mean x-distance to radar for a convective core",
-                    "units": "km",
-                    "_FillValue": fillval_f,
-                },
-                "cell_meanlat": {
-                    "long_name": "Mean latitude of a convective cell",
-                    "units": "degrees_north",
-                    "_FillValue": fillval_f,
-                },
-                "cell_meanlon": {
-                    "long_name": "Mean longitude of a convective cell",
-                    "units": "degrees_east",
-                    "_FillValue": fillval_f,
-                },
-                "cell_mean_y": {
-                    "long_name": "Mean y-distance to radar for a convective cell",
-                    "units": "km",
-                    "_FillValue": fillval_f,
-                },
-                "cell_mean_x": {
-                    "long_name": "Mean x-distance to radar for a convective cell",
-                    "units": "km",
-                    "_FillValue": fillval_f,
-                },
-                "core_area": {
-                    "long_name": "Area of a convective core",
-                    "units": "km^2",
-                    "_FillValue": fillval_f,
-                },
-                "cell_area": {
-                    "long_name": "Area of a convective cell",
-                    "units": "km^2",
-                    "_FillValue": fillval_f,
-                },
-                "max_dbz": {
-                    "long_name": "Maximum reflectivity in a convective cell",
-                    "units": "dBZ",
-                    "_FillValue": fillval_f,
-                },
-                "maxETH_10dbz": {
-                    "long_name": "Maximum 10dBZ echo-top height in a convective cell",
-                    "units": "km",
-                    "_FillValue": fillval_f,
-                },
-                "maxETH_20dbz": {
-                    "long_name": "Maximum 20dBZ echo-top height in a convective cell",
-                    "units": "km",
-                    "_FillValue": fillval_f,
-                },
-                "maxETH_30dbz": {
-                    "long_name": "Maximum 30dBZ echo-top height in a convective cell",
-                    "units": "km",
-                    "_FillValue": fillval_f,
-                },
-                "maxETH_40dbz": {
-                    "long_name": "Maximum 40dBZ echo-top height in a convective cell",
-                    "units": "km",
-                    "_FillValue": fillval_f,
-                },
-                "maxETH_50dbz": {
-                    "long_name": "Maximum 50dBZ echo-top height in a convective cell",
-                    "units": "km",
-                    "_FillValue": fillval_f,
-                },
-                "maxrange_flag": {
-                    "long_name": "Flag indicating if tracked cell is at the maximum range of the radar",
-                    "units": "unitless",
-                    "_FillValue": fillval,
-                    "comments": "0 = cell partially outside range mask; 1 = cell completely within range mask",
-                    "rangemask_varname": rangemask_varname,
-                },
-            }
-            # Merge the dictionaries
+        # Define feature specific extra variables and attributes,
+        # and update the baseline dictionaries
+        if feature_type == "tb_pf":
+            out_dict_attrs_extra, \
+            out_dict_extra = define_extra_tb(fillval_f, out_cold_area, out_core_area,
+                                             out_core_meantb, out_corecold_meantb,
+                                             out_corecold_mintb)
+            # Merge with the baseline dictionaries
             out_dict.update(out_dict_extra)
             out_dict_attrs.update(out_dict_attrs_extra)
+
+        if feature_type == "radar_cells":
+            out_dict_attrs_extra, \
+            out_dict_extra = define_extra_radar_cells(fillval, fillval_f, out_cell_area,
+                                                      out_cell_maxETH10dbz, out_cell_maxETH20dbz,
+                                                      out_cell_maxETH30dbz, out_cell_maxETH40dbz,
+                                                      out_cell_maxETH50dbz, out_cell_max_dbz,
+                                                      out_cell_mean_x, out_cell_mean_y,
+                                                      out_cell_meanlat, out_cell_meanlon,
+                                                      out_cell_rangeflag, out_core_area,
+                                                      out_core_mean_x, out_core_mean_y,
+                                                      out_core_meanlat, out_core_meanlon,
+                                                      rangemask_varname)
+            # Merge with the baseline dictionaries
+            out_dict.update(out_dict_extra)
+            out_dict_attrs.update(out_dict_attrs_extra)
+
     else:
         logger.info("No tracks in file.")
         out_dict = None
@@ -491,6 +400,320 @@ def calc_stats_singlefile(
 
     # import pdb; pdb.set_trace()
     return (out_dict, out_dict_attrs)
+
+
+
+
+
+def define_base_vars_dict(file_basetime, fillval, fillval_f, numtracks, out_area, out_basetime, out_cloudnumber,
+                          out_meanlat, out_meanlon, out_mergenumber, out_splitnumber, out_status,
+                          out_trackinterruptions, track_status_explanation, uniquetracknumbers):
+    """
+    Define baseline output variables and attributes dictionary.
+
+    Args:
+        file_basetime:
+        fillval:
+        fillval_f:
+        numtracks:
+        out_area:
+        out_basetime:
+        out_cloudnumber:
+        out_meanlat:
+        out_meanlon:
+        out_mergenumber:
+        out_splitnumber:
+        out_status:
+        out_trackinterruptions:
+        track_status_explanation:
+        uniquetracknumbers:
+
+    Returns:
+        out_dict: dictionary
+            Output variable dictionary.
+        out_dict_attrs: dictionary
+            Output variable attributes dictionary.
+
+    """
+    # Group outputs in dictionaries
+    out_dict = {
+        "uniquetracknumbers": uniquetracknumbers,
+        "numtracks": numtracks,
+        "base_time": out_basetime,
+        "meanlat": out_meanlat,
+        "meanlon": out_meanlon,
+        "area": out_area,
+        "cloudnumber": out_cloudnumber,
+        "track_status": out_status,
+        "track_interruptions": out_trackinterruptions,
+        "merge_tracknumbers": out_mergenumber,
+        "split_tracknumbers": out_splitnumber,
+    }
+    out_dict_attrs = {
+        "uniquetracknumbers": {
+            "long_name": "Unique track numbers in the current time frame",
+            "units": "unitless",
+        },
+        "numtracks": {
+            "long_name": "Number of tracks in the current time frame",
+            "units": "unitless",
+        },
+        "base_time": {
+            "long_name": "Epoch time of a feature",
+            "units": file_basetime.attrs["units"],
+            "_FillValue": fillval,
+        },
+        "meanlat": {
+            "long_name": "Mean latitude of a feature",
+            "units": "degrees_north",
+            "_FillValue": fillval_f,
+        },
+        "meanlon": {
+            "long_name": "Mean longitude of a feature",
+            "units": "degrees_east",
+            "_FillValue": fillval_f,
+        },
+        "area": {
+            "long_name": "Area of a feature",
+            "units": "km^2",
+            "_FillValue": fillval_f,
+        },
+        "cloudnumber": {
+            "long_name": "Corresponding cloud number in cloudid file",
+            "units": "unitless",
+            "_FillValue": fillval,
+        },
+        "track_status": {
+            "long_name": "Flag indicating the status of a track",
+            "units": "unitless",
+            "comments": track_status_explanation,
+            "_FillValue": fillval,
+        },
+        "track_interruptions": {
+            "long_name": "0 = full track available, good data. " + \
+                         "1 = track starts at first file, track cut short by data availability. " + \
+                         "2 = track ends at last file, track cut short by data availability",
+            "units": "unitless",
+            "_FillValue": fillval,
+        },
+        "merge_tracknumbers": {
+            "long_name": "Number of the track that this small cloud merges into",
+            "units": "unitless",
+            "_FillValue": fillval,
+            "comments": "Each row represents a track. Each column represets a cloud in that track. " + \
+                        "Numbers give the track number that this small cloud merged into."
+        },
+        "split_tracknumbers": {
+            "long_name": "Number of the track that this small cloud splits from",
+            "units": "unitless",
+            "_FillValue": fillval,
+            "comments": "Each row represents a track. Each column represets a cloud in that track. " + \
+                        "Numbers give the track number that his msallcloud splits from."
+        },
+    }
+    return out_dict, out_dict_attrs
+
+
+def define_extra_tb(fillval_f, out_cold_area, out_core_area, out_core_meantb, out_corecold_meantb,
+                    out_corecold_mintb):
+    """
+    Define extra output variables and attributes dictionary for satellite Tb.
+
+    Args:
+        fillval_f:
+        out_cold_area:
+        out_core_area:
+        out_core_meantb:
+        out_corecold_meantb:
+        out_corecold_mintb:
+
+    Returns:
+        out_dict_attrs_extra: dictionary.
+            Output variable dictionary.
+        out_dict_extra: dictionary.
+            Output variable attributes dictionary.
+    """
+    out_dict_extra = {
+        "core_area": out_core_area,
+        "cold_area": out_cold_area,
+        "corecold_mintb": out_corecold_mintb,
+        "corecold_meantb": out_corecold_meantb,
+        "core_meantb": out_core_meantb,
+    }
+    out_dict_attrs_extra = {
+        "core_area": {
+            "long_name": "Area of cold core",
+            "units": "km^2",
+            "_FillValue": fillval_f,
+        },
+        "cold_area": {
+            "long_name": "Area of cold anvil",
+            "units": "km^2",
+            "_FillValue": fillval_f,
+        },
+        "corecold_mintb": {
+            "long_name": "Minimum Tb in cold core + cold anvil area",
+            "units": "K",
+            "_FillValue": fillval_f,
+        },
+        "corecold_meantb": {
+            "long_name": "Mean Tb in cold core + cold anvil area",
+            "units": "K",
+            "_FillValue": fillval_f,
+        },
+        "core_meantb": {
+            "long_name": "Mean Tb in cold core area",
+            "units": "K",
+            "_FillValue": fillval_f,
+        },
+    }
+    return out_dict_attrs_extra, out_dict_extra
+
+def define_extra_radar_cells(fillval, fillval_f, out_cell_area, out_cell_maxETH10dbz, out_cell_maxETH20dbz,
+                             out_cell_maxETH30dbz, out_cell_maxETH40dbz, out_cell_maxETH50dbz, out_cell_max_dbz,
+                             out_cell_mean_x, out_cell_mean_y, out_cell_meanlat, out_cell_meanlon, out_cell_rangeflag,
+                             out_core_area, out_core_mean_x, out_core_mean_y, out_core_meanlat, out_core_meanlon,
+                             rangemask_varname):
+    """
+    Define extra output variables and attributes dictionary for radar cells.
+
+    Args:
+        fillval:
+        fillval_f:
+        out_cell_area:
+        out_cell_maxETH10dbz:
+        out_cell_maxETH20dbz:
+        out_cell_maxETH30dbz:
+        out_cell_maxETH40dbz:
+        out_cell_maxETH50dbz:
+        out_cell_max_dbz:
+        out_cell_mean_x:
+        out_cell_mean_y:
+        out_cell_meanlat:
+        out_cell_meanlon:
+        out_cell_rangeflag:
+        out_core_area:
+        out_core_mean_x:
+        out_core_mean_y:
+        out_core_meanlat:
+        out_core_meanlon:
+        rangemask_varname:
+
+    Returns:
+        out_dict_attrs_extra: dictionary.
+            Output variable dictionary.
+        out_dict_extra: dictionary.
+            Output variable attributes dictionary.
+    """
+    out_dict_extra = {
+        "core_meanlat": out_core_meanlat,
+        "core_meanlon": out_core_meanlon,
+        "core_mean_y": out_core_mean_y,
+        "core_mean_x": out_core_mean_x,
+        "cell_meanlat": out_cell_meanlat,
+        "cell_meanlon": out_cell_meanlon,
+        "cell_mean_y": out_cell_mean_y,
+        "cell_mean_x": out_cell_mean_x,
+        "core_area": out_core_area,
+        "cell_area": out_cell_area,
+        "max_dbz": out_cell_max_dbz,
+        "maxETH_10dbz": out_cell_maxETH10dbz,
+        "maxETH_20dbz": out_cell_maxETH20dbz,
+        "maxETH_30dbz": out_cell_maxETH30dbz,
+        "maxETH_40dbz": out_cell_maxETH40dbz,
+        "maxETH_50dbz": out_cell_maxETH50dbz,
+        "maxrange_flag": out_cell_rangeflag,
+    }
+    out_dict_attrs_extra = {
+        "core_meanlat": {
+            "long_name": "Mean latitude of a convective core",
+            "units": "degrees_north",
+            "_FillValue": fillval_f,
+        },
+        "core_meanlon": {
+            "long_name": "Mean longitude of a convective core",
+            "units": "degrees_east",
+            "_FillValue": fillval_f,
+        },
+        "core_mean_y": {
+            "long_name": "Mean y-distance to radar for a convective core",
+            "units": "km",
+            "_FillValue": fillval_f,
+        },
+        "core_mean_x": {
+            "long_name": "Mean x-distance to radar for a convective core",
+            "units": "km",
+            "_FillValue": fillval_f,
+        },
+        "cell_meanlat": {
+            "long_name": "Mean latitude of a convective cell",
+            "units": "degrees_north",
+            "_FillValue": fillval_f,
+        },
+        "cell_meanlon": {
+            "long_name": "Mean longitude of a convective cell",
+            "units": "degrees_east",
+            "_FillValue": fillval_f,
+        },
+        "cell_mean_y": {
+            "long_name": "Mean y-distance to radar for a convective cell",
+            "units": "km",
+            "_FillValue": fillval_f,
+        },
+        "cell_mean_x": {
+            "long_name": "Mean x-distance to radar for a convective cell",
+            "units": "km",
+            "_FillValue": fillval_f,
+        },
+        "core_area": {
+            "long_name": "Area of a convective core",
+            "units": "km^2",
+            "_FillValue": fillval_f,
+        },
+        "cell_area": {
+            "long_name": "Area of a convective cell",
+            "units": "km^2",
+            "_FillValue": fillval_f,
+        },
+        "max_dbz": {
+            "long_name": "Maximum reflectivity in a convective cell",
+            "units": "dBZ",
+            "_FillValue": fillval_f,
+        },
+        "maxETH_10dbz": {
+            "long_name": "Maximum 10dBZ echo-top height in a convective cell",
+            "units": "km",
+            "_FillValue": fillval_f,
+        },
+        "maxETH_20dbz": {
+            "long_name": "Maximum 20dBZ echo-top height in a convective cell",
+            "units": "km",
+            "_FillValue": fillval_f,
+        },
+        "maxETH_30dbz": {
+            "long_name": "Maximum 30dBZ echo-top height in a convective cell",
+            "units": "km",
+            "_FillValue": fillval_f,
+        },
+        "maxETH_40dbz": {
+            "long_name": "Maximum 40dBZ echo-top height in a convective cell",
+            "units": "km",
+            "_FillValue": fillval_f,
+        },
+        "maxETH_50dbz": {
+            "long_name": "Maximum 50dBZ echo-top height in a convective cell",
+            "units": "km",
+            "_FillValue": fillval_f,
+        },
+        "maxrange_flag": {
+            "long_name": "Flag indicating if tracked cell is at the maximum range of the radar",
+            "units": "unitless",
+            "_FillValue": fillval,
+            "comments": "0 = cell partially outside range mask; 1 = cell completely within range mask",
+            "rangemask_varname": rangemask_varname,
+        },
+    }
+    return out_dict_attrs_extra, out_dict_extra
 
 
 def get_loc_indices(
@@ -657,6 +880,7 @@ def get_track_startend_status(
         out_dict_attrs,
         fillval,
         maxtracklength,
+        min_dt_thresh=1.0,
 ):
     """
     Get various track start & end point data.
@@ -670,12 +894,16 @@ def get_track_startend_status(
             Default fill value for int arrays.
         maxtracklength: int
             Maximum track length.
+        min_dt_thresh: float, default=1.0
+            Minimum time difference [seconds] allowed to match base time.
 
     Returns:
         out_dict: dictionary
             Updated dictionary containing the track statistics data.
 
     """
+    logger = logging.getLogger(__name__)
+
     numtracks = len(out_dict["track_duration"])
     out_tracklength = out_dict["track_duration"]
 
@@ -689,7 +917,7 @@ def get_track_startend_status(
 
     # Ending status
     out_endstatus = np.full(numtracks, fillval, dtype=np.int32)
-    out_endbasetime = np.full(numtracks, fillval, dtype=np.int32)
+    out_endbasetime = np.full(numtracks, fillval, dtype=np.float64)
     out_endmerge_tracknumber = np.full(numtracks, fillval, dtype=np.int32)
     out_endmerge_timeindex = np.full(numtracks, fillval, dtype=np.int32)
     out_endmerge_cloudnumber = np.full(numtracks, fillval, dtype=np.int32)
@@ -725,9 +953,16 @@ def get_track_startend_status(
                 ibasetime = out_dict["base_time"][
                             imerge_idx, 0: out_tracklength[imerge_idx]
                             ]
+
                 # Find the time index matching the time when merging occurs
-                match_timeidx = np.where(ibasetime == out_endbasetime[itrack])[0]
-                if len(match_timeidx) == 1:
+                # match_timeidx = np.where(ibasetime == out_endbasetime[itrack])[0]
+                # if len(match_timeidx) == 1:
+
+                # Find the closest time matching the time when merging occurs
+                # If the time difference is < min_dt_thresh, consider it the same
+                dt = np.abs(ibasetime - out_endbasetime[itrack])
+                if np.nanmin(dt) < min_dt_thresh:
+                    match_timeidx = np.nanargmin(dt)
                     #  The time to connect to the track it merges with should be 1 time step after
                     if ((match_timeidx + 1) >= 0) & (
                             (match_timeidx + 1) < maxtracklength
@@ -739,6 +974,7 @@ def get_track_startend_status(
                     else:
                         logger.info(f"Merge time occur after track ends??")
                 else:
+                    # import pdb; pdb.set_trace()
                     logger.info(
                         f"Error: track {itrack} has no matching time in the track it merges with!"
                     )

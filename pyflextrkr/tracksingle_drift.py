@@ -75,7 +75,9 @@ def trackclouds(
     logger.info(("ref basetime: ", reference_basetime))
     reference_filedatetime = str(reference_datestring) + "_" + str(reference_timestring)
 
-    # Check that new and reference files differ by less than timegap in hours. Use base time (which is the seconds since 01-Jan-1970 00:00:00). Divide base time difference between the files by 3600 to get difference in hours
+    # Check that new and reference files differ by less than timegap in hours.
+    # Use base time (which is the seconds since 01-Jan-1970 00:00:00).
+    # Divide base time difference between the files by 3600 to get difference in hours
     hour_diff = (np.subtract(new_basetime, reference_basetime)) / float(3600)
     if hour_diff < timegap and hour_diff > 0:
         logger.info("Linking:")
@@ -84,35 +86,28 @@ def trackclouds(
         # Load cloudid file from before, called reference file
         logger.info(reference_filedatetime)
 
-        reference_data = xr.open_dataset(reference_file)  # Open file
-        reference_convcold_cloudnumber = reference_data[
-            "convcold_cloudnumber"
-        ].data  # Load cloud id map
-        nreference = reference_data["nclouds"].data  # Load number of clouds / features
-        reference_data.close()  # Close file
-
-        # Modifed by Zhixiao: Return value from reference_data["convcold_cloudnumber"].data is FLOAT.
-        # reference_convcold_cloudnumber must be converted to INT for avoiding systematic errors while using np.unique, ndi.shift and selecting DCC by specific int cloudnumber.
-        reference_convcold_cloudnumber[
-            np.isnan(reference_convcold_cloudnumber)
-        ] = 0  # Replace NAN with 0 for the cloudnumber before convert it to INT
-        reference_convcold_cloudnumber = reference_convcold_cloudnumber.astype("int32")
+        # Open file
+        reference_data = xr.open_dataset(reference_file, mask_and_scale=False)
+        reference_convcold_cloudnumber = reference_data["convcold_cloudnumber"].data
+        nreference = reference_data["nclouds"].data
+        reference_data.close()
 
         ##########################################################
         # Load next cloudid file, called new file
         logger.info(("new_filedattime: ", new_filedatetime))
 
-        new_data = xr.open_dataset(new_file)  # Open file
-        new_convcold_cloudnumber = new_data[
-            "convcold_cloudnumber"
-        ].data  # Load cloud id map
+        # Open file
+        new_data = xr.open_dataset(new_file, mask_and_scale=False)
+        new_convcold_cloudnumber = new_data["convcold_cloudnumber"].data
+        nnew = new_data["nclouds"].data
+        new_data.close()
 
-        # Modifed by Zhixiao: Similar as reference_convcold_cloudnumber, we convert float to int for new_convcold_cloudnumber
+        # Convert float type to int, missing value to 0
+        # This should not be needed when setting mask_and_scale=False
+        reference_convcold_cloudnumber[np.isnan(reference_convcold_cloudnumber)] = 0
+        reference_convcold_cloudnumber = reference_convcold_cloudnumber.astype("int")
         new_convcold_cloudnumber[np.isnan(new_convcold_cloudnumber)] = 0
-        new_convcold_cloudnumber = new_convcold_cloudnumber.astype("int32")
-
-        nnew = new_data["nclouds"].data  # Load number of clouds / features
-        new_data.close()  # Close file
+        new_convcold_cloudnumber = new_convcold_cloudnumber.astype("int")
 
         # Compare drift datetime with reference datetime
         if reference_filedatetime == datetime_drift:

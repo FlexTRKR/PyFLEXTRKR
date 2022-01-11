@@ -1,10 +1,10 @@
-import sys
 import os
 import logging
 import dask
 from dask.distributed import wait
 from pyflextrkr.ft_utilities import subset_files_timerange
 from pyflextrkr.mapcell_radar import mapcell_radar
+from pyflextrkr.mapmcspf import mapmcs_tb_pf
 
 def mapfeature_driver(config):
     logger = logging.getLogger(__name__)
@@ -29,24 +29,51 @@ def mapfeature_driver(config):
                                                      cloudid_filebase,
                                                      start_basetime,
                                                      end_basetime)
+    nfiles = len(cloudidfiles)
+
+    #######################################################################################
+    # Satellite IR temperature & precipitation
+    if feature_type == "tb_pf":
+        # Serial
+        if run_parallel == 0:
+            for ifile in range(0, nfiles):
+                result = mapmcs_tb_pf(
+                    cloudidfiles[ifile],
+                    cloudidfiles_basetime[ifile],
+                    config,
+                )
+
+        # Parallel
+        elif run_parallel == 1:
+            results = []
+            for ifile in range(0, nfiles):
+                result = dask.delayed(mapmcs_tb_pf)(
+                    cloudidfiles[ifile],
+                    cloudidfiles_basetime[ifile],
+                    config,
+                )
+                results.append(result)
+            final_result = dask.compute(*results)
+
 
     #######################################################################################
     # Radar convective cells
     if feature_type == "radar_cells":
 
-        # Call function
+        # Serial
         if run_parallel == 0:
             # Serial version
-            for ifile in range(0, len(cloudidfiles)):
+            for ifile in range(0, nfiles):
                 result = mapcell_radar(
                     cloudidfiles[ifile],
                     cloudidfiles_basetime[ifile],
                     config,
                 )
+
+        # Parallel
         elif run_parallel == 1:
-            # Parallel version
             results = []
-            for ifile in range(0, len(cloudidfiles)):
+            for ifile in range(0, nfiles):
                 result = dask.delayed(mapcell_radar)(
                     cloudidfiles[ifile],
                     cloudidfiles_basetime[ifile],
