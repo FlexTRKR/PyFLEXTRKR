@@ -39,6 +39,7 @@ def define_robust_mcs_pf(config):
 
     np.set_printoptions(threshold=np.inf)
     logger = logging.getLogger(__name__)
+    logger.info("Identifying robust MCS based on PF statistics")
 
     # Output stats file name
     statistics_outfile = f"{stats_path}robust_mcs_tracks_{startdate}_{enddate}.nc"
@@ -46,15 +47,13 @@ def define_robust_mcs_pf(config):
     ######################################################
     # Load MCS PF track stats
     mcspfstats_file = f"{stats_path}{pfstats_filebase}{startdate}_{enddate}.nc"
-    logger.info(("mcspfstats_file: ", mcspfstats_file))
+    logger.debug(("mcspfstats_file: ", mcspfstats_file))
 
     ds_pf = xr.open_dataset(mcspfstats_file,
                             mask_and_scale=False,
                             decode_times=False,)
-    # ntracks = np.nanmax(ds_pf.coords["tracks"])
     ntracks = ds_pf.dims[tracks_dimname]
     ntimes = ds_pf.dims[times_dimname]
-    # ncores = len(ds_pf.coords["cores"])
 
     ir_trackduration = ds_pf["track_duration"].data
     pf_area = ds_pf["pf_area"].data
@@ -64,9 +63,6 @@ def define_robust_mcs_pf(config):
     # pf_accumrain = ds_pf['pf_accumrain'].data
     # pf_accumrainheavy = ds_pf['pf_accumrainheavy'].data
     time_res = float(ds_pf.attrs["time_resolution_hour"])
-    # if time_res > 5:
-    #     time_res = (time_res)/60 # puts time res into hr
-    # logger.info(time_res)
     # mcs_ir_areathresh = float(data.attrs["MCS_IR_area_thresh_km2"])
     # mcs_ir_durationthresh = float(data.attrs["MCS_IR_duration_thresh_hr"])
     # mcs_ir_eccentricitythresh = float(data.attrs["MCS_IR_eccentricity_thres"])
@@ -400,8 +396,8 @@ def define_robust_mcs_pf(config):
 
     #########################################################################################
     # Save output to netCDF file
-    logger.info("Saving data")
-    logger.info((time.ctime()))
+    logger.debug("Saving data")
+    logger.debug((time.ctime()))
 
     # Check if file already exists. If exists, delete
     if os.path.isfile(statistics_outfile):

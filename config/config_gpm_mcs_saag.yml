@@ -6,22 +6,22 @@ processing_config: "global_gpm_mcs_processing_config.yml"
 
 # Processing steps:
 # Maybe worth nesting these in sets of dictionaries
-run_idfeature : True  # Segment and identify cloud systems
-run_tracksingle : True  # Track single consecutive cloudid files
-run_gettracks : True  # Run trackig for all files
-run_trackstats : True  # Calculate feature statistics
-run_identifymcs : True  # Isolate MCSs
-run_matchpf : True  # Identify precipitation features with MCSs
-run_robustmcs : True  # Filter potential mcs cases using nmq radar variables
-run_mapfeature : True  # Create maps of MCSs
+run_idfeature : True
+run_tracksingle : True
+run_gettracks : True
+run_trackstats : True
+run_identifymcs : True
+run_matchpf : True
+run_robustmcs : True
+run_mapfeature : True
 
 # Cores, parallel, etc
 run_parallel: 1
 nprocesses : 32  # Number of processors to use if run_parallel is set to 1
 
 # Start/end date and time
-startdate: '20190122.0000'
-enddate: '20190126.2300'
+startdate: '20190101.0000'
+enddate: '20190131.2300'
 # Data source, description
 datasource: gpmirimerg
 datadescription: gpm
@@ -148,7 +148,7 @@ dimname: 'nclouds'
 numbername: 'convcold_cloudnumber'
 typename: 'cloudtype'
 npxname: 'ncorecoldpix'
-pixeltracking_filebase: 'mcstracks_'
+pixeltracking_filebase: 'mcstrack_'
 tdimname: 'time'
 xdimname: 'lat'
 ydimname: 'lon'

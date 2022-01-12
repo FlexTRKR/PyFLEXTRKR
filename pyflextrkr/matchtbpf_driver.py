@@ -36,14 +36,15 @@ def match_tbpf_tracks(config):
 
     np.set_printoptions(threshold=np.inf)
     logger = logging.getLogger(__name__)
+    logger.info("Matching Tb tracked MCS with precipitation to calculate PF statistics")
 
     # Output stats file name
     statistics_outfile = f"{stats_path}mcs_tracks_pf_{startdate}_{enddate}.nc"
 
     #########################################################################################
     # Load MCS track stats
-    logger.info("Loading IR data")
-    logger.info((time.ctime()))
+    logger.debug("Loading IR data")
+    # logger.debug((time.ctime()))
 
     mcsirstats_file = f"{stats_path}{mcsstats_filebase}{startdate}_{enddate}.nc"
     ds = xr.open_dataset(mcsirstats_file,
@@ -71,9 +72,9 @@ def match_tbpf_tracks(config):
 
     #########################################################################################
     # Find precipitation feature in each mcs
-    logger.info(("Total Number of Tracks:" + str(ir_ntracks)))
-    logger.info("Looping over each track")
-    logger.info((time.ctime()))
+    logger.debug(("Total Number of Tracks:" + str(ir_ntracks)))
+    logger.debug("Looping over each pixel file")
+    logger.debug((time.ctime()))
 
     # Create a list to store matchindices for each pixel file
     trackindices_all = []
@@ -131,7 +132,7 @@ def match_tbpf_tracks(config):
 
     #########################################################################################
     # Create arrays to store output
-    logger.info("Creating arrays for track statistics.")
+    logger.debug("Collecting track PF statistics.")
 
     maxtracklength = ir_nmaxlength
     numtracks = ir_ntracks
@@ -211,8 +212,8 @@ def match_tbpf_tracks(config):
 
     #########################################################################################
     # Save output to netCDF file
-    logger.info("Saving data")
-    logger.info((time.ctime()))
+    logger.debug("Saving data")
+    logger.debug((time.ctime()))
 
     # Check if file already exists. If exists, delete
     if os.path.isfile(statistics_outfile):

@@ -5,9 +5,7 @@ import time
 import gc
 import logging
 import dask
-from dask.distributed import Client, LocalCluster
 from pyflextrkr.trackstats_func import calc_stats_singlefile, adjust_mergesplit_numbers, get_track_startend_status
-from pyflextrkr import netcdf_io_trackstats as net
 
 def trackstats_driver(config):
     """
@@ -36,13 +34,13 @@ def trackstats_driver(config):
     stats_path = config["stats_outpath"]
     lengthrange = config["lengthrange"]
     run_parallel = config["run_parallel"]
-    nprocesses = config["nprocesses"]
+    fillval = config["fillval"]
 
     # Set output filename
     trackstats_outfile = f"{stats_path}{trackstats_filebase}{startdate}_{enddate}.nc"
 
     # Load track data
-    logger.info("Loading gettracks data")
+    logger.debug("Loading tracknumbers data")
     cloudtrack_file = f"{stats_path}{tracknumbers_filebase}{startdate}_{enddate}.nc"
     ds = xr.open_dataset(cloudtrack_file,
                          mask_and_scale=False,
@@ -61,7 +59,7 @@ def trackstats_driver(config):
 
     #########################################################################################
     # loop over files. Calculate statistics and organize matrices by tracknumber and cloud
-    logger.info("Looping over files and calculating statistics for each file")
+    logger.debug("Looping over pixel files and calculating feature statistics")
     t0_files = time.time()
 
     results = []
@@ -103,9 +101,8 @@ def trackstats_driver(config):
 
     #########################################################################################
     # Create arrays to store output
-    logger.info("Creating arrays for track statistics.")
+    logger.debug("Collecting track statistics")
 
-    fillval = -9999
     maxtracklength = int(max(lengthrange))
     numtracks = int(numtracks)
 
@@ -175,8 +172,8 @@ def trackstats_driver(config):
                     itracklength[ridx]-1] = iResult[ivar][ridx]
 
     t1_files = (time.time() - t0_files) / 60.0
-    logger.info(("Files processing time (min): ", t1_files))
-    logger.info("Finish collecting track statistics")
+    logger.debug(("Files processing time (min): ", t1_files))
+    logger.debug("Finish collecting track statistics")
 
     # # Create a variable list from one of the returned dictionaries
     # var_names = list(final_result[0].keys())
@@ -186,7 +183,7 @@ def trackstats_driver(config):
 
     #########################################################################################
     ## Remove tracks that have no cells (tracklength == 0).
-    logger.info("Removing tracks with no cells")
+    logger.debug("Removing tracks with no cells")
     gc.collect()
 
     cloudindexpresent = np.where(out_dict["track_duration"] > 0)[0]
@@ -204,7 +201,7 @@ def trackstats_driver(config):
 
     #########################################################################################
     # Correct merger and split cloud numbers
-    logger.info("Correcting mergers and splits")
+    logger.debug("Correcting mergers and splits")
     t0_ms = time.time()
 
     adjusted_out_mergenumber, \
@@ -220,24 +217,24 @@ def trackstats_driver(config):
     out_dict["split_tracknumbers"] = adjusted_out_splitnumber
 
     t1_ms = (time.time() - t0_ms) / 60.0
-    logger.info(("Correct merge/split processing time (min): ", t1_ms))
-    logger.info("Merge and split adjustments done")
+    logger.debug(("Correct merge/split processing time (min): ", t1_ms))
+    logger.debug("Merge and split adjustments done")
 
     #########################################################################################
     # Record starting and ending status
-    logger.info("Getting starting and ending status")
+    logger.debug("Getting starting and ending status")
     t0_status = time.time()
 
     out_dict, out_dict_attrs = get_track_startend_status(
         out_dict, out_dict_attrs, fillval, maxtracklength)
 
     t1_status = (time.time() - t0_status) / 60.0
-    logger.info(("Start/end status processing time (min): ", t1_status))
-    logger.info("Starting and ending status done")
+    logger.debug(("Start/end status processing time (min): ", t1_status))
+    logger.debug("Starting and ending status done")
 
     #########################################################################################
     # Write output
-    logger.info("Writing trackstats netcdf ... ")
+    logger.debug("Writing trackstats netcdf ... ")
     t0_write = time.time()
 
     # Check if file already exists. If exists, delete
@@ -286,10 +283,10 @@ def trackstats_driver(config):
                     encoding=encoding)
 
     t1_write = (time.time() - t0_write) / 60.0
-    logger.info(("Writing file time (min): ", t1_write))
-    logger.info((time.ctime()))
-    logger.info(("Output saved as: ", trackstats_outfile))
+    logger.debug(("Writing file time (min): ", t1_write))
+    # logger.debug((time.ctime()))
+    logger.info(trackstats_outfile)
     t1_step4 = (time.time() - t0_step4) / 60.0
-    logger.info(("Step 4 processing time (min): ", t1_step4))
+    logger.debug(("Step 4 processing time (min): ", t1_step4))
 
     return trackstats_outfile

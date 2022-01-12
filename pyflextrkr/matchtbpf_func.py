@@ -98,10 +98,10 @@ def matchtbpf_singlefile(
             pf_aspectratio = np.full((nmatchcloud, nmaxpf), fillval_f, dtype=float)
             pf_orientation = np.full((nmatchcloud, nmaxpf), fillval_f, dtype=float)
             pf_eccentricity = np.full((nmatchcloud, nmaxpf), fillval_f, dtype=float)
-            pf_ycentroid = np.full((nmatchcloud, nmaxpf), fillval_f, dtype=float)
-            pf_xcentroid = np.full((nmatchcloud, nmaxpf), fillval_f, dtype=float)
-            pf_yweightedcentroid = np.full((nmatchcloud, nmaxpf), fillval_f, dtype=float)
-            pf_xweightedcentroid = np.full((nmatchcloud, nmaxpf), fillval_f, dtype=float)
+            pf_lon_centroid = np.full((nmatchcloud, nmaxpf), fillval_f, dtype=float)
+            pf_lat_centroid = np.full((nmatchcloud, nmaxpf), fillval_f, dtype=float)
+            pf_lon_weightedcentroid = np.full((nmatchcloud, nmaxpf), fillval_f, dtype=float)
+            pf_lat_weightedcentroid = np.full((nmatchcloud, nmaxpf), fillval_f, dtype=float)
             pf_accumrain = np.full((nmatchcloud, nmaxpf), fillval_f, dtype=float)
             pf_accumrainheavy = np.full((nmatchcloud, nmaxpf), fillval_f, dtype=float)
             # basetime = np.empty(nmatchcloud, dtype='datetime64[s]')
@@ -163,6 +163,8 @@ def matchtbpf_singlefile(
 
                     ## Isolate smaller region around cloud shield
                     subrainratemap = np.copy(filteredrainratemap[miny:maxy, minx:maxx])
+                    # sublon = lon[miny:maxy, minx:maxx]
+                    # sublat = lat[miny:maxy, minx:maxx]
 
                     # Calculate total rainfall within the cold cloud shield
                     total_rain[imatchcloud] = np.nansum(subrainratemap)
@@ -250,56 +252,47 @@ def matchtbpf_singlefile(
                                 fillval, fillval_f, heavy_rainrate_thresh,
                                 lat, logger, lon, minx, miny, nmaxpf, numpf,
                                 pf_npix, pfnumberlabelmap, pixel_radius,
-                                subdimx, subdimy, subrainratemap)
+                                subdimx, subdimy, subrainratemap,
+                                # sublon, sublat,
+                            )
 
                             # Save precipitation feature statisitcs
                             npf_save = pf_stats_dict["npf_save"]
                             pf_npf[imatchcloud] = np.copy(numpf)
-                            pf_lon[imatchcloud, 0:npf_save] = pf_stats_dict["pflon"][0:npf_save]
-                            pf_lat[imatchcloud, 0:npf_save] = pf_stats_dict["pflat"][0:npf_save]
-                            pf_area[imatchcloud, 0:npf_save] = pf_stats_dict["pfnpix"][0:npf_save] * pixel_radius**2
-                            pf_rainrate[imatchcloud, 0:npf_save] = pf_stats_dict["pfrainrate"][
-                                0:npf_save
-                            ]
-                            pf_maxrainrate[imatchcloud, 0:npf_save] = pf_stats_dict["pfmaxrainrate"][
-                                0:npf_save
-                            ]
-                            pf_skewness[imatchcloud, 0:npf_save] = pf_stats_dict["pfskewness"][
-                                0:npf_save
-                            ]
-                            pf_majoraxis[imatchcloud, 0:npf_save] = pf_stats_dict["pfmajoraxis"][
-                                0:npf_save
-                            ]
-                            pf_minoraxis[imatchcloud, 0:npf_save] = pf_stats_dict["pfminoraxis"][
-                                0:npf_save
-                            ]
-                            pf_aspectratio[imatchcloud, 0:npf_save] = pf_stats_dict["pfaspectratio"][
-                                0:npf_save
-                            ]
-                            pf_orientation[imatchcloud, 0:npf_save] = pf_stats_dict["pforientation"][
-                                0:npf_save
-                            ]
-                            pf_eccentricity[imatchcloud, 0:npf_save] = pf_stats_dict["pfeccentricity"][
-                                0:npf_save
-                            ]
-                            pf_ycentroid[imatchcloud, 0:npf_save] = pf_stats_dict["pfycentroid"][
-                                0:npf_save
-                            ]
-                            pf_xcentroid[imatchcloud, 0:npf_save] = pf_stats_dict["pfxcentroid"][
-                                0:npf_save
-                            ]
-                            pf_xweightedcentroid[
-                                imatchcloud, 0:npf_save
-                            ] = pf_stats_dict["pfxweightedcentroid"][0:npf_save]
-                            pf_yweightedcentroid[
-                                imatchcloud, 0:npf_save
-                            ] = pf_stats_dict["pfyweightedcentroid"][0:npf_save]
-                            pf_accumrain[imatchcloud, 0:npf_save] = pf_stats_dict["pfaccumrain"][
-                                0:npf_save
-                            ]
-                            pf_accumrainheavy[
-                                imatchcloud, 0:npf_save
-                            ] = pf_stats_dict["pfaccumrainheavy"][0:npf_save]
+                            pf_lon[imatchcloud, 0:npf_save] = \
+                                pf_stats_dict["pflon"][0:npf_save]
+                            pf_lat[imatchcloud, 0:npf_save] = \
+                                pf_stats_dict["pflat"][0:npf_save]
+                            pf_area[imatchcloud, 0:npf_save] = \
+                                pf_stats_dict["pfnpix"][0:npf_save] * pixel_radius**2
+                            pf_rainrate[imatchcloud, 0:npf_save] = \
+                                pf_stats_dict["pfrainrate"][0:npf_save]
+                            pf_maxrainrate[imatchcloud, 0:npf_save] = \
+                                pf_stats_dict["pfmaxrainrate"][0:npf_save]
+                            pf_skewness[imatchcloud, 0:npf_save] = \
+                                pf_stats_dict["pfskewness"][0:npf_save]
+                            pf_majoraxis[imatchcloud, 0:npf_save] = \
+                                pf_stats_dict["pfmajoraxis"][0:npf_save]
+                            pf_minoraxis[imatchcloud, 0:npf_save] = \
+                                pf_stats_dict["pfminoraxis"][0:npf_save]
+                            pf_aspectratio[imatchcloud, 0:npf_save] = \
+                                pf_stats_dict["pfaspectratio"][0:npf_save]
+                            pf_orientation[imatchcloud, 0:npf_save] = \
+                                pf_stats_dict["pforientation"][0:npf_save]
+                            pf_eccentricity[imatchcloud, 0:npf_save] = \
+                                pf_stats_dict["pfeccentricity"][0:npf_save]
+                            pf_lat_centroid[imatchcloud, 0:npf_save] = \
+                                pf_stats_dict["pflat_centroid"][0:npf_save]
+                            pf_lon_centroid[imatchcloud, 0:npf_save] = \
+                                pf_stats_dict["pflon_centroid"][0:npf_save]
+                            pf_lat_weightedcentroid[imatchcloud, 0:npf_save] = \
+                                pf_stats_dict["pflat_weightedcentroid"][0:npf_save]
+                            pf_lon_weightedcentroid[imatchcloud, 0:npf_save] = \
+                                pf_stats_dict["pflon_weightedcentroid"][0:npf_save]
+                            pf_accumrain[imatchcloud, 0:npf_save] = \
+                                pf_stats_dict["pfaccumrain"][0:npf_save]
+                            pf_accumrainheavy[imatchcloud, 0:npf_save] = \
+                                pf_stats_dict["pfaccumrainheavy"][0:npf_save]
 
             # Group outputs in dictionaries
             out_dict = {
@@ -316,10 +309,10 @@ def matchtbpf_singlefile(
                 "pf_aspectratio": pf_aspectratio,
                 "pf_orientation": pf_orientation,
                 "pf_eccentricity": pf_eccentricity,
-                # "pf_ycentroid": pf_ycentroid,
-                # "pf_xcentroid": pf_xcentroid,
-                # "pf_yweightedcentroid": pf_yweightedcentroid,
-                # "pf_xweightedcentroid": pf_xweightedcentroid,
+                "pf_lon_centroid": pf_lon_centroid,
+                "pf_lat_centroid": pf_lat_centroid,
+                "pf_lon_weightedcentroid": pf_lon_weightedcentroid,
+                "pf_lat_weightedcentroid": pf_lat_weightedcentroid,
                 "pf_maxrainrate": pf_maxrainrate,
                 "pf_accumrain": pf_accumrain,
                 "pf_accumrainheavy": pf_accumrainheavy,
@@ -386,10 +379,26 @@ def matchtbpf_singlefile(
                     "units": "unitless",
                     "_FillValue": fillval_f,
                 },
-                # "pf_ycentroid": pf_ycentroid,
-                # "pf_xcentroid": pf_xcentroid,
-                # "pf_yweightedcentroid": pf_yweightedcentroid,
-                # "pf_xweightedcentroid": pf_xweightedcentroid,
+                "pf_lon_centroid": {
+                    "long_name": "Centroid longitude of PF",
+                    "units": "degrees",
+                    "_FillValue": fillval_f,
+                },
+                "pf_lat_centroid": {
+                    "long_name": "Centroid latitude of PF",
+                    "units": "degrees",
+                    "_FillValue": fillval_f,
+                },
+                "pf_lon_weightedcentroid": {
+                    "long_name": "Weighted centroid longitude of PF",
+                    "units": "degrees",
+                    "_FillValue": fillval_f,
+                },
+                "pf_lat_weightedcentroid": {
+                    "long_name": "Weighted centroid latitude of PF",
+                    "units": "degrees",
+                    "_FillValue": fillval_f,
+                },
                 "pf_maxrainrate": {
                     "long_name": "Max rain rate of PF",
                     "units": "mm/h",
@@ -442,8 +451,11 @@ def matchtbpf_singlefile(
 
 ##########################################################################
 # Customed functions
-def calc_pf_stats(fillval, fillval_f, heavy_rainrate_thresh, lat, logger, lon, minx, miny, nmaxpf, numpf, pf_npix,
-                  pfnumberlabelmap, pixel_radius, subdimx, subdimy, subrainratemap):
+def calc_pf_stats(
+        fillval, fillval_f, heavy_rainrate_thresh, lat, logger, lon, minx, miny, nmaxpf, numpf, pf_npix,
+        pfnumberlabelmap, pixel_radius, subdimx, subdimy, subrainratemap,
+        # sublon, sublat,
+):
     """
     Calculate individual PF statistics.
 
@@ -482,10 +494,10 @@ def calc_pf_stats(fillval, fillval_f, heavy_rainrate_thresh, lat, logger, lon, m
     pfmajoraxis = np.full(npf_save, fillval_f, dtype=float)
     pfminoraxis = np.full(npf_save, fillval_f, dtype=float)
     pfaspectratio = np.full(npf_save, fillval_f, dtype=float)
-    pfxcentroid = np.full(npf_save, fillval_f, dtype=float)
-    pfycentroid = np.full(npf_save, fillval_f, dtype=float)
-    pfxweightedcentroid = np.full(npf_save, fillval_f, dtype=float)
-    pfyweightedcentroid = np.full(npf_save, fillval_f, dtype=float)
+    pflon_centroid = np.full(npf_save, fillval_f, dtype=float)
+    pflat_centroid = np.full(npf_save, fillval_f, dtype=float)
+    pflon_weightedcentroid = np.full(npf_save, fillval_f, dtype=float)
+    pflat_weightedcentroid = np.full(npf_save, fillval_f, dtype=float)
     pfeccentricity = np.full(npf_save, fillval_f, dtype=float)
     pfperimeter = np.full(npf_save, fillval_f, dtype=float)
     pforientation = np.full(npf_save, fillval_f, dtype=float)
@@ -523,6 +535,15 @@ def calc_pf_stats(fillval, fillval_f, heavy_rainrate_thresh, lat, logger, lon, m
             # Basic statistics
             pfnpix[ipf - 1] = np.copy(niipfpix)
             pfid[ipf - 1] = np.copy(int(ipf))
+            pflon[ipf - 1] = np.nanmean(
+                lon[iipfy[:] + miny, iipfx[:] + minx]
+            )
+            pflat[ipf - 1] = np.nanmean(
+                lat[iipfy[:] + miny, iipfx[:] + minx]
+            )
+            # pflon[ipf - 1] = np.nanmean(sublon[iipfy[:], iipfx[:]])
+            # pflat[ipf - 1] = np.nanmean(sublat[iipfy[:], iipfx[:]])
+
             pfrainrate[ipf - 1] = np.nanmean(
                 subrainratemap[iipfy[:], iipfx[:]]
             )
@@ -531,12 +552,6 @@ def calc_pf_stats(fillval, fillval_f, heavy_rainrate_thresh, lat, logger, lon, m
             )
             pfskewness[ipf - 1] = skew(
                 subrainratemap[iipfy[:], iipfx[:]]
-            )
-            pflon[ipf - 1] = np.nanmean(
-                lat[iipfy[:] + miny, iipfx[:] + minx]
-            )
-            pflat[ipf - 1] = np.nanmean(
-                lon[iipfy[:] + miny, iipfx[:] + minx]
             )
             pfaccumrain[ipf - 1] = np.nansum(
                 subrainratemap[iipfy[:], iipfx[:]]
@@ -549,9 +564,7 @@ def calc_pf_stats(fillval, fillval_f, heavy_rainrate_thresh, lat, logger, lon, m
                 )
 
             # Generate a binary map of PF
-            iipfflagmap = np.zeros(
-                (subdimy, subdimx), dtype=int
-            )
+            iipfflagmap = np.zeros((subdimy, subdimx), dtype=int)
             iipfflagmap[iipfy, iipfx] = 1
 
             # Geometric statistics
@@ -563,12 +576,11 @@ def calc_pf_stats(fillval, fillval_f, heavy_rainrate_thresh, lat, logger, lon, m
                 iipfflagmap,
                 intensity_image=tfilteredrainratemap,
             )
-            pfeccentricity[ipf - 1] = pfproperties[
-                0
-            ].eccentricity
+            pfeccentricity[ipf - 1] = pfproperties[0].eccentricity
             pfmajoraxis[ipf - 1] = (
                     pfproperties[0].major_axis_length * pixel_radius
             )
+
             # Need to treat minor axis length with an error except
             # since the python algorithm occasionally throws an error.
             try:
@@ -590,25 +602,33 @@ def calc_pf_stats(fillval, fillval_f, heavy_rainrate_thresh, lat, logger, lon, m
                     pfproperties[0].perimeter * pixel_radius
             )
             [
-                pfycentroid[ipf - 1],
-                pfxcentroid[ipf - 1],
+                ycentroid,
+                xcentroid,
             ] = pfproperties[0].centroid
             [
-                pfyweightedcentroid[ipf - 1],
-                pfxweightedcentroid[ipf - 1],
+                yweightedcentroid,
+                xweightedcentroid,
             ] = pfproperties[0].weighted_centroid
-            pfycentroid[ipf - 1] = pfycentroid[ipf - 1] + miny
-            pfxcentroid[ipf - 1] = pfxcentroid[ipf - 1] + minx
-            pfyweightedcentroid[ipf - 1] = (
-                    pfyweightedcentroid[ipf - 1] + miny
-            )
-            pfxweightedcentroid[ipf - 1] = (
-                    pfxweightedcentroid[ipf - 1] + minx
-            )
+
+            # Shift the centroids by minx/miny
+            # since the the PF is a subset from the full image
+            # Round the centroid values as indices
+            ycentroid = int(np.round(ycentroid + miny))
+            xcentroid = int(np.round(xcentroid + minx))
+            yweightedcentroid = int(np.round(yweightedcentroid + miny))
+            xweightedcentroid = int(np.round(xweightedcentroid + minx))
+
+            # Apply the indices to get centroid lat/lon
+            pflon_centroid[ipf-1] = lon[ycentroid, xcentroid]
+            pflat_centroid[ipf-1] = lat[ycentroid, xcentroid]
+            pflon_weightedcentroid[ipf-1] = lon[yweightedcentroid, xweightedcentroid]
+            pflat_weightedcentroid[ipf-1] = lat[yweightedcentroid, xweightedcentroid]
+
         else:
             sys.exit("Error: PF pixel count not matching!")
     logger.debug("Loop done")
 
+    # Put all variables in dictionary for output
     pf_stats_dict = {
         "npf_save": npf_save,
         "pfaccumrain": pfaccumrain,
@@ -624,10 +644,10 @@ def calc_pf_stats(fillval, fillval_f, heavy_rainrate_thresh, lat, logger, lon, m
         "pforientation": pforientation,
         "pfrainrate": pfrainrate,
         "pfskewness": pfskewness,
-        "pfxcentroid": pfxcentroid,
-        "pfxweightedcentroid": pfxweightedcentroid,
-        "pfycentroid": pfycentroid,
-        "pfyweightedcentroid": pfyweightedcentroid,
+        "pflon_centroid": pflon_centroid,
+        "pflon_weightedcentroid": pflon_weightedcentroid,
+        "pflat_centroid": pflat_centroid,
+        "pflat_weightedcentroid": pflat_weightedcentroid,
     }
     return pf_stats_dict
 

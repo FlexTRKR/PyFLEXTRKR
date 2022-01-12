@@ -9,7 +9,7 @@ import logging
 
 def gettracknumbers(config):
     """
-    Track clouds successively from the single track files.
+    Track features sequentially from the single track files.
 
     Arguments:
         config: dictionary
@@ -38,21 +38,17 @@ def gettracknumbers(config):
     np.set_printoptions(threshold=np.inf)
 
     # Call function
-    logger.info('Getting track numbers')
-    logger.info('tracking_outpath:' + datainpath)
+    logger.info('Tracking features sequentially from single track files')
+    # logger.debug('tracking_outpath:' + datainpath)
 
     #############################################################################
     # Set track numbers output file name
-    # tracknumbers_filebase = "tracknumbers" + tracknumbers_version
-    tracknumbers_outfile = (
-        stats_outpath + tracknumbers_filebase + startdate + "_" + enddate + ".nc"
-    )
+    tracknumbers_outfile = f"{stats_outpath}{tracknumbers_filebase}{startdate}_{enddate}.nc"
 
     files, gap = filter_filelisting(
         datainpath, enddate, singletrack_filebase, startdate, timegap
     )
 
-    # import pdb; pdb.set_trace()
     # KB HARDCODED GAP
     gap = 0
     ############################################################################
@@ -70,8 +66,7 @@ def gettracknumbers(config):
 
     ############################################################################
     # Load first file
-    logger.info("Processing first file")
-    #    logger.info((time.ctime()))
+    logger.debug("Processing first file")
     logger.debug(f"datainpath: {datainpath}")
     logger.debug(f"files[0]: {files[0]}")
     singletracking_data = Dataset(datainpath + files[0], "r")  # Open file
@@ -110,18 +105,18 @@ def gettracknumbers(config):
 
     ###########################################################################
     # Loop over files and generate tracks
-    logger.info("Loop through the rest of the files")
-    logger.info(f"Number of files: {str(nfiles)}")
-    logger.info((time.ctime()))
+    logger.debug("Loop through the rest of the files")
+    logger.debug(f"Number of files: {str(nfiles)}")
+    logger.debug((time.ctime()))
     ifill = 0
     for ifile in range(0, nfiles):
         logger.info((files[ifile]))
-        # logger.info((time.ctime()))
+        # logger.debug((time.ctime()))
 
         ######################################################################
         # Load single track file
-        # logger.info('Load track data')
-        # logger.info((time.ctime()))
+        # logger.debug('Load track data')
+        # logger.debug((time.ctime()))
         singletracking_data = Dataset(datainpath + files[ifile], "r")  # Open file
         nclouds_reference = int(
             np.nanmax(singletracking_data["nclouds_ref"][:]) + 1
@@ -158,8 +153,8 @@ def gettracknumbers(config):
 
         ########################################################################
         # Load cloudid files
-        # logger.info('Load cloudid files')
-        # logger.info((time.ctime()))
+        # logger.debug('Load cloudid files')
+        # logger.debug((time.ctime()))
         # Reference cloudid file
         referencecloudid_data = Dataset(ref_file, "r")
         npix_reference = referencecloudid_data[npxname][:]
@@ -176,8 +171,8 @@ def gettracknumbers(config):
 
         ########################################################################
         # Check time gap between consecutive track files
-        # logger.info('Checking if time gap between files satisfactory')
-        # logger.info((time.ctime()))
+        # logger.debug('Checking if time gap between files satisfactory')
+        # logger.debug((time.ctime()))
 
         # Set previous and new times
         if ifile < 1:
@@ -190,10 +185,10 @@ def gettracknumbers(config):
         if ifile > 0:
             hour_diff = np.array([time_new - time_prev]).astype(float)
             if hour_diff > (timegap * 3.6 * 10 ** 12):
-                logger.info(f"Track terminates on: {ref_date}")
-                logger.info(f"Time difference: {str(hour_diff)}")
-                logger.info(f"Maximum timegap allowed: {str(timegap)}")
-                logger.info(f"New track starts on: {new_date}")
+                logger.debug(f"Track terminates on: {ref_date}")
+                logger.debug(f"Time difference: {str(hour_diff)}")
+                logger.debug(f"Maximum timegap allowed: {str(timegap)}")
+                logger.debug(f"New track starts on: {new_date}")
 
                 # Flag the previous file as the last file
                 trackreset[0, ifill, :] = 2
@@ -219,19 +214,19 @@ def gettracknumbers(config):
         ########################################################################################
         # Compare forward and backward single track matirces to link new and reference clouds
         # Intiailize matrix for this time period
-        # logger.info('Generating tracks')
-        # logger.info((time.ctime()))
+        # logger.debug('Generating tracks')
+        # logger.debug((time.ctime()))
         trackfound = np.ones(nclouds_reference + 1, dtype=int) * -9999
 
         # Loop over all reference clouds
-        # logger.info('Looping over all clouds in the reference file')
-        # logger.info(('Number of clouds to process: ' + str(nclouds_reference)))
-        # logger.info((time.ctime()))
+        # logger.debug('Looping over all clouds in the reference file')
+        # logger.debug(('Number of clouds to process: ' + str(nclouds_reference)))
+        # logger.debug((time.ctime()))
         for ncr in np.arange(
             1, nclouds_reference + 1
         ):  # Looping over each reference cloud. Start at 1 since clouds numbered starting at 1.
-            # logger.info(('Reference cloud #: ' + str(ncr)))
-            # logger.info((time.ctime()))
+            # logger.debug(('Reference cloud #: ' + str(ncr)))
+            # logger.debug((time.ctime()))
             if trackfound[ncr - 1] < 1:
 
                 # Find all clouds (both forward and backward) associated with this reference cloud
@@ -240,8 +235,8 @@ def gettracknumbers(config):
                 temp_referenceclouds = [ncr]
 
                 trackpresent = 0
-                # logger.info('Finding all associated clouds')
-                # logger.info((time.ctime()))
+                # logger.debug('Finding all associated clouds')
+                # logger.debug((time.ctime()))
                 while ntemp_referenceclouds > nreferenceclouds:
                     associated_referenceclouds = np.copy(temp_referenceclouds).astype(
                         int
@@ -249,8 +244,8 @@ def gettracknumbers(config):
                     nreferenceclouds = ntemp_referenceclouds
 
                     for nr in range(0, nreferenceclouds):
-                        # logger.info(('Processing cloud #: ' + str(nr)))
-                        # logger.info((time.ctime()))
+                        # logger.debug(('Processing cloud #: ' + str(nr)))
+                        # logger.debug((time.ctime()))
                         tempncr = associated_referenceclouds[nr]
 
                         # Find indices of forward linked clouds.
@@ -360,7 +355,7 @@ def gettracknumbers(config):
 
                         # Check trackstatus already has a valid value. This will prtrack splits from a previous step being overwritten
 
-                        # logger.info(trackstatus[ifill,ncr-1])
+                        # logger.debug(trackstatus[ifill,ncr-1])
                         referencetrackstatus[ifill, ncr - 1] = 1
                         trackfound[ncr - 1] = 1
                         tracknumber[0, ifill + 1, associated_newclouds - 1] = np.copy(
@@ -468,8 +463,8 @@ def gettracknumbers(config):
                     #####################################################################
                     # Splitting only
                     elif nnewclouds > 1:
-                        # logger.info('Splitting only')
-                        # logger.info((time.ctime()))
+                        # logger.debug('Splitting only')
+                        # logger.debug((time.ctime()))
                         # Label reference cloud as a pure split
                         referencetrackstatus[ifill, ncr - 1] = 13
                         tracknumber[0, ifill, ncr - 1] = np.copy(
@@ -521,7 +516,7 @@ def gettracknumbers(config):
         #############################################################################
         # Flag the last file in the dataset
         if ifile == nfiles - 2:
-            logger.info("WE ARE AT THE LAST FILE")
+            logger.debug("WE ARE AT THE LAST FILE")
             for ncn in range(1, int(nclouds_new) + 1):
                 trackreset[0, ifill + 1, :] = 2
             break
@@ -535,7 +530,7 @@ def gettracknumbers(config):
     )
     trackstatus[np.isnan(trackstatus)] = -9999
 
-    logger.info("Tracking Done")
+    logger.debug("Tracking Done")
 
     #################################################################
     # Create histograms of the values in tracknumber. This effectively counts the number of times each track number appaers in tracknumber, which is equivalent to calculating the length of the track.
@@ -547,8 +542,8 @@ def gettracknumbers(config):
 
     #################################################################
     # Remove all tracks that have only one cloud.
-    logger.info("Removing short tracks")
-    # logger.info((time.ctime()))
+    logger.debug("Removing short tracks")
+    # logger.debug((time.ctime()))
 
     # Identify single cloud tracks
     singletracks = np.array(np.where(tracklengths <= 1))[0, :]
@@ -584,10 +579,8 @@ def gettracknumbers(config):
 
     #######################################################################
     # Save file
-    logger.info("Writing all track statistics file")
-    logger.info((time.ctime()))
-    logger.info(tracknumbers_outfile)
-    logger.info("")
+    logger.debug("Writing all track statistics file")
+    logger.debug((time.ctime()))
 
     # Check if file already exists. If exists, delete
     if os.path.isfile(tracknumbers_outfile):
@@ -611,7 +604,8 @@ def gettracknumbers(config):
             "ncharacters": (["ncharacters"], np.arange(0, strlength)),
         },
         attrs={
-            "Title": "Indicates the track each cloud is linked to. Flags indicate how the clouds transition(evolve) between files.",
+            "Title": "Indicates the track each cloud is linked to. " + \
+                     "Flags indicate how the clouds transition(evolve) between files.",
             # "Conventions": "CF-1.6",
             "Insitution": "Pacific Northwest National Laboratory",
             "Contact": "Zhe Feng: zhe.feng@pnnl.gov",
@@ -642,7 +636,11 @@ def gettracknumbers(config):
     output_data.track_numbers.attrs["long_name"] = "cloud track number"
     output_data.track_numbers.attrs[
         "usage"
-    ] = "size: 1 by time by number of clouds. Each column represents a cloudid file (time dimension). Each row represents a cloud in that file (ex. row 0=cloud 1, row 1000=cloud 1001) through time. The values indicate the track that cloud is in. This follows the largest cloud in mergers and splits."
+    ] = "size: 1 by time by number of clouds. " + \
+    "Each column represents a cloudid file (time dimension). " + \
+    "Each row represents a cloud in that file (ex. row 0=cloud 1, row 1000=cloud 1001) through time. " + \
+    "The values indicate the track that cloud is in. This follows the largest cloud in mergers and splits."
+
     output_data.track_numbers.attrs["units"] = "unitless"
     output_data.track_numbers.attrs["valid_min"] = 1
     output_data.track_numbers.attrs["valid_max"] = itrack - 1
@@ -659,7 +657,10 @@ def gettracknumbers(config):
     ] = "Number of the track that this small cloud merges into"
     output_data.track_mergenumbers.attrs[
         "usage"
-    ] = "size: 1 by time by number of clouds. Each column represents a cloudid file (time dimension). Each row represets a cloud in that file through time. Values give the track number associated with the small clouds in mergers."
+    ] = "size: 1 by time by number of clouds. Each column represents a cloudid file (time dimension). " + \
+        "Each row represets a cloud in that file through time. " + \
+        "Values give the track number associated with the small clouds in mergers."
+
     output_data.track_mergenumbers.attrs["units"] = "unitless"
     output_data.track_mergenumbers.attrs["valid_min"] = 1
     output_data.track_mergenumbers.attrs["valid_max"] = itrack - 1
@@ -669,7 +670,9 @@ def gettracknumbers(config):
     ] = "Number of the track that this small cloud splits from"
     output_data.track_splitnumbers.attrs[
         "usage"
-    ] = "size: 1 by time by number of clouds. Each column represents a cloudid file (time). Each row represets a cloud in that file through time. Values give the track number associated with the small clouds in the split"
+    ] = "size: 1 by time by number of clouds. Each column represents a cloudid file (time). " + \
+        "Each row represets a cloud in that file through time. " + \
+        "Values give the track number associated with the small clouds in the split"
     output_data.track_splitnumbers.attrs["units"] = "unitless"
     output_data.track_splitnumbers.attrs["valid_min"] = 1
     output_data.track_splitnumbers.attrs["valid_max"] = itrack - 1
@@ -679,10 +682,13 @@ def gettracknumbers(config):
     ] = "flag of track starts and abrupt track stops"
     output_data.track_reset.attrs[
         "usage"
-    ] = "Each row represents a cloudid file. Each column represents a cloud in that file. Numbers indicate if the track started or adruptly ended during this file."
+    ] = "Each row represents a cloudid file. Each column represents a cloud in that file. " + \
+        "Numbers indicate if the track started or adruptly ended during this file."
     output_data.track_reset.attrs[
         "values"
-    ] = "0=Track starts and ends within a period of continuous data. 1=Track starts as the first file in the data set or after a data gap. 2=Track ends because data ends or gap in data."
+    ] = "0=Track starts and ends within a period of continuous data. " + \
+        "1=Track starts as the first file in the data set or after a data gap. " + \
+        "2=Track ends because data ends or gap in data."
     output_data.track_reset.attrs["units"] = "unitless"
     output_data.track_reset.attrs["valid_min"] = 0
     output_data.track_reset.attrs["valid_max"] = 2
@@ -710,6 +716,7 @@ def gettracknumbers(config):
             "track_reset": {"dtype": "int", "zlib": True, "_FillValue": -9999},
         },
     )
+    logger.info(tracknumbers_outfile)
     logger.info('Get track numbers done.')
     return tracknumbers_outfile
 
@@ -724,9 +731,9 @@ def filter_filelisting(datainpath, enddate, singletrack_filebase, startdate, tim
     ##################################################################################
     # Get single track files sort
     logger = logging.getLogger(__name__)
-    logger.info("Determining which files will be processed")
-    logger.info((time.ctime()))
-    logger.info(singletrack_filebase)
+    logger.debug("Determining which files will be processed")
+    logger.debug((time.ctime()))
+    logger.debug(singletrack_filebase)
     singletrackfiles = fnmatch.filter(
         os.listdir(datainpath), singletrack_filebase + "*"
     )
@@ -735,7 +742,7 @@ def filter_filelisting(datainpath, enddate, singletrack_filebase, startdate, tim
     ################################################################################
     # Get date/time from filenames
     nfiles = len(singletrackfiles)
-    logger.info(("nfiles: ", nfiles))
+    logger.debug(("nfiles: ", nfiles))
     year = np.empty(nfiles, dtype=int)
     month = np.empty(nfiles, dtype=int)
     day = np.empty(nfiles, dtype=int)

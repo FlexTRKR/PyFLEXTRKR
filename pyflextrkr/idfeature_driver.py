@@ -1,5 +1,4 @@
 import sys
-import os
 import logging
 import dask
 from dask.distributed import wait
@@ -20,6 +19,7 @@ def idfeature_driver(config):
     """
 
     logger = logging.getLogger(__name__)
+    logger.info('Identifying features from raw data')
 
     clouddata_path = config["clouddata_path"]
     databasename = config["databasename"]
@@ -30,7 +30,7 @@ def idfeature_driver(config):
     feature_type = config["feature_type"]
 
     # Identify files to process
-    logger.info('Identifying raw data files to process.')
+    logger.debug('Identifying raw data files to process.')
     infiles_info = subset_files_timerange(
         clouddata_path,
         databasename,
@@ -79,4 +79,5 @@ def idfeature_driver(config):
         else:
             sys.exit('Valid parallelization flag not provided')
 
+    logger.info('Done with features from raw data.')
     return

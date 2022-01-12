@@ -8,7 +8,7 @@ from pyflextrkr.tracksingle import trackclouds as trackclouds
 
 def tracksingle_driver(config):
     """
-    Driver for tracking successive pairs of idfeature files.
+    Driver for tracking sequential pairs of idfeature files.
 
     Args:
         config: dictionary
@@ -19,6 +19,7 @@ def tracksingle_driver(config):
     """
 
     logger = logging.getLogger(__name__)
+    logger.info('Tracking sequential pairs of idfeature files')
 
     tracking_outpath = config["tracking_outpath"]
     cloudid_filebase = config["cloudid_filebase"]
@@ -31,7 +32,6 @@ def tracksingle_driver(config):
         driftfile = None
 
     # Identify files to process
-    logger.info('Identifying cloudid files to process')
     cloudidfiles, \
     cloudidfiles_basetime, \
     cloudidfiles_datestring, \
@@ -52,7 +52,7 @@ def tracksingle_driver(config):
         drift_data = list(zip(datetime_drift_match, xdrifts_match, ydrifts_match))
 
     # Call function
-    logger.info('Tracking clouds between single files')
+    logger.debug('Looping over pairs of single files to track')
 
     # Create pairs of input filenames and times
     cloudid_filepairs = list(zip(cloudidfiles[0:-1], cloudidfiles[1::]))
@@ -93,4 +93,5 @@ def tracksingle_driver(config):
     else:
         sys.exit('Valid parallelization flag not provided.')
 
+    logger.info('Done with tracking sequential pairs of idfeature files')
     return

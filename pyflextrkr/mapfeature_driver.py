@@ -17,7 +17,7 @@ def mapfeature_driver(config):
     run_parallel = config["run_parallel"]
     feature_type = config["feature_type"]
 
-    logger.info('Identifying which pixel level maps to generate for the cell tracks')
+    logger.info('Mapping tracked features to pixel-level files')
 
     # Create pixel tracking file output directory
     os.makedirs(pixeltracking_outpath, exist_ok=True)
@@ -83,4 +83,5 @@ def mapfeature_driver(config):
             final_result = dask.compute(*results)
             # wait(final_result)
 
+    logger.info('Done with mapping features to pixel-level files')
     return
