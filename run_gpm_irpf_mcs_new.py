@@ -10,6 +10,7 @@ from pyflextrkr.identifymcs import identifymcs_tb
 from pyflextrkr.matchtbpf_driver import match_tbpf_tracks
 from pyflextrkr.robustmcspf import define_robust_mcs_pf
 from pyflextrkr.mapfeature_driver import mapfeature_driver
+from pyflextrkr.movement_speed import movement_speed
 
 if __name__ == '__main__':
 
@@ -58,3 +59,7 @@ if __name__ == '__main__':
     # Step 8 - Map tracking to pixel files
     if config['run_mapfeature']:
         mapfeature_driver(config)
+
+    # Step 9 - Movement speed calculation
+    if config['run_speed']:
+        movement_speed(config)

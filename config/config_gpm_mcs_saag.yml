@@ -6,22 +6,27 @@ processing_config: "global_gpm_mcs_processing_config.yml"
 
 # Processing steps:
 # Maybe worth nesting these in sets of dictionaries
-run_idfeature : True
-run_tracksingle : True
-run_gettracks : True
+run_idfeature : False
+run_tracksingle : False
+run_gettracks : False
 run_trackstats : True
-run_identifymcs : True
-run_matchpf : True
-run_robustmcs : True
-run_mapfeature : True
+run_identifymcs : False
+run_matchpf : False
+run_robustmcs : False
+run_mapfeature : False
+run_speed: False
 
 # Cores, parallel, etc
 run_parallel: 1
-nprocesses : 32  # Number of processors to use if run_parallel is set to 1
+nprocesses : 30  # Number of processors to use if run_parallel is set to 1
 
 # Start/end date and time
-startdate: '20190101.0000'
-enddate: '20190131.2300'
+startdate: '20190122.0000'
+enddate: '20190127.0000'
+#startdate: '20190101.0000'
+#enddate: '20190131.2300'
+#startdate: '20180601.0000'
+#enddate: '20190630.2300'
 # Data source, description
 datasource: gpmirimerg
 datadescription: gpm
@@ -32,7 +37,7 @@ databasename: merg_
 # E.g., wrfout_2018-11-01_01:15:00 --> yyyy-mo-dd_hh:mm:ss
 time_format: 'yyyymoddhh'
 # Input files directory
-clouddata_path: '/global/cscratch1/sd/feng045/SAAG/GPM/tb_rr/2019/'
+clouddata_path: '/global/cscratch1/sd/feng045/SAAG/GPM/tb_rr/2018_2019/'
 # Working directory for the tracking data
 root_path: '/global/cscratch1/sd/feng045/SAAG/GPM/pyflex_test/'
 # Working sub-directory names
@@ -49,7 +54,10 @@ landmask_varname: 'landseamask'
 # This adds additional feature-specific statistics to be computed
 feature_type: 'tb_pf'
 cloudidmethod: 'label_grow'  # Option: futyan3:  identify cores and cold anvils and expand to get warm anvil, futyan4=identify core and expand for cold and warm anvils
-keep_singlemergesplit: 1  # Options: 0=All short tracks are removed, 1=Only short tracks without mergers or splits are removed
+#keep_singlemergesplit: 1  # Options: 0=All short tracks are removed, 1=Only short tracks without mergers or splits are removed
+# Flag to remove short-lived tracks [< min(duration_range)] that are not mergers/splits with other tracks
+# 0:keep all tracks; 1:remove short tracks
+remove_shorttracks: 1
 
 idclouds_hourly: 1  # 0:  No, 1:  Yes
 idclouds_minute: 30
@@ -65,7 +73,7 @@ cloudtb_cold:  241.0  # K
 cloudtb_warm:  261.0  # K
 cloudtb_cloud:  261.0  # K
 othresh:  0.5  # overlap percentage threshold
-lengthrange: [2, 200] # A vector [minlength,maxlength] to specify the lifetime range for the tracks
+duration_range: [2, 200] # A vector [minlength,maxlength] to specify the duration range for the tracks
 nmaxlinks:  200  # Maximum number of clouds that any single cloud can be linked to
 maxnclouds:  3000  # Maximum number of clouds in one snapshot
 keepsingletrack: 1  # Keep tracks that has only 1 time
@@ -148,7 +156,7 @@ dimname: 'nclouds'
 numbername: 'convcold_cloudnumber'
 typename: 'cloudtype'
 npxname: 'ncorecoldpix'
-pixeltracking_filebase: 'mcstrack_'
+
 tdimname: 'time'
 xdimname: 'lat'
 ydimname: 'lon'
@@ -162,3 +170,15 @@ tracks_dimname: 'tracks'
 times_dimname: 'times'
 pf_dimname: 'nmaxpf'
 fillval: -9999
+# MCS track stats file base names
+mcstbstats_filebase: 'mcs_tracks_'
+mcspfstats_filebase: 'mcs_tracks_pf_'
+mcsrobust_filebase: 'mcs_tracks_robust_'
+pixeltracking_filebase: 'mcstrack_'
+mcsfinal_filebase: 'mcs_tracks_final_'
+
+# Feature movement speed parameters
+lag: 1
+track_variable_for_speed: "pcptracknumber"
+min_size_thresh_for_speed: 20
+max_speed_thresh: 50  # [m/s]

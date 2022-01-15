@@ -203,6 +203,7 @@ def subset_files_timerange(
     files_basetime = files_basetime[fidx]
     files_datestring = np.array(files_datestring)[fidx].tolist()
     files_timestring = np.array(files_timestring)[fidx].tolist()
+
     return (
         data_filenames,
         files_basetime,

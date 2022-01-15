@@ -19,7 +19,8 @@ def define_robust_mcs_pf(config):
             Robust MCS track statistics file name.
     """
 
-    pfstats_filebase = "mcs_tracks_pf_"
+    mcspfstats_filebase = config["mcspfstats_filebase"]
+    mcsrobust_filebase = config["mcsrobust_filebase"]
     stats_path = config["stats_outpath"]
     startdate = config["startdate"]
     enddate = config["enddate"]
@@ -42,11 +43,11 @@ def define_robust_mcs_pf(config):
     logger.info("Identifying robust MCS based on PF statistics")
 
     # Output stats file name
-    statistics_outfile = f"{stats_path}robust_mcs_tracks_{startdate}_{enddate}.nc"
+    statistics_outfile = f"{stats_path}{mcsrobust_filebase}{startdate}_{enddate}.nc"
 
     ######################################################
     # Load MCS PF track stats
-    mcspfstats_file = f"{stats_path}{pfstats_filebase}{startdate}_{enddate}.nc"
+    mcspfstats_file = f"{stats_path}{mcspfstats_filebase}{startdate}_{enddate}.nc"
     logger.debug(("mcspfstats_file: ", mcspfstats_file))
 
     ds_pf = xr.open_dataset(mcspfstats_file,
@@ -399,7 +400,7 @@ def define_robust_mcs_pf(config):
     logger.debug("Saving data")
     logger.debug((time.ctime()))
 
-    # Check if file already exists. If exists, delete
+    # Delete file if it already exists
     if os.path.isfile(statistics_outfile):
         os.remove(statistics_outfile)
 

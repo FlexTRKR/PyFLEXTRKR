@@ -40,6 +40,7 @@ def tracksingle_driver(config):
                                                      start_basetime,
                                                      end_basetime)
     cloudidfilestep = len(cloudidfiles)
+    logger.info(f"Total number of files to process: {cloudidfilestep}")
 
     # Match advection data times with cloudid times
     if driftfile is not None:

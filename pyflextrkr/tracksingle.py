@@ -43,9 +43,9 @@ def trackclouds(
     othresh = config["othresh"]
 
     # firstcloudidfilename = zipped_inputs[0]
-    logger.info(("firstcloudidfilename: ", firstcloudidfilename))
+    logger.debug(("firstcloudidfilename: ", firstcloudidfilename))
     # secondcloudidfilename = zipped_inputs[1]
-    logger.info(("secondcloudidfilename: ", secondcloudidfilename))
+    logger.debug(("secondcloudidfilename: ", secondcloudidfilename))
 
     ########################################################
     # Set constants
@@ -77,7 +77,7 @@ def trackclouds(
 
         ##############################################################
         # Load cloudid file from before, called reference file
-        logger.info(reference_filedatetime)
+        logger.debug(reference_filedatetime)
 
         # Open file
         reference_data = xr.open_dataset(reference_file, mask_and_scale=False)
@@ -236,9 +236,7 @@ def trackclouds(
         if os.path.isfile(track_outfile):
             os.remove(track_outfile)
 
-        logger.info("Writing single tracks")
-        logger.info(track_outfile)
-        logger.info("")
+        logger.debug("Writing single tracks")
 
         # Define xarracy dataset
         output_data = xr.Dataset(
@@ -386,4 +384,5 @@ def trackclouds(
                 },
             },
         )
+        logger.info(track_outfile)
         return track_outfile

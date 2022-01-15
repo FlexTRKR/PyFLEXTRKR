@@ -17,8 +17,7 @@ def identifymcs_tb(config):
             MCS track statistics file name.
     """
 
-    #######################################################################
-    mcsstats_filebase = "mcs_tracks_"
+    mcstbstats_filebase = config["mcstbstats_filebase"]
     trackstats_filebase = config["trackstats_filebase"]
     stats_path = config["stats_outpath"]
     startdate = config["startdate"]
@@ -39,14 +38,12 @@ def identifymcs_tb(config):
     logger.info("Identifying MCS based on Tb statistics")
 
     # Output stats file name
-    statistics_outfile = f"{stats_path}{mcsstats_filebase}{startdate}_{enddate}.nc"
+    statistics_outfile = f"{stats_path}{mcstbstats_filebase}{startdate}_{enddate}.nc"
 
     ##########################################################################
     # Load statistics file
     statistics_file = f"{stats_path}{trackstats_filebase}{startdate}_{enddate}.nc"
     logger.debug(statistics_file)
-
-    # ds_all = Dataset(statistics_file, "r")
 
     ds_all = xr.open_dataset(statistics_file,
                              mask_and_scale=False,
@@ -56,23 +53,16 @@ def identifymcs_tb(config):
     # Maximum number of times in a given track
     nmaxtimes = np.nanmax(ds_all[times_dimname]) + 1
     logger.debug(f"nmaxtimes:{nmaxtimes}")
-
+    # Load necessary variables
+    track_duration = ds_all["track_duration"].values
     trackstat_corearea = ds_all["core_area"].values
     trackstat_coldarea = ds_all["cold_area"].values
-    trackstat_ccsarea = trackstat_corearea + trackstat_coldarea
-    fillval_f = ds_all["cold_area"].attrs["_FillValue"]
-    track_duration = ds_all["track_duration"].values
     basetime = ds_all["base_time"].values
-    # basetime_units = ds_all["base_time"].units
     mergecloudnumbers = ds_all["merge_tracknumbers"].values
     splitcloudnumbers = ds_all["split_tracknumbers"].values
     cloudnumbers = ds_all["cloudnumber"].values
     status = ds_all["track_status"].values
-    # endstatus = ds_all["end_status"].values
-    # startstatus = ds_all["start_status"].values
-    # track_interruptions = ds_all["track_interruptions"].values
-    # meanlat = ds_all["meanlat"].values
-    # meanlon = ds_all["meanlon"].values
+    fillval_f = ds_all["cold_area"].attrs["_FillValue"]
     ds_all.close()
 
     logger.debug(f"MCS CCS area threshold: {mcs_tb_area_thresh}")
@@ -80,6 +70,8 @@ def identifymcs_tb(config):
 
     # Convert track duration to physical time unit
     trackstat_duration = np.multiply(track_duration, time_resolution)
+    # Get CCS area
+    trackstat_ccsarea = trackstat_corearea + trackstat_coldarea
 
     ###################################################################
     # Identify MCSs
@@ -414,7 +406,7 @@ def identifymcs_tb(config):
     ###########################################################################
     # Write statistics to netcdf file
 
-    # Check if file already exists. If exists, delete
+    # Delete file if it already exists
     if os.path.isfile(statistics_outfile):
         os.remove(statistics_outfile)
 

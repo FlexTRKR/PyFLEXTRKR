@@ -30,7 +30,6 @@ def idfeature_driver(config):
     feature_type = config["feature_type"]
 
     # Identify files to process
-    logger.debug('Identifying raw data files to process.')
     infiles_info = subset_files_timerange(
         clouddata_path,
         databasename,
@@ -41,6 +40,7 @@ def idfeature_driver(config):
     # Get file list
     rawdatafiles = infiles_info[0]
     nfiles = len(rawdatafiles)
+    logger.info(f"Total number of files to process: {nfiles}")
 
     #######################################################################################
     # Satellite IR temperature & precipitation

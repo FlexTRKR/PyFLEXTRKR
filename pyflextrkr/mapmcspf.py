@@ -26,7 +26,7 @@ def mapmcs_tb_pf(
             Track number pixel-level file name.
     """
 
-    mcsstats_filebase = "robust_mcs_tracks_"
+    mcsrobust_filebase = config["mcsrobust_filebase"]
     stats_path = config["stats_outpath"]
     startdate = config["startdate"]
     enddate = config["enddate"]
@@ -51,8 +51,8 @@ def mapmcs_tb_pf(
         logger.info(statistics_file)
 
         ds_all = xr.open_dataset(statistics_file,
-                                      mask_and_scale=False,
-                                      decode_times=False)
+                                 mask_and_scale=False,
+                                 decode_times=False)
         trackstat_basetime = ds_all["basetime"].values
         trackstat_cloudnumber = ds_all["cloudnumber"].values
         trackstat_status = ds_all["status"].values
@@ -65,7 +65,7 @@ def mapmcs_tb_pf(
     # logger.info('Loading MCS data')
     mcsstatistics_file = (
         stats_path +
-        mcsstats_filebase +
+        mcsrobust_filebase +
         startdate + "_" +
         enddate + ".nc"
     )
@@ -298,7 +298,7 @@ def mapmcs_tb_pf(
     )
     # logger.info('mcstrackmaps_outfile: ', mcstrackmaps_outfile)
 
-    # Check if file already exists. If exists, delete
+    # Delete file if it already exists
     if os.path.isfile(mcstrackmaps_outfile):
         os.remove(mcstrackmaps_outfile)
 

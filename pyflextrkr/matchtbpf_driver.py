@@ -21,7 +21,8 @@ def match_tbpf_tracks(config):
             MCS PF track statistics file name.
     """
 
-    mcsstats_filebase = "mcs_tracks_"
+    mcstbstats_filebase = config["mcstbstats_filebase"]
+    mcspfstats_filebase = config["mcspfstats_filebase"]
     stats_path = config["stats_outpath"]
     tracking_outpath = config["tracking_outpath"]
     cloudid_filebase = config["cloudid_filebase"]
@@ -39,14 +40,14 @@ def match_tbpf_tracks(config):
     logger.info("Matching Tb tracked MCS with precipitation to calculate PF statistics")
 
     # Output stats file name
-    statistics_outfile = f"{stats_path}mcs_tracks_pf_{startdate}_{enddate}.nc"
+    statistics_outfile = f"{stats_path}{mcspfstats_filebase}{startdate}_{enddate}.nc"
 
     #########################################################################################
     # Load MCS track stats
     logger.debug("Loading IR data")
     # logger.debug((time.ctime()))
 
-    mcsirstats_file = f"{stats_path}{mcsstats_filebase}{startdate}_{enddate}.nc"
+    mcsirstats_file = f"{stats_path}{mcstbstats_filebase}{startdate}_{enddate}.nc"
     ds = xr.open_dataset(mcsirstats_file,
                          mask_and_scale=False,
                          decode_times=False)
@@ -215,7 +216,7 @@ def match_tbpf_tracks(config):
     logger.debug("Saving data")
     logger.debug((time.ctime()))
 
-    # Check if file already exists. If exists, delete
+    # Delete file if it already exists
     if os.path.isfile(statistics_outfile):
         os.remove(statistics_outfile)
 

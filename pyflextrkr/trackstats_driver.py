@@ -1,6 +1,7 @@
 import numpy as np
 import xarray as xr
 import os
+import sys
 import time
 import gc
 import logging
@@ -32,9 +33,12 @@ def trackstats_driver(config):
     startdate = config["startdate"]
     enddate = config["enddate"]
     stats_path = config["stats_outpath"]
-    lengthrange = config["lengthrange"]
+    duration_range = config["duration_range"]
     run_parallel = config["run_parallel"]
     fillval = config["fillval"]
+    tracks_dimname = config["tracks_dimname"]
+    times_dimname = config["times_dimname"]
+    remove_shorttracks = config["remove_shorttracks"]
 
     # Set output filename
     trackstats_outfile = f"{stats_path}{trackstats_filebase}{startdate}_{enddate}.nc"
@@ -59,6 +63,7 @@ def trackstats_driver(config):
 
     #########################################################################################
     # loop over files. Calculate statistics and organize matrices by tracknumber and cloud
+    logger.info(f"Total number of files to process: {nfiles}")
     logger.debug("Looping over pixel files and calculating feature statistics")
     t0_files = time.time()
 
@@ -103,7 +108,7 @@ def trackstats_driver(config):
     # Create arrays to store output
     logger.debug("Collecting track statistics")
 
-    maxtracklength = int(max(lengthrange))
+    maxtracklength = int(max(duration_range))
     numtracks = int(numtracks)
 
     # Make a variable list from one of the returned dictionaries
@@ -169,11 +174,14 @@ def trackstats_driver(config):
             for ivar in var_names:
                 out_dict[ivar][
                     tracknumbertmp[ridx],
-                    itracklength[ridx]-1] = iResult[ivar][ridx]
+                    itracklength[ridx]-1
+                ] = iResult[ivar][ridx]
 
     t1_files = (time.time() - t0_files) / 60.0
     logger.debug(("Files processing time (min): ", t1_files))
     logger.debug("Finish collecting track statistics")
+
+    trackidx_all = np.arange(0, len(out_dict["track_duration"]))
 
     # # Create a variable list from one of the returned dictionaries
     # var_names = list(final_result[0].keys())
@@ -182,43 +190,16 @@ def trackstats_driver(config):
     # var_names.remove('numtracks')
 
     #########################################################################################
-    ## Remove tracks that have no cells (tracklength == 0).
-    logger.debug("Removing tracks with no cells")
-    gc.collect()
-
-    cloudindexpresent = np.where(out_dict["track_duration"] > 0)[0]
-    # TODO: should filtering with lengthrange be applied?
-    # This would filter short merge/split tracks too
-    # cloudindexpresent = np.where(
-    #     (out_dict["track_duration"] >= min(lengthrange)) &
-    #     (out_dict["track_duration"] <= max(lengthrange))
-    # )[0]
-    numtracks = len(cloudindexpresent)
-
-    out_dict["track_duration"] = out_dict["track_duration"][cloudindexpresent]
-    for ivar in var_names:
-        out_dict[ivar] = out_dict[ivar][cloudindexpresent, :]
-
-    #########################################################################################
-    # Correct merger and split cloud numbers
-    logger.debug("Correcting mergers and splits")
-    t0_ms = time.time()
-
-    adjusted_out_mergenumber, \
-    adjusted_out_splitnumber = adjust_mergesplit_numbers(
-        out_dict["merge_tracknumbers"],
-        out_dict["split_tracknumbers"],
-        cloudindexpresent,
-        fillval,
-    )
-
-    # Replace merge/split number with the adjusted ones
-    out_dict["merge_tracknumbers"] = adjusted_out_mergenumber
-    out_dict["split_tracknumbers"] = adjusted_out_splitnumber
-
-    t1_ms = (time.time() - t0_ms) / 60.0
-    logger.debug(("Correct merge/split processing time (min): ", t1_ms))
-    logger.debug("Merge and split adjustments done")
+    # Check data max duration against config set up
+    # Provide warning message and exit if 'duration_range' is too short
+    data_max_trackduration = np.nanmax(out_dict["track_duration"])
+    if data_max_trackduration > maxtracklength:
+        logger.critical(f"WARNING: Max track duration in data ({data_max_trackduration}) " +
+                        f"exceeds 'duration_range' ({duration_range})!")
+        logger.critical(f"This would cause missing statistics in certain long-lived tracks!")
+        logger.critical(f"Increase 'duration_range' to fix this error.")
+        logger.critical(f"Tracking will now exit.")
+        sys.exit()
 
     #########################################################################################
     # Record starting and ending status
@@ -233,6 +214,79 @@ def trackstats_driver(config):
     logger.debug("Starting and ending status done")
 
     #########################################################################################
+    # Remove short duration tracks
+    if remove_shorttracks == 1:
+        logger.debug("Removing short duration tracks")
+        gc.collect()
+
+        # Find tracks that have positive duration
+        trackidx_hascloud = np.where(out_dict["track_duration"] > 0)[0]
+        # Tracks that are not starting from a split, or ending in a merge
+        mask_notmergesplit = np.logical_and(
+            (out_dict['start_split_cloudnumber'] == fillval),
+            (out_dict['end_merge_cloudnumber'] == fillval),
+        )
+        # Tracks that are shorter than the minimum duration
+        mask_shortduration = out_dict["track_duration"] < min(duration_range)
+        # Track indices that are short and not a merge or split
+        # These tracks have no meaningful use
+        trackidx_remove = np.where(mask_notmergesplit & mask_shortduration)[0]
+        # Get track indices that exclude these short tracks
+        trackidx_notshort = trackidx_all[~np.isin(trackidx_all, trackidx_remove)]
+
+        # Find the track indices in both arrays
+        trackidx_keep = np.intersect1d(trackidx_hascloud, trackidx_notshort)
+        # Keep these tracks for all variables in the output dictionary
+        numtracks = len(trackidx_keep)
+        for ivar in out_dict.keys():
+            if out_dict[ivar].ndim == 1:
+                out_dict[ivar] = out_dict[ivar][trackidx_keep]
+            elif out_dict[ivar].ndim == 2:
+                out_dict[ivar] = out_dict[ivar][trackidx_keep, :]
+
+        # numtracks = len(trackidx_hascloud)
+        # out_dict["track_duration"] = out_dict["track_duration"][trackidx_hascloud]
+        # for ivar in var_names:
+        #     out_dict[ivar] = out_dict[ivar][trackidx_hascloud, :]
+    else:
+        numtracks = len(out_dict["track_duration"])
+        trackidx_keep = trackidx_all
+
+
+    #########################################################################################
+    # Correct merger and split cloud numbers
+    logger.debug("Correcting mergers and splits")
+    t0_ms = time.time()
+
+    adjusted_out_mergenumber, \
+    adjusted_out_splitnumber = adjust_mergesplit_numbers(
+        out_dict["merge_tracknumbers"],
+        out_dict["split_tracknumbers"],
+        trackidx_keep,
+        fillval,
+    )
+
+    # Replace merge/split number with the adjusted ones
+    out_dict["merge_tracknumbers"] = adjusted_out_mergenumber
+    out_dict["split_tracknumbers"] = adjusted_out_splitnumber
+
+    t1_ms = (time.time() - t0_ms) / 60.0
+    logger.debug(("Correct merge/split processing time (min): ", t1_ms))
+    logger.debug("Merge and split adjustments done")
+
+    # #########################################################################################
+    # # Record starting and ending status
+    # logger.debug("Getting starting and ending status")
+    # t0_status = time.time()
+    #
+    # out_dict, out_dict_attrs = get_track_startend_status(
+    #     out_dict, out_dict_attrs, fillval, maxtracklength)
+    #
+    # t1_status = (time.time() - t0_status) / 60.0
+    # logger.debug(("Start/end status processing time (min): ", t1_status))
+    # logger.debug("Starting and ending status done")
+
+    #########################################################################################
     # Write output
     logger.debug("Writing trackstats netcdf ... ")
     t0_write = time.time()
@@ -245,21 +299,22 @@ def trackstats_driver(config):
     # Define output variable dictionary
     for key, value in out_dict.items():
         if value.ndim == 1:
-            varlist[key] = ([config["tracks_dimname"]], value, out_dict_attrs[key])
+            varlist[key] = ([tracks_dimname], value, out_dict_attrs[key])
         if value.ndim == 2:
-            varlist[key] = ([config["tracks_dimname"], config["times_dimname"]], value, out_dict_attrs[key])
+            varlist[key] = ([tracks_dimname, times_dimname], value, out_dict_attrs[key])
 
     # Define coordinate list
     coordlist = {
-        config["tracks_dimname"]: ([config["tracks_dimname"]], np.arange(0, numtracks)),
-        config["times_dimname"]: ([config["times_dimname"]], np.arange(0, maxtracklength)),
+        tracks_dimname: ([tracks_dimname], np.arange(0, numtracks)),
+        times_dimname: ([times_dimname], np.arange(0, maxtracklength)),
     }
 
     # Define global attributes
     gattrlist = {
-        'Title': 'Statistics of each track',
-        'Institution': 'Pacific Northwest National Laboratory',
-        'Contact': 'Zhe Feng, zhe.feng@pnnl.gov',
+        "Title": 'Statistics of each track',
+        "Institution": 'Pacific Northwest National Laboratory',
+        "Contact": 'Zhe Feng, zhe.feng@pnnl.gov',
+        "Created_on": time.ctime(time.time()),
         "source": config["datasource"],
         "description": config["datadescription"],
         "startdate": config["startdate"],
@@ -279,7 +334,7 @@ def trackstats_driver(config):
     dsout.to_netcdf(path=trackstats_outfile,
                     mode='w',
                     format='NETCDF4',
-                    unlimited_dims=config["tracks_dimname"],
+                    unlimited_dims=tracks_dimname,
                     encoding=encoding)
 
     t1_write = (time.time() - t0_write) / 60.0

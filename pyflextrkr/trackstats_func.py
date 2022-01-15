@@ -1037,11 +1037,13 @@ def get_track_startend_status(
         "long_name": "Flag indicating how the track starts",
         "units": "unitless",
         "_FillValue": fillval,
+        "comments": "Refer to track_status attributes on flag value meaning",
     }
     out_dict_attrs["end_status"] = {
         "long_name": "Flag indicating how the track ends",
         "units": "unitless",
         "_FillValue": fillval,
+        "comments": "Refer to track_status attributes on flag value meaning",
     }
     out_dict_attrs["start_basetime"] = {
         "long_name": "Start Epoch time of each track",

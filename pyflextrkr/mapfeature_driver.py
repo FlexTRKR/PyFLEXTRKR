@@ -7,6 +7,16 @@ from pyflextrkr.mapcell_radar import mapcell_radar
 from pyflextrkr.mapmcspf import mapmcs_tb_pf
 
 def mapfeature_driver(config):
+    """
+    Map tracked features to pixel level files.
+
+    Args:
+        config: dictionary
+            Dictionary containing config parameters.
+
+    Returns:
+        None.
+    """
     logger = logging.getLogger(__name__)
 
     pixeltracking_outpath = config["pixeltracking_outpath"]
@@ -81,7 +91,7 @@ def mapfeature_driver(config):
                 )
                 results.append(result)
             final_result = dask.compute(*results)
-            # wait(final_result)
+            wait(final_result)
 
     logger.info('Done with mapping features to pixel-level files')
     return
