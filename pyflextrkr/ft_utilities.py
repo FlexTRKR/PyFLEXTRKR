@@ -34,6 +34,12 @@ def load_config(config_file):
     singletrack_filebase = "track_"
     tracknumbers_filebase = "tracknumbers_"
     trackstats_filebase = "trackstats_"
+    trackstats_sparse_filebase = "trackstats_sparse_"
+    # Default not writing dense trackstats netCDF file
+    if "trackstats_dense_netcdf" not in config:
+        trackstats_dense_netcdf = 0
+    else:
+        trackstats_dense_netcdf = config["trackstats_dense_netcdf"]
 
     # Create output directories
     os.makedirs(tracking_outpath, exist_ok=True)
@@ -53,6 +59,8 @@ def load_config(config_file):
             "singletrack_filebase": singletrack_filebase,
             "tracknumbers_filebase": tracknumbers_filebase,
             "trackstats_filebase": trackstats_filebase,
+            "trackstats_sparse_filebase": trackstats_sparse_filebase,
+            "trackstats_dense_netcdf": trackstats_dense_netcdf,
             "start_basetime": start_basetime,
             "end_basetime": end_basetime,
         }

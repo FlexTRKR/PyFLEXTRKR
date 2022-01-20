@@ -9,16 +9,16 @@ processing_config: "global_gpm_mcs_processing_config.yml"
 run_idfeature : False
 run_tracksingle : False
 run_gettracks : False
-run_trackstats : True
-run_identifymcs : False
-run_matchpf : False
-run_robustmcs : False
-run_mapfeature : False
-run_speed: False
+run_trackstats : False
+run_identifymcs : True
+run_matchpf : True
+run_robustmcs : True
+run_mapfeature : True
+run_speed: True
 
 # Cores, parallel, etc
 run_parallel: 1
-nprocesses : 30  # Number of processors to use if run_parallel is set to 1
+nprocesses : 25  # Number of processors to use if run_parallel is set to 1
 
 # Start/end date and time
 startdate: '20190122.0000'
@@ -38,8 +38,10 @@ databasename: merg_
 time_format: 'yyyymoddhh'
 # Input files directory
 clouddata_path: '/global/cscratch1/sd/feng045/SAAG/GPM/tb_rr/2018_2019/'
+#clouddata_path: '/Users/feng045/data/SAAG/GPM/tb_rr/2019/'
 # Working directory for the tracking data
 root_path: '/global/cscratch1/sd/feng045/SAAG/GPM/pyflex_test/'
+#root_path: '/Users/feng045/data/SAAG/GPM/pyflex_test/'
 # Working sub-directory names
 tracking_path_name: 'tracking'
 stats_path_name: 'stats'
@@ -58,6 +60,9 @@ cloudidmethod: 'label_grow'  # Option: futyan3:  identify cores and cold anvils 
 # Flag to remove short-lived tracks [< min(duration_range)] that are not mergers/splits with other tracks
 # 0:keep all tracks; 1:remove short tracks
 remove_shorttracks: 1
+# Set this flag to 1 to write a dense (2D) trackstats netCDF file
+# Note that for datasets with lots of tracks, the memory consumption could be very large
+trackstats_dense_netcdf: 1
 
 idclouds_hourly: 1  # 0:  No, 1:  Yes
 idclouds_minute: 30

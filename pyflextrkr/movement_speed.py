@@ -43,7 +43,7 @@ def movement_speed(config):
     max_speed_thresh = config["max_speed_thresh"]
 
     logger = logging.getLogger(__name__)
-    logger.info('Calculating movement speed using pixel level tracked feature')
+    logger.info('Calculating movement speed using pixel-level tracked feature')
 
     # Stats file name
     if feature_type == 'tb_pf':

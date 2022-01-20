@@ -814,7 +814,7 @@ def pre_sort_cloudnumber(cloudnumber_mask):
 def adjust_mergesplit_numbers(
         out_mergenumber,
         out_splitnumber,
-        cloudindexpresent,
+        trackidx_keep,
         fillval,
 ):
     """
@@ -825,8 +825,8 @@ def adjust_mergesplit_numbers(
             Original merge track number.
         out_splitnumber: numpy array
             Original split track number.
-        cloudindexpresent: numpy array
-            Track indices where clouds exist.
+        trackidx_keep: numpy array
+            Track indices that are kept.
         fillval: int
             Default fill value for int arrays.
 
@@ -837,35 +837,38 @@ def adjust_mergesplit_numbers(
             Adjusted split track number.
 
     """
-    numtracks = len(cloudindexpresent)
+    numtracks = len(trackidx_keep)
     # Initialize adjusted matrices
     # adjusted_out_mergenumber = np.full(np.shape(out_mergenumber), fillval, dtype=np.int32)
     # adjusted_out_splitnumber = np.full(np.shape(out_mergenumber), fillval, dtype=np.int32)
     # logger.info(("total tracks: " + str(numtracks)))
 
     # Create adjuster
-    indexcloudnumber = np.copy(cloudindexpresent) + 1
-    # adjuster = np.arange(0, np.max(cloudindexpresent) + 2)
+    indexcloudnumber = np.copy(trackidx_keep) + 1
+    # adjuster = np.arange(0, np.max(trackidx_keep) + 2)
     # Modified by Zhixiao, initialize adjuster by fill values, rather than using np.arange
-    adjuster = np.full(np.max(cloudindexpresent) + 2, fillval, dtype=np.int32)
+    adjuster = np.full(np.max(trackidx_keep) + 2, fillval, dtype=np.int32)
     for it in range(0, numtracks):
         adjuster[indexcloudnumber[it]] = it + 1
     adjuster = np.append(adjuster, np.int32(fillval))
 
     # Adjust mergers
-    temp_out_mergenumber = out_mergenumber.astype(np.int32).ravel()
+    # temp_out_mergenumber = out_mergenumber.astype(np.int32).ravel()
+    temp_out_mergenumber = np.ravel(out_mergenumber.astype(np.int32))
     temp_out_mergenumber[temp_out_mergenumber == fillval] = (
-        np.max(cloudindexpresent) + 2
+        np.max(trackidx_keep) + 2
     )
+    # Apply
     adjusted_out_mergenumber = adjuster[temp_out_mergenumber]
     adjusted_out_mergenumber = np.reshape(
         adjusted_out_mergenumber, np.shape(out_mergenumber)
     )
 
     # Adjust splitters
-    temp_out_splitnumber = out_splitnumber.astype(np.int32).ravel()
+    # temp_out_splitnumber = out_splitnumber.astype(np.int32).ravel()
+    temp_out_splitnumber = np.ravel(out_splitnumber.astype(np.int32))
     temp_out_splitnumber[temp_out_splitnumber == fillval] = (
-        np.max(cloudindexpresent) + 2
+        np.max(trackidx_keep) + 2
     )
     adjusted_out_splitnumber = adjuster[temp_out_splitnumber]
     adjusted_out_splitnumber = np.reshape(
@@ -906,11 +909,12 @@ def get_track_startend_status(
 
     numtracks = len(out_dict["track_duration"])
     out_tracklength = out_dict["track_duration"]
+    # base_time = out_dict["base_time"]
 
     # Starting status
-    out_startstatus = out_dict["track_status"][:, 0]
-    out_startbasetime = out_dict["base_time"][:, 0]
-    out_startsplit_tracknumber = out_dict["split_tracknumbers"][:, 0]
+    out_startbasetime = out_dict["base_time"][:, 0].data
+    out_startstatus = out_dict["track_status"][:, 0].data
+    out_startsplit_tracknumber = out_dict["split_tracknumbers"][:, 0].data
 
     out_startsplit_timeindex = np.full(numtracks, fillval, dtype=np.int32)
     out_startsplit_cloudnumber = np.full(numtracks, fillval, dtype=np.int32)
@@ -927,9 +931,8 @@ def get_track_startend_status(
 
         # Make sure the track length is < maxtracklength
         # so array access would not be out of bounds
-        if (out_tracklength[itrack] > 0) & (
-                out_tracklength[itrack] < maxtracklength
-        ):
+        if (out_tracklength[itrack] > 0) & \
+                (out_tracklength[itrack] < maxtracklength):
 
             # Get the end basetime
             out_endbasetime[itrack] = out_dict["base_time"][
@@ -944,6 +947,14 @@ def get_track_startend_status(
                     itrack, out_tracklength[itrack] - 1
                 ]
             )
+            # merge_num = out_dict["merge_tracknumbers"][itrack,:].max()
+            # if (out_tracklength[itrack] > 3) & (merge_num > 0):
+            #     import pdb; pdb.set_trace()
+            # merge_num = out_dict["merge_tracknumbers"][itrack, :].data[-1]
+            # if (out_endmerge_tracknumber[itrack] != merge_num):
+            #     import pdb; pdb.set_trace()
+            # else:
+            #     print(itrack, merge_num)
 
             # If end merge tracknumber exists, this track ends by merge
             if out_endmerge_tracknumber[itrack] >= 0:
@@ -952,7 +963,7 @@ def get_track_startend_status(
                 # Get all the basetime for the track it merges with
                 ibasetime = out_dict["base_time"][
                             imerge_idx, 0: out_tracklength[imerge_idx]
-                            ]
+                            ].data
 
                 # Find the time index matching the time when merging occurs
                 # match_timeidx = np.where(ibasetime == out_endbasetime[itrack])[0]
@@ -972,10 +983,10 @@ def get_track_startend_status(
                             itrack
                         ] = out_dict["cloudnumber"][imerge_idx, match_timeidx + 1]
                     else:
-                        logger.info(f"Merge time occur after track ends??")
+                        logger.debug(f"Merge time occur after track ends??")
                 else:
                     # import pdb; pdb.set_trace()
-                    logger.info(
+                    logger.debug(
                         f"Error: track {itrack} has no matching time in the track it merges with!"
                     )
                     # import pdb; pdb.set_trace()
@@ -988,23 +999,31 @@ def get_track_startend_status(
                 # Get all the basetime for the track it splits from
                 ibasetime = out_dict["base_time"][
                             isplit_idx, 0: out_tracklength[isplit_idx]
-                            ]
-                # Find the time index matching the time when splitting occurs
-                match_timeidx = np.where(ibasetime == out_startbasetime[itrack])[0]
-                # Modified by Zhixiao: If there is no overlap time between split and reference tracks,
-                # we test whether the reference cell end time is a time step earlier than the split cell initiation.
-                # We take this as a resonable split, because the referecence cell can merge with other cells
-                # after the split moment.
-                if len(match_timeidx) == 0:
-                    # Zhixiao
-                    match_timeidx = np.where(ibasetime == ibasetime[len(ibasetime) - 1])[0]
-                    if len(match_timeidx) == 1:
-                        match_timeidx = match_timeidx + 1
-                        logger.info(
-                            f"Note: Track {itrack} splits from transient parent cloud."
-                        )
+                            ].data
 
-                if len(match_timeidx) == 1:
+                # Find the time index matching the time when splitting occurs
+                # match_timeidx = np.where(ibasetime == out_startbasetime[itrack])[0]
+
+                # Find the closest time matching the time when merging occurs
+                # If the time difference is < min_dt_thresh, consider it the same
+                dt = np.abs(ibasetime - out_startbasetime[itrack])
+                if np.nanmin(dt) < min_dt_thresh:
+                    match_timeidx = np.nanargmin(dt)
+
+                    # Modified by Zhixiao: If there is no overlap time between split and reference tracks,
+                    # we test whether the reference cell end time is a time step earlier than the split cell initiation.
+                    # We take this as a resonable split, because the referecence cell can merge with other cells
+                    # after the split moment.
+                    # if len(match_timeidx) == 0:
+                    #     # Zhixiao
+                    #     match_timeidx = np.where(ibasetime == ibasetime[len(ibasetime) - 1])[0]
+                    #     if len(match_timeidx) == 1:
+                    #         match_timeidx = match_timeidx + 1
+                    #         logger.debug(
+                    #             f"Note: Track {itrack} splits from transient parent cloud."
+                    #         )
+
+                    # if len(match_timeidx) == 1:
                     # The time to connect to the track it splits from should be 1 time step prior
                     if (match_timeidx - 1) >= 0:
                         out_startsplit_timeindex[itrack] = match_timeidx - 1
@@ -1012,13 +1031,12 @@ def get_track_startend_status(
                             itrack
                         ] = out_dict["cloudnumber"][isplit_idx, match_timeidx - 1]
                     else:
-                        logger.info(f"Split time occur before track starts??")
-                else:
-                    logger.info(
-                        f"Error: track {itrack} has no matching time in the track it splits from!"
-                    )
-
-                    sys.exit(itrack)
+                        logger.debug(f"Split time occur before track starts??")
+                    # else:
+                    #     logger.debug(
+                    #         f"Error: track {itrack} has no matching time in the track it splits from!"
+                    #     )
+                    #     sys.exit(itrack)
 
     # Add new variables to the dictionary
     out_dict["start_status"] = out_startstatus
