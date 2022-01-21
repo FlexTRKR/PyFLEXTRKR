@@ -33,6 +33,7 @@ def mapmcs_tb_pf(
     fillval = config["fillval"]
     fillval_f = np.nan
     pcp_thresh = config["pcp_thresh"]
+    feature_varname = config.get("feature_varname", "feature_number")
     showalltracks = 0
 
     np.set_printoptions(threshold=np.inf)
@@ -53,7 +54,7 @@ def mapmcs_tb_pf(
         ds_all = xr.open_dataset(statistics_file,
                                  mask_and_scale=False,
                                  decode_times=False)
-        trackstat_basetime = ds_all["basetime"].values
+        trackstat_basetime = ds_all["base_time"].values
         trackstat_cloudnumber = ds_all["cloudnumber"].values
         trackstat_status = ds_all["status"].values
         trackstat_mergenumbers = ds_all["mergenumbers"].values
@@ -62,35 +63,30 @@ def mapmcs_tb_pf(
 
     #######################################################################
     # Load MCS track stat file
-    # logger.info('Loading MCS data')
     mcsstatistics_file = (
         stats_path +
         mcsrobust_filebase +
         startdate + "_" +
         enddate + ".nc"
     )
-
     ds_mcs = xr.open_dataset(mcsstatistics_file,
                              mask_and_scale=False,
                              decode_times=False)
     mcstrackstat_basetime = ds_mcs["base_time"].values
     mcstrackstat_cloudnumber = ds_mcs["cloudnumber"].values
-    mcstrackstat_mergecloudnumber = ds_mcs["mergecloudnumber"].values
-    mcstrackstat_splitcloudnumber = ds_mcs["splitcloudnumber"].values
+    mcstrackstat_mergecloudnumber = ds_mcs["merge_cloudnumber"].values
+    mcstrackstat_splitcloudnumber = ds_mcs["split_cloudnumber"].values
 
 
     #########################################################################
     # Get cloudid file associated with this time
-    # logger.info('Determine corresponding cloudid file and rain accumlation file')
     file_datetime = time.strftime("%Y%m%d_%H%M", time.gmtime(np.copy(filebasetime)))
-    filedate = np.copy(file_datetime[0:8])
-    filetime = np.copy(file_datetime[9:14])
 
     ds_cid = xr.open_dataset(cloudid_filename,
                              mask_and_scale=False,
                              decode_times=False)
-    cloudid_cloudnumber = ds_cid[config["numbername"]].values
-    cloudid_basetime = ds_cid["basetime"].values
+    cloudid_cloudnumber = ds_cid[feature_varname].values
+    cloudid_basetime = ds_cid["base_time"].values
     precipitation = ds_cid["precipitation"].values
     ds_cid.close()
 
@@ -293,10 +289,8 @@ def mapmcs_tb_pf(
     mcstrackmaps_outfile = (
         config["pixeltracking_outpath"] +
         config["pixeltracking_filebase"] +
-        str(filedate) + "_" +
-        str(filetime) + ".nc"
+        file_datetime + ".nc"
     )
-    # logger.info('mcstrackmaps_outfile: ', mcstrackmaps_outfile)
 
     # Delete file if it already exists
     if os.path.isfile(mcstrackmaps_outfile):
@@ -305,13 +299,13 @@ def mapmcs_tb_pf(
 
     # Define variable list
     varlist = {
-        "basetime": (["time"], ds_cid["basetime"], ds_cid["basetime"].attrs),
+        "base_time": (["time"], ds_cid["base_time"], ds_cid["base_time"].attrs),
         "longitude": (["lat", "lon"], ds_cid["longitude"], ds_cid["longitude"].attrs),
         "latitude": (["lat", "lon"], ds_cid["latitude"], ds_cid["latitude"].attrs),
         "tb": (["time", "lat", "lon"], ds_cid["tb"], ds_cid["tb"].attrs),
         "precipitation": (["time", "lat", "lon"], precipitation, ds_cid["precipitation"].attrs),
         "cloudtype": (["time", "lat", "lon"], ds_cid["cloudtype"], ds_cid["cloudtype"].attrs),
-        "cloudnumber": (["time", "lat", "lon"], cloudid_cloudnumber, ds_cid[config["numbername"]].attrs),
+        "cloudnumber": (["time", "lat", "lon"], cloudid_cloudnumber, ds_cid[feature_varname].attrs),
         "split_tracknumbers": (["time", "lat", "lon"], mcssplitmap),
         "merge_tracknumbers": (["time", "lat", "lon"], mcsmergemap),
         "cloudtracknumber_nomergesplit": (["time", "lat", "lon"], mcstrackmap),

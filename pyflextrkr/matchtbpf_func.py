@@ -40,6 +40,7 @@ def matchtbpf_singlefile(
     """
     logger = logging.getLogger(__name__)
 
+    feature_varname = config.get("feature_varname", "feature_number")
     pf_rr_thres = config["pf_rr_thres"]
     pf_link_area_thresh = config["pf_link_area_thresh"]
     heavy_rainrate_thresh = config["heavy_rainrate_thresh"]
@@ -66,11 +67,9 @@ def matchtbpf_singlefile(
         logger.debug("Loading cloudid data")
         logger.debug(cloudid_filename)
         cloudiddata = Dataset(cloudid_filename, "r")
-        cloudnumbermap = cloudiddata["cloudnumber"][:]
+        cloudnumbermap = cloudiddata[feature_varname][:]
         rawrainratemap = cloudiddata["precipitation"][:]
-        # cloudtype = cloudiddata['cloudtype'][:]
-        cloudid_basetime = cloudiddata["basetime"][:]
-        # basetime_calendar = cloudiddata['basetime'].calendar
+        cloudid_basetime = cloudiddata["base_time"][:]
         lon = cloudiddata["longitude"][:]
         lat = cloudiddata["latitude"][:]
         cloudiddata.close()
@@ -104,7 +103,6 @@ def matchtbpf_singlefile(
             pf_lat_weightedcentroid = np.full((nmatchcloud, nmaxpf), fillval_f, dtype=float)
             pf_accumrain = np.full((nmatchcloud, nmaxpf), fillval_f, dtype=float)
             pf_accumrainheavy = np.full((nmatchcloud, nmaxpf), fillval_f, dtype=float)
-            # basetime = np.empty(nmatchcloud, dtype='datetime64[s]')
             basetime = np.full(nmatchcloud, fillval_f, dtype=float)
 
             for imatchcloud in range(nmatchcloud):

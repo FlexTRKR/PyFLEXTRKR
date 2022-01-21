@@ -31,8 +31,8 @@ def gettracknumbers(config):
     enddate = config["enddate"]
     timegap = config["timegap"]
     maxnclouds = config["maxnclouds"]
-    npxname = config["npxname"]
-    keepsingletrack = config["keepsingletrack"]
+    featuresize_varname = config.get("featuresize_varname", "npix_feature")
+    # keepsingletrack = config["keepsingletrack"]
     start_basetime = config["start_basetime"]
     end_basetime = config["end_basetime"]
     fillval = config["fillval"]
@@ -161,12 +161,12 @@ def gettracknumbers(config):
         # logger.debug((time.ctime()))
         # Reference cloudid file
         referencecloudid_data = Dataset(ref_file, "r")
-        npix_reference = referencecloudid_data[npxname][:]
+        npix_reference = referencecloudid_data[featuresize_varname][:]
         referencecloudid_data.close()
 
         # New cloudid file
         newcloudid_data = Dataset(new_file, "r")
-        npix_new = newcloudid_data[npxname][:]
+        npix_new = newcloudid_data[featuresize_varname][:]
         newcloudid_data.close()
 
         # Remove possible extra time dimension to make sure npix is a 1D array

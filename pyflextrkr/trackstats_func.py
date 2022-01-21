@@ -1,11 +1,7 @@
 import numpy as np
 from netCDF4 import chartostring
 import xarray as xr
-import os
 import sys
-from math import pi
-import time
-import gc
 import logging
 import warnings
 
@@ -47,9 +43,10 @@ def calc_stats_singlefile(
 
     tracking_outpath = config["tracking_outpath"]
     pixel_radius = config["pixel_radius"]
-    feature_type = config["feature_type"] if ("feature_type" in config) else None
-    terrain_file = config["terrain_file"] if ("terrain_file" in config) else None
-    rangemask_varname = config["rangemask_varname"] if ("rangemask_varname" in config) else None
+    feature_type = config.get("feature_type", None)
+    terrain_file = config.get("terrain_file", None)
+    rangemask_varname = config.get("rangemask_varname", None)
+    feature_varname = config.get("feature_varname", "feature_number")
 
     # Only process file if that file contains a track
     if np.nanmax(tracknumbers) > 0:
@@ -66,9 +63,9 @@ def calc_stats_singlefile(
         longitude = ds["longitude"].values
         nx = ds.sizes["lon"]
         ny = ds.sizes["lat"]
-        file_cloudnumber = ds["cloudnumber"].squeeze().values
-        file_corecold_cloudnumber = ds["convcold_cloudnumber"].squeeze().values
-        file_basetime = ds["basetime"].squeeze()
+        # file_cloudnumber = ds["cloudnumber"].squeeze().values
+        file_corecold_cloudnumber = ds[feature_varname].squeeze().values
+        file_basetime = ds["base_time"].squeeze()
 
         # Read feature specific variables
         if feature_type == "radar_cells":
@@ -163,7 +160,7 @@ def calc_stats_singlefile(
             ast_corearea, cumcounts_corearea = pre_sort_cloudnumber(core_cloudnumber_mask)
 
             # Pre-sort dilated cell number to get location indices
-            dilated_cloudnumber_mask = ds["convcold_cloudnumber"].squeeze().values
+            dilated_cloudnumber_mask = ds[feature_varname].squeeze().values
             dilatednumber1d_uniq, dilatednumber1d_counts, \
             ast_dilatedcellarea, cumcounts_dilatedcellarea = pre_sort_cloudnumber(dilated_cloudnumber_mask)
 
@@ -882,7 +879,7 @@ def get_track_startend_status(
         out_dict,
         out_dict_attrs,
         fillval,
-        maxtracklength,
+        max_trackduration,
         min_dt_thresh=1.0,
 ):
     """
@@ -895,8 +892,8 @@ def get_track_startend_status(
             Dictionary containing the attributes of track statistics data.
         fillval: int
             Default fill value for int arrays.
-        maxtracklength: int
-            Maximum track length.
+        max_trackduration: int
+            Maximum track duration.
         min_dt_thresh: float, default=1.0
             Minimum time difference [seconds] allowed to match base time.
 
@@ -907,21 +904,30 @@ def get_track_startend_status(
     """
     logger = logging.getLogger(__name__)
 
-    numtracks = len(out_dict["track_duration"])
     out_tracklength = out_dict["track_duration"]
-    # base_time = out_dict["base_time"]
+    numtracks = len(out_tracklength)
 
     # Starting status
-    out_startbasetime = out_dict["base_time"][:, 0].data
-    out_startstatus = out_dict["track_status"][:, 0].data
-    out_startsplit_tracknumber = out_dict["split_tracknumbers"][:, 0].data
-
+    out_startbasetime = np.full(numtracks, np.nan, dtype=np.float64)
+    out_startstatus = np.full(numtracks, fillval, dtype=np.int32)
+    out_startsplit_tracknumber = np.full(numtracks, fillval, dtype=np.int32)
     out_startsplit_timeindex = np.full(numtracks, fillval, dtype=np.int32)
     out_startsplit_cloudnumber = np.full(numtracks, fillval, dtype=np.int32)
 
+    # Some tracks have 0 tracklength (no data in sparse arrays)
+    # causing inconsistency in the number of tracks
+    # This way make sure numtracks matches
+    trackid_real = np.where(out_tracklength > 0)[0]
+    out_startbasetime[trackid_real] = out_dict["base_time"][:, 0].data
+    out_startstatus[trackid_real] = out_dict["track_status"][:, 0].data
+    out_startsplit_tracknumber[trackid_real] = out_dict["split_tracknumbers"][:, 0].data
+    # out_startbasetime = out_dict["base_time"][:, 0].data
+    # out_startstatus = out_dict["track_status"][:, 0].data
+    # out_startsplit_tracknumber = out_dict["split_tracknumbers"][:, 0].data
+
     # Ending status
+    out_endbasetime = np.full(numtracks, np.nan, dtype=np.float64)
     out_endstatus = np.full(numtracks, fillval, dtype=np.int32)
-    out_endbasetime = np.full(numtracks, fillval, dtype=np.float64)
     out_endmerge_tracknumber = np.full(numtracks, fillval, dtype=np.int32)
     out_endmerge_timeindex = np.full(numtracks, fillval, dtype=np.int32)
     out_endmerge_cloudnumber = np.full(numtracks, fillval, dtype=np.int32)
@@ -929,10 +935,10 @@ def get_track_startend_status(
     # Loop over each track
     for itrack in range(0, numtracks):
 
-        # Make sure the track length is < maxtracklength
+        # Make sure the track length is < max_trackduration
         # so array access would not be out of bounds
         if (out_tracklength[itrack] > 0) & \
-                (out_tracklength[itrack] < maxtracklength):
+                (out_tracklength[itrack] < max_trackduration):
 
             # Get the end basetime
             out_endbasetime[itrack] = out_dict["base_time"][
@@ -947,14 +953,6 @@ def get_track_startend_status(
                     itrack, out_tracklength[itrack] - 1
                 ]
             )
-            # merge_num = out_dict["merge_tracknumbers"][itrack,:].max()
-            # if (out_tracklength[itrack] > 3) & (merge_num > 0):
-            #     import pdb; pdb.set_trace()
-            # merge_num = out_dict["merge_tracknumbers"][itrack, :].data[-1]
-            # if (out_endmerge_tracknumber[itrack] != merge_num):
-            #     import pdb; pdb.set_trace()
-            # else:
-            #     print(itrack, merge_num)
 
             # If end merge tracknumber exists, this track ends by merge
             if out_endmerge_tracknumber[itrack] >= 0:
@@ -965,10 +963,6 @@ def get_track_startend_status(
                             imerge_idx, 0: out_tracklength[imerge_idx]
                             ].data
 
-                # Find the time index matching the time when merging occurs
-                # match_timeidx = np.where(ibasetime == out_endbasetime[itrack])[0]
-                # if len(match_timeidx) == 1:
-
                 # Find the closest time matching the time when merging occurs
                 # If the time difference is < min_dt_thresh, consider it the same
                 dt = np.abs(ibasetime - out_endbasetime[itrack])
@@ -976,7 +970,7 @@ def get_track_startend_status(
                     match_timeidx = np.nanargmin(dt)
                     #  The time to connect to the track it merges with should be 1 time step after
                     if ((match_timeidx + 1) >= 0) & (
-                            (match_timeidx + 1) < maxtracklength
+                            (match_timeidx + 1) < max_trackduration
                     ):
                         out_endmerge_timeindex[itrack] = match_timeidx + 1
                         out_endmerge_cloudnumber[

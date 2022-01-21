@@ -176,10 +176,6 @@ def idclouds_gpmmergir(
                         final_ncoldpix = clouddata["final_ncoldpix"]
                         final_ncorecoldpix = clouddata["final_ncorecoldpix"]
                         final_nwarmpix = clouddata["final_nwarmpix"]
-                        # final_ncorepix = np.array([clouddata['final_ncorepix']])
-                        # final_ncoldpix = np.array([clouddata['final_ncoldpix']])
-                        # final_ncorecoldpix = np.array([clouddata['final_ncorecoldpix']])
-                        # final_nwarmpix = np.array([clouddata['final_nwarmpix']])
                         final_cloudtype = np.array([clouddata["final_cloudtype"]])
                         final_cloudnumber = np.array([clouddata["final_cloudnumber"]])
                         final_convcold_cloudnumber = np.array(
@@ -308,7 +304,6 @@ def idclouds_gpmmergir(
                                 + "_"
                                 + config['datadescription']
                                 + "_cloudid"
-                                # + config['cloudid_version']
                                 + "_"
                                 + file_datestring
                                 + "_"
@@ -317,7 +312,7 @@ def idclouds_gpmmergir(
                             )
                             logger.info(f"outcloudidfile: {cloudid_outfile}")
 
-                            # Check if file exists, if it does delete it
+                            # Delete file if it already exists
                             if os.path.isfile(cloudid_outfile):
                                 os.remove(cloudid_outfile)
 
@@ -334,16 +329,9 @@ def idclouds_gpmmergir(
                                 final_convcold_cloudnumber,
                                 final_cloudnumber,
                                 final_nclouds,
-                                final_ncorepix,
-                                final_ncoldpix,
                                 final_ncorecoldpix,
-                                final_nwarmpix,
-                                # config['cloudid_version'],
                                 cloudtb_threshs,
-                                config['geolimits'],
-                                mintb_thresh,
-                                maxtb_thresh,
-                                config['area_thresh'],
+                                config,
                                 precipitation=final_pcp,
                                 pf_number=final_pf_number,
                                 convcold_cloudnumber_orig=final_convcold_cloudnumber_orig,

@@ -55,8 +55,8 @@ def match_tbpf_tracks(config):
     ir_nmaxlength = ds.dims[times_dimname]
     ir_basetime = ds["base_time"].values
     ir_cloudnumber = ds["cloudnumber"].values
-    ir_mergecloudnumber = ds["mergecloudnumber"].values
-    ir_splitcloudnumber = ds["splitcloudnumber"].values
+    ir_mergecloudnumber = ds["merge_cloudnumber"].values
+    ir_splitcloudnumber = ds["split_cloudnumber"].values
 
     #########################################################################################
     # Find cloudid files and get their basetime

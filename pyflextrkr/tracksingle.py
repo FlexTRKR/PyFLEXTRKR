@@ -37,10 +37,12 @@ def trackclouds(
     seconddatestring = pd.to_datetime(secondbasetime, unit="s").strftime("%Y%m%d")
     secondtimestring = pd.to_datetime(secondbasetime, unit="s").strftime("%H%M")
     dataoutpath = config["tracking_outpath"]
-    # track_version = config["track_version"]
+    feature_varname = config.get("feature_varname", "feature_number")
+    nfeature_varname = config.get("nfeature_varname", "nfeatures")
     timegap = config["timegap"]
     nmaxlinks = config["nmaxlinks"]
     othresh = config["othresh"]
+    fillval = config["fillval"]
 
     # firstcloudidfilename = zipped_inputs[0]
     logger.debug(("firstcloudidfilename: ", firstcloudidfilename))
@@ -81,8 +83,8 @@ def trackclouds(
 
         # Open file
         reference_data = xr.open_dataset(reference_file, mask_and_scale=False)
-        reference_convcold_cloudnumber = reference_data["convcold_cloudnumber"].data
-        nreference = reference_data["nclouds"].data
+        reference_convcold_cloudnumber = reference_data[feature_varname].data
+        nreference = reference_data[nfeature_varname].data
         reference_data.close()
 
         ##########################################################
@@ -91,8 +93,8 @@ def trackclouds(
 
         # Open file
         new_data = xr.open_dataset(new_file, mask_and_scale=False)
-        new_convcold_cloudnumber = new_data["convcold_cloudnumber"].data
-        nnew = new_data["nclouds"].data
+        new_convcold_cloudnumber = new_data[feature_varname].data
+        nnew = new_data[nfeature_varname].data
         new_data.close()
 
         # Convert float type to int, missing value to 0
@@ -113,13 +115,15 @@ def trackclouds(
         #######################################################
         # Initialize matrices
         reference_forward_index = (
-            np.ones((1, int(nreference), int(nmaxlinks)), dtype=int) * -9999
+            np.ones((1, int(nreference), int(nmaxlinks)), dtype=int) * fillval
         )
         reference_forward_size = (
-            np.ones((1, int(nreference), int(nmaxlinks)), dtype=int) * -9999
+            np.ones((1, int(nreference), int(nmaxlinks)), dtype=int) * fillval
         )
-        new_backward_index = np.ones((1, int(nnew), int(nmaxlinks)), dtype=int) * -9999
-        new_backward_size = np.ones((1, int(nnew), int(nmaxlinks)), dtype=int) * -9999
+        new_backward_index = (
+            np.ones((1, int(nnew), int(nmaxlinks)), dtype=int) * fillval
+        )
+        new_backward_size = np.ones((1, int(nnew), int(nmaxlinks)), dtype=int) * fillval
 
         ######################################################
         # Loop through each cloud / feature in reference time and look for overlaping clouds / features in the new file
@@ -238,61 +242,61 @@ def trackclouds(
 
         logger.debug("Writing single tracks")
 
-        # Define xarracy dataset
-        output_data = xr.Dataset(
-            {
-                "basetime_new": (
-                    ["time"],
-                    np.array(
-                        [pd.to_datetime(new_data["basetime"].data, unit="s")],
-                        dtype="datetime64[s]",
-                    )[0],
-                ),
-                "basetime_ref": (
-                    ["time"],
-                    np.array(
-                        [pd.to_datetime(reference_data["basetime"].data, unit="s")],
-                        dtype="datetime64[s]",
-                    )[0],
-                ),
-                "newcloud_backward_index": (
-                    ["time", "nclouds_new", "nlinks"],
-                    new_backward_index,
-                ),
-                "newcloud_backward_size": (
-                    ["time", "nclouds_new", "nlinks"],
-                    new_backward_size,
-                ),
-                "refcloud_forward_index": (
-                    ["time", "nclouds_ref", "nlinks"],
-                    reference_forward_index,
-                ),
-                "refcloud_forward_size": (
-                    ["time", "nclouds_ref", "nlinks"],
-                    reference_forward_size,
-                ),
-            },
-            coords={
-                "time": (["time"], np.arange(0, 1)),
-                "nclouds_new": (["nclouds_new"], np.arange(0, nnew)),
-                "nclouds_ref": (["nclouds_ref"], np.arange(0, nreference)),
-                "nlinks": (["nlinks"], np.arange(0, nmaxlinks)),
-            },
-            attrs={
-                "title": "Indices linking clouds in two consecutive files forward and backward in time and the size of the linked cloud",
-                "Conventions": "CF-1.6",
-                "Institution": "Pacific Northwest National Laboratoy",
-                "Contact": "Katelyn Barber: katelyn.barber@pnnl.gov",
-                "Created_on": time.ctime(time.time()),
-                "new_date": new_filedatetime,
-                "ref_date": reference_filedatetime,
-                "new_file": new_file,
-                "ref_file": reference_file,
-                # "tracking_version_number": track_version,
-                "overlap_threshold": str(int(othresh * 100)) + "%",
-                "maximum_gap_allowed": str(timegap) + " hr",
-            },
-        )
+        # Define output variables dictionary
+        varlist = {
+            "basetime_new": (
+                ["time"],
+                np.array(
+                    [pd.to_datetime(new_data["base_time"].data, unit="s")],
+                    dtype="datetime64[s]",
+                )[0],
+            ),
+            "basetime_ref": (
+                ["time"],
+                np.array(
+                    [pd.to_datetime(reference_data["base_time"].data, unit="s")],
+                    dtype="datetime64[s]",
+                )[0],
+            ),
+            "newcloud_backward_index": (
+                ["time", "nclouds_new", "nlinks"],
+                new_backward_index,
+            ),
+            "newcloud_backward_size": (
+                ["time", "nclouds_new", "nlinks"],
+                new_backward_size,
+            ),
+            "refcloud_forward_index": (
+                ["time", "nclouds_ref", "nlinks"],
+                reference_forward_index,
+            ),
+            "refcloud_forward_size": (
+                ["time", "nclouds_ref", "nlinks"],
+                reference_forward_size,
+            ),
+        }
+        coordlist = {
+            "time": (["time"], np.arange(0, 1)),
+            "nclouds_new": (["nclouds_new"], np.arange(0, nnew)),
+            "nclouds_ref": (["nclouds_ref"], np.arange(0, nreference)),
+            "nlinks": (["nlinks"], np.arange(0, nmaxlinks)),
+        }
+        gattrlist = {
+            "title": "Indices linking clouds in two consecutive files forward and backward in time and the size of the linked cloud",
+            "Conventions": "CF-1.6",
+            "Institution": "Pacific Northwest National Laboratoy",
+            "Contact": "Zhe Feng, zhe.feng@pnnl.gov",
+            "Created_on": time.ctime(time.time()),
+            "new_date": new_filedatetime,
+            "ref_date": reference_filedatetime,
+            "new_file": new_file,
+            "ref_file": reference_file,
+            # "tracking_version_number": track_version,
+            "overlap_threshold": str(int(othresh * 100)) + "%",
+            "maximum_gap_allowed": str(timegap) + " hr",
+        }
+        # Define xarray dataset
+        output_data = xr.Dataset(varlist, coords=coordlist, attrs=gattrlist)
 
         # Specify variable attributes
         output_data.nclouds_new.attrs["long_name"] = "number of cloud in new file"
@@ -365,22 +369,22 @@ def trackclouds(
                 "newcloud_backward_index": {
                     "dtype": "int",
                     "zlib": True,
-                    "_FillValue": -9999,
+                    "_FillValue": fillval,
                 },
                 "newcloud_backward_size": {
                     "dtype": "int",
                     "zlib": True,
-                    "_FillValue": -9999,
+                    "_FillValue": fillval,
                 },
                 "refcloud_forward_index": {
                     "dtype": "int",
                     "zlib": True,
-                    "_FillValue": -9999,
+                    "_FillValue": fillval,
                 },
                 "refcloud_forward_size": {
                     "dtype": "int",
                     "zlib": True,
-                    "_FillValue": -9999,
+                    "_FillValue": fillval,
                 },
             },
         )

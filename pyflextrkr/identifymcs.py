@@ -20,7 +20,6 @@ def identifymcs_tb(config):
     """
 
     mcstbstats_filebase = config["mcstbstats_filebase"]
-    trackstats_filebase = config["trackstats_filebase"]
     trackstats_sparse_filebase = config["trackstats_sparse_filebase"]
     stats_path = config["stats_outpath"]
     startdate = config["startdate"]
@@ -51,97 +50,28 @@ def identifymcs_tb(config):
     ##########################################################################
     # Load statistics file
     statistics_file = f"{stats_path}{trackstats_sparse_filebase}{startdate}_{enddate}.nc"
-    # statistics_file = f"{stats_path}{trackstats_filebase}{startdate}_{enddate}.nc.copy"
     logger.debug(statistics_file)
 
-    # xr.set_options(keep_attrs=True)
-    ds_all = xr.open_dataset(statistics_file,
-                             mask_and_scale=False,
-                             decode_times=False)
-    #
-    sparse_dimname = 'sparse_index'
-    nsparse_data = ds_all.dims[sparse_dimname]
-    ntracks = ds_all.dims[tracks_dimname]
-    # Sparse array indices
-    tracks_idx = ds_all[tracks_idx_varname].values
-    times_idx = ds_all[times_idx_varname].values
-    row_col_ind = (tracks_idx, times_idx)
-    # Sparse array shapes
-    shape_2d = (ntracks, max_trackduration)
+    # Load sparse tracks statistics file and convert to sparse arrays
+    ds_1d, \
+    sparse_attrs_dict, \
+    sparse_dict = load_sparse_trackstats(max_trackduration, statistics_file,
+                                         times_idx_varname, tracks_dimname,
+                                         tracks_idx_varname)
 
-    # Convert sparse arrays and put in a dictionary
-    sparse_dict = {}
-    sparse_attrs_dict = {}
-    for ivar in ds_all.data_vars.keys():
-        # Check dimension name for sparse arrays
-        if ds_all[ivar].dims[0] == sparse_dimname:
-            # Convert to sparse array
-            sparse_dict[ivar] = csr_matrix(
-                (ds_all[ivar].values, row_col_ind), shape=shape_2d, dtype=ds_all[ivar].dtype,
-            )
-            # Collect variable attributes
-            sparse_attrs_dict[ivar] = ds_all[ivar].attrs
-
-    # Drop all sparse variables and dimension
-    ds_1d = ds_all.drop_dims(sparse_dimname)
-    ds_all.close()
-
-    # for ivar in ds_dict['data_vars'].keys(): print(ivar, ds_dict['data_vars'][ivar].sizes)
-
+    # Get necessary variables
     ntracks_all = ds_1d.dims[tracks_dimname]
-    # max_trackduration = int(max(duration_range))
-    logger.debug(f"max_trackduration:{max_trackduration}")
-    # Load necessary variables
+    logger.debug(f"max_trackduration: {max_trackduration}")
     track_duration = ds_1d["track_duration"].values
     end_merge_tracknumber = ds_1d["end_merge_tracknumber"].values
     start_split_tracknumber = ds_1d["start_split_tracknumber"].values
     trackstat_corearea = sparse_dict["core_area"]
     trackstat_coldarea = sparse_dict["cold_area"]
     basetime = sparse_dict["base_time"]
-    # mergecloudnumbers = sparse_dict["merge_tracknumbers"]
-    # splitcloudnumbers = sparse_dict["split_tracknumbers"]
     cloudnumbers = sparse_dict["cloudnumber"]
     track_status = sparse_dict["track_status"]
 
-
-    # Convert a few key variables to dense arrays
-    # and replace fill values with NaN
-    # This is a temporary solution to make the codes for
-    # adding small merge/split clouds to MCS works
-    # TODO: ideally the add merge/split clouds code is modified to work with sparse arrays
-    # basetime_s = copy.deepcopy(basetime)
-
-    # basetime = basetime.toarray()
-    # cloudnumbers = cloudnumbers.toarray().astype(np.float32)
-    # mergecloudnumbers = mergecloudnumbers.toarray().astype(np.float32)
-    # splitcloudnumbers = splitcloudnumbers.toarray().astype(np.float32)
-    # track_status = track_status.toarray()
-    # basetime[basetime == 0] = fillval_f
-    # mask = np.logical_or((cloudnumbers == 0), (cloudnumbers == fillval))
-    # cloudnumbers[mask] = fillval_f
-    # mask = np.logical_or((mergecloudnumbers == 0), (mergecloudnumbers == fillval))
-    # mergecloudnumbers[mask] = fillval_f
-    # mask = np.logical_or((splitcloudnumbers == 0), (splitcloudnumbers == fillval))
-    # splitcloudnumbers[mask] = fillval_f
-    # track_status[np.isnan(basetime)] = fillval
-
-
-    # # Total number of tracked features
-    # ntracks_all = ds_all.dims[tracks_dimname]
-    # # Maximum number of times in a given track
-    # max_trackduration = ds_all.dims[times_dimname]
-    # logger.debug(f"max_trackduration:{max_trackduration}")
-    # # Load necessary variables
-    # track_duration = ds_all["track_duration"].values
-    # trackstat_corearea = ds_all["core_area"].values
-    # trackstat_coldarea = ds_all["cold_area"].values
-    # basetime = ds_all["base_time"].values
-    # mergecloudnumbers = ds_all["merge_tracknumbers"].values
-    # splitcloudnumbers = ds_all["split_tracknumbers"].values
-    # cloudnumbers = ds_all["cloudnumber"].values
-    # track_status = ds_all["track_status"].values
-    # fillval_f = ds_all["cold_area"].attrs["_FillValue"]
-    # ds_all.close()
+    # import pdb; pdb.set_trace()
 
     logger.debug(f"MCS CCS area threshold: {mcs_tb_area_thresh}")
     logger.debug(f"MCS duration threshold: {duration_thresh}")
@@ -259,8 +189,6 @@ def identifymcs_tb(config):
                 # Get MCS basetime
                 imcsbasetime = basetime[int(mcstracknumbers[imcs])-1, :].data
 
-                # import pdb; pdb.set_trace()
-
                 # Loop through each timestep in the MCS track
                 for t in np.arange(0, len(imcsbasetime)):
                     # Find merging cloud times that match current MCS track time
@@ -301,132 +229,6 @@ def identifymcs_tb(config):
                         mcs_split_ccsarea[imcs, int(t), 0:nspliters] = splittingccsarea[timematch]
 
 
-    # import pdb;
-    # pdb.set_trace()
-
-    # # Let's convert 2D to 1D arrays for performance
-    # split_col = np.nanmax(splitcloudnumbers, axis=1)
-    # merger_col = np.nanmax(mergecloudnumbers, axis=1)
-    #
-    # # Loop through each MCS and link small clouds merging in
-    # for imcs in np.arange(0, nmcs):
-    #     ###################################################################################
-    #     # Isolate basetime data
-    #     if imcs == 0:
-    #         mcsbasetime = basetime[trackidx_mcs[imcs], :]
-    #         # mcsbasetime = np.array([pd.to_datetime(num2date(basetime[trackidx_mcs[imcs], :],
-    #         # units=basetime_units, calendar=basetime_calendar))], dtype='datetime64[s]')
-    #     else:
-    #         mcsbasetime = np.row_stack((mcsbasetime, basetime[trackidx_mcs[imcs], :]))
-    #         # mcsbasetime = np.concatenate((mcsbasetime,
-    #         # np.array([pd.to_datetime(num2date(basetime[trackidx_mcs[imcs], :],
-    #         # units=basetime_units, calendar=basetime_calendar))], dtype='datetime64[s]')), axis=0)
-    #
-    #     ###################################################################################
-    #     # Find mergers
-    #     mergefile = np.where(merger_col == mcstracknumbers[imcs])[0]
-    #
-    #     for imerger in range(0, len(mergefile)):
-    #         additionalmergefile = np.where(merger_col == mergefile[imerger] + 1)[0]
-    #
-    #         if len(additionalmergefile) > 0:
-    #             mergefile = np.concatenate((mergefile, additionalmergefile))
-    #
-    #     # Loop through all merging tracks, if present
-    #     if len(mergefile) > 0:
-    #         # Isolate merging cases that have short duration
-    #         mergefile = mergefile[trackstat_lifetime[mergefile] < merge_duration]
-    #
-    #         # Make sure the merger itself is not an MCS
-    #         mergingmcs = np.intersect1d(mergefile, mcstracknumbers)
-    #         if len(mergingmcs) > 0:
-    #             for iremove in np.arange(0, len(mergingmcs)):
-    #                 removemerges = np.array(np.where(mergefile == mergingmcs[iremove]))[0, :]
-    #                 mergefile[removemerges] = fillval
-    #             mergefile = mergefile[mergefile != fillval].astype(int)
-    #
-    #         # Continue if mergers satisfy duration and MCS restriction
-    #         if len(mergefile) > 0:
-    #
-    #             # Get data for merging tracks
-    #             mergingcloudnumber = cloudnumbers[mergefile, :]
-    #             mergingbasetime = basetime[mergefile, :]
-    #             mergingstatus = track_status[mergefile, :]
-    #
-    #             # Get MCS basetime
-    #             imcsbasetime = basetime[
-    #                            int(mcstracknumbers[imcs])-1, 0:int(mcs_duration[imcs])
-    #                            ]
-    #
-    #             # Loop through each timestep in the MCS track
-    #             for t in np.arange(0, mcs_duration[imcs]):
-    #
-    #                 # Find merging cloud times that match current MCS track time
-    #                 timematch = np.where(mergingbasetime == imcsbasetime[int(t)])
-    #
-    #                 if np.shape(timematch)[1] > 0:
-    #                     # save cloud number of small mergers
-    #                     nmergers = np.shape(timematch)[1]
-    #                     mcs_merge_cloudnumber[
-    #                         imcs, int(t), 0:nmergers
-    #                     ] = mergingcloudnumber[timematch].astype(int)
-    #                     mcs_merge_status[imcs, int(t), 0:nmergers] = mergingstatus[
-    #                         timematch
-    #                     ]
-    #
-    #     ############################################################
-    #     # Find splits
-    #     splitfile = np.where(split_col == mcstracknumbers[imcs])[0]
-    #     # Need to verify these work
-    #
-    #     # Loop through all splitting tracks, if present
-    #     if len(splitfile) > 0:
-    #         # Isolate splitting cases that have short duration
-    #         splitfile = splitfile[trackstat_lifetime[splitfile] < split_duration]
-    #
-    #         # Make sure the spliter itself is not an MCS
-    #         splittingmcs = np.intersect1d(splitfile, mcstracknumbers)
-    #         if len(splittingmcs) > 0:
-    #             for iremove in np.arange(0, len(splittingmcs)):
-    #                 removesplits = np.array(
-    #                     np.where(splitfile == splittingmcs[iremove])
-    #                 )[0, :]
-    #                 splitfile[removesplits] = fillval
-    #             splitfile = splitfile[splitfile != fillval].astype(int)
-    #
-    #         # Continue if spliters satisfy duration and MCS restriction
-    #         if len(splitfile) > 0:
-    #
-    #             # Get data for splitting tracks
-    #             splittingcloudnumber = cloudnumbers[splitfile, :]
-    #             splittingbasetime = basetime[splitfile, :]
-    #             splittingstatus = track_status[splitfile, :]
-    #
-    #             # Get MCS basetime
-    #             imcsbasetime = basetime[
-    #                            int(mcstracknumbers[imcs])-1, 0:int(mcs_duration[imcs])
-    #                            ]
-    #
-    #             # Loop through each timestep in the MCS track
-    #             for t in np.arange(0, mcs_duration[imcs]):
-    #
-    #                 # Find splitting cloud times that match current MCS track time
-    #                 timematch = np.where(splittingbasetime == imcsbasetime[int(t)])
-    #                 if np.shape(timematch)[1] > 0:
-    #
-    #                     # save cloud number of small splitrs
-    #                     nspliters = np.shape(timematch)[1]
-    #                     mcs_split_cloudnumber[
-    #                         imcs, int(t), 0:nspliters
-    #                     ] = splittingcloudnumber[timematch].astype(int)
-    #                     mcs_split_status[imcs, int(t), 0:nspliters] = splittingstatus[
-    #                         timematch
-    #                     ]
-    #
-    # mcs_merge_cloudnumber = mcs_merge_cloudnumber.astype(np.int32)
-    # mcs_split_cloudnumber = mcs_split_cloudnumber.astype(np.int32)
-    # import pdb; pdb.set_trace()
-
     ###########################################################################
     # Prepare output dataset
 
@@ -460,17 +262,13 @@ def identifymcs_tb(config):
     # Define 2D Xarray dataset
     ds_2d = xr.Dataset(varlist, coords=coordlist)
     # Subset MCS tracks from 1D dataset
+    # Note: the tracks_dimname cannot be used here as Xarray does not seem to have
+    # a method to select data with a string variable
     ds_1d = ds_1d.sel(tracks=trackidx_mcs)
     # Replace tracks coordinate
     ds_1d[tracks_dimname] = tracks_coord
     # Merge 1D & 2D datasets
     dsout = xr.merge([ds_1d, ds_2d], compat="override", combine_attrs="no_conflicts")
-
-
-    # Subset MCS tracks from all tracks dataset
-    # Note: the tracks_dimname cannot be used here as Xarray does not seem to have
-    # a method to select data with a string variable
-    # dsout = ds_all.sel(tracks=trackidx_mcs)
     # Remove no use variables
     drop_vars_list = [
         "merge_tracknumbers", "split_tracknumbers",
@@ -478,13 +276,6 @@ def identifymcs_tb(config):
         "end_merge_tracknumber", "end_merge_timeindex",
     ]
     dsout = dsout.drop_vars(drop_vars_list)
-    # Replace tracks coordinate
-    # tracks_coord = np.arange(0, nmcs)
-    # times_coord = ds_all[times_dimname]
-    # dsout[tracks_dimname] = tracks_coord
-
-    # import pdb;
-    # pdb.set_trace()
 
     # Create a flag for MCS status
     # ccs_area = trackstat_ccsarea[trackidx_mcs, :]
@@ -498,8 +289,8 @@ def identifymcs_tb(config):
         "mcs_duration": mcs_duration,
         "mcs_status": mcs_status,
         "ccs_area": ccs_area,
-        "mergecloudnumber": mcs_merge_cloudnumber,
-        "splitcloudnumber": mcs_split_cloudnumber,
+        "merge_cloudnumber": mcs_merge_cloudnumber,
+        "split_cloudnumber": mcs_split_cloudnumber,
         "merge_ccs_area": mcs_merge_ccsarea,
         "split_ccs_area": mcs_split_ccsarea,
     }
@@ -519,12 +310,12 @@ def identifymcs_tb(config):
             "units": "km^2",
             "_FillValue": fillval_f,
         },
-        "mergecloudnumber": {
+        "merge_cloudnumber": {
             "long_name": "Cloud numbers that merge into MCS",
             "units": "unitless",
             "_FillValue": fillval,
         },
-        "splitcloudnumber": {
+        "split_cloudnumber": {
             "long_name": "Cloud numbers that split from MCS",
             "units": "unitless",
             "_FillValue": fillval,
@@ -589,3 +380,60 @@ def identifymcs_tb(config):
     logger.info(f"{statistics_outfile}")
 
     return statistics_outfile
+
+
+def load_sparse_trackstats(
+        max_trackduration,
+        statistics_file,
+        times_idx_varname,
+        tracks_dimname,
+        tracks_idx_varname,
+):
+    """
+    Load sparse trackstats file and convert to sparse arrays.
+
+    Args:
+        max_trackduration:
+        statistics_file:
+        times_idx_varname:
+        tracks_dimname:
+        tracks_idx_varname:
+
+    Returns:
+        ds_1d: Xarray Dataset
+            Dataset containing 1D track stats variables.
+        sparse_attrs_dict: dictionary
+            Dictionary containing sparse array attributes.
+        sparse_dict: dictionary
+            Dictionary containing sparse array variables.
+    """
+    # xr.set_options(keep_attrs=True)
+    ds_all = xr.open_dataset(statistics_file,
+                             mask_and_scale=False,
+                             decode_times=False)
+    # Get sparse array info
+    sparse_dimname = 'sparse_index'
+    nsparse_data = ds_all.dims[sparse_dimname]
+    ntracks = ds_all.dims[tracks_dimname]
+    # Sparse array indices
+    tracks_idx = ds_all[tracks_idx_varname].values
+    times_idx = ds_all[times_idx_varname].values
+    row_col_ind = (tracks_idx, times_idx)
+    # Sparse array shapes
+    shape_2d = (ntracks, max_trackduration)
+    # Convert sparse arrays and put in a dictionary
+    sparse_dict = {}
+    sparse_attrs_dict = {}
+    for ivar in ds_all.data_vars.keys():
+        # Check dimension name for sparse arrays
+        if ds_all[ivar].dims[0] == sparse_dimname:
+            # Convert to sparse array
+            sparse_dict[ivar] = csr_matrix(
+                (ds_all[ivar].values, row_col_ind), shape=shape_2d, dtype=ds_all[ivar].dtype,
+            )
+            # Collect variable attributes
+            sparse_attrs_dict[ivar] = ds_all[ivar].attrs
+    # Drop all sparse variables and dimension
+    ds_1d = ds_all.drop_dims(sparse_dimname)
+    ds_all.close()
+    return ds_1d, sparse_attrs_dict, sparse_dict

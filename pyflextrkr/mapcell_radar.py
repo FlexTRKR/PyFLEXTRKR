@@ -25,6 +25,8 @@ def mapcell_radar(
         celltrackmaps_outfile: string
             Track number pixel-level file name.
     """
+    feature_varname = config.get("feature_varname", "feature_number")
+    nfeature_varname = config.get("nfeature_varname", "nfeatures")
 
     np.set_printoptions(threshold=np.inf)
     logger = logging.getLogger(__name__)
@@ -62,14 +64,14 @@ def mapcell_radar(
 
     # Load cloudid data
     cloudiddata = Dataset(cloudid_filename, "r")
-    cloudid_cloudnumber = cloudiddata["cloudnumber"][:]
+    cloudid_cloudnumber = cloudiddata[feature_varname][:]
+    nclouds = cloudiddata[nfeature_varname][:]
     # cloudid_cloudnumber_noinflate = cloudiddata['cloudnumber_noinflate'][:]
-    cloudid_basetime = cloudiddata["basetime"][:]
-    basetime_units = cloudiddata["basetime"].units
-    # basetime_calendar = cloudiddata['basetime'].calendar
+    cloudid_basetime = cloudiddata["base_time"][:]
+    basetime_units = cloudiddata["base_time"].units
+    # basetime_calendar = cloudiddata['base_time'].calendar
     longitude = cloudiddata["longitude"][:]
     latitude = cloudiddata["latitude"][:]
-    nclouds = cloudiddata["nclouds"][:]
     comp_ref = cloudiddata["comp_ref"][:]
     dbz_lowlevel = cloudiddata["dbz_lowlevel"][:]
     conv_core = cloudiddata["conv_core"][:]
@@ -207,7 +209,7 @@ def mapcell_radar(
 
     # Define variable list
     varlist = {
-        "basetime": (["time"], cloudid_basetime),
+        "base_time": (["time"], cloudid_basetime),
         "longitude": (["lat", "lon"], longitude),
         "latitude": (["lat", "lon"], latitude),
         "nclouds": (["time"], nclouds),
@@ -259,10 +261,10 @@ def mapcell_radar(
     ] = "epoch time (seconds since 01/01/1970 00:00) in epoch of file"
     ds_out.time.attrs["units"] = basetime_units
 
-    ds_out.basetime.attrs[
+    ds_out.base_time.attrs[
         "long_name"
     ] = "Epoch time (seconds since 01/01/1970 00:00) of this file"
-    ds_out.basetime.attrs["units"] = basetime_units
+    ds_out.base_time.attrs["units"] = basetime_units
 
     ds_out.longitude.attrs["long_name"] = "Grid of longitude"
     ds_out.longitude.attrs["units"] = "degrees"

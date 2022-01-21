@@ -26,7 +26,6 @@ def trackstats_driver(config):
     np.set_printoptions(threshold=np.inf)
     logger = logging.getLogger(__name__)
 
-    t0_step4 = time.time()
     logger.info('Calculating track statistics')
 
     # Get values from config dictionary
@@ -59,7 +58,6 @@ def trackstats_driver(config):
     numtracks = ds["ntracks"]
     cloudidfiles = ds["cloudid_files"].values
     nfiles = ds.sizes["nfiles"]
-    numcharfilename = ds.sizes['ncharacters']
     tracknumbers = ds["track_numbers"].squeeze()
     trackreset = ds["track_reset"].squeeze()
     tracksplit = ds["track_splitnumbers"].squeeze()
@@ -114,7 +112,7 @@ def trackstats_driver(config):
     # Create arrays to store output
     logger.debug("Collecting track statistics")
 
-    maxtracklength = int(max(duration_range))
+    max_trackduration = int(max(duration_range))
     numtracks = int(numtracks)
 
     # Make a variable list from one of the returned dictionaries
@@ -129,7 +127,7 @@ def trackstats_driver(config):
     tracks_idx_varname = f"{tracks_dimname}_indices"
     times_idx_varname = f"{times_dimname}_indices"
     # Create a dictionary with variable name as key, and output arrays as values
-    out_dict_sm = {
+    out_dict = {
         "track_duration": np.zeros(numtracks, dtype=np.int32),
     }
     # Create a matching dictionary for variable attributes
@@ -148,7 +146,7 @@ def trackstats_driver(config):
                      "split_tracknumbers"]
     # Loop over variable list to create the dictionary entry
     for ivar in var_names:
-        out_dict_sm[ivar] = np.array([])
+        out_dict[ivar] = np.array([])
         out_dict_attrs[ivar] = var_attrs[ivar]
 
     # Initialize row/col indices arrays
@@ -168,20 +166,20 @@ def trackstats_driver(config):
             numtrackstmp = iResult["numtracks"]
 
             # Record the current length of the track by adding 1
-            out_dict_sm["track_duration"][tracknumbertmp] = (
-                    out_dict_sm["track_duration"][tracknumbertmp] + 1
+            out_dict["track_duration"][tracknumbertmp] = (
+                    out_dict["track_duration"][tracknumbertmp] + 1
             )
 
-            # Find track lengths that are within maxtracklength
+            # Find track lengths that are within max_trackduration
             # Only record these to avoid array index out of bounds
             # itracklength = out_tracklength[tracknumbertmp]
-            itracklength = out_dict_sm["track_duration"][tracknumbertmp]
-            ridx = itracklength <= maxtracklength
+            itracklength = out_dict["track_duration"][tracknumbertmp]
+            ridx = itracklength <= max_trackduration
             # Loop over each variable and assign values to output dictionary
             for ivar in var_names:
                 # Concatenate arrays for 2D variables
-                out_dict_sm[ivar] = np.concatenate(
-                    (out_dict_sm[ivar], iResult[ivar])
+                out_dict[ivar] = np.concatenate(
+                    (out_dict[ivar], iResult[ivar])
                 )
             # row, column indices for sparse matrix
             # row:tracks, col:times
@@ -190,27 +188,27 @@ def trackstats_driver(config):
 
     # Convert 2D variables to sparse arrays
     row_col_ind = (row_idx, col_idx)
-    shape_2d = (numtracks, maxtracklength)
+    shape_2d = (numtracks, max_trackduration)
     for ivar in var_names:
         if ivar not in var_names_int:
             if ivar == "base_time":
-                out_dict_sm[ivar] = csr_matrix(
-                    (out_dict_sm[ivar], row_col_ind), shape=shape_2d, dtype=np.float64,
+                out_dict[ivar] = csr_matrix(
+                    (out_dict[ivar], row_col_ind), shape=shape_2d, dtype=np.float64,
                 )
             else:
-                out_dict_sm[ivar] = csr_matrix(
-                    (out_dict_sm[ivar], row_col_ind), shape=shape_2d, dtype=np.float32,
+                out_dict[ivar] = csr_matrix(
+                    (out_dict[ivar], row_col_ind), shape=shape_2d, dtype=np.float32,
                 )
         else:
-            out_dict_sm[ivar] = csr_matrix(
-                (out_dict_sm[ivar], row_col_ind), shape=shape_2d, dtype=np.int32,
+            out_dict[ivar] = csr_matrix(
+                (out_dict[ivar], row_col_ind), shape=shape_2d, dtype=np.int32,
             )
 
     t1_files = (time.time() - t0_files) / 60.0
     logger.debug(("Files processing time (min): ", t1_files))
     logger.debug("Finish collecting track statistics")
 
-    trackidx_all = np.arange(0, len(out_dict_sm["track_duration"]))
+    trackidx_all = np.arange(0, len(out_dict["track_duration"]))
 
     # # Create a variable list from one of the returned dictionaries
     # var_names = list(final_result[0].keys())
@@ -221,8 +219,8 @@ def trackstats_driver(config):
     #########################################################################################
     # Check data max duration against config set up
     # Provide warning message and exit if 'duration_range' is too short
-    data_max_trackduration = np.nanmax(out_dict_sm["track_duration"])
-    if data_max_trackduration > maxtracklength:
+    data_max_trackduration = np.nanmax(out_dict["track_duration"])
+    if data_max_trackduration > max_trackduration:
         logger.critical(f"WARNING: Max track duration in data ({data_max_trackduration}) " +
                         f"exceeds 'duration_range' ({duration_range})!")
         logger.critical(f"This would cause missing statistics in certain long-lived tracks!")
@@ -235,8 +233,8 @@ def trackstats_driver(config):
     logger.debug("Getting starting and ending status")
     t0_status = time.time()
 
-    out_dict_sm, out_dict_attrs = get_track_startend_status(
-        out_dict_sm, out_dict_attrs, fillval, maxtracklength)
+    out_dict, out_dict_attrs = get_track_startend_status(
+        out_dict, out_dict_attrs, fillval, max_trackduration)
 
     t1_status = (time.time() - t0_status) / 60.0
     logger.debug(("Start/end status processing time (min): ", t1_status))
@@ -249,14 +247,14 @@ def trackstats_driver(config):
         gc.collect()
 
         # Find tracks that have positive duration
-        trackidx_hascloud = np.where(out_dict_sm["track_duration"] > 0)[0]
+        trackidx_hascloud = np.where(out_dict["track_duration"] > 0)[0]
         # Tracks that are not starting from a split, or ending in a merge
         mask_notmergesplit = np.logical_and(
-            (out_dict_sm['start_split_cloudnumber'] == fillval),
-            (out_dict_sm['end_merge_cloudnumber'] == fillval),
+            (out_dict['start_split_cloudnumber'] == fillval),
+            (out_dict['end_merge_cloudnumber'] == fillval),
         )
         # Tracks that are shorter than the minimum duration
-        mask_shortduration = out_dict_sm["track_duration"] < min(duration_range)
+        mask_shortduration = out_dict["track_duration"] < min(duration_range)
         # Track indices that are short and not a merge or split
         # These tracks have no meaningful use
         trackidx_remove = np.where(mask_notmergesplit & mask_shortduration)[0]
@@ -267,18 +265,14 @@ def trackstats_driver(config):
         trackidx_keep = np.intersect1d(trackidx_hascloud, trackidx_notshort)
         # Keep these tracks for all variables in the output dictionary
         numtracks = len(trackidx_keep)
-        for ivar in out_dict_sm.keys():
-            if out_dict_sm[ivar].ndim == 1:
-                out_dict_sm[ivar] = out_dict_sm[ivar][trackidx_keep]
-            elif out_dict_sm[ivar].ndim == 2:
-                out_dict_sm[ivar] = out_dict_sm[ivar][trackidx_keep, :]
+        for ivar in out_dict.keys():
+            if out_dict[ivar].ndim == 1:
+                out_dict[ivar] = out_dict[ivar][trackidx_keep]
+            elif out_dict[ivar].ndim == 2:
+                out_dict[ivar] = out_dict[ivar][trackidx_keep, :]
 
-        # numtracks = len(trackidx_hascloud)
-        # out_dict["track_duration"] = out_dict["track_duration"][trackidx_hascloud]
-        # for ivar in var_names:
-        #     out_dict[ivar] = out_dict[ivar][trackidx_hascloud, :]
     else:
-        numtracks = len(out_dict_sm["track_duration"])
+        numtracks = len(out_dict["track_duration"])
         trackidx_keep = trackidx_all
 
     #########################################################################################
@@ -288,24 +282,24 @@ def trackstats_driver(config):
 
     adjusted_out_mergenumber, \
     adjusted_out_splitnumber = adjust_mergesplit_numbers(
-        out_dict_sm["merge_tracknumbers"].data,
-        out_dict_sm["split_tracknumbers"].data,
+        out_dict["merge_tracknumbers"].data,
+        out_dict["split_tracknumbers"].data,
         trackidx_keep,
         fillval,
     )
 
-    # Get the row/col indices by converting 'area' to COO format
-    row_out = out_dict_sm['area'].tocoo().row
-    col_out = out_dict_sm['area'].tocoo().col
+    # Get the row/col indices by converting 'base_time' to COO format
+    row_out = out_dict['base_time'].tocoo().row
+    col_out = out_dict['base_time'].tocoo().col
 
     # Convert adjusted merge/split number to sparse arrays
     # and update the dictionary
     row_col_ind = (row_out, col_out)
-    shape_2d = (numtracks, maxtracklength)
-    out_dict_sm["merge_tracknumbers"] = csr_matrix(
+    shape_2d = (numtracks, max_trackduration)
+    out_dict["merge_tracknumbers"] = csr_matrix(
         (adjusted_out_mergenumber, row_col_ind), shape=shape_2d, dtype=np.int32,
     )
-    out_dict_sm["split_tracknumbers"] = csr_matrix(
+    out_dict["split_tracknumbers"] = csr_matrix(
         (adjusted_out_splitnumber, row_col_ind), shape=shape_2d, dtype=np.int32,
     )
     t1_ms = (time.time() - t0_ms) / 60.0
@@ -315,14 +309,14 @@ def trackstats_driver(config):
     #########################################################################################
     # Record starting and ending status again
     # because the tracknumbers have been adjusted
-    out_dict_sm, out_dict_attrs = get_track_startend_status(
-        out_dict_sm, out_dict_attrs, fillval, maxtracklength)
+    out_dict, out_dict_attrs = get_track_startend_status(
+        out_dict, out_dict_attrs, fillval, max_trackduration)
 
     #########################################################################################
     # Prepare to write output file
     # Add tracks/times indices to output dictionary
-    out_dict_sm[tracks_idx_varname] = row_out
-    out_dict_sm[times_idx_varname] = col_out
+    out_dict[tracks_idx_varname] = row_out
+    out_dict[times_idx_varname] = col_out
     out_dict_attrs[tracks_idx_varname] = {
         "long_name": "Tracks indices for constructing sparse array",
     }
@@ -332,33 +326,56 @@ def trackstats_driver(config):
 
     # Write dense arrays output file
     if trackstats_dense_netcdf == 1:
-        write_trackstats_dense(config, logger, fillval, fillval_f,
-                               maxtracklength, numtracks, out_dict_sm, out_dict_attrs, times_dimname,
+        write_trackstats_dense(config, fillval, fillval_f,
+                               max_trackduration, numtracks, out_dict, out_dict_attrs, times_dimname,
                                times_idx_varname, tracks_dimname, tracks_idx_varname, trackstats_outfile)
 
     # Write sparse arrays output file
-    write_trackstats_sparse(config, logger, numtracks, out_dict_attrs, out_dict_sm, row_out, tracks_dimname,
+    write_trackstats_sparse(config, numtracks, out_dict_attrs, out_dict, row_out, tracks_dimname,
                             trackstats_sparse_outfile)
 
     return trackstats_outfile
 
 
-def write_trackstats_sparse(config, logger, numtracks, out_dict_attrs, out_dict_sm, row_out, tracks_dimname,
+def write_trackstats_sparse(config, numtracks, out_dict_attrs, out_dict, row_out, tracks_dimname,
                             trackstats_sparse_outfile):
+    """
+    Write sparse array format track statistics to netCDF file.
+
+    Args:
+        config: dictionary
+            Dictionary containing config parameters.
+        numtracks: int
+            Number of tracks.
+        out_dict_attrs: dictionary
+            Output variable attributes dictionary.
+        out_dict: dictionary
+            Output variables dictionary.
+        row_out: np.array
+            Sparse array row indices.
+        tracks_dimname: string
+            Tracks dimension name.
+        trackstats_sparse_outfile: string
+            Output trackstats netCDF filename.
+
+    Returns:
+        None.
+    """
+    logger = logging.getLogger(__name__)
     logger.debug("Writing trackstats netcdf (sparse) ... ")
     # Delete file if it already exists
     if os.path.isfile(trackstats_sparse_outfile):
         os.remove(trackstats_sparse_outfile)
 
     # Flatten the sparse arrays in the output dictionary
-    for ivar in out_dict_sm.keys():
-        if out_dict_sm[ivar].ndim == 2:
-            out_dict_sm[ivar] = out_dict_sm[ivar].data
+    for ivar in out_dict.keys():
+        if out_dict[ivar].ndim == 2:
+            out_dict[ivar] = out_dict[ivar].data
 
     sparse_dimname = 'sparse_index'
     varlist = {}
     # Define output variable dictionary
-    for key, value in out_dict_sm.items():
+    for key, value in out_dict.items():
         # For 1D variables
         if value.size == numtracks:
             varlist[key] = ([tracks_dimname], value, out_dict_attrs[key])
@@ -399,17 +416,49 @@ def write_trackstats_sparse(config, logger, numtracks, out_dict_attrs, out_dict_
     return
 
 
-def write_trackstats_dense(config, logger, fillval, fillval_f,
-                           maxtracklength, numtracks, out_dict_sm, out_dict_attrs, times_dimname,
+def write_trackstats_dense(config, fillval, fillval_f,
+                           max_trackduration, numtracks, out_dict, out_dict_attrs, times_dimname,
                            times_idx_varname, tracks_dimname, tracks_idx_varname, trackstats_outfile):
+    """
+    Write dense array format track statistics to netCDF file.
 
+    Args:
+        config: dictionary
+            Dictionary containing config parameters.
+        fillval: int
+            Fill value for int type variables.
+        fillval_f: float
+            Fill value for float type variables.
+        max_trackduration: int
+            Maximum track duration.
+        numtracks: int
+            Number of tracks.
+        out_dict: dictionary
+            Output variables dictionary.
+        out_dict_attrs: dictionary
+            Output variable attributes dictionary.
+        times_dimname: string
+            Times dimension name.
+        times_idx_varname: string
+            Times indices variable name.
+        tracks_dimname: string
+            Tracks dimension name.
+        tracks_idx_varname: string
+            Tracks indices variable name.
+        trackstats_outfile: string
+            Output trackstats netCDF filename.
+
+    Returns:
+        None.
+    """
+    logger = logging.getLogger(__name__)
     logger.debug("Writing trackstats netcdf (dense) ... ")
     # Delete file if it already exists
     if os.path.isfile(trackstats_outfile):
         os.remove(trackstats_outfile)
 
     # Create a deep copy of the sparse matrix dictionary
-    out_dict_dense = copy.deepcopy(out_dict_sm)
+    out_dict_dense = copy.deepcopy(out_dict)
 
     # Convert the sparse arrays to dense arrays
     for ivar in out_dict_dense.keys():
@@ -437,7 +486,7 @@ def write_trackstats_dense(config, logger, fillval, fillval_f,
     # Define coordinate list
     coordlist = {
         tracks_dimname: ([tracks_dimname], np.arange(0, numtracks)),
-        times_dimname: ([times_dimname], np.arange(0, maxtracklength)),
+        times_dimname: ([times_dimname], np.arange(0, max_trackduration)),
     }
     # Define global attributes
     gattrlist = {

@@ -1,6 +1,6 @@
 ---
 # Tracking steps to run
-run_advection: True
+run_advection: False
 # Identify features to track
 run_idfeature: True
 # Track single consecutive feature files
@@ -26,7 +26,7 @@ databasename: taranis_corcsapr2cfrppiqcM1_convmask.c1.
 # E.g., wrfout_2018-11-01_01:15:00 --> yyyy-mo-dd_hh:mm:ss
 time_format: 'yyyymodd.hhmmss'
 # Input files directory
-clouddata_path: '/global/cscratch1/sd/feng045/iclass/cacti/arm/csapr/test/input_data2/'
+clouddata_path: '/global/cscratch1/sd/feng045/iclass/cacti/arm/csapr/test/input_data/'
 # Terrain file
 terrain_file: '/global/cscratch1/sd/feng045/iclass/cacti/arm/csapr/test/CSAPR2_Taranis_Gridded_500m.Terrain_RangeMask.nc'
 # Range mask variable to use in terrain file
@@ -69,17 +69,29 @@ maxnclouds: 1000       # Maximum number of clouds in one snapshot
 nmaxlinks: 10          # Maximum number of clouds that any single cloud can be linked to
 keepsingletrack: 1     # Keep tracks that has only 1 time
 
+# Flag to remove short-lived tracks [< min(duration_range)] that are not mergers/splits with other tracks
+# 0:keep all tracks; 1:remove short tracks
+remove_shorttracks: 1
+# Set this flag to 1 to write a dense (2D) trackstats netCDF file
+# Note that for datasets with lots of tracks, the memory consumption could be very large
+trackstats_dense_netcdf: 1
+
 ## Specify cell track parameters
 maincloud_duration: 0.5    # Natural time resolution of data
 merge_duration: 0.5        # Track shorter than this will be labeled as merger
 split_duration: 0.5        # Track shorter than this will be labeled as merger
 
+# Define tracked feature variable names
+feature_varname: 'feature_number'
+nfeature_varname: 'nfeatures'
+featuresize_varname: 'npix_feature'
+
 # Specify data structure
 datatimeresolution: 0.25     # hours
-dimname: 'nclouds'
-numbername: 'convcold_cloudnumber'
-typename: 'cloudtype'
-npxname: 'ncorecoldpix'
+#dimname: 'nclouds'
+#numbername: 'convcold_cloudnumber'
+#typename: 'cloudtype'
+#npxname: 'ncorecoldpix'
 pixeltracking_filebase: 'celltracks_'
 # datavariablename: 'comp_ref'
 #tdimname: 'time'
