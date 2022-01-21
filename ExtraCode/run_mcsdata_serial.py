@@ -163,7 +163,7 @@ if run_gettracks == 0:
 # Call function
 if run_finalstats == 1:
     # Load function
-    from pyflextrkr.trackstats import trackstats_sat
+    from pyflextrkr.depreciated.trackstats import trackstats_sat
 
     # Call satellite version of function
     print('Calculating track statistics')

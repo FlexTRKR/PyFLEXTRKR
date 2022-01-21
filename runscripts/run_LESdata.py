@@ -205,7 +205,7 @@ if run_idclouds == 1:
     ##########################################################################
     # Process files
     # Load function
-    from pyflextrkr.idclouds import idclouds_LES
+    from pyflextrkr.depreciated.idclouds import idclouds_LES
 
     # Generate input lists
     list_datasource = [datasource]*(filestep)
@@ -356,7 +356,7 @@ if run_gettracks == 0:
 # Call function
 if run_finalstats == 1:
     # Load function
-    from pyflextrkr.trackstats import trackstats_LES
+    from pyflextrkr.depreciated.trackstats import trackstats_LES
 
     # Call satellite version of function
     print('Calculating cell statistics')
@@ -374,7 +374,7 @@ if run_identifycell == 1:
     print('Identifying Cells')
 
     # Load function
-    from pyflextrkr.identifycell import identifycell_LES_xarray
+    from pyflextrkr.depreciated.identifycell import identifycell_LES_xarray
 
     # Call satellite version of function
     identifycell_LES_xarray(trackstats_filebase, stats_outpath, startdate, enddate, datatimeresolution, geolimits, maincloud_duration, merge_duration, split_duration, lengthrange[1])

@@ -1280,7 +1280,7 @@ def idclouds_LES(zipped_inputs):
                         warmanvilexpansion,
                     )
                 elif cloudidmethod == "futyan4":
-                    from pyflextrkr.futyan4_LES import futyan4_LES
+                    from pyflextrkr.depreciated.futyan4_LES import futyan4_LES
 
                     clouddata = futyan4_LES(
                         out_lwp,
@@ -1799,7 +1799,7 @@ def idclouds_ct(zipped_inputs):
             file_timestring = str(file_basetime)[13:15] + str(file_basetime)[16:18]
 
             # call idcloud type subroutine
-            from pyflextrkr.cloud_type_tracking_NS import cloud_type_tracking_NS
+            from pyflextrkr.depreciated.cloud_type_tracking_NS import cloud_type_tracking_NS
 
             clouddata = cloud_type_tracking_NS(
                 out_ct,
