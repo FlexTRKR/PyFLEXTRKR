@@ -2,16 +2,15 @@ import sys
 import logging
 from dask.distributed import Client, LocalCluster
 from pyflextrkr.ft_utilities import load_config
-from pyflextrkr.advection_radar import calc_mean_advection
 from pyflextrkr.idfeature_driver import idfeature_driver
 from pyflextrkr.tracksingle_driver import tracksingle_driver
 from pyflextrkr.gettracks import gettracknumbers
 from pyflextrkr.trackstats_driver import trackstats_driver
+from pyflextrkr.identifymcs import identifymcs_tb
+from pyflextrkr.matchtbpf_driver import match_tbpf_tracks
+from pyflextrkr.robustmcspf import define_robust_mcs_pf
 from pyflextrkr.mapfeature_driver import mapfeature_driver
-
-# Name: run_cacti_csapr.py
-# Purpose: Main script for tracking convective cells from CACTI CSAPR data
-# Author: Zhe Feng (zhe.feng@pnnl.gov)
+from pyflextrkr.movement_speed import movement_speed
 
 if __name__ == '__main__':
 
@@ -29,15 +28,6 @@ if __name__ == '__main__':
         cluster = LocalCluster(n_workers=config['nprocesses'], threads_per_worker=1)
         client = Client(cluster)
 
-    # Step 0 - Run advection calculation
-    if config['run_advection']:
-        logger.info('Calculating domain mean advection.')
-        driftfile = calc_mean_advection(config)
-    else:
-        driftfile = f'{config["stats_outpath"]}{config["datasource"]}_advection_' + \
-                    f'{config["startdate"]}_{config["enddate"]}.nc'
-    config.update({"driftfile": driftfile})
-
     # Step 1 - Identify features
     if config['run_idfeature']:
         idfeature_driver(config)
@@ -54,7 +44,22 @@ if __name__ == '__main__':
     if config['run_trackstats']:
         trackstats_filename = trackstats_driver(config)
 
-    # Step 5 - Map tracking to pixel files
+    # Step 5 - Identify MCS using Tb
+    if config['run_identifymcs']:
+        mcsstats_filename = identifymcs_tb(config)
+
+    # Step 6 - Match PF to MCS
+    if config['run_matchpf']:
+        pfstats_filename = match_tbpf_tracks(config)
+
+    # Step 7 - Identify robust MCS
+    if config['run_robustmcs']:
+        robustmcsstats_filename = define_robust_mcs_pf(config)
+
+    # Step 8 - Map tracking to pixel files
     if config['run_mapfeature']:
         mapfeature_driver(config)
 
+    # Step 9 - Movement speed calculation
+    if config['run_speed']:
+        movement_speed(config)

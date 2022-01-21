@@ -453,7 +453,7 @@ def trackstats_radar(
     finaltrack_core_area = finaltrack_core_area[cloudindexpresent, :]
     finaltrack_cell_area = finaltrack_cell_area[cloudindexpresent, :]
     finaltrack_status = finaltrack_status[cloudindexpresent, :]
-    finaltrack_trackinterruptions = finaltrack_trackinterruptions[cloudindexpresent]
+    finaltrack_trackinterruptions = finaltrack_trackinterruptions[cloudindexpresent, :]
     finaltrack_mergenumber = finaltrack_mergenumber[cloudindexpresent, :]
     finaltrack_splitnumber = finaltrack_splitnumber[cloudindexpresent, :]
     finaltrack_cloudnumber = finaltrack_cloudnumber[cloudindexpresent, :]

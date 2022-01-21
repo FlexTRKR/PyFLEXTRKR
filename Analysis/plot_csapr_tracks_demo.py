@@ -114,8 +114,10 @@ def plot_map(xx, yy, comp_ref, tn_perim, pixel_bt, levels, cmaps, cblabels, cbti
     mpl.rcParams['font.family'] = 'Helvetica'
 
     # Set up track lifetime colors
-    size_centroid = [30,50,80]
-    lw_centroid = [1,2,3]
+    # size_centroid = [30,50,80]
+    # lw_centroid = [1,2,3]
+    size_centroid = [80,80,80]
+    lw_centroid = [3,3,3]
     cmap_tracks = 'Spectral_r'
     cblabel_tracks = 'Lifetime (hour)'
     cbticks_tracks = [1,2,3,4]
@@ -161,8 +163,10 @@ def plot_map(xx, yy, comp_ref, tn_perim, pixel_bt, levels, cmaps, cblabels, cbti
     tn1 = ax1.pcolormesh(xx, yy, Tn, cmap='gray', transform=proj, zorder=3)
 
     # Plot track centroids and paths
-    marker_style_s = dict(edgecolor='k', linestyle='-', marker='^')
-    marker_style_m = dict(edgecolor='k', linestyle='-', marker='D')
+    # marker_style_s = dict(edgecolor='k', linestyle='-', marker='^')
+    # marker_style_m = dict(edgecolor='k', linestyle='-', marker='D')
+    marker_style_s = dict(edgecolor='k', linestyle='-', marker='o')
+    marker_style_m = dict(edgecolor='k', linestyle='-', marker='o')
     marker_style_l = dict(edgecolor='k', linestyle='-', marker='o')
     for itrack in range(0, ntracks):
         # Get duration of the track
@@ -215,13 +219,19 @@ def plot_map(xx, yy, comp_ref, tn_perim, pixel_bt, levels, cmaps, cblabels, cbti
     cbinset.set_ticks(cbticks_tracks)
     
     # Plot legends for tracks
-    legend_elements = [mpl.lines.Line2D([0], [0], lw=lw_centroid[0], color='k', label='0.5-1 h', 
-                        marker=marker_style_s['marker'], markersize=4, markerfacecolor=cmap_lifetime(0)),
-                       mpl.lines.Line2D([0], [0], lw=lw_centroid[1], color='k', label='1-2 h', 
-                        marker=marker_style_m['marker'], markersize=7, markerfacecolor=cmap_lifetime(0.2)),
-                       mpl.lines.Line2D([0], [0], lw=lw_centroid[2], color='k', label='2-4 h', 
-                        marker=marker_style_l['marker'], markersize=10, markerfacecolor=cmap_lifetime(0.5))]
-    ax1.legend(handles=legend_elements, loc='upper right')
+    # legend_elements = [mpl.lines.Line2D([0], [0], lw=lw_centroid[0], color='k', label='0.5-1 h', 
+    #                     marker=marker_style_s['marker'], markersize=4, markerfacecolor=cmap_lifetime(0)),
+    #                    mpl.lines.Line2D([0], [0], lw=lw_centroid[1], color='k', label='1-2 h', 
+    #                     marker=marker_style_m['marker'], markersize=7, markerfacecolor=cmap_lifetime(0.2)),
+    #                    mpl.lines.Line2D([0], [0], lw=lw_centroid[2], color='k', label='2-4 h', 
+    #                     marker=marker_style_l['marker'], markersize=10, markerfacecolor=cmap_lifetime(0.5))]
+    # legend_elements = [mpl.lines.Line2D([0], [0], lw=lw_centroid[0], color='k', label='0.5-1 h', 
+    #                     marker=marker_style_s['marker'], markersize=4, markerfacecolor='w'),
+    #                    mpl.lines.Line2D([0], [0], lw=lw_centroid[1], color='k', label='1-2 h', 
+    #                     marker=marker_style_m['marker'], markersize=7, markerfacecolor='w'),
+    #                    mpl.lines.Line2D([0], [0], lw=lw_centroid[2], color='k', label='2-4 h', 
+    #                     marker=marker_style_l['marker'], markersize=10, markerfacecolor='w')]
+    # ax1.legend(handles=legend_elements, loc='upper right')
 
     # Plot range circles around radar
     for ii in range(0, len(radii)):

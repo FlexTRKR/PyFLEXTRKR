@@ -7,8 +7,6 @@ import time
 from itertools import repeat
 from multiprocessing import Pool
 import logging
-import yaml
-
 
 import numpy as np
 from pytz import utc
@@ -29,23 +27,43 @@ from pyflextrkr.trackstats_parallel import trackstats_tb
 # The code does not need to run through each step each time. The code can be run starting at any step, as long as those previous codes have been run and their output is availiable.
 
 # Author: Orginial IDL version written by Sally McFarlane and Zhe Feng (zhe.feng@pnnl.gov). Adapted to Python by Hannah Barnes (hannah.barnes@pnnl.gov)
+from pyflextrkr.workflow_manager import load_config_and_paths
 
-print("Code Started")
-print((time.ctime()))
+
 if __name__ == "__main__":
     ##################################################################################################
+    # TODO: JOE: Refactor the config file handling into a function.
     logger = logging.getLogger(__name__)
-    logging.basicConfig(format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO)
-    # Set variables describing data, file structure, and tracking thresholds
-    config_filename = os.environ.get("FLEXTRKR_CONFIG_FILE", "./config/global_config.yml")
-    config = yaml.load(open(config_filename), Loader=yaml.FullLoader)
+    logging.basicConfig(format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.DEBUG)
+
+    config = load_config_and_paths()
+
+    ####< TO DELETE AFTER REPLACING #####
+    root_path = os.environ['FLEXTRKR_BASE_DATA_PATH']
+    logger.info(f'ROOT DATA PATH IS {root_path}')
+    # clouddata_path = root_path + '2015/' # Global
+    # pfdata_path = root_path + '2015/' # Global
+    # TODO: JOE:  Move these into config reading part as well
+    # TODO: Update these to full paths rather than relative.
+    clouddata_path = config['clouddata_path']
+    pfdata_path = config['pfdata_path']
+    # Specify additional file locations
+    tracking_outpath = config['tracking_outpath']
+    stats_outpath = config['stats_outpath']
+    mcstracking_outpath = config['mcstracking_outpath']
+    rainaccumulation_path = config['rainaccumulation_path']
+    landmask_file = config['landmask_file']
+    # landmask_file = root_path + "map_data/IMERG_landmask_saag.nc"
+    #### >TO DELETE AFTER REPLACING #####
 
     # Set version ofcode
     cloudidmethod = "futyan4"  # Option: futyan3 = identify cores and cold anvils and expand to get warm anvil, futyan4=identify core and expand for cold and warm anvils
     keep_singlemergesplit = 1  # Options: 0=All short tracks are removed, 1=Only short tracks without mergers or splits are removed
     show_alltracks = 0  # Options: 0=Maps of all tracks are not created, 1=Maps of all tracks are created (much slower!)
+
+
     run_parallel = (
-        1  # Options: 0-run serially, 1-run parallel (uses Pool from Multiprocessing)
+        0  # Options: 0-run serially, 1-run parallel (uses Pool from Multiprocessing)
     )
     nprocesses = 32  # Number of processors to use if run_parallel is set to 1
     idclouds_hourly = 1  # 0 = No, 1 = Yes
@@ -162,19 +180,9 @@ if __name__ == "__main__":
     label_filebase = 'cloudtrack_'
     pfdata_filebase = 'merg_'
     rainaccumulation_filebase = 'merg_'
-    root_path = os.environ['FLEXTRKR_BASE_DATA_PATH']
 
-    print(f'ROOT PATH IS {root_path}')
 
-    #clouddata_path = root_path + '2015/' # Global
-    #pfdata_path = root_path + '2015/' # Global
-    clouddata_path = root_path + 'data_in/'
-    pfdata_path = root_path + 'data_in/'
-    logger.info(f'Clouddatapath: {clouddata_path}, pfdata_path: {pfdata_path}')
 
-    rainaccumulation_path = pfdata_path
-    landmask_file = root_path+'map_data/IMERG_landmask_global.nc'
-    #landmask_file = root_path + "map_data/IMERG_landmask_saag.nc"
 
     # Specify data structure
     datatimeresolution = 1  # hours
@@ -201,50 +209,13 @@ if __name__ == "__main__":
         (cloudtb_core, cloudtb_cold, cloudtb_warm, cloudtb_cloud)
     )
 
-    # Specify additional file locations
-    tracking_outpath = (
-        root_path + "tracking/"
-    )  # Data on individual features being tracked
-    stats_outpath = root_path + "stats/"  # Data on track statistics
-    mcstracking_outpath = (
-        root_path + "mcstracking/" + startdate + "_" + enddate + "/"
-    )  # Pixel level data for MCSs
-    print(
-        f"TRACKING PATH IS {tracking_outpath}, {stats_outpath}, {mcstracking_outpath}"
-    )
-    ####################################################################
-    # Execute tracking scripts
 
-    # Create output directories
-    if not os.path.exists(tracking_outpath):
-        os.makedirs(tracking_outpath)
 
-    if not os.path.exists(stats_outpath):
-        os.makedirs(stats_outpath)
 
     ########################################################################
     # Calculate basetime of start and end date
-    TEMP_starttime = datetime.datetime(
-        int(startdate[0:4]),
-        int(startdate[4:6]),
-        int(startdate[6:8]),
-        int(startdate[9:11]),
-        int(startdate[11:13]),
-        0,
-        tzinfo=utc,
-    )
-    start_basetime = calendar.timegm(TEMP_starttime.timetuple())
-
-    TEMP_endtime = datetime.datetime(
-        int(enddate[0:4]),
-        int(enddate[4:6]),
-        int(enddate[6:8]),
-        int(enddate[9:11]),
-        int(enddate[11:13]),
-        0,
-        tzinfo=utc,
-    )
-    end_basetime = calendar.timegm(TEMP_endtime.timetuple())
+    start_basetime = config['start_basetime']
+    end_basetime = config['end_basetime']
 
     ##########################################################################
     # Step 1. Identify clouds
@@ -292,31 +263,7 @@ if __name__ == "__main__":
         # Generate input lists
         idclouds_input = zip(
             rawdatafiles,
-            repeat(irdatasource),
-            repeat(datadescription),
-            repeat(datavariablename),
-            repeat(cloudid_version),
-            repeat(tracking_outpath),
-            repeat(landmask_file),
-            repeat(geolimits),
-            repeat(startdate),
-            repeat(enddate),
-            repeat(pixel_radius),
-            repeat(area_thresh),
-            repeat(cloudtb_threshs),
-            repeat(absolutetb_threshs),
-            repeat(miss_thresh),
-            repeat(cloudidmethod),
-            repeat(mincoldcorepix),
-            repeat(smoothwindowdimensions),
-            repeat(warmanvilexpansion),
-            repeat(idclouds_hourly),
-            repeat(idclouds_minute),
-            repeat(linkpf),
-            repeat(pf_smooth_window),
-            repeat(pf_dbz_thresh),
-            repeat(pf_link_area_thresh),
-            repeat(pfvarname),
+            repeat(config),
         )
         ## Call function
         if run_parallel == 0:
@@ -325,35 +272,11 @@ if __name__ == "__main__":
                 # idclouds_gpmmergir(idclouds_input[ifile])
                 idclouds_gpmmergir(
                     rawdatafiles[ifile],
-                    irdatasource,
-                    datadescription,
-                    datavariablename,
-                    cloudid_version,
-                    tracking_outpath,
-                    landmask_file,
-                    geolimits,
-                    startdate,
-                    enddate,
-                    pixel_radius,
-                    area_thresh,
-                    cloudtb_threshs,
-                    absolutetb_threshs,
-                    miss_thresh,
-                    cloudidmethod,
-                    mincoldcorepix,
-                    smoothwindowdimensions,
-                    warmanvilexpansion,
-                    idclouds_hourly,
-                    idclouds_minute,
-                    linkpf,
-                    pf_smooth_window,
-                    pf_dbz_thresh,
-                    pf_link_area_thresh,
-                    pfvarname,
+                    config
                 )
         elif run_parallel == 1:
             # Parallel version
-            logger.info('Identifying clouds')
+            logger.info('Step 1: Identifying clouds')
             pool = Pool(nprocesses)
             # pool.map(idclouds_gpmmergir, idclouds_input)
             pool.starmap(idclouds_gpmmergir, idclouds_input)

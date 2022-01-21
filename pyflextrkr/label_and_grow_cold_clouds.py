@@ -1,33 +1,19 @@
 from collections import deque
 import numpy as np
-import numpy as np
 from scipy.ndimage import label, binary_dilation, generate_binary_structure, filters
-from scipy.interpolate import RectBivariateSpline
-from astropy.convolution import Box2DKernel, convolve, convolve_fft
-
+from astropy.convolution import Box2DKernel, convolve
+import logging
 
 def label_and_grow_cold_clouds(
     ir,
     pixel_radius,
     tb_threshs,
     area_thresh,
-    mincorecoldpix,
+    mincoldcorepix,
     smoothsize,
     warmanvilexpansion,
 ):
-    ######################################################################
-    # Import modules
-    import numpy as np
-    from scipy.ndimage import label, binary_dilation, generate_binary_structure, filters
-    from scipy.interpolate import RectBivariateSpline
-    from astropy.convolution import Box2DKernel, convolve, convolve_fft
-    import logging
-
     logger = logging.getLogger(__name__)
-
-    ######################################################################
-
-    # Define constants:
 
     # Separate array threshold
     thresh_core = tb_threshs[0]  # Convective core threshold [K]
@@ -45,7 +31,9 @@ def label_and_grow_cold_clouds(
     nthresh = area_thresh / pixel_area
 
     ######################################################################
-    # Use thresholds identify pixels containing cold core, cold anvil, and warm anvil. Also create arrays with a flag for each type and fill in cloudid array. Cores = 1. Cold anvils = 2. Warm anvils = 3. Other = 4. Clear = 5. Areas do not overlap
+    # Use thresholds identify pixels containing cold core, cold anvil, and warm anvil.
+    # Also create arrays with a flag for each type and fill in cloudid array.
+    # Cores = 1. Cold anvils = 2. Warm anvils = 3. Other = 4. Clear = 5. Areas do not overlap
     (
         coldanvil_flag,
         core_flag,
@@ -63,7 +51,7 @@ def label_and_grow_cold_clouds(
         ncorepix, nx, ny, smoothir, thresh_core
     )
 
-    # Check is any cores have been identified
+    # Check if any cores have been identified
     if nlabelcores > 0:
 
         # Check if cores satisfy size threshold
@@ -75,7 +63,7 @@ def label_and_grow_cold_clouds(
         for ilabelcore in temp_labelcore_idx:
             if ilabelcore < 1 or ilabelcore > nlabelcores:
                 continue  # THis is just to match previous logic
-            if temp_labelcore_counts[ilabelcore] > mincorecoldpix:
+            if temp_labelcore_counts[ilabelcore] > mincoldcorepix:
                 labelcore_npix[ilabelcore - 1] = temp_labelcore_counts[ilabelcore]
 
         # Check if any of the cores passed the size threshold test
@@ -113,7 +101,8 @@ def label_and_grow_cold_clouds(
             labelcorecold_number2d = np.copy(sortedcore_number2d)
             labelcorecold_npix = np.copy(sortedcore_npix)
             keepspreading = 1
-            # Keep looping through dilating code as long as at least one feature is growing. At this point limit it to 20 dilations. Remove this once use real data.
+            # Keep looping through dilating code as long as at least one feature is growing.
+            # At this point limit it to 20 dilations. Remove this once use real data.
 
             # We set everything we don't want to process to -1
             cold_threshold_map = np.logical_or(ir > thresh_cold, np.isnan(ir))
@@ -186,7 +175,7 @@ def label_and_grow_cold_clouds(
                 # Isolate cores that satisfy size threshold
                 labelisolated_number1d = (
                     np.copy(ivalidisolated) + 1
-                )  # Add one since label numbers start at 1 and indices, which validcores reports starts at 0
+                )  # Add one since label numbers start at 1 and indices, which valid cores reports starts at 0
                 labelisolated_npix = labelisolated_npix[ivalidisolated]
 
                 ###########################################################
@@ -221,7 +210,8 @@ def label_and_grow_cold_clouds(
         ##############################################################
         # Combine cases with cores and cold anvils with those that those only have cold anvils
 
-        # Add feature to core - cold anvil map giving it a number one greater that tne number of valid cores. These cores are after those that have a cold anvil.
+        # Add feature to core - cold anvil map giving it a number one greater that the number of valid cores.
+        # These cores are after those that have a cold anvil.
         labelcorecoldisolated_number2d = np.copy(labelcorecold_number2d)
 
         sortedisolated_indices = np.where(sortedisolated_number2d > 0)
@@ -231,7 +221,7 @@ def label_and_grow_cold_clouds(
                 sortedisolated_number2d[sortedisolated_indices]
             ) + np.copy(ncores)
 
-        # Combine the npix data for cases with cores and cold anvils with those that those only have cold anvils
+        # Combine the npix data for cases with cores and cold anvils with those that only have cold anvils
         labelcorecoldisolated_npix = np.hstack(
             (labelcorecold_npix, sortedisolated_npix)
         )
@@ -386,7 +376,8 @@ def label_and_grow_cold_clouds(
             ncorecoldwarmpix = np.copy(final_ncorecoldpix)
 
             keepspreading = 1
-            # Keep looping through dilating code as long as at least one feature is growing. At this point limit it to 20 dilations. Remove this once use real data.
+            # Keep looping through dilating code as long as at least one feature is growing.
+            # At this point limit it to 20 dilations. Remove this once use real data.
             while keepspreading > 0:
                 keepspreading = 0
 
@@ -408,7 +399,8 @@ def label_and_grow_cold_clouds(
                     minx = extentx[0]
                     maxx = extentx[-1]
 
-                    # Subset ir and map data to smaller region around feature. This reduces computation time. Add a 10 pixel buffer around the edges of the feature.
+                    # Subset ir and map data to smaller region around feature.
+                    # This reduces computation time. Add a 10 pixel buffer around the edges of the feature.
                     if minx <= 10:
                         minx = 0
                     else:
@@ -445,7 +437,8 @@ def label_and_grow_cold_clouds(
                     # Isolate region that was dilated.
                     expansionzone = dilatedsubset - featuresubset
 
-                    # Only keep pixels in dilated regions that are below the warm anvil threshold and are not associated with another feature
+                    # Only keep pixels in dilated regions that are below the warm anvil threshold
+                    # and are not associated with another feature
                     expansionzone[
                         np.where((expansionzone == 1) & (fullsubset != 0))
                     ] = 0
@@ -466,7 +459,10 @@ def label_and_grow_cold_clouds(
                         len(expansionindices[:, 0]) + ncorecoldwarmpix[ifeature - 1]
                     )
 
-                    # Count the number of dilated pixels. Add to the keepspreading variable. As long as this variables is > 0 the code continues to run the dilating portion. Also at this point have a requirement that can't dilate more than 20 times. This shoudl be removed when have actual data.
+                    # Count the number of dilated pixels. Add to the keepspreading variable.
+                    # As long as this variables is > 0 the code continues to run the dilating portion.
+                    # Also at this point have a requirement that can't dilate more than 20 times.
+                    # This shoudl be removed when have actual data.
                     keepspreading = keepspreading + len(
                         np.extract(expansionzone == 1, expansionzone)
                     )
@@ -514,7 +510,8 @@ def find_and_label_cold_cores(ncorepix, nx, ny, smoothir, thresh_core):
 def smooth_and_identify_indices(
     ir, nx, ny, smoothsize, thresh_cloud, thresh_cold, thresh_core, thresh_warm
 ):
-    # Smooth IR data prior to identifying cores using a boxcar filter. Along the edges the boundary elements come from the nearest edge pixel
+    # Smooth IR data prior to identifying cores using a boxcar filter.
+    # Along the edges the boundary elements come from the nearest edge pixel
     # smoothir = filters.uniform_filter(ir, size=smoothsize, mode='nearest')
     kernel = Box2DKernel(smoothsize)
     smoothir = convolve(

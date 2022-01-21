@@ -1,148 +1,125 @@
-# Purpose: Track clouds in successive pairs of cloudid files. Output netCDF file for each pair of cloudid files.
+import numpy as np
+import os
+import sys
+import xarray as xr
+import pandas as pd
+import time
+import scipy.ndimage as ndi
+import logging
 
-# Comment: Futyan and DelGenio (2007) - tracking procedure
+def trackclouds(
+    cloudid_filepairs,
+    cloudid_basetimepairs,
+    config,
+    drift_data=None,
+):
+    """
+    Track clouds in successive pairs of cloudid files.
 
-# Authors: IDL version written by Sally A. McFarlane (sally.mcfarlane@pnnl.gov) and revised by Zhe Feng (zhe.feng@pnnl.gov). Python version written by Hannah C. Barnes (hannah.barnes@pnnl.gov)
+    Arguments:
+        cloudid_filepairs: tuple
+            Cloudid filename pairs
+        cloudid_basetimepairs: tuple
+            Cloudid basetime pairs
+        config: dictionary
+            Dictionary containing config parameters
+        drift_data: tuple, optional. Default: None.
+            Drift data (datetime_string, xdrift, ydrift)
 
-# Inputs:
-# firstcloudfilename - name of the reference fdata to stop processing in YYYYMMDD formatile
-# secondcloudidfilename - name of the new file
-# firstdatestring - string with year, month, and day of the reference file
-# seconddatestring - string with yearm, month, and day of the new file
-# firsttimestring - string with hour and minute of the reference file
-# secondtimestring - string with hour and minute of the new file
-# firstbasetime - seconds since 1970-01-01 of the first file
-# secondbasetime -seconds since 1970-01-01 of the second file
-# dataoutpath - directory where the output will be stored
-# track_version - flag for saving purposes indicating version of classification. Used when more than one comparison is done on the data.
-# timegap - maximum time gap (missing time) allowed (in hours) between two consecutive files
-# nmaxlinks - maximum number of clouds that any single cloud can be linked to
-# othresh - overlap threshold used to determine if two clouds are linked in time
-# startdate - start date and time of the full dataset
-# enddate - end date and time of the full dataset
-
-# Outputs: (One netcdf output for each pair of cloud files)
-# basetime_new - seconds since 1970-01-01 of the reference (first) file
-# basetime_ref - seconds since 1970-01-01 of the new (second) file
-# newcloud_backward_index - each row represents a cloud in the new file and numbers in each row indicate what cloud in the reference file is linked to that new cloud.
-# newcloud_backward_size - each row represents a cloud in the new file and numbers provide the area of all reference clouds linked to that new cloud
-# refcloud_forward_index - each row represents a cloud in the new file and numbers in each row indicate what cloud in the reference file is linked to that new cloud.
-# refcloud_forward_size - each row represents a cloud in the new file and numbers provide the area of all reference clouds linked to that new cloud
-
-
-def trackclouds(zipped_inputs):
-    ########################################################
-    import numpy as np
-    import os
-    import re
-    import fnmatch
-    from netCDF4 import Dataset
-    from pytz import timezone, utc
-    import sys
-    import xarray as xr
-    import pandas as pd
-    import time
-    import scipy.ndimage as ndi
-    import logging
+    Returns:
+        track_outfile: string
+            Track file name.
+    """
 
     logger = logging.getLogger(__name__)
 
     # Separate inputs
-    firstcloudidfilename = zipped_inputs[0]
-    logger.info(("firstcloudidfilename: ", firstcloudidfilename))
-    secondcloudidfilename = zipped_inputs[1]
-    logger.info(("secondcloudidfilename: ", secondcloudidfilename))
-    firstdatestring = zipped_inputs[2]
-    seconddatestring = zipped_inputs[3]
-    firsttimestring = zipped_inputs[4]
-    secondtimestring = zipped_inputs[5]
-    firstbasetime = zipped_inputs[6]
-    secondbasetime = zipped_inputs[7]
-    dataoutpath = zipped_inputs[8]
-    track_version = zipped_inputs[9]
-    timegap = zipped_inputs[10]
-    nmaxlinks = zipped_inputs[11]
-    othresh = zipped_inputs[12]
-    startdate = zipped_inputs[13]
-    enddate = zipped_inputs[14]
-    datetime_drift = zipped_inputs[15]
-    xdrift = zipped_inputs[16]
-    ydrift = zipped_inputs[17]
+    firstcloudidfilename, secondcloudidfilename = cloudid_filepairs[0], cloudid_filepairs[1]
+    firstbasetime, secondbasetime = cloudid_basetimepairs[0], cloudid_basetimepairs[1]
+    firstdatestring = pd.to_datetime(firstbasetime, unit="s").strftime("%Y%m%d")
+    firsttimestring = pd.to_datetime(firstbasetime, unit="s").strftime("%H%M")
+    seconddatestring = pd.to_datetime(secondbasetime, unit="s").strftime("%Y%m%d")
+    secondtimestring = pd.to_datetime(secondbasetime, unit="s").strftime("%H%M")
+    dataoutpath = config["tracking_outpath"]
+    feature_varname = config.get("feature_varname", "feature_number")
+    nfeature_varname = config.get("nfeature_varname", "nfeatures")
+    timegap = config["timegap"]
+    nmaxlinks = config["nmaxlinks"]
+    othresh = config["othresh"]
+    fillval = config["fillval"]
+    if drift_data is not None:
+        datetime_drift, xdrift, ydrift = drift_data[0], drift_data[1], drift_data[2]
+
+    logger.debug(("firstcloudidfilename: ", firstcloudidfilename))
+    logger.debug(("secondcloudidfilename: ", secondcloudidfilename))
 
     ########################################################
-    # Set constants
-    # Version information
-    outfilebase = "track" + track_version + "_"
+    outfilebase = "track_"
     ########################################################
     # Isolate new and reference file and base times
     new_file = secondcloudidfilename
     new_datestring = seconddatestring
     new_timestring = secondtimestring
     new_basetime = secondbasetime
-    logger.info(("new basetime: ", new_basetime))
+    logger.debug(f"new basetime: {new_basetime}")
     new_filedatetime = str(new_datestring) + "_" + str(new_timestring)
 
     reference_file = firstcloudidfilename
     reference_datestring = firstdatestring
     reference_timestring = firsttimestring
     reference_basetime = firstbasetime
-    logger.info(("ref basetime: ", reference_basetime))
+    logger.debug(f"ref basetime: {reference_basetime}")
     reference_filedatetime = str(reference_datestring) + "_" + str(reference_timestring)
 
-    # Check that new and reference files differ by less than timegap in hours. Use base time (which is the seconds since 01-Jan-1970 00:00:00). Divide base time difference between the files by 3600 to get difference in hours
+    # Check that new and reference files differ by less than timegap in hours.
+    # Use base time (which is the seconds since 01-Jan-1970 00:00:00).
+    # Divide base time difference between the files by 3600 to get difference in hours
     hour_diff = (np.subtract(new_basetime, reference_basetime)) / float(3600)
     if hour_diff < timegap and hour_diff > 0:
-        logger.info("Linking:")
+        logger.debug("Linking:")
 
         ##############################################################
         # Load cloudid file from before, called reference file
-        logger.info(reference_filedatetime)
+        logger.debug(reference_filedatetime)
 
-        reference_data = xr.open_dataset(reference_file)  # Open file
-        reference_convcold_cloudnumber = reference_data[
-            "convcold_cloudnumber"
-        ].data  # Load cloud id map
-        nreference = reference_data["nclouds"].data  # Load number of clouds / features
-        reference_data.close()  # Close file
-
-        # Modifed by Zhixiao: Return value from reference_data["convcold_cloudnumber"].data is FLOAT.
-        # reference_convcold_cloudnumber must be converted to INT for avoiding systematic errors while using np.unique, ndi.shift and selecting DCC by specific int cloudnumber.
-        reference_convcold_cloudnumber[
-            np.isnan(reference_convcold_cloudnumber)
-        ] = 0  # Replace NAN with 0 for the cloudnumber before convert it to INT
-        reference_convcold_cloudnumber = reference_convcold_cloudnumber.astype("int32")
+        # Open file
+        reference_data = xr.open_dataset(reference_file, mask_and_scale=False)
+        reference_convcold_cloudnumber = reference_data[feature_varname].data
+        nreference = reference_data[nfeature_varname].data
+        reference_data.close()
 
         ##########################################################
         # Load next cloudid file, called new file
-        logger.info(("new_filedattime: ", new_filedatetime))
+        logger.debug(f"new_filedattime: {new_filedatetime}")
 
-        new_data = xr.open_dataset(new_file)  # Open file
-        new_convcold_cloudnumber = new_data[
-            "convcold_cloudnumber"
-        ].data  # Load cloud id map
+        # Open file
+        new_data = xr.open_dataset(new_file, mask_and_scale=False)
+        new_convcold_cloudnumber = new_data[feature_varname].data
+        nnew = new_data[nfeature_varname].data
+        new_data.close()
 
-        # Modifed by Zhixiao: Similar as reference_convcold_cloudnumber, we convert float to int for new_convcold_cloudnumber
+        # Convert float type to int, missing value to 0
+        # This should not be needed when setting mask_and_scale=False
+        reference_convcold_cloudnumber[np.isnan(reference_convcold_cloudnumber)] = 0
+        reference_convcold_cloudnumber = reference_convcold_cloudnumber.astype("int")
         new_convcold_cloudnumber[np.isnan(new_convcold_cloudnumber)] = 0
-        new_convcold_cloudnumber = new_convcold_cloudnumber.astype("int32")
+        new_convcold_cloudnumber = new_convcold_cloudnumber.astype("int")
 
-        nnew = new_data["nclouds"].data  # Load number of clouds / features
-        new_data.close()  # Close file
+        if drift_data is not None:
+            # Compare drift datetime with reference datetime
+            if reference_filedatetime == datetime_drift:
 
-        # Compare drift datetime with reference datetime
-        if reference_filedatetime == datetime_drift:
+                # Shift the reference cloudnumber and replace the original
+                reference_convcold_cloudnumber = ndi.shift(
+                    reference_convcold_cloudnumber, [0, ydrift, xdrift]
+                )
+            else:
+                logger.info(
+                    "Warning: datetime_drift does NOT match reference_filedatetime! No shifting is applied."
+                )
+                logger.info("reference_filedatetime: " + reference_filedatetime)
+                logger.info("datetime_drift: " + datetime_drift)
 
-            # Shift the reference cloudnumber and replace the original
-            reference_convcold_cloudnumber = ndi.shift(
-                reference_convcold_cloudnumber, [0, ydrift, xdrift]
-            )
-        else:
-            logger.info(
-                "Warning: datetime_drift does NOT match reference_filedatetime! No shifting is applied."
-            )
-            logger.info("reference_filedatetime: " + reference_filedatetime)
-            logger.info("datetime_drift: " + datetime_drift)
-
-        # import pdb; pdb.set_trace()
 
         ############################################################
         # Get size of data
@@ -154,7 +131,6 @@ def trackclouds(zipped_inputs):
 
         #######################################################
         # Initialize matrices
-        fillval = -9999
         reference_forward_index = (
             np.ones((1, int(nreference), int(nmaxlinks)), dtype=int) * fillval
         )
@@ -196,10 +172,10 @@ def trackclouds(zipped_inputs):
 
                 if sizematch / float(sizeref) > othresh:
                     if forward_nmatch > nmaxlinks:
-                        logger.info(
+                        logger.debug(
                             ("reference: " + number_filepath + files[ifile - 1])
                         )
-                        logger.info(("new: " + number_filepath + files[ifile]))
+                        logger.debug(("new: " + number_filepath + files[ifile]))
                         sys.exit(
                             "More than "
                             + str(int(nmaxlinks))
@@ -249,10 +225,10 @@ def trackclouds(zipped_inputs):
 
                 if sizematch / float(sizenew) > othresh:
                     if backward_nmatch > nmaxlinks:
-                        logger.info(
+                        logger.debug(
                             ("reference: " + number_filepath + files[ifile - 1])
                         )
-                        logger.info(("new: " + number_filepath + files[ifile]))
+                        logger.debug(("new: " + number_filepath + files[ifile]))
                         sys.exit(
                             "More than "
                             + str(int(nmaxlinks))
@@ -262,7 +238,6 @@ def trackclouds(zipped_inputs):
                         new_backward_index[
                             0, int(newindex) - 1, backward_nmatch
                         ] = matchindex
-
                         new_backward_size[0, int(newindex) - 1, backward_nmatch] = len(
                             np.extract(
                                 reference_convcold_cloudnumber == matchindex,
@@ -282,65 +257,63 @@ def trackclouds(zipped_inputs):
         if os.path.isfile(track_outfile):
             os.remove(track_outfile)
 
-        logger.info("Writing single tracks")
-        logger.info(track_outfile)
-        logger.info("")
+        logger.debug("Writing single tracks")
 
-        # Define xarracy dataset
-        output_data = xr.Dataset(
-            {
-                "basetime_new": (
-                    ["time"],
-                    np.array(
-                        [pd.to_datetime(new_data["basetime"].data, unit="s")],
-                        dtype="datetime64[s]",
-                    )[0],
-                ),
-                "basetime_ref": (
-                    ["time"],
-                    np.array(
-                        [pd.to_datetime(reference_data["basetime"].data, unit="s")],
-                        dtype="datetime64[s]",
-                    )[0],
-                ),
-                "newcloud_backward_index": (
-                    ["time", "nclouds_new", "nlinks"],
-                    new_backward_index,
-                ),
-                "newcloud_backward_size": (
-                    ["time", "nclouds_new", "nlinks"],
-                    new_backward_size,
-                ),
-                "refcloud_forward_index": (
-                    ["time", "nclouds_ref", "nlinks"],
-                    reference_forward_index,
-                ),
-                "refcloud_forward_size": (
-                    ["time", "nclouds_ref", "nlinks"],
-                    reference_forward_size,
-                ),
-            },
-            coords={
-                "time": (["time"], np.arange(0, 1)),
-                "nclouds_new": (["nclouds_new"], np.arange(0, nnew)),
-                "nclouds_ref": (["nclouds_ref"], np.arange(0, nreference)),
-                "nlinks": (["nlinks"], np.arange(0, nmaxlinks)),
-            },
-            attrs={
-                "title": "Indices linking clouds in two consecutive files forward and backward in time and the size of the linked cloud",
-                "Conventions": "CF-1.6",
-                "Institution": "Pacific Northwest National Laboratoy",
-                "Contact": "Zhe Feng, zhe.feng@pnnl.gov",
-                "Created_on": time.ctime(time.time()),
-                "new_date": new_filedatetime,
-                "ref_date": reference_filedatetime,
-                "new_file": new_file,
-                "ref_file": reference_file,
-                "tracking_version_number": track_version,
-                "overlap_threshold": str(int(othresh * 100)) + "%",
-                "maximum_gap_allowed": str(timegap) + " hr",
-            },
-        )
+        # Define output variables dictionary
+        varlist = {
+            "basetime_new": (
+                ["time"],
+                np.array(
+                    [pd.to_datetime(new_data["base_time"].data, unit="s")],
+                    dtype="datetime64[s]",
+                )[0],
+            ),
+            "basetime_ref": (
+                ["time"],
+                np.array(
+                    [pd.to_datetime(reference_data["base_time"].data, unit="s")],
+                    dtype="datetime64[s]",
+                )[0],
+            ),
+            "newcloud_backward_index": (
+                ["time", "nclouds_new", "nlinks"],
+                new_backward_index,
+            ),
+            "newcloud_backward_size": (
+                ["time", "nclouds_new", "nlinks"],
+                new_backward_size,
+            ),
+            "refcloud_forward_index": (
+                ["time", "nclouds_ref", "nlinks"],
+                reference_forward_index,
+            ),
+            "refcloud_forward_size": (
+                ["time", "nclouds_ref", "nlinks"],
+                reference_forward_size,
+            ),
+        }
+        coordlist = {
+            "time": (["time"], np.arange(0, 1)),
+            "nclouds_new": (["nclouds_new"], np.arange(0, nnew)),
+            "nclouds_ref": (["nclouds_ref"], np.arange(0, nreference)),
+            "nlinks": (["nlinks"], np.arange(0, nmaxlinks)),
+        }
+        gattrlist = {
+            "title": "Indices linking clouds in two consecutive files forward and backward in time and the size of the linked cloud",
+            "Conventions": "CF-1.6",
+            "Institution": "Pacific Northwest National Laboratoy",
+            "Contact": "Zhe Feng, zhe.feng@pnnl.gov",
+            "Created_on": time.ctime(time.time()),
+            "new_date": new_filedatetime,
+            "ref_date": reference_filedatetime,
+            "new_file": new_file,
+            "ref_file": reference_file,
+            # "tracking_version_number": track_version,
+            "overlap_threshold": str(int(othresh * 100)) + "%",
+            "maximum_gap_allowed": str(timegap) + " hr",
+        }
+        # Define xarray dataset
+        output_data = xr.Dataset(varlist, coords=coordlist, attrs=gattrlist)
 
         # Specify variable attributes
         output_data.nclouds_new.attrs["long_name"] = "number of cloud in new file"
@@ -432,3 +405,5 @@ def trackclouds(zipped_inputs):
                 },
             },
         )
+        logger.info(track_outfile)
+        return track_outfile

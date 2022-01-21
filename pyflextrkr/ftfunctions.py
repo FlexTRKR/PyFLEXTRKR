@@ -1,7 +1,9 @@
 import numpy as np
 
-
-def sort_renumber(labelcell_number2d, min_cellpix):
+def sort_renumber(
+    labelcell_number2d,
+    min_cellpix,
+):
     """
     Sorts 2D labeled cells by size, and removes cells smaller than min_cellpix.
 
@@ -28,7 +30,6 @@ def sort_renumber(labelcell_number2d, min_cellpix):
     if nlabelcells > 0:
 
         labelcell_npix = np.full(nlabelcells, -999, dtype=int)
-
         # Loop over each labeled cell
         for ilabelcell in range(1, nlabelcells + 1):
             # Count number of pixels for the cell
@@ -37,8 +38,18 @@ def sort_renumber(labelcell_number2d, min_cellpix):
             if ilabelcell_npix > min_cellpix:
                 labelcell_npix[ilabelcell - 1] = ilabelcell_npix
 
+        # # This faster approach does not work
+        # # Because when labelcell_number2d is not sequentially numbered (e.g., when some cells are removed)
+        # # This approach does not get the same sequence with the above one
+        # # Count number of pixels for each unique cells
+        # cellnum, labelcell_npix = np.unique(labelcell_number2d, return_counts=True)
+        # # Remove background and cells below size threshold
+        # labelcell_npix = labelcell_npix[(cellnum > 0)]
+        # labelcell_npix[(labelcell_npix <= min_cellpix)] = -999
+
         # Check if any of the cells passes the size threshold test
-        ivalidcells = np.array(np.where(labelcell_npix > 0))[0, :]
+        ivalidcells = np.where(labelcell_npix > 0)[0]
+        # ivalidcells = np.array(np.where(labelcell_npix > 0))[0, :]
         ncells = len(ivalidcells)
 
         if ncells > 0:
@@ -48,8 +59,8 @@ def sort_renumber(labelcell_number2d, min_cellpix):
             labelcell_npix = labelcell_npix[ivalidcells]
 
             # Sort cells from largest to smallest and get the sorted index
-            order = np.argsort(labelcell_npix)
-            order = order[::-1]  # Reverses the order
+            order = np.argsort(labelcell_npix)[::-1]
+            # order = order[::-1]  # Reverses the order
 
             # Sort the cells by size
             sortedcell_npix = np.copy(labelcell_npix[order])
@@ -78,10 +89,17 @@ def sort_renumber(labelcell_number2d, min_cellpix):
         # Return an empty array
         sortedcell_npix = np.zeros(0)
 
-    return sortedlabelcell_number2d, sortedcell_npix
+    return (
+        sortedlabelcell_number2d,
+        sortedcell_npix,
+    )
 
 
-def sort_renumber2vars(labelcell_number2d, labelcell2_number2d, min_cellpix):
+def sort_renumber2vars(
+    labelcell_number2d,
+    labelcell2_number2d,
+    min_cellpix,
+):
     """
     Sorts 2D labeled cells by size, and removes cells smaller than min_cellpix.
     This version renumbers two variables using the same size sorting from labelcell_number2d.
@@ -114,7 +132,6 @@ def sort_renumber2vars(labelcell_number2d, labelcell2_number2d, min_cellpix):
     if nlabelcells > 0:
 
         labelcell_npix = np.full(nlabelcells, -999, dtype=int)
-
         # Loop over each labeled cell
         for ilabelcell in range(1, nlabelcells + 1):
             # Count number of pixels for the cell
@@ -122,6 +139,15 @@ def sort_renumber2vars(labelcell_number2d, labelcell2_number2d, min_cellpix):
             # Check if cell satisfies size threshold
             if ilabelcell_npix > min_cellpix:
                 labelcell_npix[ilabelcell - 1] = ilabelcell_npix
+
+        # # This faster approach does not work
+        # # Because when labelcell_number2d is not sequentially numbered (e.g., when some cells are removed)
+        # # This approach does not get the same sequence with the above one
+        # # Count number of pixels for each unique cells
+        # cellnum, labelcell_npix2 = np.unique(labelcell_number2d, return_counts=True)
+        # # Remove background and cells below size threshold
+        # labelcell_npix2 = labelcell_npix2[(cellnum > 0)]
+        # labelcell_npix2[(labelcell_npix2 <= min_cellpix)] = -999
 
         # Check if any of the cells passes the size threshold test
         ivalidcells = np.array(np.where(labelcell_npix > 0))[0, :]
@@ -168,10 +194,20 @@ def sort_renumber2vars(labelcell_number2d, labelcell2_number2d, min_cellpix):
         # Return an empty array
         sortedcell_npix = np.zeros(0)
 
-    return sortedlabelcell_number2d, sortedlabelcell2_number2d, sortedcell_npix
+    return (
+        sortedlabelcell_number2d,
+        sortedlabelcell2_number2d,
+        sortedcell_npix,
+    )
 
 
-def link_pf_tb(convcold_cloudnumber, cloudnumber, pf_number, tb, tb_thresh):
+def link_pf_tb(
+    convcold_cloudnumber,
+    cloudnumber,
+    pf_number,
+    tb,
+    tb_thresh,
+):
     """
     Renumbers separated clouds over the same PF to one cloud, using the largest cloud number.
 
@@ -300,4 +336,7 @@ def link_pf_tb(convcold_cloudnumber, cloudnumber, pf_number, tb, tb_thresh):
         pf_convcold_cloudnumber = np.copy(convcold_cloudnumber)
         pf_cloudnumber = np.copy(cloudnumber)
 
-    return pf_convcold_cloudnumber, pf_cloudnumber
+    return (
+        pf_convcold_cloudnumber,
+        pf_cloudnumber,
+    )
