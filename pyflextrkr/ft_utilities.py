@@ -30,16 +30,13 @@ def load_config(config_file):
     stats_outpath = config["root_path"] + "/" + config["stats_path_name"] + "/"
     pixeltracking_outpath = config["root_path"] + "/" + config["pixel_path_name"] + "/" + \
                             config["startdate"] + "_" + config["enddate"] + "/"
-    cloudid_filebase = config["datasource"] + "_" + config["datadescription"] + "_cloudid_"
+    cloudid_filebase = "cloudid_"
     singletrack_filebase = "track_"
     tracknumbers_filebase = "tracknumbers_"
     trackstats_filebase = "trackstats_"
     trackstats_sparse_filebase = "trackstats_sparse_"
     # Default not writing dense trackstats netCDF file
-    if "trackstats_dense_netcdf" not in config:
-        trackstats_dense_netcdf = 0
-    else:
-        trackstats_dense_netcdf = config["trackstats_dense_netcdf"]
+    trackstats_dense_netcdf = config.get("trackstats_dense_netcdf", 0)
 
     # Create output directories
     os.makedirs(tracking_outpath, exist_ok=True)

@@ -1,4 +1,3 @@
-from netCDF4 import Dataset
 import os
 import logging
 import numpy as np
@@ -32,7 +31,7 @@ def idclouds_gpmmergir(
     medfiltsize = config.get('medfiltsize', 5)
 
     # Default idclouds minute difference allowed
-    idclouds_minute = config.get('idclouds_minute', 5)
+    idclouds_minute = config.get('idclouds_minute', 0)
 
     # minimum and maximum brightness temperature thresholds. data outside of this range is filtered
     mintb_thresh = config['absolutetb_threshs'][0]  # k
@@ -56,7 +55,7 @@ def idclouds_gpmmergir(
         lat = rawdata["lat"].values
         lon = rawdata["lon"].values
         time_decode = rawdata["time"]
-        original_ir = rawdata[config['cloud_variable_name']].values
+        original_ir = rawdata[config["tb_varname"]].values
         rawdata.close()
 
         # Mesh 1D grid into 2D
@@ -71,11 +70,11 @@ def idclouds_gpmmergir(
             file_timestring = iTime.dt.strftime("%H%M").item()
             iminute = iTime.dt.minute.item()
 
-            # If config['idclouds_hourly'] is set to 1, then check if iminutes is within the allowed difference
-            # from config['idclouds_minute']
+            # If config['idclouds_hourly'] is set to 1, then check if iminutes is
+            # within the allowed difference from idclouds_minute
             # If so proceed, otherwise, skip this time
             if config['idclouds_hourly'] == 1:
-                if np.absolute(iminute - config['idclouds_minute']) < config['idclouds_minute']:
+                if np.absolute(iminute - idclouds_minute) < idclouds_minute:
                     idclouds_proceed = 1
                 else:
                     idclouds_proceed = 0
@@ -170,7 +169,7 @@ def idclouds_gpmmergir(
                             )
 
                         ######################################################
-                        # separate output from futyan into the separate variables
+                        # separate output into the separate variables
                         final_nclouds = np.array([clouddata["final_nclouds"]])
                         final_ncorepix = clouddata["final_ncorepix"]
                         final_ncoldpix = clouddata["final_ncoldpix"]
@@ -192,9 +191,9 @@ def idclouds_gpmmergir(
 
                             # Proceed if there is at least 1 cloud
                             if final_nclouds > 0:
-                                # Read PF from idcloudfile
-                                rawdata = Dataset(filename, "r")
-                                pcp = rawdata[config['pfvarname']][:]
+                                # Read precipitation
+                                rawdata = xr.open_dataset(filename, mask_and_scale=False)
+                                pcp = rawdata[config['pcp_varname']].values
                                 rawdata.close()
 
                                 # For 'gpmirimerg', precipitation is averaged to 1-hourly
@@ -297,18 +296,14 @@ def idclouds_gpmmergir(
                         #######################################################
                         # output data to netcdf file, only if clouds present
                         if final_nclouds > 0:
-                            # create filename
+                            # Output filename
                             cloudid_outfile = (
-                                config['tracking_outpath']
-                                + config['clouddatasource']
-                                + "_"
-                                + config['datadescription']
-                                + "_cloudid"
-                                + "_"
-                                + file_datestring
-                                + "_"
-                                + file_timestring
-                                + ".nc"
+                                config["tracking_outpath"] +
+                                config["cloudid_filebase"] +
+                                file_datestring +
+                                "_" +
+                                file_timestring +
+                                ".nc"
                             )
                             logger.info(f"outcloudidfile: {cloudid_outfile}")
 

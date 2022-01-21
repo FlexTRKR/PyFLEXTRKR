@@ -72,16 +72,12 @@ def idcell_csapr(
     file_datestring = time_decode.dt.strftime("%Y%m%d").item()
     file_timestring = time_decode.dt.strftime("%H%M").item()
     cloudid_outfile = (
-        config['tracking_outpath']
-        + config['datasource']
-        + "_"
-        + config['datadescription']
-        + "_cloudid"
-        + "_"
-        + file_datestring
-        + "_"
-        + file_timestring
-        + ".nc"
+        config["tracking_outpath"] +
+        config["cloudid_filebase"] +
+        file_datestring +
+        "_" +
+        file_timestring +
+        ".nc"
     )
     logger.info(f"outcloudidfile: {cloudid_outfile}")
 
@@ -129,7 +125,7 @@ def idcell_csapr(
 
     # Define global attributes
     gattrlist = {
-        "title": "Convective cells identified in the data from "
+        "title": "Convective cells identified in the data"
         + file_datestring[0:4]
         + "/"
         + file_datestring[4:6]

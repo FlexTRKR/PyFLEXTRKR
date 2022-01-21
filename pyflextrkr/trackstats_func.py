@@ -916,14 +916,11 @@ def get_track_startend_status(
 
     # Some tracks have 0 tracklength (no data in sparse arrays)
     # causing inconsistency in the number of tracks
-    # This way make sure numtracks matches
+    # This makes sure numtracks match
     trackid_real = np.where(out_tracklength > 0)[0]
     out_startbasetime[trackid_real] = out_dict["base_time"][:, 0].data
     out_startstatus[trackid_real] = out_dict["track_status"][:, 0].data
     out_startsplit_tracknumber[trackid_real] = out_dict["split_tracknumbers"][:, 0].data
-    # out_startbasetime = out_dict["base_time"][:, 0].data
-    # out_startstatus = out_dict["track_status"][:, 0].data
-    # out_startsplit_tracknumber = out_dict["split_tracknumbers"][:, 0].data
 
     # Ending status
     out_endbasetime = np.full(numtracks, np.nan, dtype=np.float64)

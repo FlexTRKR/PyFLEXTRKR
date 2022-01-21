@@ -10,8 +10,8 @@ import logging
 def trackclouds(
     cloudid_filepairs,
     cloudid_basetimepairs,
-    drift_data,
     config,
+    drift_data=None,
 ):
     """
     Track clouds in successive pairs of cloudid files.
@@ -21,10 +21,10 @@ def trackclouds(
             Cloudid filename pairs
         cloudid_basetimepairs: tuple
             Cloudid basetime pairs
-        drift_data: tuple
-            Drift data (datetime_string, xdrift, ydrift)
         config: dictionary
             Dictionary containing config parameters
+        drift_data: tuple, optional. Default: None.
+            Drift data (datetime_string, xdrift, ydrift)
 
     Returns:
         track_outfile: string
@@ -47,15 +47,13 @@ def trackclouds(
     nmaxlinks = config["nmaxlinks"]
     othresh = config["othresh"]
     fillval = config["fillval"]
-    datetime_drift, xdrift, ydrift = drift_data[0], drift_data[1], drift_data[2]
+    if drift_data is not None:
+        datetime_drift, xdrift, ydrift = drift_data[0], drift_data[1], drift_data[2]
 
     logger.debug(("firstcloudidfilename: ", firstcloudidfilename))
     logger.debug(("secondcloudidfilename: ", secondcloudidfilename))
 
     ########################################################
-    # Set constants
-    # Version information
-    # outfilebase = "track" + track_version + "_"
     outfilebase = "track_"
     ########################################################
     # Isolate new and reference file and base times
@@ -107,21 +105,21 @@ def trackclouds(
         new_convcold_cloudnumber[np.isnan(new_convcold_cloudnumber)] = 0
         new_convcold_cloudnumber = new_convcold_cloudnumber.astype("int")
 
-        # Compare drift datetime with reference datetime
-        if reference_filedatetime == datetime_drift:
+        if drift_data is not None:
+            # Compare drift datetime with reference datetime
+            if reference_filedatetime == datetime_drift:
 
-            # Shift the reference cloudnumber and replace the original
-            reference_convcold_cloudnumber = ndi.shift(
-                reference_convcold_cloudnumber, [0, ydrift, xdrift]
-            )
-        else:
-            logger.info(
-                "Warning: datetime_drift does NOT match reference_filedatetime! No shifting is applied."
-            )
-            logger.info("reference_filedatetime: " + reference_filedatetime)
-            logger.info("datetime_drift: " + datetime_drift)
+                # Shift the reference cloudnumber and replace the original
+                reference_convcold_cloudnumber = ndi.shift(
+                    reference_convcold_cloudnumber, [0, ydrift, xdrift]
+                )
+            else:
+                logger.info(
+                    "Warning: datetime_drift does NOT match reference_filedatetime! No shifting is applied."
+                )
+                logger.info("reference_filedatetime: " + reference_filedatetime)
+                logger.info("datetime_drift: " + datetime_drift)
 
-        # import pdb; pdb.set_trace()
 
         ############################################################
         # Get size of data

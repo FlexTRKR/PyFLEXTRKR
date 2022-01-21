@@ -39,7 +39,7 @@ def movement_speed(config):
     run_parallel = config["run_parallel"]
     feature_type = config["feature_type"]
     pixel_radius = config["pixel_radius"]
-    lag = config["lag"]
+    lag = config["lag_for_speed"]
     max_speed_thresh = config["max_speed_thresh"]
 
     logger = logging.getLogger(__name__)
@@ -73,7 +73,7 @@ def movement_speed(config):
     stats_basetime = ds_stats.variables['base_time'].values
     ds_stats.close()
 
-    # filename_packet = zip(filelist[0:-lag], filelist[lag:], np.repeat(ntracks, nfiles))
+    # Make file pairs
     filepairs = list(zip(filelist[0:-lag], filelist[lag::]))
 
 
@@ -184,8 +184,8 @@ def movement_of_feature_fft(
             Base time for the first pixel file.
     """
 
-    track_variable = config["track_variable_for_speed"]
-    tracked_field = config["pcpvarname"]
+    tracknumber = config["track_number_for_speed"]
+    track_field = config["track_field_for_speed"]
     min_size_thresh = config["min_size_thresh_for_speed"]
     # storm_buffer = None
 
@@ -199,13 +199,13 @@ def movement_of_feature_fft(
     x_lag = np.zeros(ntracks)
 
     # Get minimum size of feature from pixel files
-    min_cloud_size = np.minimum(get_pixel_size_of_clouds(dset1, ntracks, track_variable),
-                                get_pixel_size_of_clouds(dset2, ntracks, track_variable))
+    min_cloud_size = np.minimum(get_pixel_size_of_clouds(dset1, ntracks, tracknumber),
+                                get_pixel_size_of_clouds(dset2, ntracks, tracknumber))
     # Get tracknumber and field values
-    tracknumber_1 = dset1.variables[track_variable][:].squeeze()
-    tracknumber_2 = dset2.variables[track_variable][:].squeeze()
-    field_1 = dset1.variables[tracked_field][:].squeeze()
-    field_2 = dset2.variables[tracked_field][:].squeeze()
+    tracknumber_1 = dset1.variables[tracknumber][:].squeeze()
+    tracknumber_2 = dset2.variables[tracknumber][:].squeeze()
+    field_1 = dset1.variables[track_field][:].squeeze()
+    field_2 = dset2.variables[track_field][:].squeeze()
 
     # Loop over each track number
     for track_number in np.arange(0, ntracks):
@@ -257,7 +257,7 @@ def movement_of_feature_fft(
 def get_pixel_size_of_clouds(
         dataset,
         ntracks,
-        track_variable,
+        tracknumber,
 ):
     """
     Calculate pixel size of each identified cloud in the file.
@@ -265,7 +265,7 @@ def get_pixel_size_of_clouds(
     Args:
         dataset: Dataset
             netcdf Dataset
-        track_variable: string
+        tracknumber: string
             variable that contains pixel level values.
 
     Returns:
@@ -274,7 +274,7 @@ def get_pixel_size_of_clouds(
     """
     storm_sizes = np.zeros(ntracks + 1)
 
-    track, counts = np.unique(dataset.variables[track_variable][:], return_counts=True)
+    track, counts = np.unique(dataset.variables[tracknumber][:], return_counts=True)
     storm_sizes[track] = counts
     storm_sizes[0] = 0
     return storm_sizes

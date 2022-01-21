@@ -1,14 +1,13 @@
 import numpy as np
 import os.path
-from netCDF4 import Dataset
+import sys
+import logging
+import xarray as xr
 from scipy.ndimage import label
 from skimage.measure import regionprops
 from math import pi
 from scipy.stats import skew
-import xarray as xr
-import sys
 from pyflextrkr.ftfunctions import sort_renumber
-import logging
 
 def matchtbpf_singlefile(
     cloudid_filename,
@@ -62,17 +61,20 @@ def matchtbpf_singlefile(
 
     # Read cloudid file
     if os.path.isfile(cloudid_filename):
-        logger.debug("Data Present")
         # Load cloudid data
         logger.debug("Loading cloudid data")
         logger.debug(cloudid_filename)
-        cloudiddata = Dataset(cloudid_filename, "r")
-        cloudnumbermap = cloudiddata[feature_varname][:]
-        rawrainratemap = cloudiddata["precipitation"][:]
-        cloudid_basetime = cloudiddata["base_time"][:]
-        lon = cloudiddata["longitude"][:]
-        lat = cloudiddata["latitude"][:]
-        cloudiddata.close()
+        ds = xr.open_dataset(
+            cloudid_filename,
+            mask_and_scale=False,
+            decode_times=False,
+        )
+        cloudnumbermap = ds[feature_varname].values
+        rawrainratemap = ds["precipitation"].values
+        cloudid_basetime = ds["base_time"].values
+        lon = ds["longitude"].values
+        lat = ds["latitude"].values
+        ds.close()
 
         # Get dimensions of data
         ydim, xdim = np.shape(lat)
@@ -199,9 +201,8 @@ def matchtbpf_singlefile(
                                 logger.debug("Must define how to calculate landfrac.")
 
                             if npix_land > 0:
-                                pf_landfrac[imatchcloud] = float(npix_land) / float(
-                                    nrainpix
-                                )
+                                pf_landfrac[imatchcloud] = \
+                                    float(npix_land) / float(nrainpix)
                             else:
                                 pf_landfrac[imatchcloud] = 0
                         pass
@@ -448,7 +449,7 @@ def matchtbpf_singlefile(
 
 
 ##########################################################################
-# Customed functions
+# Custom functions
 def calc_pf_stats(
         fillval, fillval_f, heavy_rainrate_thresh, lat, logger, lon, minx, miny, nmaxpf, numpf, pf_npix,
         pfnumberlabelmap, pixel_radius, subdimx, subdimy, subrainratemap,

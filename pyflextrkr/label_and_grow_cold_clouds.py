@@ -1,8 +1,7 @@
 from collections import deque
 import numpy as np
 from scipy.ndimage import label, binary_dilation, generate_binary_structure, filters
-from scipy.interpolate import RectBivariateSpline
-from astropy.convolution import Box2DKernel, convolve, convolve_fft
+from astropy.convolution import Box2DKernel, convolve
 import logging
 
 def label_and_grow_cold_clouds(
@@ -52,7 +51,7 @@ def label_and_grow_cold_clouds(
         ncorepix, nx, ny, smoothir, thresh_core
     )
 
-    # Check is any cores have been identified
+    # Check if any cores have been identified
     if nlabelcores > 0:
 
         # Check if cores satisfy size threshold

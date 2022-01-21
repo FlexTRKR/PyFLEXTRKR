@@ -23,8 +23,8 @@ def gettracknumbers(config):
     # Get parameters from config
     singletrack_filebase = config["singletrack_filebase"]
     tracknumbers_filebase = config["tracknumbers_filebase"]
-    datasource = config["datasource"]
-    datadescription = config["datadescription"]
+    # datasource = config["datasource"]
+    # datadescription = config["datadescription"]
     tracking_outpath = config["tracking_outpath"]
     stats_outpath = config["stats_outpath"]
     startdate = config["startdate"]
@@ -32,7 +32,6 @@ def gettracknumbers(config):
     timegap = config["timegap"]
     maxnclouds = config["maxnclouds"]
     featuresize_varname = config.get("featuresize_varname", "npix_feature")
-    # keepsingletrack = config["keepsingletrack"]
     start_basetime = config["start_basetime"]
     end_basetime = config["end_basetime"]
     fillval = config["fillval"]
@@ -633,8 +632,8 @@ def gettracknumbers(config):
             "Insitution": "Pacific Northwest National Laboratory",
             "Contact": "Zhe Feng: zhe.feng@pnnl.gov",
             "Created": time.ctime(time.time()),
-            "source": datasource,
-            "description": datadescription,
+            # "source": datasource,
+            # "description": datadescription,
             "singletrack_filebase": singletrack_filebase,
             "startdate": startdate,
             "enddate": enddate,

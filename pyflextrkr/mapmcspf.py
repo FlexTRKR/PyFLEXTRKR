@@ -334,7 +334,6 @@ def mapmcs_tb_pf(
         "Created_on": time.ctime(time.time()),
         "startdate": startdate,
         "enddate": enddate,
-        "datasource": config["datasource"],
         "precipitation_datasource": config["pfdatasource"],
         "mcs_tb_area_thresh": config["mcs_tb_area_thresh"],
         "mcs_tb_duration_thresh": config["mcs_tb_duration_thresh"],
