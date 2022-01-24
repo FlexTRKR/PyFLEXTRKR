@@ -12,8 +12,8 @@ run_trackstats: True
 # Map tracking to pixel files
 run_mapfeature: True
 # Start/end date and time
-startdate: '20181101.0000'
-enddate: '20181201.0000'
+startdate: '20181015.0000'
+enddate: '20190303.0000'
 # Parallel processing set up
 run_parallel: 1
 nprocesses: 25

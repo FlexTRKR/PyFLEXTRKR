@@ -51,8 +51,8 @@ def mapcell_radar(
     # Track number that it merges into
     trackstat_mergenumbers = allstatdata["merge_tracknumbers"][:]
     trackstat_splitnumbers = allstatdata["split_tracknumbers"][:]
-    datasource = allstatdata.getncattr("source")
-    datadescription = allstatdata.getncattr("description")
+    # datasource = allstatdata.getncattr("source")
+    # datadescription = allstatdata.getncattr("description")
     allstatdata.close()
 
     #########################################################################
@@ -242,9 +242,9 @@ def mapcell_radar(
 
     # Define global attributes
     gattrlist = {
-        "title": "Pixel level of tracked cells",
-        "source": datasource,
-        "description": datadescription,
+        "title": "Pixel-level cell tracking data",
+        # "source": datasource,
+        # "description": datadescription,
         # 'Main_cell_duration_hr': durationthresh, \
         # 'Merger_duration_hr': mergethresh, \
         # 'Split_duration_hr': splitthresh, \
