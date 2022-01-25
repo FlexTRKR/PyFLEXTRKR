@@ -275,7 +275,7 @@ def trackstats_ct(
     logger.info("Looping over files and calculating statistics for each file")
     logger.info((time.ctime()))
     # parallel here, by Jianfeng Li
-    from pyflextrkr.trackstats_ct_single import calc_stats_single
+    from pyflextrkr.depreciated.trackstats_ct_single import calc_stats_single
 
     with Pool(nprocesses) as pool:
         Results = pool.starmap(

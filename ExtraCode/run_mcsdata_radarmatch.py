@@ -188,7 +188,7 @@ if run_idclouds == 1:
     ##########################################################################
     # Process files
     # Load function
-    from pyflextrkr.idclouds import idclouds_mergedir
+    from pyflextrkr.depreciated.idclouds import idclouds_mergedir
 
     # Generate input lists
     list_irdatasource = [irdatasource]*(filestep)
@@ -332,7 +332,7 @@ if run_gettracks == 0:
 # Call function
 if run_finalstats == 1:
     # Load function
-    from pyflextrkr.trackstats import trackstats_sat
+    from pyflextrkr.depreciated.trackstats import trackstats_sat
 
     # Call satellite version of function
     print('Calculating track statistics')
@@ -367,7 +367,7 @@ if run_matchpf == 1:
     print('Identifying Precipitation Features in MCSs')
 
     # Load function
-    from pyflextrkr.matchpf import identifypf_mergedir_nmq
+    from pyflextrkr.depreciated.matchpf import identifypf_mergedir_nmq
 
     # Call function
     identifypf_mergedir_nmq(mcsstats_filebase, cloudid_filebase, pfdata_filebase, rainaccumulation_filebase, stats_outpath, tracking_outpath, pfdata_path, rainaccumulation_path, startdate, enddate, geolimits, nmaxpf, nmaxcore, nmaxpix, nmaxclouds, rr_min, pixel_radius, irdatasource, nmqdatasource, datadescription, datatimeresolution, mcs_mergedir_areathresh, mcs_mergedir_durationthresh, mcs_mergedir_eccentricitythresh)

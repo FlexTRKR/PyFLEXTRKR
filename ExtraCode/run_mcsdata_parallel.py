@@ -191,7 +191,7 @@ if run_idclouds == 1:
     # Call function
     print('Identifying clouds')
 
-    from pyflextrkr.idclouds import idclouds_mergedir
+    from pyflextrkr.depreciated.idclouds import idclouds_mergedir
 
     dview.map_sync(idclouds_mergedir, idclouds_input)
 
@@ -292,7 +292,7 @@ if run_gettracks == 0:
 # Call function
 if run_finalstats == 1:
     # Load function
-    from pyflextrkr.trackstats import trackstats_sat
+    from pyflextrkr.depreciated.trackstats import trackstats_sat
 
     # Call satellite version of function
     print('Calculating track statistics')

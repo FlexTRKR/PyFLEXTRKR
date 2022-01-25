@@ -1,6 +1,6 @@
 ---
 # Tracking steps to run
-run_advection: False
+run_advection: True
 # Identify features to track
 run_idfeature: True
 # Track single consecutive feature files
@@ -12,11 +12,11 @@ run_trackstats: True
 # Map tracking to pixel files
 run_mapfeature: True
 # Start/end date and time
-startdate: '20181111.0000'
-enddate: '20181114.0000'
+startdate: '20181015.0000'
+enddate: '20190303.0000'
 # Parallel processing set up
 run_parallel: 1
-nprocesses: 32
+nprocesses: 25
 # Data source, description
 datasource: CSAPR2
 datadescription: COR
@@ -26,13 +26,14 @@ databasename: taranis_corcsapr2cfrppiqcM1_convmask.c1.
 # E.g., wrfout_2018-11-01_01:15:00 --> yyyy-mo-dd_hh:mm:ss
 time_format: 'yyyymodd.hhmmss'
 # Input files directory
-clouddata_path: '/global/cscratch1/sd/feng045/iclass/cacti/arm/csapr/test/input_data/'
+#clouddata_path: '/global/cscratch1/sd/feng045/iclass/cacti/arm/csapr/test/input_data/'
+clouddata_path: '/global/cscratch1/sd/feng045/iclass/cacti/arm/csapr/taranis_corcsapr2cfrppiqcM1_gridded_convmask.c1/'
 # Terrain file
 terrain_file: '/global/cscratch1/sd/feng045/iclass/cacti/arm/csapr/test/CSAPR2_Taranis_Gridded_500m.Terrain_RangeMask.nc'
 # Range mask variable to use in terrain file
 rangemask_varname: 'mask110'
 # Working directory for the tracking data
-root_path: '/global/cscratch1/sd/feng045/iclass/cacti/arm/csapr/test/'
+root_path: '/global/cscratch1/sd/feng045/iclass/cacti/arm/csapr/test_pyflextrkr/'
 # Working sub-directory names
 tracking_path_name: 'tracking'
 stats_path_name: 'stats'

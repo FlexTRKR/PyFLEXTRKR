@@ -34,7 +34,7 @@ def trackstats_radar(
     import logging
     from multiprocessing import Pool
     from pyflextrkr import netcdf_io_trackstats as net
-    from pyflextrkr.trackstats_radar_func import calc_stats_radar
+    from pyflextrkr.depreciated.trackstats_radar_func import calc_stats_radar
 
     np.set_printoptions(threshold=np.inf)
     logger = logging.getLogger(__name__)

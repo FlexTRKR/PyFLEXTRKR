@@ -95,7 +95,7 @@ def match_tbpf_tracks(
     import glob
     import logging
     from multiprocessing import Pool
-    from pyflextrkr.matchtbpf_single import matchtbpf_singlefile
+    from pyflextrkr.depreciated.matchtbpf_single import matchtbpf_singlefile
 
     np.set_printoptions(threshold=np.inf)
     logger = logging.getLogger(__name__)

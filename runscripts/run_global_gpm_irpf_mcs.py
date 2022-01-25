@@ -3,7 +3,6 @@ import datetime
 import fnmatch
 import os
 import sys
-import time
 from itertools import repeat
 from multiprocessing import Pool
 import logging
@@ -15,10 +14,10 @@ from pyflextrkr.gettracks import gettracknumbers
 from pyflextrkr.idclouds_sat import idclouds_gpmmergir
 from pyflextrkr.identifymcs import identifymcs_tb
 from pyflextrkr.mapmcspf import mapmcs_tb_pf
-from pyflextrkr.matchtbpf_parallel import match_tbpf_tracks
+from pyflextrkr.depreciated.matchtbpf_parallel import match_tbpf_tracks
 from pyflextrkr.robustmcspf import define_robust_mcs_pf
 from pyflextrkr.tracksingle import trackclouds
-from pyflextrkr.trackstats_parallel import trackstats_tb
+from pyflextrkr.depreciated.trackstats_parallel import trackstats_tb
 
 # Purpose: Master script for tracking MCS using collocated IR brightness temperature (Tb) and GPM IMERG precipitation data.
 

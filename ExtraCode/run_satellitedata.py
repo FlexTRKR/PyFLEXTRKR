@@ -150,7 +150,7 @@ if run_idclouds == 1:
     ##########################################################################
     # Process files
     # Load function
-    from pyflextrkr.idclouds import idclouds_mergedir
+    from pyflextrkr.depreciated.idclouds import idclouds_mergedir
 
     # Generate imput lists
     list_datasource = [datasource]*(filestep)
@@ -278,7 +278,7 @@ if run_gettracks == 0:
 # Call function
 if run_finalstats == 1:
     # Load function
-    from pyflextrkr.trackstats import trackstats_sat
+    from pyflextrkr.depreciated.trackstats import trackstats_sat
 
     # Call satellite version of function
     print('Calculating track statistics')
