@@ -204,8 +204,7 @@ def calc_mean_advection(config):
 
     output_filename = (
         config["stats_outpath"] +
-        config["datasource"] +
-        "_advection_" +
+        "advection_" +
         config["startdate"] + "_" +
         config["enddate"] + ".nc"
     )
@@ -314,6 +313,9 @@ def calc_mean_advection(config):
     rootgrp.dy = dy
     rootgrp.close()
     logger.info(f"Advection file saved: {output_filename}")
+
+    # Update config to add drift filename
+    config.update({"advection_filename": output_filename})
 
     status = 1
     return output_filename

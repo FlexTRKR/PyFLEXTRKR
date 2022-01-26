@@ -1,4 +1,6 @@
 ---
+# CACTI CSAPR-2 radar cell tracking configuration file
+
 # Tracking steps to run
 run_advection: True
 # Identify features to track
@@ -14,62 +16,53 @@ run_mapfeature: True
 # Start/end date and time
 startdate: '20181015.0000'
 enddate: '20190303.0000'
+
 # Parallel processing set up
 run_parallel: 1
-nprocesses: 25
-# Data source, description
-datasource: CSAPR2
-datadescription: COR
+nprocesses: 30
+
 databasename: taranis_corcsapr2cfrppiqcM1_convmask.c1.
 # Specify date/time string format in the file name
 # E.g., radar_20181101.011503.nc --> yyyymodd.hhmmss
 # E.g., wrfout_2018-11-01_01:15:00 --> yyyy-mo-dd_hh:mm:ss
 time_format: 'yyyymodd.hhmmss'
 # Input files directory
-#clouddata_path: '/global/cscratch1/sd/feng045/iclass/cacti/arm/csapr/test/input_data/'
 clouddata_path: '/global/cscratch1/sd/feng045/iclass/cacti/arm/csapr/taranis_corcsapr2cfrppiqcM1_gridded_convmask.c1/'
 # Terrain file
 terrain_file: '/global/cscratch1/sd/feng045/iclass/cacti/arm/csapr/test/CSAPR2_Taranis_Gridded_500m.Terrain_RangeMask.nc'
 # Range mask variable to use in terrain file
 rangemask_varname: 'mask110'
 # Working directory for the tracking data
-root_path: '/global/cscratch1/sd/feng045/iclass/cacti/arm/csapr/test_pyflextrkr/'
+root_path: '/global/cscratch1/sd/feng045/iclass/cacti/arm/csapr/taranis_corcsapr2cfrppiqcM1_celltracking.c1/'
 # Working sub-directory names
 tracking_path_name: 'tracking'
 stats_path_name: 'stats'
 pixel_path_name: 'celltracking'
 
+# Specify types of feature being tracked
+# This adds additional feature-specific statistics to be computed
+feature_type: 'radar_cells'
+
 # Advection calculation parameters
 DBZ_THRESHOLD: 10       # radar reflectivity threshold [dBZ]
 MED_FILT_LEN: 9         # median filter length for advection speed time seires [number of points]
 MAX_MOVEMENT_MPS: 60    # maximum advection speed allowed [m/s]
+advection_filename: 'advection_'
 
-# 0=all short tracks removed, 1=only short tracks that are not mergers or splits are removed
-keep_singlemergesplit: 1
-
-## Specify version of code using
-#cloudid_version: 'v1.0'
-#track_version: 'v1.0'
-#tracknumber_version: 'v1.0'
-#
-## Specify default code version
-#curr_id_version: 'v1.0'
-#curr_track_version: 'v1.0'
-#curr_tracknumbers_version: 'v1.0'
-
-# Specify cloud tracking parameters
-# 4-element array boundaries [lat_min, lon_min, lat_max, lon_max]
-geolimits: np.array([-90., -180., 90., 180.])
+# Specify data structure
+datatimeresolution: 0.25     # hours
 pixel_radius: 0.5      # km
+x_dimname: 'x'
+y_dimname: 'y'
+time_dimname: 'time'
+ref_varname: 'dbz_comp'
+
+# Tracking parameters
 timegap: 0.5           # hour
-area_thresh: 4         # km^2
-miss_thresh: 0.2       # Missing data threshold. (0.1 = 10%)
 othresh: 0.3           # overlap percentage threshold
-duration_range: [2, 60]   # A vector [minlength,maxlength] to specify the duration range for the tracks
 maxnclouds: 1000       # Maximum number of clouds in one snapshot
 nmaxlinks: 10          # Maximum number of clouds that any single cloud can be linked to
-keepsingletrack: 1     # Keep tracks that has only 1 time
-
+duration_range: [2, 60]   # A vector [minlength,maxlength] to specify the duration range for the tracks
 # Flag to remove short-lived tracks [< min(duration_range)] that are not mergers/splits with other tracks
 # 0:keep all tracks; 1:remove short tracks
 remove_shorttracks: 1
@@ -77,31 +70,13 @@ remove_shorttracks: 1
 # Note that for datasets with lots of tracks, the memory consumption could be very large
 trackstats_dense_netcdf: 1
 
-## Specify cell track parameters
-maincloud_duration: 0.5    # Natural time resolution of data
-merge_duration: 0.5        # Track shorter than this will be labeled as merger
-split_duration: 0.5        # Track shorter than this will be labeled as merger
-
 # Define tracked feature variable names
 feature_varname: 'feature_number'
 nfeature_varname: 'nfeatures'
 featuresize_varname: 'npix_feature'
 
-# Specify data structure
-datatimeresolution: 0.25     # hours
-#dimname: 'nclouds'
-#numbername: 'convcold_cloudnumber'
-#typename: 'cloudtype'
-#npxname: 'ncorecoldpix'
-pixeltracking_filebase: 'celltracks_'
-# datavariablename: 'comp_ref'
-#tdimname: 'time'
-#xdimname: 'Lat_Grid'
-#ydimname: 'Lon_Grid'
 # Track statistics output file dimension names
 tracks_dimname: 'tracks'
 times_dimname: 'times'
 fillval: -9999
-# Specify types of feature being tracked
-# This adds additional feature-specific statistics to be computed
-feature_type: 'radar_cells'
+pixeltracking_filebase: 'celltracks_'

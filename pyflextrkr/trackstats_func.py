@@ -69,10 +69,11 @@ def calc_stats_singlefile(
 
         # Read feature specific variables
         if feature_type == "radar_cells":
+            ref_varname = config["ref_varname"]
             # Convert x,y units to [km]
             x_coords = ds["x"] / 1000.
             y_coords = ds["y"] / 1000.
-            file_dbz = ds["comp_ref"].squeeze().values
+            file_dbz = ds[ref_varname].squeeze().values
             file_conv_core = ds["conv_core"].squeeze().values
             file_conv_mask = ds["conv_mask"].squeeze().values
             # Replace default cloudnumber with convective mask

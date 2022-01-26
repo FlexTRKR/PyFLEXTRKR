@@ -35,8 +35,10 @@ def load_config(config_file):
     tracknumbers_filebase = "tracknumbers_"
     trackstats_filebase = "trackstats_"
     trackstats_sparse_filebase = "trackstats_sparse_"
-    # Default not writing dense trackstats netCDF file
+
+    # Optional parameters (default values if not in config file)
     trackstats_dense_netcdf = config.get("trackstats_dense_netcdf", 0)
+    geolimits = config.get("geolimits", [-90., -180., 90., 180.])
 
     # Create output directories
     os.makedirs(tracking_outpath, exist_ok=True)
@@ -60,6 +62,7 @@ def load_config(config_file):
             "trackstats_dense_netcdf": trackstats_dense_netcdf,
             "start_basetime": start_basetime,
             "end_basetime": end_basetime,
+            "geolimits": geolimits,
         }
     )
     return config
