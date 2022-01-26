@@ -34,7 +34,7 @@ if __name__ == '__main__':
         logger.info('Calculating domain mean advection.')
         driftfile = calc_mean_advection(config)
     else:
-        driftfile = f'{config["stats_outpath"]}{config["datasource"]}_advection_' + \
+        driftfile = f'{config["stats_outpath"]}advection_' + \
                     f'{config["startdate"]}_{config["enddate"]}.nc'
     config.update({"driftfile": driftfile})
 

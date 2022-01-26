@@ -26,6 +26,7 @@ def mapcell_radar(
     """
     feature_varname = config.get("feature_varname", "feature_number")
     nfeature_varname = config.get("nfeature_varname", "nfeatures")
+    ref_varname = config["ref_varname"]
     fillval = config.get("fillval", -9999)
 
     np.set_printoptions(threshold=np.inf)
@@ -73,7 +74,7 @@ def mapcell_radar(
     basetime_units = cloudiddata["base_time"].units
     longitude = cloudiddata["longitude"].values
     latitude = cloudiddata["latitude"].values
-    comp_ref = cloudiddata["comp_ref"].values
+    comp_ref = cloudiddata[ref_varname].values
     dbz_lowlevel = cloudiddata["dbz_lowlevel"].values
     conv_core = cloudiddata["conv_core"].values
     conv_mask = cloudiddata["conv_mask"].values
