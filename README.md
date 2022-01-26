@@ -14,7 +14,7 @@ Then the package can be installed (in editable/dev mode for now) with
 ```bash
 pip install -e .
 ```
-Then any changes to the source code will be reflected in the running version. 
+Then any changes to the source code will be reflected in the running version.  
 Example to run the code:
 ```bash
 python ./runscripts/run_cacti_csapr.py ./config/config_csapr500m_nersc.yaml
