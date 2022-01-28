@@ -16,15 +16,18 @@ run_robustmcs : True
 run_mapfeature : True
 run_speed: True
 
-# Cores, parallel, etc
-run_parallel: 1
-nprocesses : 25  # Number of processors to use if run_parallel is set to 1
+# Parallel processing set up
+# run_parallel: 1 (local cluster), 2 (Dask MPI)
+run_parallel: 2
+nprocesses : 25  # Number of processors to use if run_parallel=1
 
 # Start/end date and time
-startdate: '20190122.0000'
-enddate: '20190127.0000'
+#startdate: '20190122.0000'
+#enddate: '20190127.0000'
 #startdate: '20190101.0000'
 #enddate: '20190131.2300'
+startdate: '20190101.0000'
+enddate: '20200101.0000'
 #startdate: '20180601.0000'
 #enddate: '20190630.2300'
 # Data source, description
@@ -37,11 +40,9 @@ databasename: 'merg_'
 # E.g., wrfout_2018-11-01_01:15:00 --> yyyy-mo-dd_hh:mm:ss
 time_format: 'yyyymoddhh'
 # Input files directory
-clouddata_path: '/global/cscratch1/sd/feng045/SAAG/GPM/tb_rr/2018_2019/'
-#clouddata_path: '/Users/feng045/data/SAAG/GPM/tb_rr/2019/'
+clouddata_path: '/global/cscratch1/sd/feng045/SAAG/GPM/tb_rr/2019/'
 # Working directory for the tracking data
-root_path: '/global/cscratch1/sd/feng045/SAAG/GPM/pyflex_test/'
-#root_path: '/Users/feng045/data/SAAG/GPM/pyflex_test/'
+root_path: '/global/cscratch1/sd/feng045/SAAG/GPM/mpi_test/'
 # Working sub-directory names
 tracking_path_name: 'tracking'
 stats_path_name: 'stats'

@@ -279,7 +279,7 @@ def identifymcs_tb(config):
 
     # Create a flag for MCS status
     # ccs_area = trackstat_ccsarea[trackidx_mcs, :]
-    ccs_area = dsout['core_area'] + dsout['cold_area']
+    ccs_area = dsout['core_area'].data + dsout['cold_area'].data
     mcs_status = np.full(ccs_area.shape, fillval, dtype=np.int16)
     mcs_status[ccs_area > mcs_tb_area_thresh] = 1
     mcs_status[(ccs_area <= mcs_tb_area_thresh) & (ccs_area > 0)] = 0

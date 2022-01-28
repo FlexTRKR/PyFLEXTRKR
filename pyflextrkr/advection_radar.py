@@ -46,8 +46,8 @@ def movement_of_storm_fft(
     dset_2,
     dx,
     dy,
+    config,
     cuts=1,
-    times=None,
     threshold=30,
     plot_subplots=False,
     buffer=30,
@@ -56,7 +56,9 @@ def movement_of_storm_fft(
     MAX_MOVEMENT_MPS=60,
 ):
 
-    """Calculate Movement of first labeled storm
+    """
+    Calculate Movement of labeled storm.
+
     Parameters
     ----------
     dset_1: Xarray DataSet
@@ -67,10 +69,10 @@ def movement_of_storm_fft(
         Grid spacing in x-direction [km]
     dy: float
         Grid spacing in y-direction [km]
+    config: dictionary
+        Dictionary containing config parameters
     cuts: int
         Number of tiles to cut the domain into for calculating advection
-    times: ?
-        Unknown.
     threshold: float
         Threshold value for filtering the data
     buffer: int
@@ -88,8 +90,9 @@ def movement_of_storm_fft(
     x_lag: int
         Advection in y-direction [number of grids]
     """
-    field_1 = np.squeeze(dset_1["dbz_comp"].values)
-    field_2 = np.squeeze(dset_2["dbz_comp"].values)
+    ref_varname = config["ref_varname"]
+    field_1 = np.squeeze(dset_1[ref_varname].values)
+    field_2 = np.squeeze(dset_2[ref_varname].values)
 
     y_lag = np.zeros((cuts, cuts))
     x_lag = np.zeros((cuts, cuts))
@@ -161,7 +164,7 @@ def movement_of_storm_fft(
     return y_lag[0, 0], x_lag[0, 0]
 
 def movement_of_storm_fft_l(
-    filenames, dx, dy, DBZ_THRESHOLD, TIME_RES_SECOND, MAX_MOVEMENT_MPS
+    filenames, dx, dy, DBZ_THRESHOLD, TIME_RES_SECOND, MAX_MOVEMENT_MPS, config,
 ):
     """This just exists to make parallelism easier"""
     dset_1 = xr.open_dataset(filenames[0])
@@ -172,6 +175,7 @@ def movement_of_storm_fft_l(
         dset_2,
         dx=dx,
         dy=dy,
+        config=config,
         threshold=DBZ_THRESHOLD,
         TIME_RES_SECOND=TIME_RES_SECOND,
         MAX_MOVEMENT_MPS=MAX_MOVEMENT_MPS,
@@ -235,6 +239,7 @@ def calc_mean_advection(config):
                 ii,
                 dx=dx,
                 dy=dy,
+                config=config,
                 DBZ_THRESHOLD=DBZ_THRESHOLD,
                 TIME_RES_SECOND=TIME_RES_SECOND,
                 MAX_MOVEMENT_MPS=MAX_MOVEMENT_MPS,
@@ -249,6 +254,7 @@ def calc_mean_advection(config):
                 ii,
                 dx=dx,
                 dy=dy,
+                config=config,
                 DBZ_THRESHOLD=DBZ_THRESHOLD,
                 TIME_RES_SECOND=TIME_RES_SECOND,
                 MAX_MOVEMENT_MPS=MAX_MOVEMENT_MPS,
