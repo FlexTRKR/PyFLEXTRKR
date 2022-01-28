@@ -299,12 +299,12 @@ def mapmcs_tb_pf(
 
     # Define variable list
     varlist = {
-        "base_time": (["time"], ds_cid["base_time"], ds_cid["base_time"].attrs),
-        "longitude": (["lat", "lon"], ds_cid["longitude"], ds_cid["longitude"].attrs),
-        "latitude": (["lat", "lon"], ds_cid["latitude"], ds_cid["latitude"].attrs),
-        "tb": (["time", "lat", "lon"], ds_cid["tb"], ds_cid["tb"].attrs),
+        "base_time": (["time"], ds_cid["base_time"].data, ds_cid["base_time"].attrs),
+        "longitude": (["lat", "lon"], ds_cid["longitude"].data, ds_cid["longitude"].attrs),
+        "latitude": (["lat", "lon"], ds_cid["latitude"].data, ds_cid["latitude"].attrs),
+        "tb": (["time", "lat", "lon"], ds_cid["tb"].data, ds_cid["tb"].attrs),
         "precipitation": (["time", "lat", "lon"], precipitation, ds_cid["precipitation"].attrs),
-        "cloudtype": (["time", "lat", "lon"], ds_cid["cloudtype"], ds_cid["cloudtype"].attrs),
+        "cloudtype": (["time", "lat", "lon"], ds_cid["cloudtype"].data, ds_cid["cloudtype"].attrs),
         "cloudnumber": (["time", "lat", "lon"], cloudid_cloudnumber, ds_cid[feature_varname].attrs),
         "split_tracknumbers": (["time", "lat", "lon"], mcssplitmap),
         "merge_tracknumbers": (["time", "lat", "lon"], mcsmergemap),
@@ -322,9 +322,9 @@ def mapmcs_tb_pf(
 
     # Define coordinate list
     coordlist = {
-        "time": (["time"], ds_cid["time"], ds_cid["time"].attrs),
-        "lat": (["lat"], ds_cid["lat"], ds_cid["lat"].attrs),
-        "lon": (["lon"], ds_cid["lon"], ds_cid["lon"].attrs),
+        "time": (["time"], ds_cid["time"].data, ds_cid["time"].attrs),
+        "lat": (["lat"], ds_cid["lat"].data, ds_cid["lat"].attrs),
+        "lon": (["lon"], ds_cid["lon"].data, ds_cid["lon"].attrs),
     }
 
     # Define global attributes

@@ -68,8 +68,8 @@ def movement_speed(config):
                                decode_times=False)
     ntracks = ds_stats.dims[tracks_dimname]
     ntimes = ds_stats.dims[times_dimname]
-    tracks_coord = ds_stats.coords[tracks_dimname]
-    times_coord = ds_stats.coords[times_dimname]
+    tracks_coord = ds_stats.coords[tracks_dimname].data
+    times_coord = ds_stats.coords[times_dimname].data
     stats_basetime = ds_stats.variables['base_time'].values
     ds_stats.close()
 
