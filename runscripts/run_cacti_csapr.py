@@ -1,3 +1,4 @@
+import os
 import sys
 import logging
 from dask.distributed import Client, LocalCluster
@@ -28,6 +29,9 @@ if __name__ == '__main__':
     if config['run_parallel'] == 1:
         cluster = LocalCluster(n_workers=config['nprocesses'], threads_per_worker=1)
         client = Client(cluster)
+    elif config['run_parallel'] == 2:
+        scheduler_file = os.path.join(os.environ["SCRATCH"], "scheduler.json")
+        client = Client(scheduler_file=scheduler_file)
 
     # Step 0 - Run advection calculation
     if config['run_advection']:
