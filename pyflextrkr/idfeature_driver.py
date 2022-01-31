@@ -50,7 +50,7 @@ def idfeature_driver(config):
             for ifile in range(0, nfiles):
                 idclouds_gpmmergir(rawdatafiles[ifile], config)
         # Parallel version
-        elif run_parallel == 1:
+        elif run_parallel >= 1:
             results = []
             for ifile in range(0, nfiles):
                 result = dask.delayed(idclouds_gpmmergir)(rawdatafiles[ifile], config)
@@ -69,7 +69,7 @@ def idfeature_driver(config):
             for ifile in range(0, nfiles):
                 idcell_csapr(rawdatafiles[ifile], config)
         # Parallel version
-        elif run_parallel == 1:
+        elif run_parallel >= 1:
             results = []
             for ifile in range(0, nfiles):
                 result = dask.delayed(idcell_csapr)(rawdatafiles[ifile], config)

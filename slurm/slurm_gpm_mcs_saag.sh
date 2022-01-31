@@ -1,10 +1,10 @@
 #!/bin/bash
 #SBATCH -A m1867
-#SBATCH -t 00:30:00
-#SBATCH -N 30
-#SBATCH -n 900
-#SBATCH --cpus-per-task 1
-#SBATCH -q debug
+#SBATCH -t 01:00:00
+#SBATCH -N 10
+#SBATCH -n 100
+#SBATCH --cpus-per-task 3
+#SBATCH -q regular
 #SBATCH -C haswell
 #SBATCH --exclusive
 #SBATCH --output=log_dask-mpi.log

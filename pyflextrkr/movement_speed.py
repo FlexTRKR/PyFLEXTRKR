@@ -88,7 +88,7 @@ def movement_speed(config):
             results.append(result)
         final_result = results
     # Parallel
-    if run_parallel == 1:
+    elif run_parallel >= 1:
         for ifile in range(0, nfiles-1):
             result = dask.delayed(movement_of_feature_fft)(
                 filepairs[ifile], ntracks,
@@ -97,6 +97,8 @@ def movement_speed(config):
             results.append(result)
         final_result = dask.compute(*results)
         wait(final_result)
+    else:
+        sys.exit('Valid parallelization flag not provided')
 
     move_y, move_x, time_lag, base_time = zip(*final_result)
     move_y = np.array(move_y)

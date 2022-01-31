@@ -8,6 +8,7 @@ import copy
 import gc
 import logging
 import dask
+from dask.distributed import wait
 from pyflextrkr.trackstats_func import calc_stats_singlefile, adjust_mergesplit_numbers, get_track_startend_status
 
 def trackstats_driver(config):
@@ -91,7 +92,7 @@ def trackstats_driver(config):
         final_result = results
 
     # Parallel
-    if run_parallel == 1:
+    elif run_parallel >= 1:
         for nf in range(0, nfiles):
             result = dask.delayed(calc_stats_singlefile)(
                 tracknumbers[nf, :],
@@ -106,6 +107,10 @@ def trackstats_driver(config):
 
         # Trigger dask computation
         final_result = dask.compute(*results)
+        wait(final_result)
+
+    else:
+        sys.exit('Valid parallelization flag not provided.')
 
 
     #########################################################################################

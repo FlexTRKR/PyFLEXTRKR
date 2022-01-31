@@ -27,7 +27,6 @@ def idcell_csapr(
     x_dimname = config.get("x_dimname", "x")
     y_dimname = config.get("y_dimname", "y")
     time_dimname = config.get("time", "time")
-    ref_varname = config["ref_varname"]
 
     np.set_printoptions(threshold=np.inf)
     logger = logging.getLogger(__name__)
@@ -38,21 +37,17 @@ def idcell_csapr(
     ds = xr.open_dataset(input_filename, mask_and_scale=False)
     time_decode = ds["time"]
     feature_mask = ds["conv_mask_inflated"]
-    reflectivity = ds[ref_varname]
     ds.close()
-
-    # Replace very small reflectivity values with nan
-    reflectivity[np.where(reflectivity < -30)] = np.nan
 
     # Count number of pixels for each feature
     unique_num, npix_feature = np.unique(feature_mask, return_counts=True)
-    # Remove background
+    # Remove background (unique_num = 0)
     npix_feature = npix_feature[(unique_num > 0)]
 
     # Get number of features
     nfeatures = np.nanmax(feature_mask)
 
-    # if nfeatures > 0:
+    # Get date/time and make output filename
     file_basetime = time_decode[0].values.tolist() / 1e9
     file_datestring = time_decode.dt.strftime("%Y%m%d").item()
     file_timestring = time_decode.dt.strftime("%H%M").item()
@@ -105,10 +100,9 @@ def idcell_csapr(
     feature_mask.attrs["long_name"] = "Labeled feature number for tracking"
 
     # Copy input dataset for output
-    dsout = ds
+    dsout = ds.copy(deep=True)
     # Add new variables to dataset
     dsout["base_time"] = out_basetime
-    dsout[ref_varname] = reflectivity
     dsout[feature_varname] = feature_mask
     dsout[nfeature_varname] = out_nfeatures
     dsout[featuresize_varname] = out_npix_feature
