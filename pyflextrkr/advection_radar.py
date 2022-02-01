@@ -1,3 +1,4 @@
+import sys
 import numpy as np
 import xarray as xr
 from netCDF4 import Dataset
@@ -246,7 +247,7 @@ def calc_mean_advection(config):
             )
             final_results.append(x_y)
 
-    if run_parallel == 1:
+    elif run_parallel >= 1:
         # Parallel version
         results = []
         for ii in zip(filelist[:-1], filelist[1:]):
@@ -262,6 +263,9 @@ def calc_mean_advection(config):
             results.append(x_y)
         final_results = dask.compute(*results)
         dask.distributed.wait(final_results)
+
+    else:
+        sys.exit('Valid parallelization flag not provided')
 
     # Zip the (x, y) and convert them into numpy array
     x_and_y = np.array(tuple(zip(*final_results)))
@@ -310,9 +314,6 @@ def calc_mean_advection(config):
     v_dir.long_name = "Advection direction"
     v_dir.units = "degree"
 
-    # import pdb;
-    # pdb.set_trace()
-
     rootgrp.dbz_threshold = float(DBZ_THRESHOLD)
     rootgrp.MAX_MOVEMENT_MPS = float(MAX_MOVEMENT_MPS)
     rootgrp.dx = dx
@@ -323,5 +324,4 @@ def calc_mean_advection(config):
     # Update config to add drift filename
     config.update({"advection_filename": output_filename})
 
-    status = 1
     return output_filename

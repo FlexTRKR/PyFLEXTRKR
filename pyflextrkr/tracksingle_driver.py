@@ -73,7 +73,7 @@ def tracksingle_driver(config):
                 )
 
     # Parallel version
-    elif run_parallel == 1:
+    elif run_parallel >= 1:
         results = []
         for ifile in range(0, cloudidfilestep - 1):
             if driftfile is not None:

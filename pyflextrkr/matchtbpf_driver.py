@@ -1,5 +1,6 @@
 import numpy as np
 import os
+import sys
 import xarray as xr
 import time
 import logging
@@ -113,7 +114,7 @@ def match_tbpf_tracks(config):
             )
             results.append(result)
         # Parallel
-        if run_parallel == 1:
+        elif run_parallel >= 1:
             result = dask.delayed(matchtbpf_singlefile)(
                 filename,
                 file_cloudnumber,
@@ -122,13 +123,17 @@ def match_tbpf_tracks(config):
                 config,
             )
             results.append(result)
+        else:
+            sys.exit('Valid parallelization flag not provided.')
 
     if run_parallel == 0:
         final_result = results
-    if run_parallel == 1:
+    elif run_parallel >= 1:
         # Trigger dask computation
         final_result = dask.compute(*results)
         wait(final_result)
+    else:
+        sys.exit('Valid parallelization flag not provided.')
 
 
     #########################################################################################

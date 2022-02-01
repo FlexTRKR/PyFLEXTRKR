@@ -76,7 +76,7 @@ def mapmcs_tb_pf(
     mcstrackstat_cloudnumber = ds_mcs["cloudnumber"].values
     mcstrackstat_mergecloudnumber = ds_mcs["merge_cloudnumber"].values
     mcstrackstat_splitcloudnumber = ds_mcs["split_cloudnumber"].values
-
+    ds_mcs.close()
 
     #########################################################################
     # Get cloudid file associated with this time

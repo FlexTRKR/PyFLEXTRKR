@@ -24,13 +24,17 @@ if __name__ == '__main__':
     config = load_config(config_file)
 
     ################################################################################################
-    # Initiate a local cluster for parallel processing
+    # Parallel processing options
     if config['run_parallel'] == 1:
+        # Local cluster
         cluster = LocalCluster(n_workers=config['nprocesses'], threads_per_worker=1)
         client = Client(cluster)
     elif config['run_parallel'] == 2:
+        # Dask-MPI
         scheduler_file = os.path.join(os.environ["SCRATCH"], "scheduler.json")
         client = Client(scheduler_file=scheduler_file)
+    else:
+        logger.info(f"Running in serial.")
 
     # Step 1 - Identify features
     if config['run_idfeature']:

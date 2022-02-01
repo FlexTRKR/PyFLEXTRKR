@@ -1,4 +1,5 @@
 import os
+import sys
 import logging
 import dask
 from dask.distributed import wait
@@ -54,7 +55,7 @@ def mapfeature_driver(config):
                 )
 
         # Parallel
-        elif run_parallel == 1:
+        elif run_parallel >= 1:
             results = []
             for ifile in range(0, nfiles):
                 result = dask.delayed(mapmcs_tb_pf)(
@@ -64,12 +65,14 @@ def mapfeature_driver(config):
                 )
                 results.append(result)
             final_result = dask.compute(*results)
+            wait(final_result)
+        else:
+            sys.exit('Valid parallelization flag not provided.')
 
 
     #######################################################################################
     # Radar convective cells
     if feature_type == "radar_cells":
-
         # Serial
         if run_parallel == 0:
             # Serial version
@@ -81,7 +84,7 @@ def mapfeature_driver(config):
                 )
 
         # Parallel
-        elif run_parallel == 1:
+        elif run_parallel >= 1:
             results = []
             for ifile in range(0, nfiles):
                 result = dask.delayed(mapcell_radar)(
@@ -92,6 +95,8 @@ def mapfeature_driver(config):
                 results.append(result)
             final_result = dask.compute(*results)
             wait(final_result)
+        else:
+            sys.exit('Valid parallelization flag not provided.')
 
     logger.info('Done with mapping features to pixel-level files')
     return

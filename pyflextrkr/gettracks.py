@@ -549,15 +549,15 @@ def gettracknumbers(config):
 
     logger.debug("Tracking Done")
 
-    #################################################################
-    # Create histograms of the values in tracknumber.
-    # This effectively counts the number of times each track number appaers in tracknumber,
-    # which is equivalent to calculating the length of the track.
-    tracklengths, trackbins = np.histogram(
-        np.copy(tracknumber[0, :, :]),
-        bins=np.arange(1, itrack + 1, 1),
-        range=(1, itrack + 1),
-    )
+    # #################################################################
+    # # Create histograms of the values in tracknumber.
+    # # This effectively counts the number of times each track number appaers in tracknumber,
+    # # which is equivalent to calculating the length of the track.
+    # tracklengths, trackbins = np.histogram(
+    #     np.copy(tracknumber[0, :, :]),
+    #     bins=np.arange(1, itrack + 1, 1),
+    #     range=(1, itrack + 1),
+    # )
 
     # # #################################################################
     # # Remove all tracks that have only one cloud.
