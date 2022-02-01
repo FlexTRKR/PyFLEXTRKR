@@ -8,11 +8,11 @@ processing_config: "global_gpm_mcs_processing_config.yml"
 # Maybe worth nesting these in sets of dictionaries
 run_idfeature : False
 run_tracksingle : False
-run_gettracks : True
-run_trackstats : True
-run_identifymcs : True
-run_matchpf : True
-run_robustmcs : True
+run_gettracks : False
+run_trackstats : False
+run_identifymcs : False
+run_matchpf : False
+run_robustmcs : False
 run_mapfeature : True
 run_speed: True
 

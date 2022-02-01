@@ -1,9 +1,10 @@
 #!/bin/bash
 #SBATCH -A m1867
+#SBATCH -J csapr_tracking
 #SBATCH -t 00:30:00
-#SBATCH -N 10
-#SBATCH -n 80
-#SBATCH --cpus-per-task 4
+#SBATCH -N 1
+#SBATCH -n 30
+#SBATCH --cpus-per-task 1
 #SBATCH -q debug
 #SBATCH -C haswell
 #SBATCH --exclusive
@@ -14,15 +15,15 @@
 module load python
 conda activate /global/common/software/m1867/python/flextrkr-mpi
 
-# Start dask cluster
-srun -u dask-mpi \
---scheduler-file=$SCRATCH/scheduler.json \
---nthreads=1 \
---memory-limit='auto' \
---worker-class distributed.Worker \
---local-directory=/tmp &
-
-sleep 5
+## Start dask cluster
+#srun -u dask-mpi \
+#--scheduler-file=$SCRATCH/scheduler.json \
+#--nthreads=2 \
+#--memory-limit='auto' \
+#--worker-class distributed.Worker \
+#--local-directory=/tmp &
+#
+#sleep 5
 
 # Run Python
 cd /global/homes/f/feng045/program/PyFLEXTRKR

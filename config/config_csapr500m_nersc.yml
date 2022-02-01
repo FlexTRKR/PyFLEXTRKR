@@ -19,7 +19,7 @@ enddate: '20190303.0000'
 
 # Parallel processing set up
 # run_parallel: 1 (local cluster), 2 (Dask MPI)
-run_parallel: 2
+run_parallel: 1
 nprocesses: 30  # Number of processors to use if run_parallel=1
 
 databasename: taranis_corcsapr2cfrppiqcM1_convmask.c1.

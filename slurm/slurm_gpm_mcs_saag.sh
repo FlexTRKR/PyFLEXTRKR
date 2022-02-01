@@ -1,13 +1,14 @@
 #!/bin/bash
 #SBATCH -A m1867
-#SBATCH -t 01:00:00
-#SBATCH -N 10
-#SBATCH -n 100
-#SBATCH --cpus-per-task 3
-#SBATCH -q regular
+#SBATCH -J gpm_saag
+#SBATCH -t 00:30:00
+#SBATCH -N 2
+#SBATCH -n 60
+#SBATCH --cpus-per-task 1
+#SBATCH -q debug
 #SBATCH -C haswell
 #SBATCH --exclusive
-#SBATCH --output=log_dask-mpi.log
+#SBATCH --output=log_gpm_saag.log
 #SBATCH --mail-type=END
 #SBATCH --mail-user=zhe.feng@pnnl.gov
 
