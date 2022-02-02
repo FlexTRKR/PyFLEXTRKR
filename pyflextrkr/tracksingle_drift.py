@@ -173,9 +173,9 @@ def trackclouds(
                 if sizematch / float(sizeref) > othresh:
                     if forward_nmatch > nmaxlinks:
                         logger.debug(
-                            ("reference: " + number_filepath + files[ifile - 1])
+                            ("reference: " + reference_file)
                         )
-                        logger.debug(("new: " + number_filepath + files[ifile]))
+                        logger.debug(("new: " + new_file))
                         sys.exit(
                             "More than "
                             + str(int(nmaxlinks))
@@ -226,9 +226,9 @@ def trackclouds(
                 if sizematch / float(sizenew) > othresh:
                     if backward_nmatch > nmaxlinks:
                         logger.debug(
-                            ("reference: " + number_filepath + files[ifile - 1])
+                            ("reference: " + reference_file)
                         )
-                        logger.debug(("new: " + number_filepath + files[ifile]))
+                        logger.debug(("new: " + new_file))
                         sys.exit(
                             "More than "
                             + str(int(nmaxlinks))
