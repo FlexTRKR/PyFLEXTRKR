@@ -4,7 +4,7 @@ PyFlexTRKR is a python package for both MCS and cell-tracking from Satellite and
 ---
 To use PyFlexTRKR please use the attached environment.yml file and create a conda virtual environment
 ```bash
-conda env create -f environment.yml
+conda env create -f environment.yml --prefix flextrkr
 ```
 Then when running pyflextrkr you can first activate its virtual environment with
 ```bash
