@@ -32,7 +32,7 @@ def idfeature_driver(config):
     elif feature_type == "radar_cells":
         from pyflextrkr.idcells_radar import idcell_csapr as id_feature
     elif feature_type == "tb_pf":
-        from pyflextrkr.idclouds_sat import idclouds_gpmmergir as id_feature
+        from pyflextrkr.idclouds_tbpf import idclouds_tbpf as id_feature
     else:
         logger.critical(f"ERROR: Unknown feature_type: {feature_type}")
         logger.critical("Tracking will now exit.")

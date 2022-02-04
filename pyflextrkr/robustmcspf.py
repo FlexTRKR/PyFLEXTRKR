@@ -1,6 +1,6 @@
 import numpy as np
 import xarray as xr
-import os
+import os, shutil
 import sys
 import time
 import warnings
@@ -412,5 +412,14 @@ def define_robust_mcs_pf(config):
     dsout.to_netcdf(path=statistics_outfile, mode="w",
                     format="NETCDF4", unlimited_dims=tracks_dimname, encoding=encoding)
     logger.info(f"{statistics_outfile}")
+
+    # Write to Zarr format
+    zarr_outpath = f"{stats_path}robust.zarr_{startdate}_{enddate}/"
+    # Delete directory if it already exists
+    if os.path.isdir(zarr_outpath):
+        shutil.rmtree(zarr_outpath)
+    os.makedirs(zarr_outpath, exist_ok=True)
+    dsout.to_zarr(store=zarr_outpath, consolidated=True)
+    logger.info(f"Robust MCS Zarr: {zarr_outpath}")
 
     return statistics_outfile

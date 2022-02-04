@@ -1,10 +1,10 @@
 #!/bin/bash
 #SBATCH -A m1867
 #SBATCH -J gpm_saag
-#SBATCH -t 00:30:00
-#SBATCH -N 2
-#SBATCH -n 60
-#SBATCH --cpus-per-task 1
+#SBATCH -t 00:10:00
+#SBATCH -N 10
+#SBATCH --ntasks-per-node=4
+#SBATCH --cpus-per-task=8
 #SBATCH -q debug
 #SBATCH -C haswell
 #SBATCH --exclusive
@@ -14,6 +14,8 @@
 
 module load python
 conda activate /global/common/software/m1867/python/flextrkr-mpi
+
+export MALLOC_TRIM_THRESHOLD_=0
 
 # Start dask cluster
 srun -u dask-mpi \
