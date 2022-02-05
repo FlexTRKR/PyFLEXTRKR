@@ -6,43 +6,33 @@ processing_config: "global_gpm_mcs_processing_config.yml"
 
 # Processing steps:
 # Maybe worth nesting these in sets of dictionaries
-run_idfeature : False
-run_tracksingle : False
-run_gettracks : False
-run_trackstats : False
-run_identifymcs : False
-run_matchpf : False
-run_robustmcs : False
+run_idfeature : True
+run_tracksingle : True
+run_gettracks : True
+run_trackstats : True
+run_identifymcs : True
+run_matchpf : True
+run_robustmcs : True
 run_mapfeature : True
-run_speed: False
+run_speed : True
 
 # Parallel processing set up
 # run_parallel: 1 (local cluster), 2 (Dask MPI)
-run_parallel: 2
-nprocesses : 32  # Number of processors to use if run_parallel=1
+run_parallel: 1
+nprocesses : 30  # Number of processors to use if run_parallel=1
 
 # Start/end date and time
-#startdate: '20190122.0000'
-#enddate: '20190127.0000'
-#startdate: '20190101.0000'
-#enddate: '20190131.2300'
-startdate: '20190101.0000'
-enddate: '20200101.0000'
-#startdate: '20180601.0000'
-#enddate: '20190630.2300'
-# Data source, description
-#datasource: gpmirimerg
-#datadescription: gpm
-#databasename: 'merg_'
+startdate: '20181005.0000'
+enddate: '20181008.0000'
 
 # Specify date/time string format in the file name
 # E.g., radar_20181101.011503.nc --> yyyymodd.hhmmss
 # E.g., wrfout_2018-11-01_01:15:00 --> yyyy-mo-dd_hh:mm:ss
-time_format: 'yyyymoddhh'
+time_format: 'yyyymodd_hhmm'
 # Input files directory
-clouddata_path: '/global/cscratch1/sd/feng045/SAAG/GPM/tb_rr/2019/'
+clouddata_path: '/global/cscratch1/sd/ksa/simulation/MPAS/MPAS-Model-7.0/x4.9-36km_02/ctr_mjo/processed/mcs_track/'
 # Working directory for the tracking data
-root_path: '/global/cscratch1/sd/feng045/SAAG/GPM/mpi_test/'
+root_path: '/global/cscratch1/sd/feng045/MPAS_WACCEM/MPAS-Model-7.0/'
 # Working sub-directory names
 tracking_path_name: 'tracking'
 stats_path_name: 'stats'
@@ -50,7 +40,7 @@ pixel_path_name: 'mcstracking'
 
 # Land mask file
 #input_data_directory: 'data_in/'
-landmask_filename: '/global/cscratch1/sd/feng045/SAAG/map_data/IMERG_landmask_saag.nc'
+landmask_filename: '/global/cscratch1/sd/feng045/waccem/mcs_region/map-data/IMERG_landmask_asia.nc'
 landmask_varname: 'landseamask'
 
 # Specify types of feature being tracked
@@ -82,7 +72,7 @@ pf_link_area_thresh:  648.0  # [km^2]
 # Tracking parameters
 othresh:  0.5  # overlap fraction threshold
 nmaxlinks:  200  # Maximum number of clouds that any single cloud can be linked to
-maxnclouds:  3000  # Maximum number of clouds in one snapshot
+maxnclouds:  2000  # Maximum number of clouds in one snapshot
 duration_range: [2, 200] # A vector [minlength,maxlength] to specify the duration range for the tracks
 #keepsingletrack: 1  # Keep tracks that has only 1 time
 #keep_singlemergesplit: 1  # Options: 0=All short tracks are removed, 1=Only short tracks without mergers or splits are removed
@@ -91,7 +81,7 @@ duration_range: [2, 200] # A vector [minlength,maxlength] to specify the duratio
 remove_shorttracks: 1
 # Set this flag to 1 to write a dense (2D) trackstats netCDF file
 # Note that for datasets with lots of tracks, the memory consumption could be very large
-trackstats_dense_netcdf: 1
+trackstats_dense_netcdf: 0
 
 # MCS Tb parameters
 mcs_tb_area_thresh:  40000  # Tb area threshold [km^2]
@@ -144,12 +134,12 @@ coefs_pf_heavyratio:  [3.419024, 0.4387090]  # 10% [recommended]
 # coefs_pf_heavyratio:  [4.592209, 0.6107371]  # 20%
 # coefs_pf_heavyratio:  [8.389616, 0.5079337]  # 25%
 
-# Specific to GPM Tb+IMERG combined dataset
-tb_varname:  'Tb'
-pcp_varname: 'precipitationCal'
-clouddatasource:  'gpmirimerg'
+# Input dataset structure
+tb_varname:  'tb'
+pcp_varname: 'rainrate'
+clouddatasource: 'model'
 pfdatasource:  'imerg'
-databasename:  'merg_'
+databasename:  'mpas4flextrkr_ctr_mjo_'
 xcoord_name: 'lon'
 ycoord_name: 'lat'
 idclouds_hourly: 1  # 0:  No, 1:  Yes

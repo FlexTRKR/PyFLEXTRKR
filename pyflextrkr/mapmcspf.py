@@ -51,9 +51,11 @@ def mapmcs_tb_pf(
         )
         logger.info(statistics_file)
 
-        ds_all = xr.open_dataset(statistics_file,
-                                 mask_and_scale=False,
-                                 decode_times=False)
+        ds_all = xr.open_dataset(
+            statistics_file,
+            mask_and_scale=False,
+            decode_times=False,
+        )
         trackstat_basetime = ds_all["base_time"].values
         trackstat_cloudnumber = ds_all["cloudnumber"].values
         trackstat_status = ds_all["status"].values
@@ -62,16 +64,14 @@ def mapmcs_tb_pf(
         ds_all.close()
 
     #######################################################################
-    # Load MCS track stat file
-    mcsstatistics_file = (
-        stats_path +
-        mcsrobust_filebase +
-        startdate + "_" +
-        enddate + ".nc"
+    # Load Zarr format MCS track stats file
+    # This allows multi-thread read to increase performance
+    mcsstatistics_file_zarr = f"{stats_path}robust.zarr_{startdate}_{enddate}/"
+    ds_mcs = xr.open_zarr(
+        mcsstatistics_file_zarr,
+        mask_and_scale=False,
+        decode_times=False,
     )
-    ds_mcs = xr.open_dataset(mcsstatistics_file,
-                             mask_and_scale=False,
-                             decode_times=False)
     mcstrackstat_basetime = ds_mcs["base_time"].values
     mcstrackstat_cloudnumber = ds_mcs["cloudnumber"].values
     mcstrackstat_mergecloudnumber = ds_mcs["merge_cloudnumber"].values
@@ -82,9 +82,11 @@ def mapmcs_tb_pf(
     # Get cloudid file associated with this time
     file_datetime = time.strftime("%Y%m%d_%H%M", time.gmtime(np.copy(filebasetime)))
 
-    ds_cid = xr.open_dataset(cloudid_filename,
-                             mask_and_scale=False,
-                             decode_times=False)
+    ds_cid = xr.open_dataset(
+        cloudid_filename,
+        mask_and_scale=False,
+        decode_times=False
+    )
     cloudid_cloudnumber = ds_cid[feature_varname].values
     cloudid_basetime = ds_cid["base_time"].values
     precipitation = ds_cid["precipitation"].values
@@ -95,7 +97,6 @@ def mapmcs_tb_pf(
 
     ##############################################################
     # Intiailize track maps
-    # logger.info('Initialize maps')
     mcstrackmap = np.zeros((1, nlat, nlon), dtype=int)
     mcstrackmap_mergesplit = np.zeros((1, nlat, nlon), dtype=int)
     mcspcpmap_mergesplit = np.zeros((1, nlat, nlon), dtype=int)
@@ -105,7 +106,6 @@ def mapmcs_tb_pf(
     ###############################################################
     # Create map of status and track number for every feature in this file
     if showalltracks == 1:
-        # logger.info('Create maps of all tracks')
         statusmap = np.full((1, nlat, nlon), fillval, dtype=int)
         alltrackmap = np.zeros((1, nlat, nlon), dtype=int)
         allmergemap = np.zeros((1, nlat, nlon), dtype=int)
