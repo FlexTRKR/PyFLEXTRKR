@@ -191,6 +191,18 @@ def trackstats_driver(config):
             row_idx = np.concatenate((row_idx, tracknumbertmp[ridx])).astype(int)
             col_idx = np.concatenate((col_idx, itracklength[ridx] - 1)).astype(int)
 
+    #########################################################################################
+    # Check data max duration against config set up
+    # Provide warning message and exit if 'duration_range' is too short
+    data_max_trackduration = np.nanmax(out_dict["track_duration"])
+    if data_max_trackduration > max_trackduration:
+        logger.critical(f"WARNING: Max track duration in data ({data_max_trackduration}) " +
+                        f"exceeds 'duration_range' ({duration_range})!")
+        logger.critical(f"This would cause missing statistics in certain long-lived tracks!")
+        logger.critical(f"Increase 'duration_range' to fix this error.")
+        logger.critical(f"Tracking will now exit.")
+        sys.exit()
+
     # Convert 2D variables to sparse arrays
     row_col_ind = (row_idx, col_idx)
     shape_2d = (numtracks, max_trackduration)
@@ -220,18 +232,6 @@ def trackstats_driver(config):
     # # Drop variables from the list
     # var_names.remove('uniquetracknumbers')
     # var_names.remove('numtracks')
-
-    #########################################################################################
-    # Check data max duration against config set up
-    # Provide warning message and exit if 'duration_range' is too short
-    data_max_trackduration = np.nanmax(out_dict["track_duration"])
-    if data_max_trackduration > max_trackduration:
-        logger.critical(f"WARNING: Max track duration in data ({data_max_trackduration}) " +
-                        f"exceeds 'duration_range' ({duration_range})!")
-        logger.critical(f"This would cause missing statistics in certain long-lived tracks!")
-        logger.critical(f"Increase 'duration_range' to fix this error.")
-        logger.critical(f"Tracking will now exit.")
-        sys.exit()
 
     #########################################################################################
     # Record starting and ending status
