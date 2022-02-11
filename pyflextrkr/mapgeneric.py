@@ -7,6 +7,12 @@ import xarray as xr
 def map_generic(
     cloudid_filename,
     filebasetime,
+    file_trackindex,
+    file_cloudnumber,
+    file_trackstatus,
+    file_mergecloudnumber,
+    file_splitcloudnumber,
+    trackstats_comments,
     config,
 ):
     """
@@ -32,24 +38,24 @@ def map_generic(
     np.set_printoptions(threshold=np.inf)
     logger = logging.getLogger(__name__)
 
-    ###################################################################
-    # Load track stats file
-    statistics_file = (
-        config["stats_outpath"] +
-        config["trackstats_filebase"] +
-        config["startdate"] + "_" +
-        config["enddate"] + ".nc"
-    )
-    allstatdata = xr.open_dataset(statistics_file,
-                                  decode_times=False,
-                                  mask_and_scale=False)
-    trackstat_basetime = allstatdata["base_time"].values
-    trackstat_cloudnumber = allstatdata["cloudnumber"].values
-    trackstat_status = allstatdata["track_status"].values
-    track_status_explanation = allstatdata['track_status'].comments
-    trackstat_mergenumbers = allstatdata["merge_tracknumbers"].values
-    trackstat_splitnumbers = allstatdata["split_tracknumbers"].values
-    allstatdata.close()
+    # ###################################################################
+    # # Load track stats file
+    # statistics_file = (
+    #     config["stats_outpath"] +
+    #     config["trackstats_filebase"] +
+    #     config["startdate"] + "_" +
+    #     config["enddate"] + ".nc"
+    # )
+    # allstatdata = xr.open_dataset(statistics_file,
+    #                               decode_times=False,
+    #                               mask_and_scale=False)
+    # trackstat_basetime = allstatdata["base_time"].values
+    # trackstat_cloudnumber = allstatdata["cloudnumber"].values
+    # trackstat_status = allstatdata["track_status"].values
+    # track_status_explanation = allstatdata['track_status'].comments
+    # trackstat_mergenumbers = allstatdata["merge_tracknumbers"].values
+    # trackstat_splitnumbers = allstatdata["split_tracknumbers"].values
+    # allstatdata.close()
 
     #########################################################################
     # Get cloudid file associated with this time
@@ -81,17 +87,21 @@ def map_generic(
     allsplitmap = np.zeros((1, ny, nx), dtype=int)
 
     # Find matching time from the trackstats_basetime
-    itrack, itime = np.array(np.where(trackstat_basetime == cloudid_basetime))
+    # itrack, itime = np.array(np.where(trackstat_basetime == cloudid_basetime))
     # If a match is found, that means there are tracked cells at this time
     # Proceed and label them
-    ntimes = len(itime)
-    if ntimes > 0:
 
+    itrack = file_trackindex
+    nmatchcloud = len(file_cloudnumber)
+    if nmatchcloud > 0:
+        ##############################################################
         # Loop over each instance matching the trackstats time
-        for jj in range(0, ntimes):
+        for jj in range(0, nmatchcloud):
             # Get cloud number
-            jjcloudnumber = trackstat_cloudnumber[itrack[jj], itime[jj]]
-            jjstatus = trackstat_status[itrack[jj], itime[jj]]
+            # jjcloudnumber = trackstat_cloudnumber[itrack[jj], itime[jj]]
+            # jjstatus = trackstat_status[itrack[jj], itime[jj]]
+            jjcloudnumber = file_cloudnumber[jj]
+            jjstatus = file_trackstatus[jj]
 
             # Find pixels matching this cloud number
             jjcloudypixels, jjcloudxpixels = np.array(
@@ -103,45 +113,45 @@ def map_generic(
                 trackmap[0, jjcloudypixels, jjcloudxpixels] = itrack[jj] + 1
                 statusmap[0, jjcloudypixels, jjcloudxpixels] = jjstatus
             else:
-                logger.info(
-                    f"Warning: No matching cloud pixel found?! itrack: {itrack[jj]}, itime: {itime[jj]}"
-                )
-                # sys.exit('Error: No matching cloud pixel found?!')
+                logger.warning(f"Warning: No matching cloud pixel found: {jjcloudnumber}")
 
-        # Get cloudnumbers and split cloudnumbers within this time
-        jjcloudnumber = trackstat_cloudnumber[itrack, itime]
-        jjallsplit = trackstat_splitnumbers[itrack, itime]
-        # Count valid split cloudnumbers (> 0)
-        splitpresent = np.count_nonzero(jjallsplit > 0)
-        if splitpresent > 0:
-            # Find valid split cloudnumbers (> 0)
-            splittracks = jjallsplit[np.where(jjallsplit > 0)]
-            splitcloudid = jjcloudnumber[np.where(jjallsplit > 0)]
-            if len(splittracks) > 0:
-                for isplit in range(0, len(splittracks)):
-                    splitypixels, splitxpixels = np.array(
-                        np.where(feature_number[0, :, :] == splitcloudid[isplit])
-                    )
-                    allsplitmap[0, splitypixels, splitxpixels] = splittracks[isplit]
+            # Get cloudnumbers and split cloudnumbers within this time
+            # jjcloudnumber = trackstat_cloudnumber[itrack, itime]
+            # jjallsplit = trackstat_splitnumbers[itrack, itime]
+            jjcloudnumber = file_cloudnumber[jj]
+            jjallsplit = file_splitcloudnumber[jj]
+            # Count valid split cloudnumbers (> 0)
+            splitpresent = np.count_nonzero(jjallsplit > 0)
+            if splitpresent > 0:
+                # Find valid split cloudnumbers (> 0)
+                splittracks = jjallsplit[jjallsplit > 0]
+                splitcloudid = jjcloudnumber[jjallsplit > 0]
+                if len(splittracks) > 0:
+                    for isplit in range(0, len(splittracks)):
+                        splitypixels, splitxpixels = np.array(
+                            np.where(feature_number[0, :, :] == splitcloudid[isplit])
+                        )
+                        allsplitmap[0, splitypixels, splitxpixels] = splittracks[isplit]
 
-        # Get cloudnumbers and merg cloudnumbers within this time
-        jjallmerge = trackstat_mergenumbers[itrack, itime]
-        # Count valid split cloudnumbers (> 0)
-        mergepresent = np.count_nonzero(jjallmerge > 0)
-        if mergepresent > 0:
-            # Find valid merge cloudnumbers (> 0)
-            mergetracks = jjallmerge[np.where(jjallmerge > 0)]
-            mergecloudid = jjcloudnumber[np.where(jjallmerge > 0)]
-            if len(mergetracks) > 0:
-                for imerge in range(0, len(mergetracks)):
-                    mergeypixels, mergexpixels = np.array(
-                        np.where(feature_number[0, :, :] == mergecloudid[imerge])
-                    )
-                    allmergemap[0, mergeypixels, mergexpixels] = mergetracks[imerge]
+            # Get cloudnumbers and merg cloudnumbers within this time
+            # jjallmerge = trackstat_mergenumbers[itrack, itime]
+            jjallmerge = file_mergecloudnumber[jj]
+            # Count valid split cloudnumbers (> 0)
+            mergepresent = np.count_nonzero(jjallmerge > 0)
+            if mergepresent > 0:
+                # Find valid merge cloudnumbers (> 0)
+                mergetracks = jjallmerge[jjallmerge > 0]
+                mergecloudid = jjcloudnumber[jjallmerge > 0]
+                if len(mergetracks) > 0:
+                    for imerge in range(0, len(mergetracks)):
+                        mergeypixels, mergexpixels = np.array(
+                            np.where(feature_number[0, :, :] == mergecloudid[imerge])
+                        )
+                        allmergemap[0, mergeypixels, mergexpixels] = mergetracks[imerge]
 
-        trackmap = trackmap.astype(np.int32)
-        allmergemap = allmergemap.astype(np.int32)
-        allsplitmap = allsplitmap.astype(np.int32)
+        # trackmap = trackmap.astype(np.int32)
+        # allmergemap = allmergemap.astype(np.int32)
+        # allsplitmap = allsplitmap.astype(np.int32)
 
 
     #####################################################################
@@ -209,7 +219,7 @@ def map_generic(
     ds_out["track_status"].attrs["long_name"] = "Flag indicating history of track"
     ds_out["track_status"].attrs["units"] = "unitless"
     ds_out["track_status"].attrs["_FillValue"] = fillval
-    ds_out["track_status"].attrs["comments"] = track_status_explanation
+    ds_out["track_status"].attrs["comments"] = trackstats_comments
 
     ds_out[feature_varname].attrs["long_name"] = "Labeled feature number"
     ds_out[feature_varname].attrs["units"] = "unitless"
