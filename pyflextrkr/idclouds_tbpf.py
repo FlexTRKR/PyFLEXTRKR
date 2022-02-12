@@ -32,8 +32,10 @@ def idclouds_tbpf(
     clouddatasource = config['clouddatasource']
     # Set medfilt2d kernel_size, this determines the filter window dimension
     medfiltsize = config.get('medfiltsize', 5)
-    # Default idclouds minute difference allowed
+    idclouds_hourly = config.get('idclouds_hourly', 0)
     idclouds_minute = config.get('idclouds_minute', 0)
+    # Default idclouds minute difference allowed
+    idclouds_dt_thresh = config.get('idclouds_dt_thresh', 5)
     # minimum and maximum brightness temperature thresholds. data outside of this range is filtered
     mintb_thresh = config['absolutetb_threshs'][0]
     maxtb_thresh = config['absolutetb_threshs'][1]
@@ -45,7 +47,6 @@ def idclouds_tbpf(
     cloudtb_threshs = [thresh_core, thresh_cold, thresh_warm, thresh_cloud]
     miss_thresh = config['miss_thresh']
     tb_varname = config["tb_varname"]
-    idclouds_hourly = config['idclouds_hourly']
     geolimits = config['geolimits']
     cloudidmethod = config['cloudidmethod']
     pixel_radius = config['pixel_radius']
@@ -102,10 +103,10 @@ def idclouds_tbpf(
         iminute = iTime.dt.minute.item()
 
         # If idclouds_hourly is set to 1, then check if iminutes is
-        # within the allowed difference from idclouds_minute
+        # within the allowed difference from idclouds_dt_thresh
         # If so proceed, otherwise, skip this time
         if idclouds_hourly == 1:
-            if np.absolute(iminute - idclouds_minute) < idclouds_minute:
+            if np.absolute(iminute - idclouds_minute) < idclouds_dt_thresh:
                 idclouds_proceed = 1
             else:
                 idclouds_proceed = 0

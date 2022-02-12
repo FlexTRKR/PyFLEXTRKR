@@ -55,7 +55,7 @@ def matchtbpf_singlefile(
     # Read landmask file
     if os.path.isfile(landmask_filename):
         dslm = xr.open_dataset(landmask_filename)
-        landmask = dslm[landmask_varname].data
+        landmask = dslm[landmask_varname].squeeze().data
     else:
         landmask = None
 
@@ -196,9 +196,14 @@ def matchtbpf_singlefile(
                                 npix_land = np.count_nonzero(
                                     sublandmask[ipfy, ipfx] <= landfrac_thresh
                                 )
+                            elif pfdatasource == "wrf":
+                                # WRF: landmask is 1 for land, 0 for water
+                                npix_land = np.count_nonzero(sublandmask[ipfy, ipfx] == 1)
                             else:
-                                logger.warning(f"Error, unknown pfdatasource: {pfdatasource}")
-                                logger.debug("Must define how to calculate landfrac.")
+                                logger.warning(f"WARNING: unknown pfdatasource: {pfdatasource}")
+                                logger.warning("Must define how to calculate landfrac.")
+                                logger.warning("pf_landfrac will be set to 0.")
+                                npix_land = 0
 
                             if npix_land > 0:
                                 pf_landfrac[imatchcloud] = \
