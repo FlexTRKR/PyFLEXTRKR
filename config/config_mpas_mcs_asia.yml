@@ -1,11 +1,8 @@
 ---
-# Global GPM based tracking configuration file
-
-# Processing configuration to use:
-processing_config: "global_gpm_mcs_processing_config.yml"
+# MCS tracking configuration file
+# Tracking uses collocated Tb + Precipitation
 
 # Processing steps:
-# Maybe worth nesting these in sets of dictionaries
 run_idfeature : True
 run_tracksingle : True
 run_gettracks : True
@@ -19,7 +16,7 @@ run_speed : True
 # Parallel processing set up
 # run_parallel: 1 (local cluster), 2 (Dask MPI)
 run_parallel: 1
-nprocesses : 30  # Number of processors to use if run_parallel=1
+nprocesses : 32  # Number of processors to use if run_parallel=1
 
 # Start/end date and time
 startdate: '20181005.0000'
@@ -43,6 +40,18 @@ pixel_path_name: 'mcstracking'
 landmask_filename: '/global/cscratch1/sd/feng045/waccem/mcs_region/map-data/IMERG_landmask_asia.nc'
 landmask_varname: 'landseamask'
 
+# Input dataset structure
+tb_varname:  'tb'
+pcp_varname: 'rainrate'
+clouddatasource: 'model'
+pfdatasource:  'imerg'
+databasename:  'mpas4flextrkr_ctr_mjo_'
+xcoord_name: 'lon'
+ycoord_name: 'lat'
+datatimeresolution: 1.0  # hours
+# Minimum time difference threshold to match track stats with cloudid files
+match_tbpf_dt_thresh: 60.0  # seconds
+
 # Specify types of feature being tracked
 # This adds additional feature-specific statistics to be computed
 feature_type: 'tb_pf'
@@ -60,7 +69,7 @@ cloudtb_cloud:  261.0  # K
 absolutetb_threshs: [160, 330]  # K [min, max] brightness temperature allowed.
 warmanvilexpansion:  0  # If this is set to one, then the cold anvil is spread laterally until it exceeds the warm anvil threshold
 mincoldcorepix:  4  # Minimum number of pixels for the cold core, needed for futyan version 4 cloud identification code. Not used if use futyan version 3.
-smoothwindowdimensions:  3  # Was 10. Dimension of the Box2DKernel filter on Tb.
+smoothwindowdimensions:  10  # Was 10. Dimension of the Box2DKernel filter on Tb.
 medfiltsize: 5      # Window size to perform medfilt2d to fill missing IR pixels, must be an odd number
 cloudidmethod: 'label_grow'
 # Specific parameters to link cloud objects using PF
@@ -133,21 +142,6 @@ coefs_pf_heavyratio:  [3.419024, 0.4387090]  # 10% [recommended]
 # coefs_pf_heavyratio:  [4.753215, 0.4886454]  # 15%
 # coefs_pf_heavyratio:  [4.592209, 0.6107371]  # 20%
 # coefs_pf_heavyratio:  [8.389616, 0.5079337]  # 25%
-
-# Input dataset structure
-tb_varname:  'tb'
-pcp_varname: 'rainrate'
-clouddatasource: 'model'
-pfdatasource:  'imerg'
-databasename:  'mpas4flextrkr_ctr_mjo_'
-xcoord_name: 'lon'
-ycoord_name: 'lat'
-idclouds_hourly: 1  # 0:  No, 1:  Yes
-idclouds_minute: 30  # 0 or 30 min, which minute mark to use the Tb data
-datatimeresolution: 1.0  # hours
-# Minimum time difference threshold to match track stats with cloudid files
-match_tbpf_dt_thresh: 60.0  # seconds
-landvarname: 'landseamask'
 
 # Define tracked feature variable names
 feature_varname: 'feature_number'

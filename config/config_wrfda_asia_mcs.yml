@@ -3,7 +3,6 @@
 # Tracking uses collocated Tb + Precipitation
 
 # Processing steps:
-# Maybe worth nesting these in sets of dictionaries
 run_idfeature : True
 run_tracksingle : True
 run_gettracks : True
@@ -51,9 +50,6 @@ pfdatasource:  'wrf'
 databasename:  'wrfout_rainrate_tb_'
 xcoord_name: 'lon2d'
 ycoord_name: 'lat2d'
-idclouds_hourly: 0  # 0: No (all times are used), 1: Yes (only hourly data is used)
-idclouds_minute: 00  # 0 or 30 min, which minute mark to use the Tb data
-idclouds_dt_thresh: 5.0  # [minute], time difference allowed between actual data and idclouds_minute
 datatimeresolution: 1.0  # hours
 # Minimum time difference threshold to match track stats with cloudid files
 match_tbpf_dt_thresh: 60.0  # seconds
