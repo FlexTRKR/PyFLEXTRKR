@@ -1,8 +1,6 @@
 ---
-# Global GPM based tracking configuration file
-
-# Processing configuration to use:
-processing_config: "global_gpm_mcs_processing_config.yml"
+# Global GPM based MCS tracking configuration file
+# Tracking uses collocated Tb + Precipitation
 
 # Processing steps:
 # Maybe worth nesting these in sets of dictionaries
@@ -26,23 +24,19 @@ nprocesses : 32  # Number of processors to use if run_parallel=1
 #enddate: '20190127.0000'
 #startdate: '20190101.0000'
 #enddate: '20190131.2300'
-startdate: '20190101.0000'
-enddate: '20200101.0000'
-#startdate: '20180601.0000'
-#enddate: '20190630.2300'
-# Data source, description
-#datasource: gpmirimerg
-#datadescription: gpm
-#databasename: 'merg_'
+#startdate: '20190101.0000'
+#enddate: '20200101.0000'
+startdate: '20180601.0000'
+enddate: '20190630.2300'
 
 # Specify date/time string format in the file name
 # E.g., radar_20181101.011503.nc --> yyyymodd.hhmmss
 # E.g., wrfout_2018-11-01_01:15:00 --> yyyy-mo-dd_hh:mm:ss
 time_format: 'yyyymoddhh'
 # Input files directory
-clouddata_path: '/global/cscratch1/sd/feng045/SAAG/GPM/tb_rr/2019/'
+clouddata_path: '/global/cscratch1/sd/feng045/SAAG/GPM/tb_rr/2018_2019/'
 # Working directory for the tracking data
-root_path: '/global/cscratch1/sd/feng045/SAAG/GPM/mpi_test/'
+root_path: '/global/cscratch1/sd/feng045/SAAG/GPM/pyflex_test2/'
 # Working sub-directory names
 tracking_path_name: 'tracking'
 stats_path_name: 'stats'
@@ -52,6 +46,21 @@ pixel_path_name: 'mcstracking'
 #input_data_directory: 'data_in/'
 landmask_filename: '/global/cscratch1/sd/feng045/SAAG/map_data/IMERG_landmask_saag.nc'
 landmask_varname: 'landseamask'
+
+# Specific to GPM Tb+IMERG combined dataset
+databasename:  'merg_'
+tb_varname:  'Tb'
+pcp_varname: 'precipitationCal'
+clouddatasource:  'gpmirimerg'
+pfdatasource:  'imerg'
+xcoord_name: 'lon'
+ycoord_name: 'lat'
+idclouds_hourly: 1  # 0:  No, 1:  Yes
+idclouds_minute: 30  # 0 or 30 min, which minute mark to use the Tb data
+idclouds_dt_thresh: 5  # [minute], time difference allowed between actual data and idclouds_minute
+datatimeresolution: 1.0  # hours
+# Minimum time difference threshold to match track stats with cloudid files
+match_tbpf_dt_thresh: 60.0  # seconds
 
 # Specify types of feature being tracked
 # This adds additional feature-specific statistics to be computed
@@ -70,7 +79,7 @@ cloudtb_cloud:  261.0  # K
 absolutetb_threshs: [160, 330]  # K [min, max] brightness temperature allowed.
 warmanvilexpansion:  0  # If this is set to one, then the cold anvil is spread laterally until it exceeds the warm anvil threshold
 mincoldcorepix:  4  # Minimum number of pixels for the cold core, needed for futyan version 4 cloud identification code. Not used if use futyan version 3.
-smoothwindowdimensions:  3  # Was 10. Dimension of the Box2DKernel filter on Tb.
+smoothwindowdimensions:  10  # Was 10. Dimension of the Box2DKernel filter on Tb.
 medfiltsize: 5      # Window size to perform medfilt2d to fill missing IR pixels, must be an odd number
 cloudidmethod: 'label_grow'
 # Specific parameters to link cloud objects using PF
@@ -143,21 +152,6 @@ coefs_pf_heavyratio:  [3.419024, 0.4387090]  # 10% [recommended]
 # coefs_pf_heavyratio:  [4.753215, 0.4886454]  # 15%
 # coefs_pf_heavyratio:  [4.592209, 0.6107371]  # 20%
 # coefs_pf_heavyratio:  [8.389616, 0.5079337]  # 25%
-
-# Specific to GPM Tb+IMERG combined dataset
-tb_varname:  'Tb'
-pcp_varname: 'precipitationCal'
-clouddatasource:  'gpmirimerg'
-pfdatasource:  'imerg'
-databasename:  'merg_'
-xcoord_name: 'lon'
-ycoord_name: 'lat'
-idclouds_hourly: 1  # 0:  No, 1:  Yes
-idclouds_minute: 30  # 0 or 30 min, which minute mark to use the Tb data
-datatimeresolution: 1.0  # hours
-# Minimum time difference threshold to match track stats with cloudid files
-match_tbpf_dt_thresh: 60.0  # seconds
-landvarname: 'landseamask'
 
 # Define tracked feature variable names
 feature_varname: 'feature_number'

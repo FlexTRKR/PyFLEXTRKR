@@ -1,6 +1,5 @@
 import numpy as np
 import os
-import sys
 import xarray as xr
 import time
 import logging
@@ -24,16 +23,26 @@ def mapmcs_tb_pf(
             Cloudid file name.
         filebasetime: int
             Cloudid file base time.
+        file_trackindex: np.array
+            Track indices for the features in the cloudid file.
+        file_cloudnumber: np.array
+            Matched feature numbers in the cloudid file.
+        file_trackstatus: np.array
+            Track status for the features in the cloudid file.
+        file_mergecloudnumber: np.array
+            Merge feature cloud number in the cloudid file.
+        file_splitcloudnumber: np.array
+            Split feature cloud number in the cloudid file.
+        trackstats_comments: string
+            Track status explanation.
         config: dictionary
             Dictionary containing config parameters.
 
     Returns:
-        mcstrackmaps_outfile: string
+        tracksmap_outfile: string
             Track number pixel-level file name.
     """
 
-    # mcsrobust_filebase = config["mcsrobust_filebase"]
-    # stats_path = config["stats_outpath"]
     startdate = config["startdate"]
     enddate = config["enddate"]
     fillval = config["fillval"]
@@ -44,84 +53,44 @@ def mapmcs_tb_pf(
     np.set_printoptions(threshold=np.inf)
     logger = logging.getLogger(__name__)
 
-    #######################################################################
-    # Load Zarr format MCS track stats file
-    # This allows multi-thread read to increase performance
-    # mcsstatistics_file_zarr = f"{stats_path}robust.zarr_{startdate}_{enddate}/"
-    # ds_mcs = xr.open_zarr(
-    #     mcsstatistics_file_zarr,
-    #     mask_and_scale=False,
-    #     decode_times=False,
-    # ).compute()
-    # mcsstatistics_file = f"{stats_path}{mcsrobust_filebase}{startdate}_{enddate}.nc"
-    # ds_mcs = xr.open_dataset(
-    #     mcsstatistics_file,
-    #     mask_and_scale=False,
-    #     decode_times=False,
-    # ).compute()
-    # mcstrackstat_basetime = ds_mcs["base_time"].values
-    # mcstrackstat_cloudnumber = ds_mcs["cloudnumber"].values
-    # mcstrackstat_mergecloudnumber = ds_mcs["merge_cloudnumber"].values
-    # mcstrackstat_splitcloudnumber = ds_mcs["split_cloudnumber"].values
-    # ds_mcs.close()
-
     #########################################################################
     # Get cloudid file associated with this time
     file_datetime = time.strftime("%Y%m%d_%H%M", time.gmtime(np.copy(filebasetime)))
-
+    # Load cloudid data
     ds_cid = xr.open_dataset(
         cloudid_filename,
         mask_and_scale=False,
         decode_times=False
     ).compute()
     # Required variables
-    cloudid_cloudnumber = ds_cid[feature_varname].data
+    feature_number = ds_cid[feature_varname].data
     cloudid_basetime = ds_cid["base_time"].data
     precipitation = ds_cid["precipitation"]
-    # # Pass-out variables
-    # base_time = ds_cid["base_time"]
-    # longitude = ds_cid["longitude"]
-    # latitude = ds_cid["latitude"]
-    # tb = ds_cid["tb"]
-    # cloudtype = ds_cid["cloudtype"]
-    # cid_time = ds_cid["time"]
-    # lat = ds_cid["lat"]
-    # lon = ds_cid["lon"]
     ds_cid.close()
 
     # file_datetime = time.strftime("%Y%m%d_%H%M", time.gmtime(np.int(cloudid_basetime.item())))
 
     # Get data dimensions
-    [timeindex, nlat, nlon] = np.shape(cloudid_cloudnumber)
+    [timeindex, nlat, nlon] = np.shape(feature_number)
 
     ##############################################################
-    # Intiailize track maps
+    # Create map of status and track number for every feature in this file
     mcstrackmap = np.zeros((1, nlat, nlon), dtype=int)
     mcstrackmap_mergesplit = np.zeros((1, nlat, nlon), dtype=int)
     mcspcpmap_mergesplit = np.zeros((1, nlat, nlon), dtype=int)
     mcsmergemap = np.zeros((1, nlat, nlon), dtype=int)
     mcssplitmap = np.zeros((1, nlat, nlon), dtype=int)
 
-    ###############################################################
-    # logger.info('Generate MCS maps')
-    # Get tracks
-    # itrack, itime = np.array(np.where(mcstrackstat_basetime == cloudid_basetime))
-    # nmatchcloud = len(itime)
-    # import pdb; pdb.set_trace()
-
-    itrack = file_trackindex
+    # Check number of matched features
     nmatchcloud = len(file_cloudnumber)
     if nmatchcloud > 0:
         ##############################################################
         # Loop over each cloud in this unique file
         for jj in range(0, nmatchcloud):
-            # logger.debug(('MCS #: ' + str(int(itrack[jj] + 1))))
-            # Get cloud number
-            # jjcloudnumber = mcstrackstat_cloudnumber[itrack[jj], itime[jj]]
             jjcloudnumber = file_cloudnumber[jj]
 
             # Get the mask matching this cloud number
-            cmask = cloudid_cloudnumber.squeeze() == jjcloudnumber
+            cmask = feature_number.squeeze() == jjcloudnumber
 
             # Label this cloud with the track number.
             # In the IDL version, track numbers on pixel files are added 1
@@ -130,8 +99,8 @@ def mapmcs_tb_pf(
             # TODO: Look into how much change in gpm_mcs_post is needed
             #  and decide if this change should be made
             if np.count_nonzero(cmask) > 0:
-                mcstrackmap[0, cmask] = itrack[jj] + 1
-                mcstrackmap_mergesplit[0, cmask] = itrack[jj] + 1
+                mcstrackmap[0, cmask] = file_trackindex[jj] + 1
+                mcstrackmap_mergesplit[0, cmask] = file_trackindex[jj] + 1
             else:
                 logger.warning(f"Warning: No matching cloud pixel found: {jjcloudnumber}")
 
@@ -144,13 +113,13 @@ def mapmcs_tb_pf(
                 for imerge in jjmerge:
                     # Get mask matching the merging cloud
                     im_number = file_mergecloudnumber[jj, imerge]
-                    m_cmask = cloudid_cloudnumber.squeeze() == im_number
+                    m_cmask = feature_number.squeeze() == im_number
 
                     # Label this cloud with the track number.
                     # TODO: consider mapping with same track number
                     if np.count_nonzero(m_cmask) > 0:
-                        mcstrackmap_mergesplit[0, m_cmask] = itrack[jj] + 1
-                        mcsmergemap[0, m_cmask] = itrack[jj] + 1
+                        mcstrackmap_mergesplit[0, m_cmask] = file_trackindex[jj] + 1
+                        mcsmergemap[0, m_cmask] = file_trackindex[jj] + 1
                     else:
                         logger.warning(f"Warning: No matching merging cloud found: {im_number}")
 
@@ -163,13 +132,13 @@ def mapmcs_tb_pf(
                 for isplit in jjsplit:
                     # Get mask matching the splitting cloud
                     is_number = file_splitcloudnumber[jj, isplit]
-                    s_cmask = cloudid_cloudnumber.squeeze() == is_number
+                    s_cmask = feature_number.squeeze() == is_number
 
                     # Label this cloud with the track number.
                     # TODO: consider mapping with same track number
                     if np.count_nonzero(s_cmask) > 0:
-                        mcstrackmap_mergesplit[0, s_cmask] = itrack[jj] + 1
-                        mcssplitmap[0, s_cmask] = itrack[jj] + 1
+                        mcstrackmap_mergesplit[0, s_cmask] = file_trackindex[jj] + 1
+                        mcssplitmap[0, s_cmask] = file_trackindex[jj] + 1
                     else:
                         logger.warning(f"Warning: No matching splitting cloud found: {is_number}")
 
@@ -183,15 +152,15 @@ def mapmcs_tb_pf(
     logger.debug('Writing MCS pixel-level data')
 
     # Define output fileame
-    mcstrackmaps_outfile = (
+    tracksmap_outfile = (
         config["pixeltracking_outpath"] +
         config["pixeltracking_filebase"] +
         file_datetime + ".nc"
     )
 
     # Delete file if it already exists
-    if os.path.isfile(mcstrackmaps_outfile):
-        os.remove(mcstrackmaps_outfile)
+    if os.path.isfile(tracksmap_outfile):
+        os.remove(tracksmap_outfile)
 
     # Define variable list
     varlist = {
@@ -201,14 +170,7 @@ def mapmcs_tb_pf(
         "tb": (["time", "lat", "lon"], ds_cid["tb"].data, ds_cid["tb"].attrs),
         "precipitation": (["time", "lat", "lon"], ds_cid["precipitation"].data, ds_cid["precipitation"].attrs),
         "cloudtype": (["time", "lat", "lon"], ds_cid["cloudtype"].data, ds_cid["cloudtype"].attrs),
-
-        # "base_time": (["time"], base_time.values, base_time.attrs),
-        # "longitude": (["lat", "lon"], longitude.values, longitude.attrs),
-        # "latitude": (["lat", "lon"], latitude.values, latitude.attrs),
-        # "tb": (["time", "lat", "lon"], tb.values, tb.attrs),
-        # "precipitation": (["time", "lat", "lon"], precipitation.values, precipitation.attrs),
-        # "cloudtype": (["time", "lat", "lon"], cloudtype.values, cloudtype.attrs),
-        "cloudnumber": (["time", "lat", "lon"], cloudid_cloudnumber, ds_cid[feature_varname].attrs),
+        "cloudnumber": (["time", "lat", "lon"], feature_number, ds_cid[feature_varname].attrs),
         "split_tracknumbers": (["time", "lat", "lon"], mcssplitmap),
         "merge_tracknumbers": (["time", "lat", "lon"], mcsmergemap),
         "cloudtracknumber_nomergesplit": (["time", "lat", "lon"], mcstrackmap),
@@ -221,9 +183,6 @@ def mapmcs_tb_pf(
         "time": (["time"], ds_cid["time"].data, ds_cid["time"].attrs),
         "lat": (["lat"], ds_cid["lat"].data, ds_cid["lat"].attrs),
         "lon": (["lon"], ds_cid["lon"].data, ds_cid["lon"].attrs),
-        # "time": (["time"], cid_time.values, cid_time.attrs),
-        # "lat": (["lat"], lat.values, lat.attrs),
-        # "lon": (["lon"], lon.values, lon.attrs),
     }
 
     # Define global attributes
@@ -277,13 +236,12 @@ def mapmcs_tb_pf(
     encodelist["latitude"] = dict(zlib=True, dtype="float32")
     # Write netcdf file
     ds_out.to_netcdf(
-        path=mcstrackmaps_outfile,
+        path=tracksmap_outfile,
         mode="w",
         format="NETCDF4",
         unlimited_dims="time",
         encoding=encodelist,
     )
-    logger.info(mcstrackmaps_outfile)
-    # import pdb; pdb.set_trace()
+    logger.info(tracksmap_outfile)
 
-    return mcstrackmaps_outfile
+    return tracksmap_outfile

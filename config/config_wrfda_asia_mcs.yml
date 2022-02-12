@@ -1,48 +1,38 @@
 ---
-# Global GPM based tracking configuration file
-
-# Processing configuration to use:
-processing_config: "global_gpm_mcs_processing_config.yml"
+# MCS tracking configuration file
+# Tracking uses collocated Tb + Precipitation
 
 # Processing steps:
 # Maybe worth nesting these in sets of dictionaries
-run_idfeature : False
-run_tracksingle : False
-run_gettracks : False
-run_trackstats : False
-run_identifymcs : False
-run_matchpf : False
-run_robustmcs : False
+run_idfeature : True
+run_tracksingle : True
+run_gettracks : True
+run_trackstats : True
+run_identifymcs : True
+run_matchpf : True
+run_robustmcs : True
 run_mapfeature : True
-run_speed: False
+run_speed : True
 
 # Parallel processing set up
 # run_parallel: 1 (local cluster), 2 (Dask MPI)
-run_parallel: 2
-nprocesses : 4  # Number of processors to use if run_parallel=1
+run_parallel: 1
+nprocesses : 30  # Number of processors to use if run_parallel=1
 
 # Start/end date and time
-#startdate: '20190122.0000'
-#enddate: '20190127.0000'
-#startdate: '20190101.0000'
-#enddate: '20190131.2300'
-startdate: '20190101.0000'
-enddate: '20200101.0000'
-#startdate: '20180601.0000'
-#enddate: '20190630.2300'
-# Data source, description
-#datasource: gpmirimerg
-#datadescription: gpm
-#databasename: 'merg_'
+#startdate: '20170601.0000'
+#enddate: '20170602.0000'
+startdate: '20170520.0000'
+enddate: '20170901.0000'
 
 # Specify date/time string format in the file name
 # E.g., radar_20181101.011503.nc --> yyyymodd.hhmmss
 # E.g., wrfout_2018-11-01_01:15:00 --> yyyy-mo-dd_hh:mm:ss
-time_format: 'yyyymoddhh'
+time_format: 'yyyymoddhhmm'
 # Input files directory
-clouddata_path: '/global/cscratch1/sd/feng045/SAAG/GPM/tb_rr/2019/'
+clouddata_path: '/global/cscratch1/sd/feng045/waccem/TMeCSR/analysis_mean/tb_rr/'
 # Working directory for the tracking data
-root_path: '/global/cscratch1/sd/feng045/SAAG/GPM/mpi_test/'
+root_path: '/global/cscratch1/sd/feng045/waccem/TMeCSR/analysis_mean/'
 # Working sub-directory names
 tracking_path_name: 'tracking'
 stats_path_name: 'stats'
@@ -50,8 +40,23 @@ pixel_path_name: 'mcstracking'
 
 # Land mask file
 #input_data_directory: 'data_in/'
-landmask_filename: '/global/cscratch1/sd/feng045/SAAG/map_data/IMERG_landmask_saag.nc'
-landmask_varname: 'landseamask'
+landmask_filename: '/global/cscratch1/sd/feng045/waccem/TMeCSR/map_data/wrf_landmask.nc'
+landmask_varname: 'LANDMASK'
+
+# Input dataset structure
+tb_varname:  'tb'
+pcp_varname: 'rainrate'
+clouddatasource: 'model'
+pfdatasource:  'wrf'
+databasename:  'wrfout_rainrate_tb_'
+xcoord_name: 'lon2d'
+ycoord_name: 'lat2d'
+idclouds_hourly: 0  # 0: No (all times are used), 1: Yes (only hourly data is used)
+idclouds_minute: 00  # 0 or 30 min, which minute mark to use the Tb data
+idclouds_dt_thresh: 5.0  # [minute], time difference allowed between actual data and idclouds_minute
+datatimeresolution: 1.0  # hours
+# Minimum time difference threshold to match track stats with cloudid files
+match_tbpf_dt_thresh: 60.0  # seconds
 
 # Specify types of feature being tracked
 # This adds additional feature-specific statistics to be computed
@@ -59,7 +64,7 @@ feature_type: 'tb_pf'
 
 # Cloud identification parameters
 geolimits: [-90, -360, 90, 360] # 4-element array with plotting boundaries [lat_min, lon_min, lat_max, lon_max]
-pixel_radius:  10.0  # km
+pixel_radius:  9.0  # km
 timegap:  3.1  # hour
 area_thresh:  800  # km^2
 miss_thresh:  0.35  # Missing data fraction threshold
@@ -70,7 +75,7 @@ cloudtb_cloud:  261.0  # K
 absolutetb_threshs: [160, 330]  # K [min, max] brightness temperature allowed.
 warmanvilexpansion:  0  # If this is set to one, then the cold anvil is spread laterally until it exceeds the warm anvil threshold
 mincoldcorepix:  4  # Minimum number of pixels for the cold core, needed for futyan version 4 cloud identification code. Not used if use futyan version 3.
-smoothwindowdimensions:  3  # Was 10. Dimension of the Box2DKernel filter on Tb.
+smoothwindowdimensions:  10  # Was 10. Dimension of the Box2DKernel filter on Tb.
 medfiltsize: 5      # Window size to perform medfilt2d to fill missing IR pixels, must be an odd number
 cloudidmethod: 'label_grow'
 # Specific parameters to link cloud objects using PF
@@ -82,8 +87,8 @@ pf_link_area_thresh:  648.0  # [km^2]
 # Tracking parameters
 othresh:  0.5  # overlap fraction threshold
 nmaxlinks:  200  # Maximum number of clouds that any single cloud can be linked to
-maxnclouds:  3000  # Maximum number of clouds in one snapshot
-duration_range: [2, 200] # A vector [minlength,maxlength] to specify the duration range for the tracks
+maxnclouds:  2000  # Maximum number of clouds in one snapshot
+duration_range: [2, 300] # A vector [minlength,maxlength] to specify the duration range for the tracks
 #keepsingletrack: 1  # Keep tracks that has only 1 time
 #keep_singlemergesplit: 1  # Options: 0=All short tracks are removed, 1=Only short tracks without mergers or splits are removed
 # Flag to remove short-lived tracks [< min(duration_range)] that are not mergers/splits with other tracks
@@ -91,7 +96,7 @@ duration_range: [2, 200] # A vector [minlength,maxlength] to specify the duratio
 remove_shorttracks: 1
 # Set this flag to 1 to write a dense (2D) trackstats netCDF file
 # Note that for datasets with lots of tracks, the memory consumption could be very large
-trackstats_dense_netcdf: 1
+trackstats_dense_netcdf: 0
 
 # MCS Tb parameters
 mcs_tb_area_thresh:  40000  # Tb area threshold [km^2]
@@ -143,21 +148,6 @@ coefs_pf_heavyratio:  [3.419024, 0.4387090]  # 10% [recommended]
 # coefs_pf_heavyratio:  [4.753215, 0.4886454]  # 15%
 # coefs_pf_heavyratio:  [4.592209, 0.6107371]  # 20%
 # coefs_pf_heavyratio:  [8.389616, 0.5079337]  # 25%
-
-# Specific to GPM Tb+IMERG combined dataset
-tb_varname:  'Tb'
-pcp_varname: 'precipitationCal'
-clouddatasource:  'gpmirimerg'
-pfdatasource:  'imerg'
-databasename:  'merg_'
-xcoord_name: 'lon'
-ycoord_name: 'lat'
-idclouds_hourly: 1  # 0:  No, 1:  Yes
-idclouds_minute: 30  # 0 or 30 min, which minute mark to use the Tb data
-datatimeresolution: 1.0  # hours
-# Minimum time difference threshold to match track stats with cloudid files
-match_tbpf_dt_thresh: 60.0  # seconds
-landvarname: 'landseamask'
 
 # Define tracked feature variable names
 feature_varname: 'feature_number'

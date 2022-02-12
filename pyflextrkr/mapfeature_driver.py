@@ -146,8 +146,6 @@ def mapfeature_driver(config):
         # Trigger dask computation
         final_result = dask.compute(*results)
         wait(final_result)
-    else:
-        sys.exit('Valid parallelization flag not provided.')
 
     logger.info('Done with mapping features to pixel-level files')
     return
