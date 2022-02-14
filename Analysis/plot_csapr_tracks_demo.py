@@ -2,7 +2,8 @@ import numpy as np
 import glob, os, sys
 import xarray as xr
 import pandas as pd
-from scipy.ndimage import label, binary_dilation, binary_erosion, generate_binary_structure
+import math
+from scipy.ndimage import binary_erosion, generate_binary_structure
 import datetime
 import matplotlib as mpl
 import matplotlib.pyplot as plt
@@ -15,9 +16,9 @@ from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
 mpl.use('agg')
 import dask
 from dask.distributed import Client, LocalCluster
-
 import warnings
 warnings.filterwarnings("ignore")
+from pyflextrkr.ft_utilities import load_config
 
 #-----------------------------------------------------------------------
 def label_perimeter(tracknumber):
@@ -85,8 +86,6 @@ def calc_latlon(lon1, lat1, dist, angle):
     angle:  angle in [degree]
     """
 
-    import math
-
     # Earth radius
     # R_earth = 6378.39  # at Equator [km]
     R_earth = 6374.2  # at 40 degree latitude [km]
@@ -110,8 +109,8 @@ def calc_latlon(lon1, lat1, dist, angle):
 def plot_map(xx, yy, comp_ref, tn_perim, pixel_bt, levels, cmaps, cblabels, cbticks, timestr, dt_thres, 
              ntracks, lifetime, cell_bt, cell_lon, cell_lat, lon_tn, lat_tn, tracknumbers, figname):
 
-    mpl.rcParams['font.size'] = 14
-    mpl.rcParams['font.family'] = 'Helvetica'
+    mpl.rcParams['font.size'] = 13
+    # mpl.rcParams['font.family'] = 'Helvetica'
 
     # Set up track lifetime colors
     # size_centroid = [30,50,80]
@@ -129,10 +128,6 @@ def plot_map(xx, yy, comp_ref, tn_perim, pixel_bt, levels, cmaps, cblabels, cbti
     azimuths = np.arange(0,361,30)  # azimuth angles for HSRHI scans [degree]
     radar_lon, radar_lat = -64.7284, -32.1264  # CSAPR radar location
 
-    radii = np.arange(20,101,20)  # radii for the range rings [km]
-    azimuths = np.arange(0,361,30)  # azimuth angles for HSRHI scans [degree]
-    radar_lon, radar_lat = -64.7284, -32.1264  # CSAPR radar location
-
     map_extend = [np.min(xx), np.max(xx), np.min(yy), np.max(yy)]
     lonvals = mpl.ticker.FixedLocator(np.arange(-66,-63,0.5))
     latvals = mpl.ticker.FixedLocator(np.arange(-34,-30,0.5))
@@ -140,7 +135,7 @@ def plot_map(xx, yy, comp_ref, tn_perim, pixel_bt, levels, cmaps, cblabels, cbti
 
     fig = plt.figure(figsize=[8,7], dpi=200)
     gs = gridspec.GridSpec(1,2, height_ratios=[1], width_ratios=[1,0.03])
-    gs.update(wspace=0.05, hspace=0.05, left=0.08, right=0.9, top=0.93, bottom=0.05)
+    gs.update(wspace=0.05, hspace=0.05, left=0.1, right=0.9, top=0.92, bottom=0.08)
 
     ax1 = plt.subplot(gs[0], projection=proj)
     ax1.set_extent(map_extend, crs=proj)
@@ -316,33 +311,32 @@ if __name__ == "__main__":
     start_datetime = sys.argv[1]
     end_datetime = sys.argv[2]
     run_parallel = int(sys.argv[3])
+    config_file = sys.argv[4]
 
     # start_datetime = '2019-01-25T17'
     # end_datetime = '2019-01-26T06'
     # run_parallel = 0
 
-    # Set up dask workers (if run_parallel = 1)
-    n_workers = 32
-
     # Track stats file
-    # rootdir = os.path.expandvars('$ICLASS') + f'cacti/radar_processing/taranis_corcsapr2cfrppiqcM1_celltracking.c1/'
-    rootdir = os.path.expandvars('$ICLASS') + f'cacti/arm/csapr/taranis_corcsapr2cfrppiqcM1_celltracking.c1.new/'
-    statsfile = f'{rootdir}stats/stats_tracknumbersv1.0_20181015.0000_20190303.0000.nc'
+    config = load_config(config_file)
+    stats_path = config["stats_outpath"]
+    pixeltracking_path = config["pixeltracking_outpath"]
+    trackstats_filebase = config["trackstats_filebase"]
+    startdate = config["startdate"]
+    enddate = config["enddate"]
+    trackstats_file = f"{stats_path}{trackstats_filebase}{startdate}_{enddate}.nc"
+    n_workers = config["nprocesses"]
 
-    # Pixel-level files
-    datadir = f'{rootdir}/celltracking/20181015.0000_20190303.0000/'
-    # datadir = f'{rootdir}celltracking/20181110.1800_20181112.2359/'
     # Generate 15min time marks within the start/end datetime
     input_datetimes = pd.date_range(start=start_datetime, end=end_datetime, freq='15min').strftime('%Y%m%d_%H%M')
-    # Find all files that matches the input datetime
+    # Find all pixel-level files that match the input datetime
     datafiles = []
     for tt in range(0, len(input_datetimes)):
-        datafiles.extend(sorted(glob.glob(f'{datadir}celltracks_{input_datetimes[tt]}*.nc')))
+        datafiles.extend(sorted(glob.glob(f'{pixeltracking_path}celltracks_{input_datetimes[tt]}*.nc')))
     print(f'Number of pixel files: {len(datafiles)}')
- 
+
     # Output figure directory
-    figdir = f'{rootdir}celltracking/quicklooks_trackpaths/'
-    # figdir = f'{rootdir}celltracking/quicklooks_trackpaths_filter/'
+    figdir = f'{pixeltracking_path}quicklooks_trackpaths/'
     os.makedirs(figdir, exist_ok=True)
 
     # Create a timedelta threshold in minutes
@@ -350,16 +344,9 @@ if __name__ == "__main__":
     # This treshold controls the time window to retain previous tracks
     dt_thres = datetime.timedelta(minutes=30)
 
-    # # Read topography file
-    # terr = xr.open_dataset(terrain_file)
-    # topoZ = terr['z']
-    # topoLon = terr['x']
-    # topoLat = terr['y']
-    # topoZ.plot(vmin=0, vmax=2250, cmap='terrain')
-
     # Read track stats file
-    dss = xr.open_dataset(statsfile)
-    stats_starttime = dss.basetime.isel(times=0)
+    dss = xr.open_dataset(trackstats_file)
+    stats_starttime = dss.base_time.isel(times=0)
     # Convert input datetime to np.datetime64
     stime = np.datetime64(start_datetime)
     etime = np.datetime64(end_datetime)
@@ -370,8 +357,8 @@ if __name__ == "__main__":
 
     # Subset these tracks
     time_res = dss.attrs['time_resolution_hour']
-    lifetime = dss.lifetime.isel(tracks=idx) * time_res
-    cell_bt = dss.basetime.isel(tracks=idx)
+    lifetime = dss.track_duration.isel(tracks=idx) * time_res
+    cell_bt = dss.base_time.isel(tracks=idx)
     cell_lon = dss.cell_meanlon.isel(tracks=idx)
     cell_lat = dss.cell_meanlat.isel(tracks=idx)
     start_split_tracknumber = dss.start_split_tracknumber.isel(tracks=idx)
