@@ -1,10 +1,11 @@
 import numpy as np
 import os, fnmatch, sys, glob
-import datetime, calendar
+import datetime, calendar, time
 from pytz import utc
 import yaml
 import xarray as xr
 import logging
+from scipy.sparse import csr_matrix
 
 def load_config(config_file):
     """
@@ -281,3 +282,110 @@ def match_drift_times(
         xdrifts_match,
         ydrifts_match,
     )
+
+def convert_trackstats_sparse2dense(
+        filename_sparse,
+        filename_dense,
+        max_trackduration,
+        tracks_idx_varname,
+        times_idx_varname,
+        tracks_dimname,
+        times_dimname,
+        fillval,
+        fillval_f,
+):
+    """
+    Convert sparse trackstats netCDF file to dense trackstats netCDF file.
+
+    Args:
+        filename_sparse: string
+            Filename for sparse trackstats netCDF file.
+        filename_dense: string
+            Filename for dense trackstats netCDF file.
+        max_trackduration: int
+            Maximum track duration.
+        tracks_idx_varname: string
+            Tracks indices variable name.
+        times_idx_varname: string
+            Times indices variable name.
+        tracks_dimname: string
+            Tracks dimension name.
+        times_dimname: string
+            Times dimension name.
+        fillval: int
+            Missing value for int type variables.
+        fillval_f: float
+            Missing value for float type variables.
+
+    Returns:
+        True.
+    """
+    # Read sparse netCDF file
+    ds_all = xr.open_dataset(
+        filename_sparse,
+        mask_and_scale=False,
+        decode_times=False
+    )
+    # Get sparse array info
+    sparse_dimname = 'sparse_index'
+    nsparse_data = ds_all.dims[sparse_dimname]
+    ntracks = ds_all.dims[tracks_dimname]
+    # Sparse array indices
+    tracks_idx = ds_all[tracks_idx_varname].values
+    times_idx = ds_all[times_idx_varname].values
+    row_col_ind = (tracks_idx, times_idx)
+    # Sparse array shapes
+    shape_2d = (ntracks, max_trackduration)
+
+    # Create a dense mask for no feature
+    mask = csr_matrix(
+        (ds_all['base_time'].data, row_col_ind),
+        shape=shape_2d,
+        dtype=ds_all['base_time'].dtype,
+    ).toarray() == 0
+
+    # Create variable dictionary
+    var_dict = {}
+    for key, value in ds_all.data_vars.items():
+        # Check dimension name for sparse arrays
+        if ds_all[key].dims[0] == sparse_dimname:
+            # Convert to sparse array, then to dense array
+            var_dense = csr_matrix(
+                (ds_all[key].data, row_col_ind), shape=shape_2d, dtype=ds_all[key].dtype,
+            ).toarray()
+            # Replace missing values based on variable type
+            if isinstance(var_dense[0, 0], np.floating):
+                var_dense[mask] = fillval_f
+            else:
+                var_dense[mask] = fillval
+            var_dict[key] = ([tracks_dimname, times_dimname], var_dense, ds_all[key].attrs)
+        else:
+            var_dict[key] = ([tracks_dimname], value.data, ds_all[key].attrs)
+    # Remove the tracks/times indices variables
+    var_dict.pop(tracks_idx_varname, None)
+    var_dict.pop(times_idx_varname, None)
+
+    # Define coordinate dictionary
+    coord_dict = {
+        tracks_dimname: ([tracks_dimname], np.arange(0, ntracks)),
+        times_dimname: ([times_dimname], np.arange(0, max_trackduration)),
+    }
+
+    # Update file creation time in global attribute
+    gattr_dict = ds_all.attrs
+    gattr_dict["Created_on"] = time.ctime(time.time())
+
+    # Define output Xarray dataset
+    dsout = xr.Dataset(var_dict, coords=coord_dict, attrs=gattr_dict)
+    # Set encoding/compression for all variables
+    comp = dict(zlib=True)
+    encoding = {var: comp for var in dsout.data_vars}
+    # Write to netcdf file
+    dsout.to_netcdf(
+        path=filename_dense,
+        mode='w',
+        format='NETCDF4',
+        unlimited_dims=tracks_dimname,
+        encoding=encoding
+    )
+    return True
