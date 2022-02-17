@@ -78,8 +78,6 @@ def identifymcs_tb(config):
 
     # Convert track duration to physical time unit
     trackstat_lifetime = np.multiply(track_duration, time_resolution)
-    # Get CCS area
-    trackstat_ccsarea = trackstat_corearea + trackstat_coldarea
 
     ###################################################################
     # Identify MCSs
@@ -93,7 +91,8 @@ def identifymcs_tb(config):
     for nt in range(0, ntracks_all):
         # Get data for a given track
         track_corearea = trackstat_corearea[nt, :].data
-        track_ccsarea = trackstat_ccsarea[nt, :].data
+        # Get CCS area
+        track_ccsarea = trackstat_corearea[nt, :].data + trackstat_coldarea[nt, :].data
 
         # Remove fill values
         track_corearea = track_corearea[
@@ -184,7 +183,8 @@ def identifymcs_tb(config):
                 mergingcloudnumber = cloudnumbers[mergetrack_idx, :].data
                 mergingbasetime = basetime[mergetrack_idx, :].data
                 mergingstatus = track_status[mergetrack_idx, :].data
-                mergingccsarea = trackstat_ccsarea[mergetrack_idx, :].data
+                mergingccsarea = trackstat_corearea[mergetrack_idx, :].data +\
+                                 trackstat_coldarea[mergetrack_idx, :].data
 
                 # Get MCS basetime
                 imcsbasetime = basetime[int(mcstracknumbers[imcs])-1, :].data
@@ -213,7 +213,8 @@ def identifymcs_tb(config):
                 splittingcloudnumber = cloudnumbers[splittrack_idx, :].data
                 splittingbasetime = basetime[splittrack_idx, :].data
                 splittingstatus = track_status[splittrack_idx, :].data
-                splittingccsarea = trackstat_ccsarea[splittrack_idx, :].data
+                splittingccsarea = trackstat_corearea[splittrack_idx, :].data +\
+                                   trackstat_coldarea[splittrack_idx, :].data
 
                 # Get MCS basetime
                 imcsbasetime = basetime[int(mcstracknumbers[imcs]) - 1, :].data
@@ -278,7 +279,6 @@ def identifymcs_tb(config):
     dsout = dsout.drop_vars(drop_vars_list)
 
     # Create a flag for MCS status
-    # ccs_area = trackstat_ccsarea[trackidx_mcs, :]
     ccs_area = dsout['core_area'].data + dsout['cold_area'].data
     mcs_status = np.full(ccs_area.shape, fillval, dtype=np.int16)
     mcs_status[ccs_area > mcs_tb_area_thresh] = 1
