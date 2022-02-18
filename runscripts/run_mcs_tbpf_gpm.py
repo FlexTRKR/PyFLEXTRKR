@@ -26,6 +26,7 @@ if __name__ == '__main__':
     # Update path names by adding a year
     config["clouddata_path"] = f"{config['clouddata_path']}{year}/"
     config["tracking_outpath"] = f"{config['tracking_outpath']}{year}/"
+    os.makedirs(config["tracking_outpath"], exist_ok=True)
 
     ################################################################################################
     # Parallel processing options
@@ -35,8 +36,13 @@ if __name__ == '__main__':
         client = Client(cluster)
     elif config['run_parallel'] == 2:
         # Dask-MPI
-        scheduler_file = os.path.join(os.environ["SCRATCH"], "scheduler.json")
+        # Get the scheduler name from input argument
+        scheduler_name = sys.argv[2]
+        n_workers = int(sys.argv[3])
+        timeout = config.get("timeout", 60)
+        scheduler_file = os.path.join(os.environ["SCRATCH"], scheduler_name)
         client = Client(scheduler_file=scheduler_file)
+        client.wait_for_workers(n_workers=n_workers, timeout=timeout)
     else:
         logger.info(f"Running in serial.")
 
