@@ -4,19 +4,19 @@
 
 # Processing steps:
 # Maybe worth nesting these in sets of dictionaries
-run_idfeature : False
-run_tracksingle : False
+run_idfeature : True
+run_tracksingle : True
 run_gettracks : False
 run_trackstats : False
-run_identifymcs : True
-run_matchpf : True
-run_robustmcs : True
-run_mapfeature : True
-run_speed: True
+run_identifymcs : False
+run_matchpf : False
+run_robustmcs : False
+run_mapfeature : False
+run_speed: False
 
 # Parallel processing set up
 # run_parallel: 1 (local cluster), 2 (Dask MPI)
-run_parallel: 0
+run_parallel: 2
 nprocesses : 32  # Number of processors to use if run_parallel=1
 timeout: 90  # [seconds] Dask timeout limit
 
@@ -29,9 +29,9 @@ enddate: 'ENDDATE'
 # E.g., wrfout_2018-11-01_01:15:00 --> yyyy-mo-dd_hh:mm:ss
 time_format: 'yyyymoddhh'
 # Input files directory
-clouddata_path: '/global/cscratch1/sd/feng045/waccem/Subsets_IMERG/asia/'
+clouddata_path: '/global/cscratch1/sd/feng045/waccem/IR_IMERG_Combined/'
 # Working directory for the tracking data
-root_path: '/global/cscratch1/sd/feng045/waccem/mcs_global/asia/'
+root_path: '/global/cscratch1/sd/feng045/waccem/mcs_global/global/'
 # Working sub-directory names
 tracking_path_name: 'tracking'
 stats_path_name: 'stats'
@@ -39,7 +39,7 @@ pixel_path_name: 'mcstracking'
 
 # Land mask file
 #input_data_directory: 'data_in/'
-landmask_filename: '/global/cscratch1/sd/feng045/waccem/mcs_global/map_data/IMERG_landmask_asia.nc'
+landmask_filename: '/global/cscratch1/sd/feng045/waccem/mcs_global/map_data/IMERG_landmask_180W-180E_60S-60N.nc'
 landmask_varname: 'landseamask'
 
 # Specific to GPM Tb+IMERG combined dataset
@@ -62,7 +62,7 @@ match_tbpf_dt_thresh: 60.0  # seconds
 feature_type: 'tb_pf'
 
 # Cloud identification parameters
-geolimits: [-90, -360, 90, 360] # 4-element array with plotting boundaries [lat_min, lon_min, lat_max, lon_max]
+geolimits: [-60, -360, 60, 360] # 4-element array with plotting boundaries [lat_min, lon_min, lat_max, lon_max]
 pixel_radius:  10.0  # km
 timegap:  3.1  # hour
 area_thresh:  800  # km^2
