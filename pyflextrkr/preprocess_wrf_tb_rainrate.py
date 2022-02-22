@@ -127,10 +127,9 @@ def calc_rainrate_tb(filepairnames, outdir, inbasename, outbasename):
 
         # Define xarray dataset
         var_dict = {
-            'base_time': (['time'], np.expand_dims(basetimes[tt], axis=0)),
             'Times': (['time','char'], times_char_t1),
-            'lon2d': (['lat','lon'], XLONG),
-            'lat2d': (['lat','lon'], XLAT),
+            'lon2d': (['lat','lon'], XLONG.data),
+            'lat2d': (['lat','lon'], XLAT.data),
             'tb': (['time','lat','lon'], np.expand_dims(tb[tt,:,:], axis=0)),
             'rainrate': (['time','lat','lon'], np.expand_dims(rainrate[tt,:,:], axis=0)),
         }
@@ -151,8 +150,6 @@ def calc_rainrate_tb(filepairnames, outdir, inbasename, outbasename):
         dsout = xr.Dataset(var_dict, coords=coord_dict, attrs=gattr_dict)
 
         # Specify attributes
-        dsout['base_time'].attrs['long_name'] = 'Epoch time (seconds since 1970-01-01 00:00:00)'
-        dsout['base_time'].attrs['units'] = 'seconds since 1970-01-01 00:00:00'
         dsout['time'].attrs['long_name'] = 'Epoch time (seconds since 1970-01-01 00:00:00)'
         dsout['time'].attrs['units'] = 'seconds since 1970-01-01 00:00:00'
         dsout['Times'].attrs['long_name'] = 'WRF-based time'
@@ -167,7 +164,7 @@ def calc_rainrate_tb(filepairnames, outdir, inbasename, outbasename):
 
         # Write to netcdf file
         encoding_dict = {
-            'base_time': {'zlib':True, 'dtype':'int64'},
+            # 'base_time': {'zlib':True, 'dtype':'int64'},
             'time':{'zlib':True, 'dtype':'int64'},
             'Times':{'zlib':True},
             'lon2d':{'zlib':True, 'dtype':'float32'},
