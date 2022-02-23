@@ -4,7 +4,7 @@
 
 # Processing steps:
 # Maybe worth nesting these in sets of dictionaries
-run_idfeature : True
+run_idfeature : False
 run_tracksingle : True
 run_gettracks : False
 run_trackstats : False
@@ -18,16 +18,19 @@ run_speed: False
 # run_parallel: 1 (local cluster), 2 (Dask MPI)
 run_parallel: 2
 nprocesses : 32  # Number of processors to use if run_parallel=1
-timeout: 90  # [seconds] Dask timeout limit
+timeout: 120  # [seconds] Dask timeout limit
 
 # Start/end date and time
-startdate: 'STARTDATE'
-enddate: 'ENDDATE'
+startdate: '20180101.0000'
+enddate: '20190101.0000'
 
-# Specify date/time string format in the file name
-# E.g., radar_20181101.011503.nc --> yyyymodd.hhmmss
-# E.g., wrfout_2018-11-01_01:15:00 --> yyyy-mo-dd_hh:mm:ss
+# Specify tracking input data date/time string format
+# This is the preprocessed file that contains Tb & rainrate
+# E.g., databasename20181101.011503.nc --> yyyymodd.hhmmss
+# E.g., databasename2018-11-01_01:15:00 --> yyyy-mo-dd_hh:mm:ss
 time_format: 'yyyymoddhh'
+databasename:  'merg_'  # Note: include all strings before the time (including "_", ".")
+
 # Input files directory
 clouddata_path: '/global/cscratch1/sd/feng045/waccem/IR_IMERG_Combined/'
 # Working directory for the tracking data
@@ -38,12 +41,13 @@ stats_path_name: 'stats'
 pixel_path_name: 'mcstracking'
 
 # Land mask file
-#input_data_directory: 'data_in/'
 landmask_filename: '/global/cscratch1/sd/feng045/waccem/mcs_global/map_data/IMERG_landmask_180W-180E_60S-60N.nc'
 landmask_varname: 'landseamask'
 
 # Specific to GPM Tb+IMERG combined dataset
-databasename:  'merg_'
+pixel_radius:  10.0  # [km] Spatial resolution of the input data
+datatimeresolution: 1.0  # [hour] Temporal resolution of the input data
+# Variable names in the input data
 tb_varname:  'Tb'
 pcp_varname: 'precipitationCal'
 clouddatasource:  'gpmirimerg'
@@ -53,29 +57,24 @@ ycoord_name: 'lat'
 idclouds_hourly: 1  # 0:  No, 1:  Yes
 idclouds_minute: 30  # 0 or 30 min, which minute mark to use the Tb data
 idclouds_dt_thresh: 5  # [minute], time difference allowed between actual data and idclouds_minute
-datatimeresolution: 1.0  # hours
-# Minimum time difference threshold to match track stats with cloudid files
-match_tbpf_dt_thresh: 60.0  # seconds
 
 # Specify types of feature being tracked
 # This adds additional feature-specific statistics to be computed
 feature_type: 'tb_pf'
 
 # Cloud identification parameters
-geolimits: [-60, -360, 60, 360] # 4-element array with plotting boundaries [lat_min, lon_min, lat_max, lon_max]
-pixel_radius:  10.0  # km
-timegap:  3.1  # hour
-area_thresh:  800  # km^2
-miss_thresh:  0.4  # Missing data fraction threshold
-cloudtb_core:  225.0  # K
-cloudtb_cold:  241.0  # K
-cloudtb_warm:  261.0  # K
-cloudtb_cloud:  261.0  # K
-absolutetb_threshs: [160, 330]  # K [min, max] brightness temperature allowed.
-warmanvilexpansion:  0  # If this is set to one, then the cold anvil is spread laterally until it exceeds the warm anvil threshold
-mincoldcorepix:  4  # Minimum number of pixels for the cold core, needed for futyan version 4 cloud identification code. Not used if use futyan version 3.
-smoothwindowdimensions:  10  # Was 10. Dimension of the Box2DKernel filter on Tb.
-medfiltsize: 5      # Window size to perform medfilt2d to fill missing IR pixels, must be an odd number
+mincoldcorepix:  4  # Minimum number of pixels for the cold core
+smoothwindowdimensions:  10  # Dimension of the Box2DKernel filter on Tb.
+medfiltsize: 5      # Window size to perform medfilt2d to fill missing Tb pixels, must be an odd number
+geolimits: [-60, -360, 60, 360] # 4-element array to subset domain boundaries [lat_min, lon_min, lat_max, lon_max]
+area_thresh:  800  # [km^2] Minimum area to define a cloud
+miss_thresh:  0.4  # Missing data fraction threshold. If missing data exceeds this, the time frame will be omitted.
+cloudtb_core:  225.0  # [K]
+cloudtb_cold:  241.0  # [K]
+cloudtb_warm:  261.0  # [K]
+cloudtb_cloud:  261.0  # [K]
+absolutetb_threshs: [160, 330]  # K [min, max] absolute Tb range allowed.
+warmanvilexpansion:  0  # Not working yet, set this to 0 for now
 cloudidmethod: 'label_grow'
 # Specific parameters to link cloud objects using PF
 linkpf:  1  # Set to 1 to turn on linkpf option; default: 0
@@ -84,34 +83,32 @@ pf_dbz_thresh:  3  # [dBZ] for reflectivity, or [mm/h] for rainrate
 pf_link_area_thresh:  648.0  # [km^2]
 
 # Tracking parameters
-othresh:  0.5  # overlap fraction threshold
-nmaxlinks:  200  # Maximum number of clouds that any single cloud can be linked to
+othresh: 0.5  # overlap fraction threshold. Clouds that overlap more than this between times are tracked.
+timegap: 3.1  # [hour] If missing data duration longer than this, tracking restarts
+nmaxlinks: 200  # Maximum number of clouds that any single cloud can be linked to
 maxnclouds:  3000  # Maximum number of clouds in one snapshot
 duration_range: [2, 400] # A vector [minlength,maxlength] to specify the duration range for the tracks
-#keepsingletrack: 1  # Keep tracks that has only 1 time
-#keep_singlemergesplit: 1  # Options: 0=All short tracks are removed, 1=Only short tracks without mergers or splits are removed
 # Flag to remove short-lived tracks [< min(duration_range)] that are not mergers/splits with other tracks
 # 0:keep all tracks; 1:remove short tracks
 remove_shorttracks: 1
 # Set this flag to 1 to write a dense (2D) trackstats netCDF file
-# Note that for datasets with lots of tracks, the memory consumption could be very large
+# Note that for datasets with lots of tracks, the memory consumption could be large
 trackstats_dense_netcdf: 1
+# Minimum time difference threshold to match track stats with cloudid files
+match_tbpf_dt_thresh: 60.0  # seconds
 
 # MCS Tb parameters
-mcs_tb_area_thresh:  40000  # Tb area threshold [km^2]
-mcs_tb_duration_thresh:  4  # Tb minimum length of a mcs [hr]
-#mcs_tb_eccentricitythresh:  0.7  # Tb eccentricity at time of maximum extent
-mcs_tb_split_duration:  12  # Tb tracks smaller or equal to this length will be included with the MCS splits from
-mcs_tb_merge_duration:  12  # Tb tracks smaller or equal to this length will be included with the MCS merges into
-mcs_tb_gap: 1  # Allowable gap in Tb data to exceed area threshold [hr]
+mcs_tb_area_thresh: 40000  # [km^2] Tb area threshold
+mcs_tb_duration_thresh:  4  # [hour] Tb minimum length of a mcs
+mcs_tb_split_duration:  12  # [hour] Tb tracks smaller or equal to this length will be included with the MCS splits from
+mcs_tb_merge_duration:  12  # [hour] Tb tracks smaller or equal to this length will be included with the MCS merges into
+mcs_tb_gap: 1  # [unitless] Allowable temporal gap in Tb data for MCS area threshold
 # MCS PF parameters
-mcs_pf_majoraxis_thresh:  100  # MCS PF major axis length lower limit [km]
-max_pf_majoraxis_thresh:  1800  # MCS PF major axis length upper limit [km]
-mcs_pf_durationthresh:  4  # PF minimum length of mcs [hr]
-mcs_pf_aspectratiothresh:  4  # PF aspect ragio require to define a squall lines
-mcs_pf_lifecyclethresh:  4  # Minimum MCS lifetime required to classify life stages
-mcs_pf_majoraxis_for_lifetime:  20  # Minimum PF size to count PF lifetime [km]
-mcs_pf_gap:  1  # Allowable gap in data for subMCS characteristics [hr]
+mcs_pf_majoraxis_thresh:  100  # [km] MCS PF major axis length lower limit
+max_pf_majoraxis_thresh:  1800  # [km] MCS PF major axis length upper limit
+mcs_pf_durationthresh:  4  # [hour] PF minimum length of mcs
+mcs_pf_majoraxis_for_lifetime:  20  # [km] Minimum PF size to count PF lifetime
+mcs_pf_gap:  1  # [unitless] Allowable temporal gap in PF data for MCS characteristics
 landfrac_thresh: 90  # [%] Define threshold for PF land fraction
 
 # Specify rain rate parameters
