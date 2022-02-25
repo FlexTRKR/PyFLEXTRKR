@@ -12,6 +12,7 @@ from pyflextrkr.matchtbpf_driver import match_tbpf_tracks
 from pyflextrkr.robustmcspf import define_robust_mcs_pf
 from pyflextrkr.mapfeature_driver import mapfeature_driver
 from pyflextrkr.movement_speed import movement_speed
+from pyflextrkr.ft_utilities import get_basetime_from_string
 
 if __name__ == '__main__':
 
@@ -21,8 +22,16 @@ if __name__ == '__main__':
 
     # Load configuration file
     config_file = sys.argv[1]
+    # startdate = sys.argv[2]
+    # enddate = sys.argv[3]
     config = load_config(config_file)
     year = config["startdate"][0:4]
+    # year = startdate[0:4]
+    # # Update start/end dates
+    # config["startdate"] = startdate
+    # config["enddate"] = enddate
+    # config["start_basetime"] = get_basetime_from_string(startdate)
+    # config["end_basetime"] = get_basetime_from_string(enddate)
     # Update path names by adding a year
     config["clouddata_path"] = f"{config['clouddata_path']}{year}/"
     config["tracking_outpath"] = f"{config['tracking_outpath']}{year}/"

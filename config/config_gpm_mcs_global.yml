@@ -4,7 +4,7 @@
 
 # Processing steps:
 # Maybe worth nesting these in sets of dictionaries
-run_idfeature : False
+run_idfeature : True
 run_tracksingle : True
 run_gettracks : False
 run_trackstats : False
@@ -18,11 +18,11 @@ run_speed: False
 # run_parallel: 1 (local cluster), 2 (Dask MPI)
 run_parallel: 2
 nprocesses : 32  # Number of processors to use if run_parallel=1
-timeout: 120  # [seconds] Dask timeout limit
+timeout: 180  # [seconds] Dask timeout limit
 
 # Start/end date and time
-startdate: '20180101.0000'
-enddate: '20190101.0000'
+startdate: 'STARTDATE'
+enddate: 'ENDDATE'
 
 # Specify tracking input data date/time string format
 # This is the preprocessed file that contains Tb & rainrate
