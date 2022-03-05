@@ -215,30 +215,31 @@ def write_cloudid_tb(
         ds_out["cloudnumber_orig"].attrs["_FillValue"] = 0
 
     # Specify encoding list
+    zlib = True
     encodelist = {
-        "lon": {"zlib": True, "dtype":"float32"},
-        "lat": {"zlib": True, "dtype":"float32"},
-        "features": {"zlib": True},
-        "longitude": {"zlib": True, "_FillValue": np.nan, "dtype":"float32"},
-        "latitude": {"zlib": True, "_FillValue": np.nan, "dtype":"float32"},
-        "tb": {"zlib": True, "_FillValue": np.nan},
-        "cloudtype": {"zlib": True},
-        feature_varname: {"dtype": "int", "zlib": True},
-        "cloudnumber": {"dtype": "int", "zlib": True},
-        nfeature_varname: {"dtype": "int", "zlib": True},
-        featuresize_varname: {"dtype":"int", "zlib":True, "_FillValue":-9999},
+        "lon": {"zlib": zlib, "dtype":"float32"},
+        "lat": {"zlib": zlib, "dtype":"float32"},
+        "features": {"zlib": zlib},
+        "longitude": {"zlib": zlib, "_FillValue": np.nan, "dtype":"float32"},
+        "latitude": {"zlib": zlib, "_FillValue": np.nan, "dtype":"float32"},
+        "tb": {"zlib": zlib, "_FillValue": np.nan},
+        "cloudtype": {"zlib": zlib},
+        feature_varname: {"dtype": "int", "zlib": zlib},
+        "cloudnumber": {"dtype": "int", "zlib": zlib},
+        nfeature_varname: {"dtype": "int", "zlib": zlib},
+        featuresize_varname: {"dtype":"int", "zlib":zlib, "_FillValue":-9999},
     }
     # Now check for optional arguments, add them to encodelist if provided
     if "precipitation" in kwargs:
-        encodelist["precipitation"] = {"zlib": True}
+        encodelist["precipitation"] = {"zlib": zlib}
     if "reflectivity" in kwargs:
-        encodelist["reflectivity"] = {"zlib": True}
+        encodelist["reflectivity"] = {"zlib": zlib}
     if "pf_number" in kwargs:
-        encodelist["pf_number"] = {"zlib": True}
+        encodelist["pf_number"] = {"zlib": zlib}
     if "convcold_cloudnumber_orig" in kwargs:
-        encodelist["convcold_cloudnumber_orig"] = {"zlib": True}
+        encodelist["convcold_cloudnumber_orig"] = {"zlib": zlib}
     if "cloudnumber_orig" in kwargs:
-        encodelist["cloudnumber_orig"] = {"zlib": True}
+        encodelist["cloudnumber_orig"] = {"zlib": zlib}
 
     # Write netCDF file
     ds_out.to_netcdf(

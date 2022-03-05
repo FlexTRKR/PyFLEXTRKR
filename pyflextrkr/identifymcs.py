@@ -73,6 +73,7 @@ def identifymcs_tb(config):
 
     # import pdb; pdb.set_trace()
 
+    logger.info(f"Number of tracks to process: {ntracks_all}")
     logger.debug(f"MCS CCS area threshold: {mcs_tb_area_thresh}")
     logger.debug(f"MCS duration threshold: {duration_thresh}")
 

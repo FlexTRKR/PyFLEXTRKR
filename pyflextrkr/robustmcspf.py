@@ -26,7 +26,6 @@ def define_robust_mcs_pf(config):
     enddate = config["enddate"]
     mcs_pf_majoraxis_thresh = config["mcs_pf_majoraxis_thresh"]
     mcs_pf_durationthresh = config["mcs_pf_durationthresh"]
-    mcs_pf_lifecyclethresh = config["mcs_pf_lifecyclethresh"]
     mcs_pf_majoraxis_for_lifetime = config["mcs_pf_majoraxis_for_lifetime"]
     mcs_pf_gap = config["mcs_pf_gap"]
     coefs_pf_area = config["coefs_pf_area"]

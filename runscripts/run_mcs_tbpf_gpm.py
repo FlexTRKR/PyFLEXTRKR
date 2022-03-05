@@ -48,7 +48,7 @@ if __name__ == '__main__':
         # Get the scheduler name from input argument
         scheduler_name = sys.argv[2]
         n_workers = int(sys.argv[3])
-        timeout = config.get("timeout", 60)
+        timeout = config.get("timeout", 120)
         scheduler_file = os.path.join(os.environ["SCRATCH"], scheduler_name)
         client = Client(scheduler_file=scheduler_file)
         client.wait_for_workers(n_workers=n_workers, timeout=timeout)

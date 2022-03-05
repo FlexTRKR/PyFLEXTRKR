@@ -367,40 +367,41 @@ def trackclouds(
 
         # Write netcdf files
         # output_data.to_netcdf(path=track_outfile, mode='w', format='NETCDF4_CLASSIC', unlimited_dims='times', \
+        zlib = True
         output_data.to_netcdf(
             path=track_outfile,
             mode="w",
-            format="NETCDF4_CLASSIC",
+            format="NETCDF4",
             unlimited_dims="time",
             encoding={
                 "basetime_new": {
                     "dtype": "int64",
-                    "zlib": True,
+                    "zlib": zlib,
                     "units": "seconds since 1970-01-01",
                 },
                 "basetime_ref": {
                     "dtype": "int64",
-                    "zlib": True,
+                    "zlib": zlib,
                     "units": "seconds since 1970-01-01",
                 },
                 "newcloud_backward_index": {
                     "dtype": "int",
-                    "zlib": True,
+                    "zlib": zlib,
                     "_FillValue": fillval,
                 },
                 "newcloud_backward_size": {
                     "dtype": "int",
-                    "zlib": True,
+                    "zlib": zlib,
                     "_FillValue": fillval,
                 },
                 "refcloud_forward_index": {
                     "dtype": "int",
-                    "zlib": True,
+                    "zlib": zlib,
                     "_FillValue": fillval,
                 },
                 "refcloud_forward_size": {
                     "dtype": "int",
-                    "zlib": True,
+                    "zlib": zlib,
                     "_FillValue": fillval,
                 },
             },

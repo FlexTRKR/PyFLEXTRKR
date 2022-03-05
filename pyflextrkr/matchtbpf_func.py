@@ -46,9 +46,9 @@ def matchtbpf_singlefile(
     pixel_radius = config["pixel_radius"]
     nmaxpf = config["nmaxpf"]
     pfdatasource = config["pfdatasource"]
-    landmask_filename = config["landmask_filename"]
-    landmask_varname = config["landmask_varname"]
-    landfrac_thresh = config["landfrac_thresh"]
+    landmask_filename = config.get("landmask_filename", "")
+    landmask_varname = config.get("landmask_varname", "")
+    landfrac_thresh = config.get("landfrac_thresh", 0)
     fillval = config["fillval"]
     fillval_f = np.nan
 
