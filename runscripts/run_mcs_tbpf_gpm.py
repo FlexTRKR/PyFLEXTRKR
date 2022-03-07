@@ -22,16 +22,8 @@ if __name__ == '__main__':
 
     # Load configuration file
     config_file = sys.argv[1]
-    # startdate = sys.argv[2]
-    # enddate = sys.argv[3]
     config = load_config(config_file)
     year = config["startdate"][0:4]
-    # year = startdate[0:4]
-    # # Update start/end dates
-    # config["startdate"] = startdate
-    # config["enddate"] = enddate
-    # config["start_basetime"] = get_basetime_from_string(startdate)
-    # config["end_basetime"] = get_basetime_from_string(enddate)
     # Update path names by adding a year
     config["clouddata_path"] = f"{config['clouddata_path']}{year}/"
     config["tracking_outpath"] = f"{config['tracking_outpath']}{year}/"
@@ -45,11 +37,10 @@ if __name__ == '__main__':
         client = Client(cluster)
     elif config['run_parallel'] == 2:
         # Dask-MPI
-        # Get the scheduler name from input argument
-        scheduler_name = sys.argv[2]
+        # Get the scheduler filename from input argument
+        scheduler_file = sys.argv[2]
         n_workers = int(sys.argv[3])
         timeout = config.get("timeout", 120)
-        scheduler_file = os.path.join(os.environ["SCRATCH"], scheduler_name)
         client = Client(scheduler_file=scheduler_file)
         client.wait_for_workers(n_workers=n_workers, timeout=timeout)
     else:

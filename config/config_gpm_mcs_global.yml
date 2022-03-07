@@ -4,9 +4,9 @@
 
 # Processing steps:
 # Maybe worth nesting these in sets of dictionaries
-run_idfeature : True
-run_tracksingle : True
-run_gettracks : False
+run_idfeature : False
+run_tracksingle : False
+run_gettracks : True
 run_trackstats : False
 run_identifymcs : False
 run_matchpf : False
@@ -16,9 +16,9 @@ run_speed: False
 
 # Parallel processing set up
 # run_parallel: 1 (local cluster), 2 (Dask MPI)
-run_parallel: 2
+run_parallel: 0
 nprocesses : 32  # Number of processors to use if run_parallel=1
-timeout: 180  # [seconds] Dask timeout limit
+timeout: 360  # [seconds] Dask timeout limit
 
 # Start/end date and time
 startdate: 'STARTDATE'
@@ -40,7 +40,7 @@ tracking_path_name: 'tracking'
 stats_path_name: 'stats'
 pixel_path_name: 'mcstracking'
 
-# Land mask file
+# Land mask file (optional)
 landmask_filename: '/global/cscratch1/sd/feng045/waccem/mcs_global/map_data/IMERG_landmask_180W-180E_60S-60N.nc'
 landmask_varname: 'landseamask'
 
@@ -85,7 +85,7 @@ pf_link_area_thresh:  648.0  # [km^2]
 # Tracking parameters
 othresh: 0.5  # overlap fraction threshold. Clouds that overlap more than this between times are tracked.
 timegap: 3.1  # [hour] If missing data duration longer than this, tracking restarts
-nmaxlinks: 200  # Maximum number of clouds that any single cloud can be linked to
+nmaxlinks: 50  # Maximum number of clouds that any single cloud can be linked to
 maxnclouds:  3000  # Maximum number of clouds in one snapshot
 duration_range: [2, 400] # A vector [minlength,maxlength] to specify the duration range for the tracks
 # Flag to remove short-lived tracks [< min(duration_range)] that are not mergers/splits with other tracks

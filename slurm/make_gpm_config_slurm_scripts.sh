@@ -1,16 +1,16 @@
 #!/bin/bash
 # Create GPM MCS tracking config file and slurm script for a given year
 
-START_YEAR=2014
-END_YEAR=2014
-START_MON=2
+START_YEAR=2000
+END_YEAR=2000
+START_MON=6
 END_MON=12
 
 # Flag to make monthly scripts (1:yes, 0:no)
-make_month=1
-submit_month=1
+make_month=0
+submit_month=0
 # Flag to make annual scripts (1:yes, 0:no)
-make_year=0
+make_year=1
 submit_year=0
 
 config_dir="/global/homes/f/feng045/program/PyFLEXTRKR/config/"
