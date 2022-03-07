@@ -19,38 +19,36 @@ run_parallel: 1
 nprocesses : 30  # Number of processors to use if run_parallel=1
 
 # Start/end date and time
-#startdate: '20170601.0000'
-#enddate: '20170602.0000'
-startdate: '20170520.0000'
-enddate: '20170901.0000'
+startdate: '20140319.0000'
+enddate: '20140321.0000'
 
 # Specify tracking input data date/time string format
 # This is the preprocessed file that contains Tb & rainrate
 # E.g., databasename20181101.011503.nc --> yyyymodd.hhmmss
 # E.g., databasename2018-11-01_01:15:00 --> yyyy-mo-dd_hh:mm:ss
-time_format: 'yyyymoddhhmm'
+time_format: 'yyyy-mo-dd_hh:mm:ss'
 databasename: 'wrfout_rainrate_tb_'  # Note: include all strings before the time (including "_", ".")
 
 # WRF raw data
-wrfout_path: '/global/cfs/cdirs/m1867/TMeCSR/for_sharing/analysis_mean/'
-wrfout_basename: 'analysis_mean_'
+wrfout_path: '/global/cscratch1/sd/tais958/tozhe/20140320_12_24/'
+wrfout_basename: 'wrfout_d01_'
 # Tracking input files directory
-clouddata_path: '/global/cscratch1/sd/feng045/waccem/TMeCSR/analysis_mean/tb_rr/'
+clouddata_path: '/global/cscratch1/sd/feng045/iclass/goamazon/wrfda/tb_rr/'
 # Working directory for the tracking data
-root_path: '/global/cscratch1/sd/feng045/waccem/TMeCSR/analysis_mean/'
+root_path: '/global/cscratch1/sd/feng045/iclass/goamazon/wrfda/'
 # Working sub-directory names
 tracking_path_name: 'tracking'
 stats_path_name: 'stats'
 pixel_path_name: 'mcstracking'
 
 # Land mask file
-landmask_filename: '/global/cscratch1/sd/feng045/waccem/TMeCSR/map_data/wrf_landmask.nc'
+landmask_filename: '/global/cscratch1/sd/feng045/iclass/goamazon/wrfda/map_data/wrf_landmask.nc'
 landmask_varname: 'LANDMASK'
 
 # Input dataset structure
-pixel_radius:  9.0  # [km] Spatial resolution of the input data
+pixel_radius:  4.0  # [km] Spatial resolution of the input data
 datatimeresolution: 1.0  # [hour] Temporal resolution of the input data
-# Variable names in the input data
+# Variable names in the input dat
 tb_varname:  'tb'
 pcp_varname: 'rainrate'
 clouddatasource: 'model'
@@ -64,7 +62,7 @@ feature_type: 'tb_pf'
 
 # Cloud identification parameters
 mincoldcorepix:  4  # Minimum number of pixels for the cold core
-smoothwindowdimensions:  10  # Dimension of the Box2DKernel filter on Tb.
+smoothwindowdimensions:  25  # Dimension of the Box2DKernel filter on Tb.
 medfiltsize: 5      # Window size to perform medfilt2d to fill missing Tb pixels, must be an odd number
 geolimits: [-90, -360, 90, 360] # 4-element array to subset domain boundaries [lat_min, lon_min, lat_max, lon_max]
 area_thresh:  800  # [km^2] Minimum area to define a cloud
@@ -78,7 +76,7 @@ warmanvilexpansion:  0  # Not working yet, set this to 0 for now
 cloudidmethod: 'label_grow'
 # Specific parameters to link cloud objects using PF
 linkpf:  1  # Set to 1 to turn on linkpf option; default: 0
-pf_smooth_window:  5  # Smoothing window for identifying PF
+pf_smooth_window:  10  # Smoothing window for identifying PF
 pf_dbz_thresh:  3  # [dBZ] for reflectivity, or [mm/h] for rainrate
 pf_link_area_thresh:  648.0  # [km^2]
 

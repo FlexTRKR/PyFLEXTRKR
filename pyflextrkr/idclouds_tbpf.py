@@ -144,27 +144,14 @@ def idclouds_tbpf(
                     & (in_lon <= geolimits[3])
                 )
             )
+            ymin, ymax = np.nanmin(indicesy), np.nanmax(indicesy) + 1
+            xmin, xmax = np.nanmin(indicesx), np.nanmax(indicesx) + 1
 
             # proceed if file covers the geographic region in interest
             if (len(indicesx) > 0) and (len(indicesy) > 0):
-                out_lat = np.copy(
-                    in_lat[
-                        np.nanmin(indicesy) : np.nanmax(indicesy) + 1,
-                        np.nanmin(indicesx) : np.nanmax(indicesx) + 1,
-                    ]
-                )
-                out_lon = np.copy(
-                    in_lon[
-                        np.nanmin(indicesy) : np.nanmax(indicesy) + 1,
-                        np.nanmin(indicesx) : np.nanmax(indicesx) + 1,
-                    ]
-                )
-                out_ir = np.copy(
-                    in_ir[
-                        np.nanmin(indicesy) : np.nanmax(indicesy) + 1,
-                        np.nanmin(indicesx) : np.nanmax(indicesx) + 1,
-                    ]
-                )
+                out_lat = np.copy(in_lat[ymin:ymax, xmin:xmax])
+                out_lon = np.copy(in_lon[ymin:ymax, xmin:xmax])
+                out_ir = np.copy(in_ir[ymin:ymax, xmin:xmax])
 
                 ######################################################
                 # proceed only if number of missing data does not exceed an accepable threshold
@@ -236,6 +223,9 @@ def idclouds_tbpf(
                             else:
                                 # For other data source take the same time as tb
                                 pcp = pcp[tt, :, :]
+
+                            # Subset region to match Tb
+                            pcp = pcp[ymin:ymax, xmin:xmax]
 
                             # Smooth PF variable, then label PF exceeding threshold
                             pcp_s = filters.uniform_filter(

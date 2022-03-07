@@ -197,9 +197,9 @@ def trackstats_driver(config):
     data_max_trackduration = np.nanmax(out_dict["track_duration"])
     if data_max_trackduration > max_trackduration:
         logger.critical(f"WARNING: Max track duration in data ({data_max_trackduration}) " +
-                        f"exceeds 'duration_range' ({duration_range})!")
-        logger.critical(f"This would cause missing statistics in certain long-lived tracks!")
-        logger.critical(f"Increase 'duration_range' to fix this error.")
+                        f"exceeds 'duration_range' ({duration_range}) in the config file!")
+        logger.critical(f"This would cause missing statistics in long-lived tracks!")
+        logger.critical(f"Increase 'duration_range' in the config file.")
         logger.critical(f"Tracking will now exit.")
         sys.exit()
 

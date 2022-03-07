@@ -1,62 +1,62 @@
 ---
-# MCS tracking configuration file
+# Global GPM based MCS tracking configuration file
 # Tracking uses collocated Tb + Precipitation
 
 # Processing steps:
-run_idfeature : True
-run_tracksingle : True
+# Maybe worth nesting these in sets of dictionaries
+run_idfeature : False
+run_tracksingle : False
 run_gettracks : True
-run_trackstats : True
-run_identifymcs : True
-run_matchpf : True
-run_robustmcs : True
-run_mapfeature : True
-run_speed : True
+run_trackstats : False
+run_identifymcs : False
+run_matchpf : False
+run_robustmcs : False
+run_mapfeature : False
+run_speed: False
 
 # Parallel processing set up
 # run_parallel: 1 (local cluster), 2 (Dask MPI)
-run_parallel: 1
-nprocesses : 30  # Number of processors to use if run_parallel=1
+run_parallel: 0
+nprocesses : 32  # Number of processors to use if run_parallel=1
+timeout: 360  # [seconds] Dask timeout limit
 
 # Start/end date and time
-#startdate: '20170601.0000'
-#enddate: '20170602.0000'
-startdate: '20170520.0000'
-enddate: '20170901.0000'
+startdate: 'STARTDATE'
+enddate: 'ENDDATE'
 
 # Specify tracking input data date/time string format
 # This is the preprocessed file that contains Tb & rainrate
 # E.g., databasename20181101.011503.nc --> yyyymodd.hhmmss
 # E.g., databasename2018-11-01_01:15:00 --> yyyy-mo-dd_hh:mm:ss
-time_format: 'yyyymoddhhmm'
-databasename: 'wrfout_rainrate_tb_'  # Note: include all strings before the time (including "_", ".")
+time_format: 'yyyymoddhh'
+databasename:  'merg_'  # Note: include all strings before the time (including "_", ".")
 
-# WRF raw data
-wrfout_path: '/global/cfs/cdirs/m1867/TMeCSR/for_sharing/analysis_mean/'
-wrfout_basename: 'analysis_mean_'
-# Tracking input files directory
-clouddata_path: '/global/cscratch1/sd/feng045/waccem/TMeCSR/analysis_mean/tb_rr/'
+# Input files directory
+clouddata_path: '/global/cscratch1/sd/feng045/waccem/IR_IMERG_Combined/'
 # Working directory for the tracking data
-root_path: '/global/cscratch1/sd/feng045/waccem/TMeCSR/analysis_mean/'
+root_path: '/global/cscratch1/sd/feng045/waccem/mcs_global/global/'
 # Working sub-directory names
 tracking_path_name: 'tracking'
 stats_path_name: 'stats'
 pixel_path_name: 'mcstracking'
 
-# Land mask file
-landmask_filename: '/global/cscratch1/sd/feng045/waccem/TMeCSR/map_data/wrf_landmask.nc'
-landmask_varname: 'LANDMASK'
+# Land mask file (optional)
+landmask_filename: '/global/cscratch1/sd/feng045/waccem/mcs_global/map_data/IMERG_landmask_180W-180E_60S-60N.nc'
+landmask_varname: 'landseamask'
 
-# Input dataset structure
-pixel_radius:  9.0  # [km] Spatial resolution of the input data
+# Specific to GPM Tb+IMERG combined dataset
+pixel_radius:  10.0  # [km] Spatial resolution of the input data
 datatimeresolution: 1.0  # [hour] Temporal resolution of the input data
 # Variable names in the input data
-tb_varname:  'tb'
-pcp_varname: 'rainrate'
-clouddatasource: 'model'
-pfdatasource:  'wrf'
-xcoord_name: 'lon2d'
-ycoord_name: 'lat2d'
+tb_varname:  'Tb'
+pcp_varname: 'precipitationCal'
+clouddatasource:  'gpmirimerg'
+pfdatasource:  'imerg'
+xcoord_name: 'lon'
+ycoord_name: 'lat'
+idclouds_hourly: 1  # 0:  No, 1:  Yes
+idclouds_minute: 30  # 0 or 30 min, which minute mark to use the Tb data
+idclouds_dt_thresh: 5  # [minute], time difference allowed between actual data and idclouds_minute
 
 # Specify types of feature being tracked
 # This adds additional feature-specific statistics to be computed
@@ -66,9 +66,9 @@ feature_type: 'tb_pf'
 mincoldcorepix:  4  # Minimum number of pixels for the cold core
 smoothwindowdimensions:  10  # Dimension of the Box2DKernel filter on Tb.
 medfiltsize: 5      # Window size to perform medfilt2d to fill missing Tb pixels, must be an odd number
-geolimits: [-90, -360, 90, 360] # 4-element array to subset domain boundaries [lat_min, lon_min, lat_max, lon_max]
+geolimits: [-60, -360, 60, 360] # 4-element array to subset domain boundaries [lat_min, lon_min, lat_max, lon_max]
 area_thresh:  800  # [km^2] Minimum area to define a cloud
-miss_thresh:  0.35  # Missing data fraction threshold. If missing data exceeds this, the time frame will be omitted.
+miss_thresh:  0.4  # Missing data fraction threshold. If missing data exceeds this, the time frame will be omitted.
 cloudtb_core:  225.0  # [K]
 cloudtb_cold:  241.0  # [K]
 cloudtb_warm:  261.0  # [K]
@@ -85,9 +85,9 @@ pf_link_area_thresh:  648.0  # [km^2]
 # Tracking parameters
 othresh: 0.5  # overlap fraction threshold. Clouds that overlap more than this between times are tracked.
 timegap: 3.1  # [hour] If missing data duration longer than this, tracking restarts
-nmaxlinks: 200  # Maximum number of clouds that any single cloud can be linked to
-maxnclouds: 2000  # Maximum number of clouds in one snapshot
-duration_range: [2, 300] # A vector [minlength,maxlength] to specify the duration range for the tracks
+nmaxlinks: 50  # Maximum number of clouds that any single cloud can be linked to
+maxnclouds:  3000  # Maximum number of clouds in one snapshot
+duration_range: [2, 400] # A vector [minlength,maxlength] to specify the duration range for the tracks
 # Flag to remove short-lived tracks [< min(duration_range)] that are not mergers/splits with other tracks
 # 0:keep all tracks; 1:remove short tracks
 remove_shorttracks: 1
@@ -163,8 +163,8 @@ pixeltracking_filebase: 'mcstrack_'
 mcsfinal_filebase: 'mcs_tracks_final_'
 
 # Feature movement speed parameters
-lag_for_speed: 1  # [unitless] lag intervals between tracked features to calculate movement
+lag_for_speed: 1  # lag intervals between tracked features to calculate movement
 track_number_for_speed: "pcptracknumber"
 track_field_for_speed: 'precipitation'
 min_size_thresh_for_speed: 20 # [km] Min PF major axis length to calculate movement
-max_speed_thresh: 50  # [m/s] Speeds larger than this will be replaced by temporal filter
+max_speed_thresh: 50  # [m/s]
