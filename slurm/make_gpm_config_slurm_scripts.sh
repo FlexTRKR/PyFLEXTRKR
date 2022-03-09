@@ -1,20 +1,21 @@
 #!/bin/bash
 # Create GPM MCS tracking config file and slurm script for a given year
 
-START_YEAR=2000
-END_YEAR=2000
-START_MON=6
+START_YEAR=2015
+END_YEAR=2015
+START_MON=2
 END_MON=12
 
 # Flag to make monthly scripts (1:yes, 0:no)
-make_month=0
-submit_month=0
+make_month=1
+submit_month=1
 # Flag to make annual scripts (1:yes, 0:no)
-make_year=1
+make_year=0
 submit_year=0
 
 config_dir="/global/homes/f/feng045/program/PyFLEXTRKR/config/"
 slurm_dir="/global/homes/f/feng045/program/PyFLEXTRKR/slurm/"
+data_dir="/global/cscratch1/sd/feng045/waccem/mcs_global/global/tracking/"
 config_template=${config_dir}"config_gpm_mcs_global.yml"
 slurm_template=${slurm_dir}"slurm_gpm_mcs_global.sh"
 config_basename="config_gpm_mcs_global_"
@@ -53,6 +54,36 @@ if [ $((make_month)) -eq 1 ]; then
       sed "s/STARTDATE/"${sdate}"/g;s/ENDDATE/"${edate}"/g" $slurm_template > ${slurm_file}
   #    echo ${config_file}
       echo ${slurm_file}
+
+#      # Check number of cloudid and track files for this month
+#      idir="${data_dir}${year}/"
+#      nf_cloud=`find ${idir}/cloudid_${year}${smon}*nc | wc | awk '{print $1}'`
+#      nf_track=`find ${idir}/track_${year}${smon}*nc | wc | awk '{print $1}'`
+#      # If track files < cloudid files
+#      if [ $((nf_track)) -lt $((nf_cloud)) ]; then
+#        # For the 1st month
+#        if [ $((mon)) -eq 1 ]; then
+#          # If cloudid files > track files by more than 1
+#          if [ $(($nf_cloud-$nf_track)) -gt 1 ]; then
+#            echo ${slurm_file}
+#            echo ${year}-${smon}: ${nf_cloud} ${nf_track}
+#            # Submit job
+#            if [ $((submit_month)) -eq 1 ]; then
+#              sbatch ${slurm_file}
+#            fi
+#          fi
+#        else
+#          # For the rest of the months, if the two files are not equal
+#          if [ $(($nf_cloud)) -ne $((nf_track)) ]; then
+#            echo ${slurm_file}
+#            echo ${year}-${smon}: ${nf_cloud} ${nf_track}
+#            # Submit job
+#            if [ $((submit_month)) -eq 1 ]; then
+#              sbatch ${slurm_file}
+#            fi
+#          fi
+#        fi
+#      fi
 
       # Submit job
       if [ $((submit_month)) -eq 1 ]; then

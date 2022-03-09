@@ -329,15 +329,15 @@ def trackstats_driver(config):
         "long_name": "Times indices for constructing sparse array",
     }
 
+    # Write sparse arrays output file
+    write_trackstats_sparse(config, numtracks, out_dict_attrs, out_dict, row_out, tracks_dimname,
+                            trackstats_sparse_outfile)
+
     # Write dense arrays output file
     if trackstats_dense_netcdf == 1:
         write_trackstats_dense(config, fillval, fillval_f,
                                max_trackduration, numtracks, out_dict, out_dict_attrs, times_dimname,
                                times_idx_varname, tracks_dimname, tracks_idx_varname, trackstats_outfile)
-
-    # Write sparse arrays output file
-    write_trackstats_sparse(config, numtracks, out_dict_attrs, out_dict, row_out, tracks_dimname,
-                            trackstats_sparse_outfile)
 
     return trackstats_outfile
 
