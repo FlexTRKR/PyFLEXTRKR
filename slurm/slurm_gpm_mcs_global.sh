@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH -A m1867
 #SBATCH -J STARTDATE
-#SBATCH -t 00:10:00
+#SBATCH -t 00:20:00
 #SBATCH -N 10
 #SBATCH --ntasks-per-node=16
 #SBATCH --cpus-per-task=4
@@ -16,7 +16,7 @@
 n_tasks=160
 
 module load python
-conda activate /global/common/software/m1867/python/flextrkr-mpi
+conda activate /global/common/software/m1867/python/testflex
 
 #export MALLOC_TRIM_THRESHOLD_=0
 

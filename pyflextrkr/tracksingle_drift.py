@@ -71,6 +71,9 @@ def trackclouds(
     logger.debug(f"ref basetime: {reference_basetime}")
     reference_filedatetime = str(reference_datestring) + "_" + str(reference_timestring)
 
+    # create filename
+    track_outfile = dataoutpath + outfilebase + new_filedatetime + ".nc"
+
     # Check that new and reference files differ by less than timegap in hours.
     # Use base time (which is the seconds since 01-Jan-1970 00:00:00).
     # Divide base time difference between the files by 3600 to get difference in hours
@@ -83,9 +86,11 @@ def trackclouds(
         logger.debug(reference_filedatetime)
 
         # Open file
-        reference_data = xr.open_dataset(reference_file, mask_and_scale=False)
-        reference_convcold_cloudnumber = reference_data[feature_varname].data
-        nreference = reference_data[nfeature_varname].data
+        reference_data = xr.open_dataset(
+            reference_file, mask_and_scale=False, decode_times=False, chunks=-1,
+        )
+        reference_convcold_cloudnumber = reference_data[feature_varname].load().data
+        nreference = reference_data[nfeature_varname].load().data
         reference_data.close()
 
         ##########################################################
@@ -93,9 +98,11 @@ def trackclouds(
         logger.debug(f"new_filedattime: {new_filedatetime}")
 
         # Open file
-        new_data = xr.open_dataset(new_file, mask_and_scale=False)
-        new_convcold_cloudnumber = new_data[feature_varname].data
-        nnew = new_data[nfeature_varname].data
+        new_data = xr.open_dataset(
+            new_file, mask_and_scale=False, decode_times=False, chunks=-1,
+        )
+        new_convcold_cloudnumber = new_data[feature_varname].load().data
+        nnew = new_data[nfeature_varname].load().data
         new_data.close()
 
         # Convert float type to int, missing value to 0
@@ -251,7 +258,7 @@ def trackclouds(
         # Save forward and backward indices and linked sizes in netcdf file
 
         # create filename
-        track_outfile = dataoutpath + outfilebase + new_filedatetime + ".nc"
+        # track_outfile = dataoutpath + outfilebase + new_filedatetime + ".nc"
 
         # Check if file already exists. If exists, delete
         if os.path.isfile(track_outfile):
@@ -407,4 +414,4 @@ def trackclouds(
             },
         )
         logger.info(track_outfile)
-        return track_outfile
+    return track_outfile

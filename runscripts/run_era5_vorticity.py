@@ -1,6 +1,7 @@
 import os
 import sys
 import logging
+import dask
 from dask.distributed import Client, LocalCluster
 from pyflextrkr.ft_utilities import load_config
 from pyflextrkr.idfeature_driver import idfeature_driver
@@ -26,8 +27,11 @@ if __name__ == '__main__':
     ################################################################################################
     # Parallel processing options
     if config['run_parallel'] == 1:
+        # Set Dask temporary directory for workers
+        dask_tmp_dir = config.get("dask_tmp_dir", "./")
+        dask.config.set({'temporary-directory': dask_tmp_dir})
         # Local cluster
-        cluster = LocalCluster(n_workers=config['nprocesses'], threads_per_worker=1)
+        cluster = LocalCluster(n_workers=config['nprocesses'], threads_per_worker=1, silence_logs=False)
         client = Client(cluster)
     elif config['run_parallel'] == 2:
         # Dask-MPI

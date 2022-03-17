@@ -4,20 +4,20 @@
 
 # Processing steps:
 # Maybe worth nesting these in sets of dictionaries
-run_idfeature : True
+run_idfeature : False
 run_tracksingle : False
 run_gettracks : False
-run_trackstats : False
-run_identifymcs : False
-run_matchpf : False
-run_robustmcs : False
-run_mapfeature : False
-run_speed: False
+run_trackstats : True
+run_identifymcs : True
+run_matchpf : True
+run_robustmcs : True
+run_mapfeature : True
+run_speed: True
 
 # Parallel processing set up
 # run_parallel: 1 (local cluster), 2 (Dask MPI)
-run_parallel: 2
-nprocesses : 32  # Number of processors to use if run_parallel=1
+run_parallel: 1
+nprocesses : 64  # Number of processors to use if run_parallel=1
 dask_tmp_dir: '/tmp'  # Dask temporary directory if run_parallel=1
 timeout: 360  # [seconds] Dask timeout limit
 
@@ -33,16 +33,16 @@ time_format: 'yyyymoddhh'
 databasename:  'merg_'  # Note: include all strings before the time (including "_", ".")
 
 # Input files directory
-clouddata_path: '/global/cscratch1/sd/feng045/waccem/IR_IMERG_Combined/'
+clouddata_path: '/gpfs/wolf/atm123/proj-shared/zhefeng/GPM/IR_IMERG_Combined/'
 # Working directory for the tracking data
-root_path: '/global/cscratch1/sd/feng045/waccem/mcs_global/global/'
+root_path: '/gpfs/wolf/atm123/proj-shared/zhefeng/mcs_global/'
 # Working sub-directory names
 tracking_path_name: 'tracking'
 stats_path_name: 'stats'
 pixel_path_name: 'mcstracking'
 
 # Land mask file (optional)
-landmask_filename: '/global/cscratch1/sd/feng045/waccem/mcs_global/map_data/IMERG_landmask_180W-180E_60S-60N.nc'
+landmask_filename: '/gpfs/wolf/atm123/proj-shared/zhefeng/GPM/map_data/IMERG_landmask_180W-180E_60S-60N.nc'
 landmask_varname: 'landseamask'
 
 # Specific to GPM Tb+IMERG combined dataset

@@ -1,6 +1,7 @@
 import os
 import sys
 import logging
+import dask
 from dask.distributed import Client, LocalCluster
 from pyflextrkr.ft_utilities import load_config
 from pyflextrkr.advection_radar import calc_mean_advection
@@ -9,10 +10,6 @@ from pyflextrkr.tracksingle_driver import tracksingle_driver
 from pyflextrkr.gettracks import gettracknumbers
 from pyflextrkr.trackstats_driver import trackstats_driver
 from pyflextrkr.mapfeature_driver import mapfeature_driver
-
-# Name: run_cacti_csapr.py
-# Purpose: Main script for tracking convective cells from CACTI CSAPR data
-# Author: Zhe Feng (zhe.feng@pnnl.gov)
 
 if __name__ == '__main__':
 
@@ -27,8 +24,11 @@ if __name__ == '__main__':
     ################################################################################################
     # Parallel processing options
     if config['run_parallel'] == 1:
+        # Set Dask temporary directory for workers
+        dask_tmp_dir = config.get("dask_tmp_dir", "./")
+        dask.config.set({'temporary-directory': dask_tmp_dir})
         # Local cluster
-        cluster = LocalCluster(n_workers=config['nprocesses'], threads_per_worker=1)
+        cluster = LocalCluster(n_workers=config['nprocesses'], threads_per_worker=1, silence_logs=False)
         client = Client(cluster)
     elif config['run_parallel'] == 2:
         # Dask-MPI
