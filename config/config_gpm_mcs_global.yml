@@ -4,9 +4,9 @@
 
 # Processing steps:
 # Maybe worth nesting these in sets of dictionaries
-run_idfeature : False
+run_idfeature : True
 run_tracksingle : False
-run_gettracks : True
+run_gettracks : False
 run_trackstats : False
 run_identifymcs : False
 run_matchpf : False
@@ -16,8 +16,9 @@ run_speed: False
 
 # Parallel processing set up
 # run_parallel: 1 (local cluster), 2 (Dask MPI)
-run_parallel: 0
+run_parallel: 2
 nprocesses : 32  # Number of processors to use if run_parallel=1
+dask_tmp_dir: '/tmp'  # Dask temporary directory if run_parallel=1
 timeout: 360  # [seconds] Dask timeout limit
 
 # Start/end date and time
