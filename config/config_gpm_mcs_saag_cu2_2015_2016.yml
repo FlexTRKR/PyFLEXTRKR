@@ -5,25 +5,25 @@
 # Processing steps:
 # Maybe worth nesting these in sets of dictionaries
 run_idfeature : False
-run_tracksingle : False
-run_gettracks : False
-run_trackstats : False
-run_identifymcs : False
-run_matchpf : False
-run_robustmcs : False
+run_tracksingle : True
+run_gettracks : True
+run_trackstats : True
+run_identifymcs : True
+run_matchpf : True
+run_robustmcs : True
 run_mapfeature : True
-run_speed: False
+run_speed: True
 
 # Parallel processing set up
 # run_parallel: 1 (local cluster), 2 (Dask MPI)
 run_parallel: 1
-nprocesses : 64  # Number of processors to use if run_parallel=1
+nprocesses : 32  # Number of processors to use if run_parallel=1
 dask_tmp_dir: '/tmp'  # Dask temporary directory if run_parallel=1
 timeout: 360  # [seconds] Dask timeout limit
 
 # Start/end date and time
-startdate: 'STARTDATE'
-enddate: 'ENDDATE'
+startdate: '20150601.0000'
+enddate: '20160601.0000'
 
 # Specify tracking input data date/time string format
 # This is the preprocessed file that contains Tb & rainrate
@@ -33,16 +33,16 @@ time_format: 'yyyymoddhh'
 databasename:  'merg_'  # Note: include all strings before the time (including "_", ".")
 
 # Input files directory
-clouddata_path: '/gpfs/wolf/atm123/proj-shared/zhefeng/GPM/IR_IMERG_Combined/'
+clouddata_path: '/gpfs/wolf/atm123/proj-shared/zhefeng/SAAG/GPM/2015_2016/'
 # Working directory for the tracking data
-root_path: '/gpfs/wolf/atm123/proj-shared/zhefeng/mcs_global/'
+root_path: '/gpfs/wolf/atm123/proj-shared/zhefeng/SAAG/mcs_tracking/GPM/2015_2016/'
 # Working sub-directory names
 tracking_path_name: 'tracking'
 stats_path_name: 'stats'
 pixel_path_name: 'mcstracking'
 
 # Land mask file (optional)
-landmask_filename: '/gpfs/wolf/atm123/proj-shared/zhefeng/GPM/map_data/IMERG_landmask_180W-180E_60S-60N.nc'
+landmask_filename: '/gpfs/wolf/atm123/proj-shared/zhefeng/SAAG/mcs_tracking/map_data/IMERG_landmask_saag.nc'
 landmask_varname: 'landseamask'
 
 # Specific to GPM Tb+IMERG combined dataset
