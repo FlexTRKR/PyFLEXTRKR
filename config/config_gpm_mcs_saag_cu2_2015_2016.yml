@@ -159,8 +159,8 @@ fillval: -9999
 # MCS track stats file base names
 mcstbstats_filebase: 'mcs_tracks_'
 mcspfstats_filebase: 'mcs_tracks_pf_'
-# mcsrobust_filebase: 'mcs_tracks_robust_'
-mcsrobust_filebase: 'mcs_tracks_final_extc_'
+mcsrobust_filebase: 'mcs_tracks_robust_'
+# mcsrobust_filebase: 'mcs_tracks_final_extc_'
 pixeltracking_filebase: 'mcstrack_'
 mcsfinal_filebase: 'mcs_tracks_final_'
 
