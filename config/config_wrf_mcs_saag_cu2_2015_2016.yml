@@ -1,5 +1,5 @@
 ---
-# Global GPM based MCS tracking configuration file
+# MCS tracking configuration file for SAAG WRF regridded to GPM IMERG
 # Tracking uses collocated Tb + Precipitation
 
 # Processing steps:
@@ -9,55 +9,53 @@ run_tracksingle : False
 run_gettracks : False
 run_trackstats : False
 run_identifymcs : False
-run_matchpf : False
-run_robustmcs : False
-run_mapfeature : True
-run_speed: False
+run_matchpf : True
+run_robustmcs : True
+run_mapfeature : False
+run_speed: True
 
 # Parallel processing set up
 # run_parallel: 1 (local cluster), 2 (Dask MPI)
 run_parallel: 1
-nprocesses : 64  # Number of processors to use if run_parallel=1
+nprocesses : 18  # Number of processors to use if run_parallel=1
 dask_tmp_dir: '/tmp'  # Dask temporary directory if run_parallel=1
 timeout: 360  # [seconds] Dask timeout limit
 
 # Start/end date and time
-startdate: 'STARTDATE'
-enddate: 'ENDDATE'
+startdate: '20150601.0000'
+enddate: '20160601.0000'
 
 # Specify tracking input data date/time string format
 # This is the preprocessed file that contains Tb & rainrate
 # E.g., databasename20181101.011503.nc --> yyyymodd.hhmmss
 # E.g., databasename2018-11-01_01:15:00 --> yyyy-mo-dd_hh:mm:ss
-time_format: 'yyyymoddhh'
-databasename:  'merg_'  # Note: include all strings before the time (including "_", ".")
+time_format: 'yyyy-mo-dd_hh:mm'
+databasename:  'tb_rainrate_'  # Note: include all strings before the time (including "_", ".")
 
 # Input files directory
-clouddata_path: '/gpfs/wolf/atm123/proj-shared/zhefeng/GPM/IR_IMERG_Combined/'
+clouddata_path: '/gpfs/wolf/atm123/proj-shared/zhefeng/SAAG/June2015_June2016_nsp/tb_rr/'
 # Working directory for the tracking data
-root_path: '/gpfs/wolf/atm123/proj-shared/zhefeng/mcs_global/'
+root_path: '/gpfs/wolf/atm123/proj-shared/zhefeng/SAAG/mcs_tracking/June2015_June2016_nsp/'
 # Working sub-directory names
 tracking_path_name: 'tracking'
 stats_path_name: 'stats'
 pixel_path_name: 'mcstracking'
 
 # Land mask file (optional)
-landmask_filename: '/gpfs/wolf/atm123/proj-shared/zhefeng/GPM/map_data/IMERG_landmask_180W-180E_60S-60N.nc'
+landmask_filename: '/gpfs/wolf/atm123/proj-shared/zhefeng/SAAG/mcs_tracking/map_data/IMERG_landmask_saag.nc'
 landmask_varname: 'landseamask'
 
 # Specific to GPM Tb+IMERG combined dataset
 pixel_radius:  10.0  # [km] Spatial resolution of the input data
 datatimeresolution: 1.0  # [hour] Temporal resolution of the input data
 # Variable names in the input data
-tb_varname:  'Tb'
-pcp_varname: 'precipitationCal'
-clouddatasource:  'gpmirimerg'
-pfdatasource:  'imerg'
+tb_varname:  'tb'
+pcp_varname: 'rainrate'
+clouddatasource: 'model'
+# pfdatasource:  'wrf'
+pfdatasource: 'imerg'  # SAAG WRF data is regridded to IMERG, and uses IMERG landmask (this is for pf_landfrac)
 xcoord_name: 'lon'
 ycoord_name: 'lat'
-idclouds_hourly: 1  # 0:  No, 1:  Yes
-idclouds_minute: 30  # 0 or 30 min, which minute mark to use the Tb data
-idclouds_dt_thresh: 5  # [minute], time difference allowed between actual data and idclouds_minute
 
 # Specify types of feature being tracked
 # This adds additional feature-specific statistics to be computed
@@ -87,8 +85,8 @@ pf_link_area_thresh:  648.0  # [km^2]
 othresh: 0.5  # overlap fraction threshold. Clouds that overlap more than this between times are tracked.
 timegap: 3.1  # [hour] If missing data duration longer than this, tracking restarts
 nmaxlinks: 50  # Maximum number of clouds that any single cloud can be linked to
-maxnclouds:  3000  # Maximum number of clouds in one snapshot
-duration_range: [2, 400] # A vector [minlength,maxlength] to specify the duration range for the tracks
+maxnclouds: 2000  # Maximum number of clouds in one snapshot
+duration_range: [2, 200] # A vector [minlength,maxlength] to specify the duration range for the tracks
 # Flag to remove short-lived tracks [< min(duration_range)] that are not mergers/splits with other tracks
 # 0:keep all tracks; 1:remove short tracks
 remove_shorttracks: 1
@@ -159,8 +157,7 @@ fillval: -9999
 # MCS track stats file base names
 mcstbstats_filebase: 'mcs_tracks_'
 mcspfstats_filebase: 'mcs_tracks_pf_'
-# mcsrobust_filebase: 'mcs_tracks_robust_'
-mcsrobust_filebase: 'mcs_tracks_final_extc_'
+mcsrobust_filebase: 'mcs_tracks_robust_'
 pixeltracking_filebase: 'mcstrack_'
 mcsfinal_filebase: 'mcs_tracks_final_'
 

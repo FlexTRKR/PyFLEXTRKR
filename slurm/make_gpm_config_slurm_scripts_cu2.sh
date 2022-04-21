@@ -1,8 +1,8 @@
 #!/bin/bash
 # Create GPM MCS tracking config file and slurm script for a given year
 
-START_YEAR=2016
-END_YEAR=2016
+START_YEAR=2020
+END_YEAR=2020
 START_MON=1
 END_MON=12
 

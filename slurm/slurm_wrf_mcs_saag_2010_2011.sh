@@ -1,17 +1,17 @@
 #!/bin/bash
 #SBATCH -A atm123
-#SBATCH -J STARTDATE
+#SBATCH -J 2010_2011
 #SBATCH --time=01:00:00
 #SBATCH --nodes=1
-#SBATCH --ntasks-per-node=64
+#SBATCH --ntasks-per-node=18
 #SBATCH -p batch_high_memory
 #SBATCH --exclusive
-#SBATCH --output=log_gpm_global_STARTDATE_ENDDATE.log
+#SBATCH --output=log_wrf_mcs_saag_2010_2011.log
 #SBATCH --mail-type=END
 #SBATCH --mail-user=zhe.feng@pnnl.gov
 
 # Set n_tasks = n_nodes x ntasks-per-node
-n_tasks=64
+n_tasks=18
 
 source /ccsopen/home/zhe1feng1/.bashrc
 # module load python
@@ -51,5 +51,5 @@ scheduler_file=/gpfs/wolf/atm123/proj-shared/zhefeng/scheduler_${random_str}.jso
 
 # Run Python
 cd /ccsopen/home/zhe1feng1/program/PyFLEXTRKR
-# python ./runscripts/run_mcs_tbpf_gpm.py ./config/config_gpm_mcs_global_STARTDATE_ENDDATE.yml $scheduler_file $n_tasks
-python ./runscripts/run_mcs_tbpf_gpm.py ./config/config_gpm_mcs_global_STARTDATE_ENDDATE.yml 
+# python ./runscripts/run_mcs_tbpf.py ./config/config_wrf_mcs_saag_cu2_2010_2011.yml $scheduler_file $n_tasks
+python ./runscripts/run_mcs_tbpf.py ./config/config_wrf_mcs_saag_cu2_2010_2011.yml
