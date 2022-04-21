@@ -1,3 +1,10 @@
+"""
+Demonstrates ploting cell tracks on radar reflectivity snapshots for CSAPR.
+
+Zhe Feng, PNNL
+contact: Zhe.Feng@pnnl.gov
+"""
+
 import numpy as np
 import glob, os, sys
 import xarray as xr
@@ -383,7 +390,9 @@ if __name__ == "__main__":
 
     # Parallel option
     elif run_parallel == 1:
-
+        # Set Dask temporary directory for workers
+        dask_tmp_dir = config.get("dask_tmp_dir", "./")
+        dask.config.set({'temporary-directory': dask_tmp_dir})
         # Initialize dask
         cluster = LocalCluster(n_workers=n_workers, threads_per_worker=1)
         client = Client(cluster)
