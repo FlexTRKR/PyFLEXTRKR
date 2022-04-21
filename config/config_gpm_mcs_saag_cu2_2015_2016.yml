@@ -5,7 +5,7 @@
 # Processing steps:
 # Maybe worth nesting these in sets of dictionaries
 run_idfeature : False
-run_tracksingle : True
+run_tracksingle : False
 run_gettracks : True
 run_trackstats : True
 run_identifymcs : True

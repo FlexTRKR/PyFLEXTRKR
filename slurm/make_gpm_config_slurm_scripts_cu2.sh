@@ -1,8 +1,8 @@
 #!/bin/bash
 # Create GPM MCS tracking config file and slurm script for a given year
 
-START_YEAR=2008
-END_YEAR=2009
+START_YEAR=2020
+END_YEAR=2020
 START_MON=1
 END_MON=12
 
@@ -11,7 +11,7 @@ make_month=0
 submit_month=0
 # Flag to make annual scripts (1:yes, 0:no)
 make_year=1
-submit_year=1
+submit_year=0
 
 config_dir="/ccsopen/home/zhe1feng1/program/PyFLEXTRKR/config/"
 slurm_dir="/ccsopen/home/zhe1feng1/program/PyFLEXTRKR/slurm/"

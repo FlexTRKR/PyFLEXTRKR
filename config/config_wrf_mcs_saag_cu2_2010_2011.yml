@@ -22,8 +22,8 @@ dask_tmp_dir: '/tmp'  # Dask temporary directory if run_parallel=1
 timeout: 360  # [seconds] Dask timeout limit
 
 # Start/end date and time
-startdate: '20150601.0000'
-enddate: '20160601.0000'
+startdate: '20100601.0000'
+enddate: '20110601.0000'
 
 # Specify tracking input data date/time string format
 # This is the preprocessed file that contains Tb & rainrate
@@ -33,9 +33,9 @@ time_format: 'yyyy-mo-dd_hh:mm'
 databasename:  'tb_rainrate_'  # Note: include all strings before the time (including "_", ".")
 
 # Input files directory
-clouddata_path: '/gpfs/wolf/atm123/proj-shared/zhefeng/SAAG/June2015_June2016_nsp/tb_rr/'
+clouddata_path: '/gpfs/wolf/atm123/proj-shared/zhefeng/SAAG/June2010_June2011.nsp/tb_rr/'
 # Working directory for the tracking data
-root_path: '/gpfs/wolf/atm123/proj-shared/zhefeng/SAAG/mcs_tracking/June2015_June2016_nsp/'
+root_path: '/gpfs/wolf/atm123/proj-shared/zhefeng/SAAG/mcs_tracking/June2010_June2011.nsp/'
 # Working sub-directory names
 tracking_path_name: 'tracking'
 stats_path_name: 'stats'
