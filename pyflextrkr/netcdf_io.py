@@ -93,8 +93,8 @@ def write_cloudid_tb(
         + ":"
         + file_timestring[2:4]
         + " UTC",
-        'institution': 'Pacific Northwest National Laboratory', \
-        'contact': 'Zhe Feng: zhe.feng@pnnl.gov', \
+        'institution': 'Pacific Northwest National Laboratory',
+        'contact': 'Zhe Feng: zhe.feng@pnnl.gov',
         "created_on": time.ctime(time.time()),
         "tb_threshold_core": cloudtb_threshs[0],
         "tb_threshold_coldanvil": cloudtb_threshs[1],
@@ -245,7 +245,182 @@ def write_cloudid_tb(
     ds_out.to_netcdf(
         path=cloudid_outfile, mode="w", format="NETCDF4", encoding=encodelist
     )
+    return cloudid_outfile
 
+#----------------------------------------------------------------------------------
+def write_radar_cellid(
+        cloudid_outfile,
+        file_basetime,
+        file_datestring,
+        file_timestring,
+        dx,
+        dy,
+        radar_lon,
+        radar_lat,
+        out_lon,
+        out_lat,
+        dbz_comp,
+        dbz_lowlevel,
+        reflectivity_file,
+        sfc_dz_min,
+        convsf_steiner,
+        core_steiner,
+        core_sorted,
+        core_expand,
+        echotop10,
+        echotop20,
+        echotop30,
+        echotop40,
+        echotop50,
+        feature_mask,
+        npix_feature,
+        nfeatures,
+        config,
+        **kwargs,
+):
+    feature_varname = config.get("feature_varname", "feature_number")
+    nfeature_varname = config.get("nfeature_varname", "nfeatures")
+    featuresize_varname = config.get("featuresize_varname", "npix_feature")
+
+    # Define output variables
+    varlist = {
+        'radar_longitude': (radar_lon.data),
+        'radar_latitude': (radar_lat.data),
+        'base_time': (["time"], file_basetime),
+        'longitude': (['lat', 'lon'], out_lon.data),
+        'latitude': (['lat', 'lon'], out_lat.data),
+        # 'dbz_comp': (['time', 'lat', 'lon'], dbz_comp.expand_dims('time', axis=0)),
+        # 'dbz_lowlevel': (['time', 'lat', 'lon'], dbz_lowlevel.expand_dims('time', axis=0)),
+        'dbz_comp': (['time', 'lat', 'lon'], np.expand_dims(dbz_comp.data, axis=0)),
+        'dbz_lowlevel': (['time', 'lat', 'lon'], np.expand_dims(dbz_lowlevel.data, axis=0)),
+        'convsf': (['time', 'lat', 'lon'], np.expand_dims(convsf_steiner, axis=0)),
+        'conv_core': (['time', 'lat', 'lon'], np.expand_dims(core_steiner, axis=0)),
+        'conv_mask': (['time', 'lat', 'lon'], np.expand_dims(core_sorted, axis=0)),
+        'conv_mask_inflated': (['time', 'lat', 'lon'], np.expand_dims(core_expand, axis=0)),
+        'echotop10': (['time', 'lat', 'lon'], np.expand_dims(echotop10, axis=0)),
+        'echotop20': (['time', 'lat', 'lon'], np.expand_dims(echotop20, axis=0)),
+        'echotop30': (['time', 'lat', 'lon'], np.expand_dims(echotop30, axis=0)),
+        'echotop40': (['time', 'lat', 'lon'], np.expand_dims(echotop40, axis=0)),
+        'echotop50': (['time', 'lat', 'lon'], np.expand_dims(echotop50, axis=0)),
+        feature_varname: (["time", "lat", "lon"], np.expand_dims(feature_mask, axis=0)),
+        nfeature_varname: (["time"], nfeatures),
+        featuresize_varname: (["features"], npix_feature),
+    }
+    # Output coordinates
+    coordlist = {
+        'time': (['time'], file_basetime),
+        'lon': (['lon'], np.squeeze(out_lon.data[0, :])),
+        'lat': (['lat'], np.squeeze(out_lat.data[:, 0])),
+        'features': (['features'], np.arange(1, nfeatures + 1),),
+    }
+    # Output global attributes
+    attrlist = {
+        "title": "Cloudid file from "
+        + file_datestring[0:4]
+        + "/"
+        + file_datestring[4:6]
+        + "/"
+        + file_datestring[6:8]
+        + " "
+        + file_timestring[0:2]
+        + ":"
+        + file_timestring[2:4]
+        + " UTC",
+        'contact': 'Zhe Feng, zhe.feng@pnnl.gov',
+        'Institution': 'Pacific Northwest National Laboratory',
+        'created on': time.ctime(time.time()),
+        'Input_File': reflectivity_file,
+        'dx': dx,
+        'dy': dy,
+    }
+    # Check for optional keyword steiner_params
+    if 'steiner_params' in kwargs:
+        # Add all parameters from the dictionary to the global attribute list
+        for key, value in kwargs['steiner_params'].items():
+            attrlist[key] = value
+
+    # Define xarray dataset
+    ds_out = xr.Dataset(varlist, coords=coordlist, attrs=attrlist)
+
+    ds_out['lat'].attrs['long_name'] = 'Latitudes, y-coordinate in Cartesian system'
+    ds_out['lat'].attrs['standard_name'] = 'latitude'
+    ds_out['lat'].attrs['units'] = 'degrees_north'
+    ds_out['lon'].attrs['long_name'] = 'Longitudes, x-coordinate in Cartesian system'
+    ds_out['lon'].attrs['standard_name'] = 'longitude'
+    ds_out['lon'].attrs['units'] = 'degrees_east'
+    ds_out['time'].attrs['long_name'] = 'Base time in Epoch'
+    ds_out['time'].attrs['units'] = 'Seconds since 1970-1-1'
+    ds_out['base_time'].attrs['long_name'] = 'Base time in Epoch'
+    ds_out['base_time'].attrs['units'] = 'Seconds since 1970-1-1'
+    ds_out['radar_longitude'].attrs = radar_lon.attrs
+    ds_out['radar_latitude'].attrs = radar_lat.attrs
+    ds_out['longitude'].attrs = out_lon.attrs
+    ds_out['latitude'].attrs = out_lat.attrs
+    ds_out['dbz_comp'].attrs['long_name'] = f'Composite Reflectivity ({sfc_dz_min}+ m above surface in each column)'
+    ds_out['dbz_comp'].attrs['units'] = 'dBZ'
+    ds_out['dbz_lowlevel'].attrs['long_name'] = \
+        f'Composite Low-level Reflectivity ({sfc_dz_min}+ m above surface in each column)'
+    ds_out['dbz_lowlevel'].attrs['units'] = 'dBZ'
+    ds_out['conv_core'].attrs['long_name'] = \
+        'Convective Core Mask After Reflectivity Threshold and Peakedness Steps '+\
+        '(1 = convective, 0 = not convective)'
+    ds_out['conv_core'].attrs['units'] = 'unitless'
+    ds_out['conv_mask'].attrs['long_name'] = \
+        'Convective Region Mask After Reflectivity Threshold, Peakedness, and Expansion Steps '+\
+        '(1 = convective, 0 = not convective)'
+    ds_out['conv_mask'].attrs['units'] = 'unitless'
+    ds_out['conv_mask_inflated'].attrs['long_name'] = \
+        f'Convective Region Mask Inflated by 5 km (each region is a separate number > 0)'
+    ds_out['conv_mask_inflated'].attrs['units'] = 'unitless'
+    ds_out['convsf'].attrs['long_name'] = f'Steiner Convective/Stratiform classification'
+    ds_out['convsf'].attrs['units'] = 'unitless'
+    ds_out['convsf'].attrs['comment'] = 'NAN:0, NO_SURF_ECHO:1, WEAK_ECHO:2, STRATIFORM:3, CONVECTIVE:4'
+    ds_out['echotop10'].attrs['long_name'] = '10dBZ echo-top height'
+    ds_out['echotop10'].attrs['units'] = 'm'
+    ds_out['echotop10'].attrs['_FillValue'] = np.nan
+    ds_out['echotop20'].attrs['long_name'] = '20dBZ echo-top height'
+    ds_out['echotop20'].attrs['units'] = 'm'
+    ds_out['echotop20'].attrs['_FillValue'] = np.nan
+    ds_out['echotop30'].attrs['long_name'] = '30dBZ echo-top height'
+    ds_out['echotop30'].attrs['units'] = 'm'
+    ds_out['echotop30'].attrs['_FillValue'] = np.nan
+    ds_out['echotop40'].attrs['long_name'] = '40dBZ echo-top height'
+    ds_out['echotop40'].attrs['units'] = 'm'
+    ds_out['echotop40'].attrs['_FillValue'] = np.nan
+    ds_out['echotop50'].attrs['long_name'] = '50dBZ echo-top height'
+    ds_out['echotop50'].attrs['units'] = 'm'
+    ds_out['echotop50'].attrs['_FillValue'] = np.nan
+    ds_out[feature_varname].attrs['long_name'] = 'Labeled feature number for tracking'
+    ds_out[feature_varname].attrs['units'] = 'unitless'
+    ds_out[feature_varname].attrs['_FillValue'] = 0
+    ds_out[nfeature_varname].attrs['long_name'] = 'Number of features labeled'
+    ds_out[nfeature_varname].attrs['units'] = 'unitless'
+    ds_out[featuresize_varname].attrs['long_name'] = 'Number of pixels for each feature'
+    ds_out[featuresize_varname].attrs['units'] = 'unitless'
+
+    # Now check for optional arguments, add them to output dataset if provided
+    if 'refl_bkg' in kwargs:
+        ds_out['refl_bkg'] = (['time', 'lat', 'lon'], np.expand_dims(kwargs['refl_bkg'], axis=0))
+        ds_out['refl_bkg'].attrs['long_name'] = 'Steiner background reflectivity'
+        ds_out['refl_bkg'].attrs['unit'] = 'dBZ'
+    if 'peakedness' in kwargs:
+        ds_out['peakedness'] = (['time', 'lat', 'lon'], np.expand_dims(kwargs['peakedness'], axis=0))
+        ds_out['peakedness'].attrs['long_name'] = 'Peakedness above background reflectivity'
+        ds_out['peakedness'].attrs['unit'] = 'dB'
+    if 'core_steiner_orig' in kwargs:
+        ds_out['core_steiner_orig'] = (['time', 'lat', 'lon'], np.expand_dims(kwargs['core_steiner_orig'], axis=0))
+        ds_out['core_steiner_orig'].attrs['long_name'] = 'Steiner convective core before core area filter'
+        ds_out['core_steiner_orig'].attrs['unit'] = 'unitless'
+
+    # Set encoding/compression for all variables
+    comp = dict(zlib=True)
+    encoding = {var: comp for var in ds_out.data_vars}
+
+    # Write to netcdf file
+    ds_out.to_netcdf(
+        path=cloudid_outfile, mode='w', format='NETCDF4', unlimited_dims='time', encoding=encoding
+    )
+    return cloudid_outfile
 
 def write_cloudtype_wrf(
     cloudid_outfile,
@@ -554,411 +729,3 @@ def write_cloudtype_wrf(
 
 
 
-def write_trackstats_ct(
-    trackstats_outfile,
-    numtracks,
-    maxtracklength,
-    numcharfilename,
-    datasource,
-    datadescription,
-    startdate,
-    enddate,
-    track_version,
-    tracknumbers_version,
-    timegap,
-    pixel_radius,
-    geolimits,
-    areathresh,
-    basetime_units,
-    basetime_calendar,
-    finaltrack_tracklength,
-    finaltrack_basetime,
-    finaltrack_cloudidfile,
-    finaltrack_datetimestring,
-    finaltrack_corecold_meanlat,
-    finaltrack_corecold_meanlon,
-    finaltrack_corecold_minlat,
-    finaltrack_corecold_minlon,
-    finaltrack_corecold_maxlat,
-    finaltrack_corecold_maxlon,
-    finaltrack_corecold_radius,
-    finaltrack_ncorecoldpix,
-    finaltrack_ncorepix,
-    finaltrack_ncoldpix,
-    finaltrack_corecold_cloudnumber,
-    finaltrack_corecold_status,
-    finaltrack_corecold_startstatus,
-    finaltrack_corecold_endstatus,
-    adjusted_finaltrack_corecold_mergenumber,
-    adjusted_finaltrack_corecold_splitnumber,
-    finaltrack_corecold_trackinterruptions,
-    finaltrack_corecold_boundary,  # finaltrack_corecold_majoraxis, finaltrack_corecold_orientation, finaltrack_corecold_eccentricity, \
-    # finaltrack_corecold_perimeter, finaltrack_corecold_xcenter, finaltrack_corecold_ycenter, \
-    # finaltrack_corecold_xweightedcenter, finaltrack_corecold_yweightedcenter, \
-    finaltrack_cloudtype_low,
-    finaltrack_cloudtype_conglow,
-    finaltrack_cloudtype_conghigh,
-    finaltrack_cloudtype_deep,
-):
-
-    """
-    Writes Tb cloudtype trackstats variables to netCDF file.
-    """
-
-    # Define variable list
-    varlist = {
-        "lifetime": (["ntracks"], finaltrack_tracklength),
-        "basetime": (["ntracks", "nmaxlength"], finaltrack_basetime),
-        "cloudidfiles": (
-            ["ntracks", "nmaxlength", "nfilenamechars"],
-            finaltrack_cloudidfile,
-        ),
-        "datetimestrings": (
-            ["ntracks", "nmaxlength", "ndatetimechars"],
-            finaltrack_datetimestring,
-        ),
-        "meanlat": (["ntracks", "nmaxlength"], finaltrack_corecold_meanlat),
-        "meanlon": (["ntracks", "nmaxlength"], finaltrack_corecold_meanlon),
-        "minlat": (["ntracks", "nmaxlength"], finaltrack_corecold_minlat),
-        "minlon": (["ntracks", "nmaxlength"], finaltrack_corecold_minlon),
-        "maxlat": (["ntracks", "nmaxlength"], finaltrack_corecold_maxlat),
-        "maxlon": (["ntracks", "nmaxlength"], finaltrack_corecold_maxlon),
-        "radius": (["ntracks", "nmaxlength"], finaltrack_corecold_radius),
-        "npix": (["ntracks", "nmaxlength"], finaltrack_ncorecoldpix),
-        "nconv": (["ntracks", "nmaxlength"], finaltrack_ncorepix),
-        "ncoldanvil": (["ntracks", "nmaxlength"], finaltrack_ncoldpix),
-        "cloudnumber": (["ntracks", "nmaxlength"], finaltrack_corecold_cloudnumber),
-        "status": (["ntracks", "nmaxlength"], finaltrack_corecold_status),
-        "startstatus": (["ntracks"], finaltrack_corecold_startstatus),
-        "endstatus": (["ntracks"], finaltrack_corecold_endstatus),
-        "mergenumbers": (
-            ["ntracks", "nmaxlength"],
-            adjusted_finaltrack_corecold_mergenumber,
-        ),
-        "splitnumbers": (
-            ["ntracks", "nmaxlength"],
-            adjusted_finaltrack_corecold_splitnumber,
-        ),
-        "trackinterruptions": (["ntracks"], finaltrack_corecold_trackinterruptions),
-        "boundary": (
-            ["ntracks", "nmaxlength"],
-            finaltrack_corecold_boundary,
-        ),  #'majoraxis': (['ntracks', 'nmaxlength'], finaltrack_corecold_majoraxis), \
-        #'orientation': (['ntracks', 'nmaxlength'], finaltrack_corecold_orientation), \
-        #'eccentricity': (['ntracks', 'nmaxlength'], finaltrack_corecold_eccentricity), \
-        #'perimeter': (['ntracks', 'nmaxlength'], finaltrack_corecold_perimeter), \
-        #'xcenter': (['ntracks', 'nmaxlength'], finaltrack_corecold_xcenter), \
-        #'ycenter': (['ntracks', 'nmaxlength'], finaltrack_corecold_ycenter), \
-        #'xcenter_weighted': (['ntracks', 'nmaxlength'], finaltrack_corecold_xweightedcenter), \
-        #'ycenter_weighted': (['ntracks', 'nmaxlength'], finaltrack_corecold_yweightedcenter), \
-        "cloudtype_npix_low": (["ntracks", "nmaxlength"], finaltrack_cloudtype_low),
-        "cloudtype_npix_conglow": (
-            ["ntracks", "nmaxlength"],
-            finaltrack_cloudtype_conglow,
-        ),
-        "cloudtype_npix_conghigh": (
-            ["ntracks", "nmaxlength"],
-            finaltrack_cloudtype_conghigh,
-        ),
-        "cloudtype_npix_deep": (["ntracks", "nmaxlength"], finaltrack_cloudtype_deep),
-    }
-
-    # Define coordinate list
-    coordlist = {
-        "ntracks": (["ntracks"], np.arange(0, numtracks)),
-        "nmaxlength": (["nmaxlength"], np.arange(0, maxtracklength)),
-        "nfilenamechars": (["nfilenamechars"], np.arange(0, numcharfilename)),
-        "ndatetimechars": (["ndatetimechars"], np.arange(0, 13)),
-    }
-
-    # Define global attributes
-    gattrlist = {
-        "title": "File containing statistics for each track",
-        "Conventions": "CF-1.6",
-        "Institution": "Pacific Northwest National Laboratoy",
-        "Contact": "Katelyn Barber: katelyn.barber@pnnl.gov",
-        "Created_on": time.ctime(time.time()),
-        "source": datasource,
-        "description": datadescription,
-        "startdate": startdate,
-        "enddate": enddate,
-        "track_version": track_version,
-        "tracknumbers_version": tracknumbers_version,
-        "timegap": str(timegap) + "-hr",
-        "pixel_radius_km": pixel_radius,
-    }
-
-    # Define xarray dataset
-    output_data = xr.Dataset(varlist, coords=coordlist, attrs=gattrlist)
-
-    # Specify variable attributes
-    output_data.ntracks.attrs["long_name"] = "Total number of cloud tracks"
-    output_data.ntracks.attrs["units"] = "unitless"
-
-    output_data.nmaxlength.attrs["long_name"] = "Maximum length of a cloud track"
-    output_data.nmaxlength.attrs["units"] = "unitless"
-
-    output_data.lifetime.attrs["long_name"] = "duration of each track"
-    output_data.lifetime.attrs["units"] = "Temporal resolution of data"
-
-    output_data.basetime.attrs["long_name"] = "epoch time of each cloud in a track"
-    output_data.basetime.attrs["standard_name"] = "time"
-
-    output_data.cloudidfiles.attrs[
-        "long_name"
-    ] = "File name for each cloud in each track"
-
-    output_data.datetimestrings.attrs[
-        "long_name"
-    ] = "date_time for for each cloud in each track"
-
-    output_data.meanlat.attrs[
-        "long_name"
-    ] = "Mean latitude of the core + cold anvil for each cloud in a track"
-    output_data.meanlat.attrs["standard_name"] = "latitude"
-    output_data.meanlat.attrs["units"] = "degrees_north"
-    output_data.meanlat.attrs["valid_min"] = geolimits[1]
-    output_data.meanlat.attrs["valid_max"] = geolimits[3]
-
-    output_data.meanlon.attrs[
-        "long_name"
-    ] = "Mean longitude of the core + cold anvil for each cloud in a track"
-    output_data.meanlon.attrs["standard_name"] = "longitude"
-    output_data.meanlon.attrs["units"] = "degrees_east"
-    output_data.meanlon.attrs["valid_min"] = geolimits[0]
-    output_data.meanlon.attrs["valid_max"] = geolimits[2]
-
-    output_data.minlat.attrs[
-        "long_name"
-    ] = "Minimum latitude of the core + cold anvil for each cloud in a track"
-    output_data.minlat.attrs["standard_name"] = "latitude"
-    output_data.minlat.attrs["units"] = "degrees_north"
-    output_data.minlat.attrs["valid_min"] = geolimits[1]
-    output_data.minlat.attrs["valid_max"] = geolimits[3]
-
-    output_data.minlon.attrs[
-        "long_name"
-    ] = "Minimum longitude of the core + cold anvil for each cloud in a track"
-    output_data.minlon.attrs["standard_name"] = "longitude"
-    output_data.minlon.attrs["units"] = "degrees_east"
-    output_data.minlon.attrs["valid_min"] = geolimits[0]
-    output_data.minlon.attrs["valid_max"] = geolimits[2]
-
-    output_data.maxlat.attrs[
-        "long_name"
-    ] = "Maximum latitude of the core + cold anvil for each cloud in a track"
-    output_data.maxlat.attrs["standard_name"] = "latitude"
-    output_data.maxlat.attrs["units"] = "degrees_north"
-    output_data.maxlat.attrs["valid_min"] = geolimits[1]
-    output_data.maxlat.attrs["valid_max"] = geolimits[3]
-
-    output_data.maxlon.attrs[
-        "long_name"
-    ] = "Maximum longitude of the core + cold anvil for each cloud in a track"
-    output_data.maxlon.attrs["standard_name"] = "longitude"
-    output_data.maxlon.attrs["units"] = "degrees_east"
-    output_data.maxlon.attrs["valid_min"] = geolimits[0]
-    output_data.maxlon.attrs["valid_max"] = geolimits[2]
-
-    output_data.radius.attrs[
-        "long_name"
-    ] = "Equivalent radius of the core + cold anvil for each cloud in a track"
-    output_data.radius.attrs["standard_name"] = "Equivalent radius"
-    output_data.radius.attrs["units"] = "km"
-    output_data.radius.attrs["valid_min"] = areathresh
-
-    output_data.npix.attrs[
-        "long_name"
-    ] = "Number of pixels in the core + cold anvil for each cloud in a track"
-    output_data.npix.attrs["units"] = "unitless"
-    output_data.npix.attrs["valid_min"] = int(
-        areathresh / float(np.square(pixel_radius))
-    )
-
-    output_data.nconv.attrs[
-        "long_name"
-    ] = "Number of pixels in the core for each cloud in a track"
-    output_data.nconv.attrs["units"] = "unitless"
-    output_data.nconv.attrs["valid_min"] = int(
-        areathresh / float(np.square(pixel_radius))
-    )
-
-    output_data.ncoldanvil.attrs[
-        "long_name"
-    ] = "Number of pixels in the cold anvil for each cloud in a track"
-    output_data.ncoldanvil.attrs["units"] = "unitless"
-    output_data.ncoldanvil.attrs["valid_min"] = int(
-        areathresh / float(np.square(pixel_radius))
-    )
-
-    output_data.cloudnumber.attrs[
-        "long_name"
-    ] = "Ccorresponding cloud identification number in cloudid file for each cloud in a track"
-    output_data.cloudnumber.attrs["units"] = "unitless"
-    output_data.cloudnumber.attrs[
-        "usage"
-    ] = "To link this tracking statistics file with corresponding pixel-level cloudid files, use the cloudidfile and cloudnumber together to identify which file and cloud this track is associated with at this time"
-
-    output_data.status.attrs[
-        "long_name"
-    ] = "Flag indicating evolution / behavior for each cloud in a track"
-    output_data.status.attrs["units"] = "unitless"
-    output_data.status.attrs["valid_min"] = 0
-    output_data.status.attrs["valid_max"] = 65
-
-    output_data.startstatus.attrs[
-        "long_name"
-    ] = "Flag indicating how the first cloud in a track starts"
-    output_data.startstatus.attrs["units"] = "unitless"
-    output_data.startstatus.attrs["valid_min"] = 0
-    output_data.startstatus.attrs["valid_max"] = 65
-
-    output_data.endstatus.attrs[
-        "long_name"
-    ] = "Flag indicating how the last cloud in a track ends"
-    output_data.endstatus.attrs["units"] = "unitless"
-    output_data.endstatus.attrs["valid_min"] = 0
-    output_data.endstatus.attrs["valid_max"] = 65
-
-    output_data.trackinterruptions.attrs[
-        "long_name"
-    ] = "Flag indicating if track started or ended naturally or artifically due to data availability"
-    output_data.trackinterruptions.attrs[
-        "values"
-    ] = "0 = full track available, good data. 1 = track starts at first file, track cut short by data availability. 2 = track ends at last file, track cut short by data availability"
-    output_data.trackinterruptions.attrs["valid_min"] = 0
-    output_data.trackinterruptions.attrs["valid_max"] = 2
-    output_data.trackinterruptions.attrs["units"] = "unitless"
-
-    output_data.mergenumbers.attrs[
-        "long_name"
-    ] = "Number of the track that this small cloud merges into"
-    output_data.mergenumbers.attrs[
-        "usuage"
-    ] = "Each row represents a track. Each column represets a cloud in that track. Numbers give the track number that this small cloud merged into."
-    output_data.mergenumbers.attrs["units"] = "unitless"
-    output_data.mergenumbers.attrs["valid_min"] = 1
-    output_data.mergenumbers.attrs["valid_max"] = numtracks
-
-    output_data.splitnumbers.attrs[
-        "long_name"
-    ] = "Number of the track that this small cloud splits from"
-    output_data.splitnumbers.attrs[
-        "usuage"
-    ] = "Each row represents a track. Each column represets a cloud in that track. Numbers give the track number that his msallcloud splits from."
-    output_data.splitnumbers.attrs["units"] = "unitless"
-    output_data.splitnumbers.attrs["valid_min"] = 1
-    output_data.splitnumbers.attrs["valid_max"] = numtracks
-
-    output_data.boundary.attrs[
-        "long_name"
-    ] = "Flag indicating whether the core + cold anvil touches one of the domain edges."
-    output_data.boundary.attrs["usuage"] = " 0 = away from edge. 1= touches edge."
-    output_data.boundary.attrs["units"] = "unitless"
-    output_data.boundary.attrs["valid_min"] = 0
-    output_data.boundary.attrs["valid_max"] = 1
-
-    # output_data.orientation.attrs['long_name'] = 'Orientation of the major axis of the core + cold anvil for each cloud in a track'
-    # output_data.orientation.attrs['units'] = 'Degrees clockwise from vertical'
-    # output_data.orientation.attrs['valid_min'] = 0
-    # output_data.orientation.attrs['valid_max'] = 360
-
-    # output_data.eccentricity.attrs['long_name'] = 'Eccentricity of the major axis of the core + cold anvil for each cloud in a track'
-    # output_data.eccentricity.attrs['units'] = 'unitless'
-    # output_data.eccentricity.attrs['valid_min'] = 0
-    # output_data.eccentricity.attrs['valid_max'] = 1
-
-    # output_data.majoraxis.attrs['long_name'] =  'Length of the major axis of the core + cold anvil for each cloud in a track'
-    # output_data.majoraxis.attrs['units'] = 'km'
-
-    # output_data.perimeter.attrs['long_name'] = 'Approximnate circumference of the core + cold anvil for each cloud in a track'
-    # output_data.perimeter.attrs['units'] = 'km'
-
-    # output_data.xcenter.attrs['long_name'] = 'X index of the geometric center of the cloud feature for each cloud in a track'
-    # output_data.xcenter.attrs['units'] = 'unitless'
-
-    # output_data.ycenter.attrs['long_name'] = 'Y index of the geometric center of the cloud feature for each cloud in a track'
-    # output_data.ycenter.attrs['units'] = 'unitless'
-
-    # output_data.xcenter_weighted.attrs['long_name'] = 'X index of the brightness temperature weighted center of the cloud feature for each cloud in a track'
-    # output_data.xcenter_weighted.attrs['units'] = 'unitless'
-
-    # output_data.ycenter_weighted.attrs['long_name'] = 'Y index of the brightness temperature weighted center of the cloud feature for each cloud in a track'
-    # output_data.ycenter_weighted.attrs['units'] = 'unitless'
-
-    output_data.cloudtype_npix_low.attrs[
-        "long_name"
-    ] = "Number of pixels labeled as low cloud in a track"
-    output_data.cloudtype_npix_low.attrs["units"] = "unitless"
-
-    output_data.cloudtype_npix_conglow.attrs[
-        "long_name"
-    ] = "Number of pixels labeled as low congestus cloud in a track"
-    output_data.cloudtype_npix_conglow.attrs["units"] = "unitless"
-
-    output_data.cloudtype_npix_conghigh.attrs[
-        "long_name"
-    ] = "Number of pixels labeled as high congestus cloud in a track"
-    output_data.cloudtype_npix_conghigh.attrs["units"] = "unitless"
-
-    output_data.cloudtype_npix_deep.attrs[
-        "long_name"
-    ] = "Number of pixels labeled as deep cloud in a track"
-    output_data.cloudtype_npix_deep.attrs["units"] = "unitless"
-
-    # Specify encoding list
-    encodelist = {
-        "lifetime": {"dtype": "int", "zlib": True, "_FillValue": -9999},
-        "basetime": {
-            "zlib": True,
-            "units": basetime_units,
-            "calendar": basetime_calendar,
-        },
-        "ntracks": {"dtype": "int", "zlib": True},
-        "nmaxlength": {"dtype": "int", "zlib": True},
-        "cloudidfiles": {"zlib": True},
-        "datetimestrings": {"zlib": True},
-        "meanlat": {"zlib": True, "_FillValue": np.nan},
-        "meanlon": {"zlib": True, "_FillValue": np.nan},
-        "minlat": {"zlib": True, "_FillValue": np.nan},
-        "minlon": {"zlib": True, "_FillValue": np.nan},
-        "maxlat": {"zlib": True, "_FillValue": np.nan},
-        "maxlon": {"zlib": True, "_FillValue": np.nan},
-        "radius": {"zlib": True, "_FillValue": np.nan},
-        "boundary": {"dtype": "int", "zlib": True, "_FillValue": -9999},
-        "npix": {"dtype": "int", "zlib": True, "_FillValue": -9999},
-        "nconv": {"dtype": "int", "zlib": True, "_FillValue": -9999},
-        "ncoldanvil": {"dtype": "int", "zlib": True, "_FillValue": -9999},
-        "cloudnumber": {"dtype": "int", "zlib": True, "_FillValue": -9999},
-        "mergenumbers": {"dtype": "int", "zlib": True, "_FillValue": -9999},
-        "splitnumbers": {"dtype": "int", "zlib": True, "_FillValue": -9999},
-        "status": {"dtype": "int", "zlib": True, "_FillValue": -9999},
-        "startstatus": {"dtype": "int", "zlib": True, "_FillValue": -9999},
-        "endstatus": {"dtype": "int", "zlib": True, "_FillValue": -9999},
-        "trackinterruptions": {
-            "dtype": "int",
-            "zlib": True,
-            "_FillValue": -9999,
-        },  #'majoraxis': {'zlib':True, '_FillValue': np.nan}, \
-        #'orientation': {'zlib':True, '_FillValue': np.nan}, \
-        #'eccentricity': {'zlib':True, '_FillValue': np.nan}, \
-        #'perimeter': {'zlib':True, '_FillValue': np.nan}, \
-        #'xcenter': {'zlib':True, '_FillValue': -9999}, \
-        #'ycenter': {'zlib':True, '_FillValue': -9999}, \
-        #'xcenter_weighted': {'zlib':True, '_FillValue': -9999}, \
-        #'ycenter_weighted': {'zlib':True, '_FillValue': -9999}, \
-        "cloudtype_npix_low": {"dtype": "int", "zlib": True, "_FillValue": -9999},
-        "cloudtype_npix_conglow": {"dtype": "int", "zlib": True, "_FillValue": -9999},
-        "cloudtype_npix_conghigh": {"dtype": "int", "zlib": True, "_FillValue": -9999},
-        "cloudtype_npix_deep": {"dtype": "int", "zlib": True, "_FillValue": -9999},
-    }
-
-    # Write netcdf file
-    print("Here I am with file: ", trackstats_outfile)
-    output_data.to_netcdf(
-        path=trackstats_outfile,
-        mode="w",
-        format="NETCDF4_CLASSIC",
-        unlimited_dims="ntracks",
-        encoding=encodelist,
-    )

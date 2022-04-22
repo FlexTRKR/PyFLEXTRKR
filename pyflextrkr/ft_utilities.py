@@ -118,7 +118,7 @@ def get_basetime_from_filename(
     """
     logger = logging.getLogger(__name__)
     # Isolate all possible files
-    filenames = sorted(fnmatch.filter(os.listdir(data_path), data_basename + '*.nc'))
+    filenames = sorted(fnmatch.filter(os.listdir(data_path), data_basename + '*'))
 
     # Loop through files, identifying files within the startdate - enddate interval
     nleadingchar = len(data_basename)
