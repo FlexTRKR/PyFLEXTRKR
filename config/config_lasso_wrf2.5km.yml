@@ -1,5 +1,5 @@
 ---
-# CACTI CSAPR-2 radar cell tracking configuration file
+# LASSO WRF simulated radar cell tracking configuration file
 
 # Tracking steps to run
 run_advection: False
@@ -57,7 +57,6 @@ MAX_MOVEMENT_MPS: 60    # maximum advection speed allowed [m/s]
 advection_filename: 'advection_'
 
 # Cell identification parameters
-#out_basename: "convmask_"
 # Parameter in Steiner
 # The background reflectivity fall off point in the cosine fucntion,
 # if background reflectivity > absConvThres [dBZ], the grid point is a convective core
@@ -91,7 +90,7 @@ min_corearea: 9
 echotop_gap: 4
 # Minimum height above surface elevation to filter the data
 sfc_dz_min: 500
-# Maximum height above surface to calculate low-level max reflectivity
+# Maximum height above surface [m] to calculate low-level max reflectivity
 # (similar to lowest-level composite reflectiivty)
 sfc_dz_max: 3000
 # Set equivalent radar sensitivity [dBZ]
@@ -99,21 +98,19 @@ radar_sensitivity: 0.0
 # Flag to output additional Steiner variables for diagnostic purpose
 return_diag: False
 # Radar file data dimensions and reflectivity variable name
-dx: 2500
-dy: 2500
+dx: 2500  # meter
+dy: 2500  # meter
 x_dimname: "west_east"
 y_dimname: "south_north"
 z_dimname: "bottom_top"
 x_varname: "XLONG"
 y_varname: "XLAT"
-z_varname: "ZAMSL"
 reflectivity_varname: 'REFL_10CM'
-# flag: data sources (radar or wrf)
-iradar: 0
-iwrf: 1
+# Input data source: 'radar', 'wrf'
+input_source: 'wrf'
 
 # Specify data structure
-datatimeresolution: 0.25     # hours
+datatimeresolution: 0.25     # hour
 pixel_radius: 2.5      # km
 #x_dimname: 'x'
 #y_dimname: 'y'

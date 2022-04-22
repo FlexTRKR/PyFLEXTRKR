@@ -1,4 +1,4 @@
-import os
+import os, sys
 import numpy as np
 import time
 import xarray as xr
@@ -15,18 +15,20 @@ def idcells_reflectivity(
     config,
 ):
     """
-    Identifies convective cells using reflectivity.
+    Identifies convective cells using composite radar reflectivity.
 
     Args:
-        input_filename:
-        config:
+        input_filename: string
+            Input data filename
+        config: dictionary
+            Dictionary containing config parameters
 
     Returns:
-
+        cloudid_outfile: string
+            Cloudid file name.
     """
-    feature_varname = config.get("feature_varname", "feature_number")
-    nfeature_varname = config.get("nfeature_varname", "nfeatures")
-    featuresize_varname = config.get("featuresize_varname", "npix_feature")
+    np.set_printoptions(threshold=np.inf)
+    logger = logging.getLogger(__name__)
 
     absConvThres = config['absConvThres']
     minZdiff = config['minZdiff']
@@ -45,7 +47,6 @@ def idcells_reflectivity(
     sfc_dz_min = config['sfc_dz_min']
     sfc_dz_max = config['sfc_dz_max']
     radar_sensitivity = config['radar_sensitivity']
-    # types_steiner = config['types_steiner']
     return_diag = config['return_diag']
     dx = config['dx']
     dy = config['dy']
@@ -57,44 +58,40 @@ def idcells_reflectivity(
     y_varname = config['y_varname']
     # z_varname = config['z_varname']
     reflectivity_varname = config['reflectivity_varname']
-    iradar = config['iradar']
-    iwrf = config['iwrf']
+    fillval = config["fillval"]
+    input_source = config['input_source']
 
+    # Set echo type values
     types_powell = {'NO_ECHO': 1, 'WEAK_ECHO': 2, 'STRATIFORM': 3, 'CONVECTIVE': 4, 'ISO_CONV_CORE': 5,
                     'ISO_CONV_FRINGE': 6, 'UNCERTAIN': 7, 'CS_CORE': 8, 'ISO_CS_CORE': 9}
     types_steiner = {'NO_SURF_ECHO': 1, 'WEAK_ECHO': 2, 'STRATIFORM': 3, 'CONVECTIVE': 4}
 
-    np.set_printoptions(threshold=np.inf)
-    logger = logging.getLogger(__name__)
-
-    fillval = config["fillval"]
-
     # From radar data
-    if iradar == 1:
+    if input_source == 'radar':
 
         # Read radar file
         ds = xr.open_dataset(input_filename)
 
     # From WRF data
-    elif iwrf == 1:
+    elif input_source == 'wrf':
 
         # Read WRF file
         ds = xr.open_dataset(input_filename)
         # Drop XTIME dimension, and rename 'Time' dimension to 'time'
-        ds = ds.reset_coords(names='XTIME', drop=False).rename({'Time': 'time'})
+        ds = ds.reset_coords(names='XTIME', drop=False).rename({'Time': time_dimname})
         # Rounds up to second, some model converted datetimes do not contain round second
         time_coords = ds.XTIME.dt.round('S')
         # out_ftime = time_coords.dt.strftime("%Y%m%d.%H%M%S").item()
 
         # Get data coordinates and dimensions
-        # height = ds[z_varname].squeeze().values
+        # Get WRF height values
         height = (ds['PH'] + ds['PHB']).squeeze().data / 9.80665
         nx = ds.sizes[x_dimname]
         ny = ds.sizes[y_dimname]
         # nz = ds.sizes[z_dimname]
         # Create x, y coordinates
-        x_coords = np.arange(0, nx) * dx
-        y_coords = np.arange(0, ny) * dy
+        # x_coords = np.arange(0, nx) * dx
+        # y_coords = np.arange(0, ny) * dy
         # Create a fake radar lat/lon
         radar_lon, radar_lat = 0, 0
         # Convert to DataArray
@@ -104,8 +101,6 @@ def idcells_reflectivity(
         radar_lat = xr.DataArray(radar_lat, attrs={'long_name': 'Radar latitude'})
         grid_lon = ds[x_varname].squeeze()
         grid_lat = ds[y_varname].squeeze()
-        out_x_dimname = 'x'
-        out_y_dimname = 'y'
 
         # Get radar variables
         dbz3d = ds[reflectivity_varname].squeeze()
@@ -120,7 +115,8 @@ def idcells_reflectivity(
         refl = np.copy(dbz_comp.values)
 
         # Replace all values less than min radar sensitivity, including NAN, to be equal to the sensitivity value
-        # The purpose is to include areas surrounding isolated cells below radar sensitivity in the background intensity calculation
+        # The purpose is to include areas surrounding isolated cells below radar sensitivity
+        # in the background intensity calculation.
         # This differs from Steiner.
         refl[(refl < radar_sensitivity) | np.isnan(refl)] = radar_sensitivity
 
@@ -128,6 +124,10 @@ def idcells_reflectivity(
         # dster = xr.open_dataset(terrain_file)
         # mask_goodvalues = dster.mask110.values.astype(int)
         mask_goodvalues = np.full(refl.shape, 1, dtype=np.int8)
+
+    else:
+        logger.error(f'Unknown input_source: {input_source}')
+        sys.exit()
 
     # Convert radii_expand from a list to a numpy array
     radii_expand = np.array(radii_expand)
@@ -186,7 +186,7 @@ def idcells_reflectivity(
 
     # Calculate echo-top heights for various reflectivity thresholds
     shape_2d = refl.shape
-    if (iradar == 1):
+    if (input_source == 'radar'):
         echotop10 = echotop_height(dbz3d_filt, height, z_dimname, shape_2d,
                                    dbz_thresh=10, gap=echotop_gap, min_thick=0)
         echotop20 = echotop_height(dbz3d_filt, height, z_dimname, shape_2d,
@@ -197,7 +197,7 @@ def idcells_reflectivity(
                                    dbz_thresh=40, gap=echotop_gap, min_thick=0)
         echotop50 = echotop_height(dbz3d_filt, height, z_dimname, shape_2d,
                                    dbz_thresh=50, gap=echotop_gap, min_thick=0)
-    elif (iwrf == 1):
+    elif (input_source == 'wrf'):
         echotop10 = echotop_height_wrf(dbz3d_filt, height, z_dimname, shape_2d,
                                        dbz_thresh=10, gap=echotop_gap, min_thick=0)
         echotop20 = echotop_height_wrf(dbz3d_filt, height, z_dimname, shape_2d,
@@ -212,6 +212,8 @@ def idcells_reflectivity(
 
     # Put all Steiner parameters in a dictionary
     steiner_params = {
+        'dx': dx,
+        'dy': dy,
         'absConvThres': absConvThres,
         'minZdiff': minZdiff,
         'truncZconvThres': truncZconvThres,
@@ -234,7 +236,7 @@ def idcells_reflectivity(
     # plt.colorbar()
     # plt.show()
 
-    # Create variables for tracking
+    # Create variables needed for tracking
     feature_mask = core_expand
     # Count number of pixels for each feature
     unique_num, npix_feature = np.unique(feature_mask, return_counts=True)
@@ -248,12 +250,12 @@ def idcells_reflectivity(
     file_datestring = time_coords.dt.strftime("%Y%m%d").item()
     file_timestring = time_coords.dt.strftime("%H%M").item()
     cloudid_outfile = (
-            config["tracking_outpath"] +
-            config["cloudid_filebase"] +
-            file_datestring +
-            "_" +
-            file_timestring +
-            ".nc"
+        config["tracking_outpath"] +
+        config["cloudid_filebase"] +
+        file_datestring +
+        "_" +
+        file_timestring +
+        ".nc"
     )
 
     # Put time and nfeatures in a numpy array so that they can be set with a time dimension
@@ -270,8 +272,6 @@ def idcells_reflectivity(
             out_basetime,
             file_datestring,
             file_timestring,
-            dx,
-            dy,
             radar_lon,
             radar_lat,
             grid_lon,
@@ -301,8 +301,6 @@ def idcells_reflectivity(
             out_basetime,
             file_datestring,
             file_timestring,
-            dx,
-            dy,
             radar_lon,
             radar_lat,
             grid_lon,
@@ -329,6 +327,7 @@ def idcells_reflectivity(
             peakedness=peakedness,
             core_steiner_orig=core_steiner_orig,
         )
+    logger.info(f"{cloudid_outfile}")
 
-    import pdb; pdb.set_trace()
-    return
+    # import pdb; pdb.set_trace()
+    return cloudid_outfile

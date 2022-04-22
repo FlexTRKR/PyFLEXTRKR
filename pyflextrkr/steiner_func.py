@@ -1,4 +1,3 @@
-## functions to classify gridded radar data into convective, stratiform, weak_echo and no surface echo.
 import numpy as np
 from scipy import ndimage
 
@@ -73,7 +72,18 @@ def peakedness(refl_bkg, mask_goodvalues, minZdiff, absConvThres):
     return peak
 
 
-def dilate_conv_rad(types_steiner, refl_bkg, sclass, score, dx, dy, mask_goodvalues,mindBZuse, maxConvRadius,dBZforMaxConvRadius):
+def dilate_conv_rad(
+        types_steiner,
+        refl_bkg,
+        sclass,
+        score,
+        dx,
+        dy,
+        mask_goodvalues,
+        mindBZuse,
+        maxConvRadius,
+        dBZforMaxConvRadius
+):
     """
     Given a mean background reflectivity value, we determine via a step
     function what the corresponding convective radius would be
@@ -124,7 +134,14 @@ def dilate_conv_rad(types_steiner, refl_bkg, sclass, score, dx, dy, mask_goodval
     return sclass_new
 
 
-def make_dilation_step_func(mindBZuse=25, dBZforMaxConvRadius=40, bkg_refl_increment=5, conv_rad_increment=1, conv_rad_start=1, maxConvRadius=5):
+def make_dilation_step_func(
+        mindBZuse=25,
+        dBZforMaxConvRadius=40,
+        bkg_refl_increment=5,
+        conv_rad_increment=1,
+        conv_rad_start=1,
+        maxConvRadius=5
+):
     """
     Makes convective radius dilation step function (Fig. 6 in Steiner et al. 1995 JAM)
 
@@ -166,7 +183,17 @@ def make_dilation_step_func(mindBZuse=25, dBZforMaxConvRadius=40, bkg_refl_incre
     return bkg_bin, conv_rad_bin
 
 
-def mod_dilate_conv_rad(types_steiner, refl_bkg, sclass, score, mask_goodvalues, dx, dy, bkg_bin, conv_rad_bin):
+def mod_dilate_conv_rad(
+        types_steiner,
+        refl_bkg,
+        sclass,
+        score,
+        mask_goodvalues,
+        dx,
+        dy,
+        bkg_bin,
+        conv_rad_bin
+):
     """
     Given a mean background reflectivity value, we determine via a step function
     what the corresponding convective radius would be to dilate the convective cores.
@@ -392,8 +419,20 @@ def expand_conv_core(score, radii_expand, dx, dy, min_corenpix=1):
     return score_expand, score_sorted
 
 
-def steiner_classification(types_steiner, refl, dx, dy, bkg_rad, minZdiff, absConvThres, mindBZuse, maxConvRadius, dBZforMaxConvRadius,
-                           truncZconvThres, weakEchoThres,):
+def steiner_classification(
+        types_steiner,
+        refl,
+        dx,
+        dy,
+        bkg_rad,
+        minZdiff,
+        absConvThres,
+        mindBZuse,
+        maxConvRadius,
+        dBZforMaxConvRadius,
+        truncZconvThres,
+        weakEchoThres,
+):
     """
     We perform the Steiner et al. (1995) algorithm for echo classification
     using only the reflectivity field in order to classify each grid point
@@ -461,8 +500,23 @@ def steiner_classification(types_steiner, refl, dx, dy, bkg_rad, minZdiff, absCo
     return (sclass_new,score)
 
 
-def mod_steiner_classification(types_steiner, refl, mask_goodvalues, dx, dy, bkg_rad, minZdiff, absConvThres, truncZconvThres, weakEchoThres,
-                               bkg_bin, conv_rad_bin, min_corearea=1, remove_smallcores=True, return_diag=False):
+def mod_steiner_classification(
+        types_steiner,
+        refl,
+        mask_goodvalues,
+        dx,
+        dy,
+        bkg_rad,
+        minZdiff,
+        absConvThres,
+        truncZconvThres,
+        weakEchoThres,
+        bkg_bin,
+        conv_rad_bin,
+        min_corearea=1,
+        remove_smallcores=True,
+        return_diag=False,
+):
     """
     Modified Steiner et al. (1995) algorithm for echo classification using the reflectivity field
     to classify each grid point as either convective, stratiform, weak echo or undefined.
@@ -526,14 +580,17 @@ def mod_steiner_classification(types_steiner, refl, mask_goodvalues, dx, dy, bkg
     sclass[mask_goodvalues==1] = types_steiner['STRATIFORM']
 
     # Assign convective core (Ze > truncZconvThres, or Ze - Ze_bkg >= peak)
-    ind_core = np.logical_or(refl >= truncZconvThres, (refl - refl_bkg) >= peak) # define the convective core
+    # define the convective core
+    ind_core = np.logical_or(refl >= truncZconvThres, (refl - refl_bkg) >= peak)
     score[ind_core] = 1
     sclass[ind_core] = types_steiner['CONVECTIVE']
 
-    ind_weak = np.logical_and(refl>minZdiff, refl<weakEchoThres) # define the weak echo region
+    # define the weak echo region
+    ind_weak = np.logical_and(refl>minZdiff, refl<weakEchoThres)
     sclass[ind_weak] = types_steiner['WEAK_ECHO']
 
-    ind_nosfc = np.logical_and(mask_goodvalues==1, refl<minZdiff) # define the no surface echo region
+    # define the no surface echo region
+    ind_nosfc = np.logical_and(mask_goodvalues==1, refl<minZdiff)
     sclass[ind_nosfc] = types_steiner['NO_SURF_ECHO']
 
     # If remove_smallcores is set, then remove cores with pixels < min_corearea
@@ -554,7 +611,17 @@ def mod_steiner_classification(types_steiner, refl, mask_goodvalues, dx, dy, bkg
                 score_keep[rid] = 0
 
     # Dilate convective radius
-    sclass_new, score_dilate = mod_dilate_conv_rad(types_steiner, refl_bkg, sclass, score_keep, mask_goodvalues, dx, dy, bkg_bin, conv_rad_bin)
+    sclass_new, score_dilate = mod_dilate_conv_rad(
+        types_steiner,
+        refl_bkg,
+        sclass,
+        score_keep,
+        mask_goodvalues,
+        dx,
+        dy,
+        bkg_bin,
+        conv_rad_bin
+    )
 
     if (return_diag == False):
         return sclass_new, score_keep, score_dilate
