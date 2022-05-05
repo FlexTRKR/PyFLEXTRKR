@@ -4,7 +4,7 @@ import logging
 import dask
 from dask.distributed import Client, LocalCluster
 from pyflextrkr.ft_utilities import load_config
-from pyflextrkr.advection_radar import calc_mean_advection
+from pyflextrkr.advection_tiles import calc_mean_advection
 from pyflextrkr.idfeature_driver import idfeature_driver
 from pyflextrkr.tracksingle_driver import tracksingle_driver
 from pyflextrkr.gettracks import gettracknumbers

@@ -217,6 +217,8 @@ def write_radar_cellid(
         radar_lat,
         out_lon,
         out_lat,
+        x_coords,
+        y_coords,
         dbz_comp,
         dbz_lowlevel,
         reflectivity_file,
@@ -247,6 +249,8 @@ def write_radar_cellid(
         'base_time': (["time"], file_basetime),
         'longitude': (['lat', 'lon'], out_lon.data),
         'latitude': (['lat', 'lon'], out_lat.data),
+        'x': (['lon'], x_coords),
+        'y': (['lat'], y_coords),
         'dbz_comp': (['time', 'lat', 'lon'], np.expand_dims(dbz_comp.data, axis=0)),
         'dbz_lowlevel': (['time', 'lat', 'lon'], np.expand_dims(dbz_lowlevel.data, axis=0)),
         'convsf': (['time', 'lat', 'lon'], np.expand_dims(convsf_steiner, axis=0)),
@@ -270,7 +274,7 @@ def write_radar_cellid(
         'features': (['features'], np.arange(1, nfeatures + 1),),
     }
     # Output global attributes
-    attrlist = {
+    gattr_dict = {
         "Title": "Cloudid file from "
         + file_datestring[0:4]
         + "-"
@@ -291,11 +295,15 @@ def write_radar_cellid(
     if 'steiner_params' in kwargs:
         # Add all parameters from the dictionary to the global attribute list
         for key, value in kwargs['steiner_params'].items():
-            attrlist[key] = value
+            gattr_dict[key] = value
 
     # Define xarray dataset
-    ds_out = xr.Dataset(var_dict, coords=coord_dict, attrs=attrlist)
+    ds_out = xr.Dataset(var_dict, coords=coord_dict, attrs=gattr_dict)
     # Define variable attributes
+    ds_out['x'].attrs['long_name'] = 'X distance on the projection plane from the origin'
+    ds_out['x'].attrs['units'] = 'm'
+    ds_out['y'].attrs['long_name'] = 'Y distance on the projection plane from the origin'
+    ds_out['y'].attrs['units'] = 'm'
     ds_out['lat'].attrs['long_name'] = 'Latitudes, y-coordinate in Cartesian system'
     ds_out['lat'].attrs['standard_name'] = 'latitude'
     ds_out['lat'].attrs['units'] = 'degrees_north'
