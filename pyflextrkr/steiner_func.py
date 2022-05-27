@@ -26,9 +26,8 @@ def background_intensity(refl, mask_goodvalues, dx, dy, bkg_rad):
 
     # Get a background radius mask
     ygrd, xgrd = np.ogrid[-bkg_rad_y:bkg_rad_y+1, -bkg_rad_x:bkg_rad_x+1]
-    # mask = xgrd*xgrd + ygrd*ygrd <= bkg_rad_x*bkg_rad_y
     mask = xgrd*xgrd + ygrd*ygrd <= (bkg_rad/dx)*(bkg_rad/dy)
-    
+
     ## another way to mask
     # mask = np.zeros((bkg_rad_x*2+1, bkg_rad_y*2+1))
     # mask[bkg_rad_x,bkg_rad_y]=1
@@ -37,10 +36,9 @@ def background_intensity(refl, mask_goodvalues, dx, dy, bkg_rad):
     # Convert to linear unit
     linrefl = np.zeros(refl.shape)
     linrefl[mask_goodvalues==1] = 10. ** (refl[mask_goodvalues==1] / 10.)
-
     # Apply convolution filter 
     bkg_linrefl = ndimage.convolve(linrefl, mask, mode='constant', cval=0.0)
-    numPixs = ndimage.convolve(mask_goodvalues, mask, mode='constant', cval=0)
+    numPixs = ndimage.convolve(mask_goodvalues, mask, mode='constant', cval=0.0)
     bkg_linrefl[mask_goodvalues==0]=0
     numPixs[mask_goodvalues==0]=0
     
@@ -50,7 +48,7 @@ def background_intensity(refl, mask_goodvalues, dx, dy, bkg_rad):
     
     # Remove pixels with 0 number of pixels
     refl_bkg[mask_goodvalues==0] = np.nan
-    
+
     return refl_bkg
 
 
@@ -469,13 +467,13 @@ def steiner_classification(
     score = np.zeros(refl.shape, dtype=int)
     sclass = np.zeros(refl.shape, dtype=int) 
     
-    mask_goodvalues = np.ones(refl.shape,dtype=int)
+    mask_goodvalues = np.ones(refl.shape, dtype=int)
     mask_goodvalues[np.isnan(refl)] = 0
     ny, nx = refl.shape
     
     # Calculate background reflectivity
     refl_bkg = background_intensity(refl, mask_goodvalues, dx, dy, bkg_rad)
-    
+
     # If refl below truncZconvThres, use peakedness criteria
     peak = peakedness(refl_bkg, mask_goodvalues, minZdiff, absConvThres)
     

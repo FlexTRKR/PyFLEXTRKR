@@ -78,6 +78,9 @@ def idcells_reflectivity(
     elif input_source == 'wrf':
         comp_dict = get_composite_reflectivity_wrf(
             input_filename, config)
+    elif input_source == 'wrf_regrid':
+        comp_dict = get_composite_reflectivity_wrf_regrid(
+            input_filename, config)
     else:
         logger.error(f'Unknown input_source: {input_source}')
         sys.exit()
@@ -146,7 +149,7 @@ def idcells_reflectivity(
             remove_smallcores=True,
             return_diag=return_diag,
         )
-
+    
     # Expand convective cores outward to a set of radii to
     # make the convective region larger for better tracking convective cells
     core_expand, core_sorted = expand_conv_core(
@@ -154,7 +157,7 @@ def idcells_reflectivity(
 
     # Calculate echo-top heights for various reflectivity thresholds
     shape_2d = refl.shape
-    if (input_source == 'csapr_cacti'):
+    if (input_source == 'csapr_cacti') or (input_source == 'wrf_regrid'):
         echotop10 = echotop_height(dbz3d_filt, height, z_dimname, shape_2d,
                                    dbz_thresh=10, gap=echotop_gap, min_thick=0)
         echotop20 = echotop_height(dbz3d_filt, height, z_dimname, shape_2d,
@@ -332,7 +335,6 @@ def get_composite_reflectivity_wrf(input_filename, config):
     ds = ds.reset_coords(names='XTIME', drop=False).rename({'Time': time_dimname})
     # Rounds up to second, some model converted datetimes do not contain round second
     time_coords = ds.XTIME.dt.round('S')
-    # out_ftime = time_coords.dt.strftime("%Y%m%d.%H%M%S").item()
     # Get data coordinates and dimensions
     # Get WRF height values
     height = (ds['PH'] + ds['PHB']).squeeze().data / 9.80665
@@ -370,7 +372,106 @@ def get_composite_reflectivity_wrf(input_filename, config):
     # Create a good value mask (everywhere is good for WRF)
     # dster = xr.open_dataset(terrain_file)
     # mask_goodvalues = dster.mask110.values.astype(int)
-    mask_goodvalues = np.full(refl.shape, 1, dtype=np.int8)
+    mask_goodvalues = np.full(refl.shape, 1, dtype=int)
+
+    # Put output variables in a dictionary
+    comp_dict = {
+        'x_coords': x_coords,
+        'y_coords': y_coords,
+        'dbz3d_filt': dbz3d_filt,
+        'dbz_comp': dbz_comp,
+        'dbz_lowlevel': dbz_lowlevel,
+        'grid_lat': grid_lat,
+        'grid_lon': grid_lon,
+        'height': height,
+        'mask_goodvalues': mask_goodvalues,
+        'radar_lat': radar_lat,
+        'radar_lon': radar_lon,
+        'refl': refl,
+        'time_coords': time_coords,
+    }
+    return comp_dict
+
+
+def get_composite_reflectivity_wrf_regrid(input_filename, config):
+    """
+    Get composite reflectivity from regridded WRF.
+
+    Args:
+        input_filename: string
+            Input data filename
+        config: dictionary
+            Dictionary containing config parameters
+
+    Returns:
+        comp_dict: dictionary
+            Dictionary containing output variables
+    """
+    sfc_dz_min = config['sfc_dz_min']
+    sfc_dz_max = config['sfc_dz_max']
+    radar_sensitivity = config['radar_sensitivity']
+    time_dimname = config.get("time_dimname", "time")
+    x_dimname = config.get("x_dimname", "x")
+    y_dimname = config.get("y_dimname", "y")
+    z_dimname = config.get("z_dimname", "z")
+    x_varname = config['x_varname']
+    y_varname = config['y_varname']
+    z_varname = config['z_varname']
+    reflectivity_varname = config['reflectivity_varname']
+    composite_reflectivity_varname = config.get('composite_reflectivity_varname', '')
+    fillval = config["fillval"]
+
+    # Read WRF file
+    ds = xr.open_dataset(input_filename)
+    # Drop XTIME dimension, and rename 'Time' dimension to 'time'
+    # ds = ds.reset_coords(names='XTIME', drop=False).rename({'Time': time_dimname})
+    # Rounds up to second, some model converted datetimes do not contain round second
+    time_coords = ds[time_dimname].dt.round('S')
+    # Get data coordinates and dimensions
+    # Get WRF height values
+    height = ds[z_dimname].data
+    nx = ds.sizes[x_dimname]
+    ny = ds.sizes[y_dimname]
+    # Create x, y coordinates to mimic radar
+    dx = ds.attrs['DX']
+    dy = ds.attrs['DY']
+    x_coords = np.arange(0, nx) * dx
+    y_coords = np.arange(0, ny) * dy
+    # Create a fake radar lat/lon
+    radar_lon, radar_lat = 0, 0
+    # Convert to DataArray
+    radar_lon = xr.DataArray(radar_lon, attrs={'long_name': 'Radar longitude'})
+    radar_lat = xr.DataArray(radar_lat, attrs={'long_name': 'Radar latitude'})
+    grid_lon = ds[x_varname].squeeze()
+    grid_lat = ds[y_varname].squeeze()
+
+    # Get radar variables
+    dbz3d = ds[reflectivity_varname].squeeze()
+    dbz3d_filt = dbz3d
+    # Get composite reflectivity
+    if composite_reflectivity_varname != '':
+        dbz_comp = ds[composite_reflectivity_varname].squeeze()
+    else:
+        dbz_comp = dbz3d_filt.max(dim=z_dimname)
+
+    # Filter reflectivity outside the low-level
+    dbz3d_lowlevel = dbz3d.where((ds[z_varname] >= sfc_dz_min) & (ds[z_varname] <= sfc_dz_max))
+    # Get composite reflectivity
+    dbz_comp = dbz3d_filt.max(dim=z_dimname)
+    # Get low-level composite reflectivity
+    dbz_lowlevel = dbz3d_lowlevel.max(dim=z_dimname)
+
+    # Make a copy of the composite reflectivity (must do this or the dbz_comp will be altered)
+    refl = np.copy(dbz_comp.data)
+    # Replace all values less than min radar sensitivity, including NAN, to be equal to the sensitivity value
+    # The purpose is to include areas surrounding isolated cells below radar sensitivity
+    # in the background intensity calculation.
+    # This differs from Steiner.
+    refl[(refl < radar_sensitivity) | np.isnan(refl)] = radar_sensitivity
+    # Create a good value mask (everywhere is good for WRF)
+    # dster = xr.open_dataset(terrain_file)
+    # mask_goodvalues = dster.mask110.values.astype(int)
+    mask_goodvalues = np.full(refl.shape, 1, dtype=int)
 
     # Put output variables in a dictionary
     comp_dict = {
