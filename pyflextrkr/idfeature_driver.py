@@ -30,7 +30,8 @@ def idfeature_driver(config):
     if feature_type == "vorticity":
         from pyflextrkr.idvorticity_era5 import idvorticity_era5 as id_feature
     elif feature_type == "radar_cells":
-        from pyflextrkr.idcells_radar import idcell_csapr as id_feature
+        # from pyflextrkr.idcells_radar import idcell_csapr as id_feature
+        from pyflextrkr.idcells_reflectivity import idcells_reflectivity as id_feature
     elif feature_type == "tb_pf":
         from pyflextrkr.idclouds_tbpf import idclouds_tbpf as id_feature
     else:

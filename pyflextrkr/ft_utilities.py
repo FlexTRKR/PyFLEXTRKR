@@ -118,7 +118,7 @@ def get_basetime_from_filename(
     """
     logger = logging.getLogger(__name__)
     # Isolate all possible files
-    filenames = sorted(fnmatch.filter(os.listdir(data_path), data_basename + '*.nc'))
+    filenames = sorted(fnmatch.filter(os.listdir(data_path), data_basename + '*'))
 
     # Loop through files, identifying files within the startdate - enddate interval
     nleadingchar = len(data_basename)
@@ -262,9 +262,9 @@ def match_drift_times(
 
         # Read the drift file
         ds_drift = xr.open_dataset(driftfile)
-        bt_drift = ds_drift.basetime
-        xdrifts = ds_drift.x.values
-        ydrifts = ds_drift.y.values
+        bt_drift = ds_drift['time']
+        xdrifts = ds_drift['x'].values.squeeze()
+        ydrifts = ds_drift['y'].values.squeeze()
 
         # Convert dateime64 objects to string array
         datetime_drift = bt_drift.dt.strftime("%Y%m%d_%H%M").values
