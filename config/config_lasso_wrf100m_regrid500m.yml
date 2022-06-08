@@ -1,6 +1,8 @@
 ---
 # LASSO WRF simulated radar cell tracking configuration file
 
+# Regrid input reflectivity
+run_regridreflectivity: True
 # Identify features to track
 run_idfeature: True
 # Tracking steps to run
@@ -13,6 +15,8 @@ run_gettracks: True
 run_trackstats: True
 # Map tracking to pixel files
 run_mapfeature: True
+# Regrid pixel files to original grid
+run_regridmask: True
 
 # Parallel processing set up
 # run_parallel: 1 (local cluster), 2 (Dask MPI)
@@ -24,12 +28,17 @@ timeout: 360  # [seconds] Dask timeout limit
 # Start/end date and time
 startdate: '20181204.1200'
 enddate: '20181205.0000'
+# Ensemble member name
+ensmember: 'gefs18'
+# Time frequency of input used for tracking (e.g., '5min', '15min')
+sample_time_freq: '5min'
 
 # Specify tracking input data date/time string format
 # This is the preprocessed file that contains Tb & rainrate
 # E.g., databasename20181101.011503.nc --> yyyymodd.hhmmss
 # E.g., databasename2018-11-01_01:15:00 --> yyyy-mo-dd_hh:mm:ss
 time_format: 'yyyymodd??_?hhmmss'
+raw_databasename: 'corlasso_sub_cloudOnHamsl.M1.m1.'
 databasename: 'reg_refl_'
 
 # Input files directory
