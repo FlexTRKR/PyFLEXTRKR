@@ -145,10 +145,16 @@ def match_tbpf_tracks(config):
     maxtracklength = ir_nmaxlength
     numtracks = ir_ntracks
 
-    # Make a variable list from one of the returned dictionaries
-    var_names = list(final_result[0][0].keys())
-    # Get variable attributes from one of the returned dictionaries
-    var_attrs = final_result[0][1]
+    # Make a variable list and get attributes from one of the returned dictionaries
+    # Loop over each return results till one that is not None
+    counter = 0
+    while counter < nfiles:
+        if final_result[counter] is not None:
+            var_names = list(final_result[counter][0].keys())
+            # Get variable attributes
+            var_attrs = final_result[counter][1]
+            break
+        counter += 1
 
     # Loop over variable list to create the dictionary entry
     pf_dict = {}

@@ -120,10 +120,16 @@ def trackstats_driver(config):
     max_trackduration = int(max(duration_range))
     numtracks = int(numtracks)
 
-    # Make a variable list from one of the returned dictionaries
-    var_names = list(final_result[0][0].keys())
-    # Get variable attributes from one of the returned dictionaries
-    var_attrs = final_result[0][1]
+    # Make a variable list and get attributes from one of the returned dictionaries
+    # Loop over each return results till one that is not None
+    counter = 0
+    while counter < nfiles:
+        if final_result[counter] is not None:
+            var_names = list(final_result[counter][0].keys())
+            # Get variable attributes
+            var_attrs = final_result[counter][1]
+            break
+        counter += 1
     # Drop variables from the list
     var_names.remove("uniquetracknumbers")
     var_names.remove("numtracks")
@@ -227,11 +233,6 @@ def trackstats_driver(config):
 
     trackidx_all = np.arange(0, len(out_dict["track_duration"]))
 
-    # # Create a variable list from one of the returned dictionaries
-    # var_names = list(final_result[0].keys())
-    # # Drop variables from the list
-    # var_names.remove('uniquetracknumbers')
-    # var_names.remove('numtracks')
 
     #########################################################################################
     # Record starting and ending status
