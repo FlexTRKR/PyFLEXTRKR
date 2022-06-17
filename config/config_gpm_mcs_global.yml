@@ -4,20 +4,20 @@
 
 # Processing steps:
 # Maybe worth nesting these in sets of dictionaries
-run_idfeature : True
+run_idfeature : False
 run_tracksingle : False
 run_gettracks : False
 run_trackstats : False
 run_identifymcs : False
 run_matchpf : False
 run_robustmcs : False
-run_mapfeature : False
+run_mapfeature : True
 run_speed: False
 
 # Parallel processing set up
 # run_parallel: 1 (local cluster), 2 (Dask MPI)
-run_parallel: 2
-nprocesses : 32  # Number of processors to use if run_parallel=1
+run_parallel: 1
+nprocesses : 64  # Number of processors to use if run_parallel=1
 dask_tmp_dir: '/tmp'  # Dask temporary directory if run_parallel=1
 timeout: 360  # [seconds] Dask timeout limit
 
@@ -159,7 +159,8 @@ fillval: -9999
 # MCS track stats file base names
 mcstbstats_filebase: 'mcs_tracks_'
 mcspfstats_filebase: 'mcs_tracks_pf_'
-mcsrobust_filebase: 'mcs_tracks_robust_'
+# mcsrobust_filebase: 'mcs_tracks_robust_'
+mcsrobust_filebase: 'mcs_tracks_final_extc_'
 pixeltracking_filebase: 'mcstrack_'
 mcsfinal_filebase: 'mcs_tracks_final_'
 
