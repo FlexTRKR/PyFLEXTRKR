@@ -25,15 +25,17 @@ def regrid_lasso_reflectivity(config):
     logger = logging.getLogger(__name__)
     logger.info('Regridding LASSO reflectivity')
 
-    in_dir = config['clouddata_path']
+    in_dir = config['rawdata_path']
     ensmember = config['ensmember']
-    in_basename = config['raw_databasename'] + ensmember + '_'
+    in_basename = config['rawdatabasename'] + ensmember + '_'
     out_dir = config["clouddata_path"]
     out_basename = config['databasename']
     run_parallel = config['run_parallel']
     start_basetime = config["start_basetime"]
     end_basetime = config["end_basetime"]
     sample_time_freq = config['sample_time_freq']
+
+    os.makedirs(out_dir, exist_ok=True)
 
     # Generate time marks within the start/end datetime
     start_datetime = pd.to_datetime(start_basetime, unit='s')

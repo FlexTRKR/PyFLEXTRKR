@@ -1,10 +1,7 @@
 ---
 # LASSO WRF simulated radar cell tracking configuration file
-# The dx=100m data is coarsen to dx=500m for tracking
-# Then the cell track masks are regridded back to the native 100m grid
+# 
 
-# Regrid input reflectivity
-run_regridreflectivity: True
 # Identify features to track
 run_idfeature: True
 # Tracking steps to run
@@ -17,8 +14,6 @@ run_gettracks: True
 run_trackstats: True
 # Map tracking to pixel files
 run_mapfeature: True
-# Regrid pixel files to original grid
-run_regridmask: True
 
 # Parallel processing set up
 # run_parallel: 1 (local cluster), 2 (Dask MPI)
@@ -32,23 +27,18 @@ startdate: 'STARTDATE.1200'
 enddate: 'ENDDATE.0000'
 # Ensemble member name
 ensmember: 'ENSMEMBER'
-# Time frequency of input used for tracking (e.g., '5min', '15min')
-sample_time_freq: '5min'
 
 # Specify tracking input data date/time string format
 # This is the preprocessed file that contains Tb & rainrate
 # E.g., databasename20181101.011503.nc --> yyyymodd.hhmmss
 # E.g., databasename2018-11-01_01:15:00 --> yyyy-mo-dd_hh:mm:ss
 time_format: 'yyyymodd??_?hhmmss'
-rawdatabasename: 'corlasso_sub_cloudOnHamsl.M1.m1.'
-databasename: 'reg_refl_'
+databasename: 'corlasso_sub_cloudOnHamsl.M1.m1.ENSMEMBER_'
 
-# Raw input files directory
-rawdata_path: '/gpfs/wolf/cli120/proj-shared/zfeng/cacti/les/STARTDATE/ENSMEMBER/d4/run/'
-# Regrid reflectivity files directory
-clouddata_path: '/gpfs/wolf/cli120/proj-shared/zfeng/cacti/les/STARTDATE/ENSMEMBER/d4/run/'
+# Input files directory
+clouddata_path: '/gpfs/wolf/cli120/proj-shared/zfeng/cacti/les/STARTDATE/ENSMEMBER/d3/run/'
 # Working directory for the tracking data
-root_path: '/gpfs/wolf/cli120/proj-shared/zfeng/cacti/les/STARTDATE/ENSMEMBER/d4/'
+root_path: '/gpfs/wolf/cli120/proj-shared/zfeng/cacti/les/STARTDATE/ENSMEMBER/d3/'
 # Working sub-directory names
 tracking_path_name: 'tracking'
 stats_path_name: 'stats'
@@ -127,7 +117,7 @@ composite_reflectivity_varname: 'REFL_10CM_MAX'
 input_source: 'wrf_regrid'
 
 # Specify data structure
-datatimeresolution: 0.08333     # hour
+datatimeresolution: 0.25     # hour
 pixel_radius: 0.5      # km
 time_dimname: 'Time'
 ref_varname: 'dbz_comp'
@@ -137,7 +127,7 @@ timegap: 0.5           # hour
 othresh: 0.3           # overlap percentage threshold
 maxnclouds: 1000       # Maximum number of clouds in one snapshot
 nmaxlinks: 10          # Maximum number of clouds that any single cloud can be linked to
-duration_range: [2, 200]   # A vector [minlength,maxlength] to specify the duration range for the tracks
+duration_range: [2, 60]   # A vector [minlength,maxlength] to specify the duration range for the tracks
 # Flag to remove short-lived tracks [< min(duration_range)] that are not mergers/splits with other tracks
 # 0:keep all tracks; 1:remove short tracks
 remove_shorttracks: 1

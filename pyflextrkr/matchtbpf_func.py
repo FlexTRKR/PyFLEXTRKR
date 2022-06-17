@@ -446,10 +446,10 @@ def matchtbpf_singlefile(
             return out_dict, out_dict_attrs,
 
         else:
-            logger.debug("No matching cloud found in cloudid: " + cloudid_filename)
+            logger.info("No matching cloud found in cloudid: " + cloudid_filename)
 
     else:
-        logger.debug("cloudid file does not exist: " + cloudid_filename)
+        logger.info("cloudid file does not exist: " + cloudid_filename)
 
 
 

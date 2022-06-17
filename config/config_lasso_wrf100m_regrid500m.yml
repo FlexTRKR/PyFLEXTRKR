@@ -123,7 +123,7 @@ composite_reflectivity_varname: 'REFL_10CM_MAX'
 input_source: 'wrf_regrid'
 
 # Specify data structure
-datatimeresolution: 0.8333     # hour
+datatimeresolution: 0.08333     # hour
 pixel_radius: 0.5      # km
 time_dimname: 'Time'
 ref_varname: 'dbz_comp'

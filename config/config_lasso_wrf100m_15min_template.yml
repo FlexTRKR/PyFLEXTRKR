@@ -2,6 +2,7 @@
 # LASSO WRF simulated radar cell tracking configuration file
 # The dx=100m data is coarsen to dx=500m for tracking
 # Then the cell track masks are regridded back to the native 100m grid
+# This config only uses 15min output for tracking for comparison with CSAPR
 
 # Regrid input reflectivity
 run_regridreflectivity: True
@@ -33,7 +34,7 @@ enddate: 'ENDDATE.0000'
 # Ensemble member name
 ensmember: 'ENSMEMBER'
 # Time frequency of input used for tracking (e.g., '5min', '15min')
-sample_time_freq: '5min'
+sample_time_freq: '15min'
 
 # Specify tracking input data date/time string format
 # This is the preprocessed file that contains Tb & rainrate
@@ -46,9 +47,9 @@ databasename: 'reg_refl_'
 # Raw input files directory
 rawdata_path: '/gpfs/wolf/cli120/proj-shared/zfeng/cacti/les/STARTDATE/ENSMEMBER/d4/run/'
 # Regrid reflectivity files directory
-clouddata_path: '/gpfs/wolf/cli120/proj-shared/zfeng/cacti/les/STARTDATE/ENSMEMBER/d4/run/'
+clouddata_path: '/gpfs/wolf/cli120/proj-shared/zfeng/cacti/les/STARTDATE/ENSMEMBER/d4_15min/run/'
 # Working directory for the tracking data
-root_path: '/gpfs/wolf/cli120/proj-shared/zfeng/cacti/les/STARTDATE/ENSMEMBER/d4/'
+root_path: '/gpfs/wolf/cli120/proj-shared/zfeng/cacti/les/STARTDATE/ENSMEMBER/d4_15min/'
 # Working sub-directory names
 tracking_path_name: 'tracking'
 stats_path_name: 'stats'
@@ -127,7 +128,7 @@ composite_reflectivity_varname: 'REFL_10CM_MAX'
 input_source: 'wrf_regrid'
 
 # Specify data structure
-datatimeresolution: 0.08333     # hour
+datatimeresolution: 0.25     # hour
 pixel_radius: 0.5      # km
 time_dimname: 'Time'
 ref_varname: 'dbz_comp'

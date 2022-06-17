@@ -17,4 +17,5 @@ dependencies:
   - ipython>7.0
   - pip
   - astropy
-
+  - wrf-python
+  - colorcet

@@ -153,9 +153,15 @@ def get_basetime_from_filename(
         minute = ifile[mm_idx:mm_idx+2] if (mm_idx is not None) else '00'
         second = ifile[ss_idx:ss_idx+2] if (ss_idx is not None) else '00'
 
-        TEMP_filetime = datetime.datetime(int(year), int(month), int(day),
-                                          int(hour), int(minute), int(second), tzinfo=utc)
-        files_basetime[ii] = calendar.timegm(TEMP_filetime.timetuple())
+        # Check month, day, hour, minute, second valid values
+        if (0 <= int(month) <= 12) & (0 <= int(day) <= 31) & \
+           (0 <= int(hour) <= 23) & (0 <= int(minute) <= 59) & (0 <= int(second) <= 59):
+            TEMP_filetime = datetime.datetime(int(year), int(month), int(day),
+                                            int(hour), int(minute), int(second), tzinfo=utc)
+            files_basetime[ii] = calendar.timegm(TEMP_filetime.timetuple())
+        else:
+            logger.warning(f'File has invalid date/time, will not be included in processing: {ifile}')
+            pass
         files_datestring[ii] = year + month + day
         files_timestring[ii] = hour + minute
         data_filenames[ii] = data_path + ifile
