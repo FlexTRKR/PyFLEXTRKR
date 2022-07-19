@@ -48,9 +48,10 @@ def idcells_reflectivity(
     return_diag = config['return_diag']
     dx = config['dx']
     dy = config['dy']
-    z_dimname = config.get("z_dimname", "z")
-    fillval = config["fillval"]
+    z_dimname = config.get('z_dimname', 'z')
+    fillval = config['fillval']
     input_source = config['input_source']
+    geolimits = config.get('geolimits', None)
 
     # Set echo classification type values
     types_powell = {
@@ -98,6 +99,36 @@ def idcells_reflectivity(
     radar_lon = comp_dict['radar_lon']
     refl = comp_dict['refl']
     time_coords = comp_dict['time_coords']
+
+    # Subset domain
+    if geolimits is not None:
+        # Get lat/lon limits
+        buffer = 0
+        lonmin, lonmax = geolimits[0]-buffer, geolimits[1]+buffer
+        latmin, latmax = geolimits[2]-buffer, geolimits[3]+buffer
+        # Make a 2D mask
+        mask = ((grid_lon >= lonmin) & (grid_lon <= lonmax) & \
+                (grid_lat >= latmin) & (grid_lat <= latmax)).squeeze()
+        # Get y/x indices limits from the mask
+        y_idx, x_idx = np.where(mask == True)
+        xmin, xmax = np.min(x_idx), np.max(x_idx)
+        ymin, ymax = np.min(y_idx), np.max(y_idx)
+        # Subset variables
+        dbz3d_filt = dbz3d_filt[:, ymin:ymax+1, xmin:xmax+1]
+        dbz_comp = dbz_comp[ymin:ymax+1, xmin:xmax+1]
+        dbz_lowlevel = dbz_lowlevel[ymin:ymax+1, xmin:xmax+1]
+        mask_goodvalues = mask_goodvalues[ymin:ymax+1, xmin:xmax+1]
+        refl = refl[ymin:ymax+1, xmin:xmax+1]
+        grid_lon = grid_lon[ymin:ymax+1, xmin:xmax+1]
+        grid_lat = grid_lat[ymin:ymax+1, xmin:xmax+1]
+        # Vertical coordinate
+        if height.ndim > 1:
+            height = height[:, ymin:ymax+1, xmin:xmax+1]
+        # Horizontal coordinates
+        nx = xmax - xmin + 1
+        ny = ymax - ymin + 1
+        x_coords = np.arange(0, nx) * dx
+        y_coords = np.arange(0, ny) * dy
 
     # Convert radii_expand from a list to a numpy array
     radii_expand = np.array(radii_expand)
@@ -319,18 +350,19 @@ def get_composite_reflectivity_wrf(input_filename, config):
     sfc_dz_min = config['sfc_dz_min']
     sfc_dz_max = config['sfc_dz_max']
     radar_sensitivity = config['radar_sensitivity']
-    time_dimname = config.get("time", "time")
-    x_dimname = config.get("x_dimname", "x")
-    y_dimname = config.get("y_dimname", "y")
-    z_dimname = config.get("z_dimname", "z")
+    time_dimname = config.get('time', 'time')
+    x_dimname = config.get('x_dimname', 'x')
+    y_dimname = config.get('y_dimname', 'y')
+    z_dimname = config.get('z_dimname', 'z')
     x_varname = config['x_varname']
     y_varname = config['y_varname']
     # z_varname = config['z_varname']
     reflectivity_varname = config['reflectivity_varname']
-    fillval = config["fillval"]
+    fillval = config['fillval']
 
     # Read WRF file
     ds = xr.open_dataset(input_filename)
+
     # Drop XTIME dimension, and rename 'Time' dimension to 'time'
     ds = ds.reset_coords(names='XTIME', drop=False).rename({'Time': time_dimname})
     # Rounds up to second, some model converted datetimes do not contain round second
@@ -410,16 +442,16 @@ def get_composite_reflectivity_wrf_regrid(input_filename, config):
     sfc_dz_min = config['sfc_dz_min']
     sfc_dz_max = config['sfc_dz_max']
     radar_sensitivity = config['radar_sensitivity']
-    time_dimname = config.get("time_dimname", "time")
-    x_dimname = config.get("x_dimname", "x")
-    y_dimname = config.get("y_dimname", "y")
-    z_dimname = config.get("z_dimname", "z")
+    time_dimname = config.get('time_dimname', 'time')
+    x_dimname = config.get('x_dimname', 'x')
+    y_dimname = config.get('y_dimname', 'y')
+    z_dimname = config.get('z_dimname', 'z')
     x_varname = config['x_varname']
     y_varname = config['y_varname']
     z_varname = config['z_varname']
     reflectivity_varname = config['reflectivity_varname']
     composite_reflectivity_varname = config.get('composite_reflectivity_varname', '')
-    fillval = config["fillval"]
+    fillval = config['fillval']
 
     # Read WRF file
     ds = xr.open_dataset(input_filename)
@@ -527,7 +559,7 @@ def get_composite_reflectivity_csapr_cacti(input_filename, config):
     # time_coords = ds.time[0].expand_dims('time',axis=0)
     out_ftime = time_coords.dt.strftime("%Y%m%d.%H%M%S").item()
     # Get data coordinates and dimensions
-    height = ds[z_dimname].squeeze().values
+    height = ds[z_dimname].squeeze().data
     nx = ds.sizes[x_dimname]
     ny = ds.sizes[y_dimname]
     nz = ds.sizes[z_dimname]
