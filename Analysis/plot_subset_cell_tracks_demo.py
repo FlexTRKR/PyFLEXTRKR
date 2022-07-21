@@ -1,8 +1,12 @@
 """
 Demonstrates ploting cell tracks on radar reflectivity snapshots for a single radar domain.
 
-Example command to run the code:
-    python plot_subset_cell_tracks_demo.py -s 2018-12-19T12:00 -e 2018-12-19T23:55 -c config_lasso.yml -p 1
+>python plot_subset_cell_tracks_demo.py -s STARTDATE -e ENDDATE -c CONFIG.yml --radar_lat LAT --radar_lon LON
+Optional arguments:
+-p 0 (serial), 1 (parallel)
+--extent lonmin lonmax latmin latmax (subset domain boundary)
+--figsize width height (figure size in inches)
+--output output_directory (output figure directory)
 """
 __author__ = "Zhe.Feng@pnnl.gov"
 __created_date__ = "08-Jun-2022"
@@ -37,21 +41,31 @@ def parse_cmd_args():
     parser = argparse.ArgumentParser(
         description="Plot cell tracks on radar reflectivity snapshots for a user-defined subset domain."
     )
-    parser.add_argument("-s", "--start", help="first time in time series to plot, format=YYYY-mm-ddTHH:MM:SS")
-    parser.add_argument("-e", "--end", help="last time in time series to plot, format=YYYY-mm-ddTHH:MM:SS")
-    parser.add_argument("-p", "--parallel", help="flag to run in parallel (0:serial, 1:parallel)", default=0)
-    parser.add_argument("-c", "--config", help="yaml config file for cell tracking")
-    parser.add_argument("-o", "--output", help="ouput directory", default=None)
+    parser.add_argument("-s", "--start", help="first time in time series to plot, format=YYYY-mm-ddTHH:MM:SS", required=True)
+    parser.add_argument("-e", "--end", help="last time in time series to plot, format=YYYY-mm-ddTHH:MM:SS", required=True)
+    parser.add_argument("-c", "--config", help="yaml config file for tracking", required=True)
+    parser.add_argument("-p", "--parallel", help="flag to run in parallel (0:serial, 1:parallel)", type=int, default=0)
+    parser.add_argument("--radar_lat", help="radar latitude", type=float, required=True)
+    parser.add_argument("--radar_lon", help="radar longitude", type=float, required=True)
+    parser.add_argument("--extent", nargs='+', help="map extent (lonmin, lonmax, latmin, latmax)", type=float, default=None)
+    parser.add_argument("--figsize", nargs='+', help="figure size (width, height) in inches", type=float, default=None)
+    parser.add_argument("--output", help="ouput directory", default=None)
     args = parser.parse_args()
 
-    # Map back to separate variables...
-    start_datetime = args.start
-    end_datetime = args.end
-    run_parallel = int(args.parallel)
-    config_file = args.config
-    out_dir = args.output
+    # Put arguments in a dictionary
+    args_dict = {
+        'start_datetime': args.start,
+        'end_datetime': args.end,
+        'run_parallel': args.parallel,
+        'config_file': args.config,
+        'radar_lat': args.radar_lat,
+        'radar_lon': args.radar_lon,
+        'extent': args.extent,
+        'figsize': args.figsize,
+        'out_dir': args.output,
+    }
 
-    return start_datetime, end_datetime, run_parallel, config_file, out_dir
+    return args_dict
 
 
 #-----------------------------------------------------------------------
@@ -134,6 +148,69 @@ def calc_latlon(lon1, lat1, dist, angle):
     return lon2, lat2
 
 #-----------------------------------------------------------------------
+def get_track_stats(trackstats_file, start_datetime, end_datetime, dt_thres):
+    """
+    Subset tracks statistics data within start/end datetime
+
+    Args:
+        trackstats_file: string
+            Track statistics file name.
+        start_datetime: string
+            Start datetime to subset tracks.
+        end_datetime: dstring
+            End datetime to subset tracks.
+        dt_thres: timedelta
+            A timedelta threshold to retain tracks.
+            
+    Returns:
+        track_dict: dictionary
+            Dictionary containing track stats data.
+    """
+    # Read track stats file
+    dss = xr.open_dataset(trackstats_file)
+    stats_starttime = dss.base_time.isel(times=0)
+    # Convert input datetime to np.datetime64
+    stime = np.datetime64(start_datetime)
+    etime = np.datetime64(end_datetime)
+    time_res = dss.attrs['time_resolution_hour']
+
+    # Find track initiated within the time window
+    idx = np.where((stats_starttime >= stime) & (stats_starttime <= etime))[0]
+    ntracks = len(idx)
+    print(f'Number of tracks within input period: {ntracks}')
+
+    # Calculate cell lifetime
+    lifetime = dss.track_duration.isel(tracks=idx) * time_res
+
+    # # Select long-lived tracks
+    # idx_long = np.where(lifetime > lifetime_longtracks)[0]
+    # ntracks_long = len(idx_long)
+    # lifetime_long = lifetime.isel(tracks=idx_long)
+    # print(f'Number of long tracks within input period: {ntracks_long}')
+
+    # Subset these tracks and put in a dictionary
+    track_dict = {
+        'ntracks' : ntracks,
+        'lifetime' : lifetime,
+        'cell_bt' : dss['base_time'].isel(tracks=idx),
+        'cell_lon' : dss['cell_meanlon'].isel(tracks=idx),
+        'cell_lat' : dss['cell_meanlat'].isel(tracks=idx),
+        'start_split_tracknumber' : dss['start_split_tracknumber'].isel(tracks=idx),
+        'end_merge_tracknumber' : dss['end_merge_tracknumber'].isel(tracks=idx),
+        'dt_thres': dt_thres,
+        'time_res': time_res,
+        # # Long-lived tracks
+        # 'lifetime_long': lifetime_long,
+        # 'cell_bt_long' : dss['base_time'].isel(tracks=idx_long),
+        # 'cell_lon_long' : dss['cell_meanlon'].isel(tracks=idx_long),
+        # 'cell_lat_long' : dss['cell_meanlat'].isel(tracks=idx_long),
+        # 'start_split_tracknumber_long' : dss['start_split_tracknumber'].isel(tracks=idx_long),
+        # 'end_merge_tracknumber_long' : dss['end_merge_tracknumber'].isel(tracks=idx_long),
+    }
+    
+    return track_dict
+
+#-----------------------------------------------------------------------
 def plot_map(pixel_dict, plot_info, map_info, track_dict):
     """
     Plotting function.
@@ -164,7 +241,6 @@ def plot_map(pixel_dict, plot_info, map_info, track_dict):
     lat_tn = pixel_dict['lat_tn']
     tracknumbers = pixel_dict['tracknumber_unique']
     # Get track data from dictionary
-    dt_thres = track_dict['dt_thres']
     ntracks = track_dict['ntracks']
     lifetime = track_dict['lifetime']
     cell_bt = track_dict['cell_bt']
@@ -178,15 +254,15 @@ def plot_map(pixel_dict, plot_info, map_info, track_dict):
     cbticks = plot_info['cbticks']
     timestr = plot_info['timestr']
     figname = plot_info['figname']
+    figsize = plot_info['figsize']
+    dt_thres = track_dict['dt_thres']
+    time_res = track_dict['time_res']
     # Map domain, lat/lon ticks, background map features
-    map_extend = map_info['map_extend']
+    map_extent = map_info['map_extent']
     lonv = map_info['lonv']
     latv = map_info['latv']
     radar_lon = map_info['radar_lon'] 
     radar_lat = map_info['radar_lat']
-
-    mpl.rcParams['font.size'] = 13
-    mpl.rcParams['font.family'] = 'Helvetica'
 
     # Set up track lifetime colors
     size_centroid = [30,30,30]
@@ -202,18 +278,23 @@ def plot_map(pixel_dict, plot_info, map_info, track_dict):
     azimuths = np.arange(0,361,90)   # azimuth angles for HSRHI scans [degree]
     proj = ccrs.PlateCarree()
 
-    fig = plt.figure(figsize=[8,7], dpi=200)
+    # Set up figure
+    mpl.rcParams['font.size'] = 13
+    mpl.rcParams['font.family'] = 'Helvetica'
+    fig = plt.figure(figsize=figsize, dpi=300)
     gs = gridspec.GridSpec(1,2, height_ratios=[1], width_ratios=[1,0.03])
     gs.update(wspace=0.05, hspace=0.05, left=0.1, right=0.9, top=0.92, bottom=0.08)
-
     ax1 = plt.subplot(gs[0], projection=proj)
-    ax1.set_extent(map_extend, crs=proj)
+    cax1 = plt.subplot(gs[1])
+
+    ax1.set_extent(map_extent, crs=proj)
     ax1.set_aspect('auto', adjustable=None)
-    gl = ax1.gridlines(crs=proj, draw_labels=False, linestyle='--', linewidth=0.)
-    gl.xlocator = mpl.ticker.FixedLocator(lonv)
-    gl.ylocator = mpl.ticker.FixedLocator(latv)
-    ax1.set_xticks(lonv, crs=proj)
-    ax1.set_yticks(latv, crs=proj)
+    gl = ax1.gridlines(crs=proj, draw_labels=True, linestyle='--', linewidth=0.)
+    gl.right_labels = False
+    gl.top_labels = False
+    if (lonv is not None) & (latv is not None):
+        gl.xlocator = mpl.ticker.FixedLocator(lonv)
+        gl.ylocator = mpl.ticker.FixedLocator(latv)
     lon_formatter = LongitudeFormatter(zero_direction_label=True)
     lat_formatter = LatitudeFormatter()        
     ax1.xaxis.set_major_formatter(lon_formatter)
@@ -289,7 +370,6 @@ def plot_map(pixel_dict, plot_info, map_info, track_dict):
         lon2, lat2 = calc_latlon(radar_lon, radar_lat, 200, azimuths[ii])
         ax1.plot([radar_lon,lon2], [radar_lat,lat2], color='k', lw=0.4, transform=ccrs.Geodetic(), zorder=5)
     # Reflectivity colorbar
-    cax1 = plt.subplot(gs[1])
     cb1 = plt.colorbar(cf1, cax=cax1, label=cblabels, ticks=cbticks, extend='both')
     ax1.set_title(timestr)
 
@@ -300,7 +380,7 @@ def plot_map(pixel_dict, plot_info, map_info, track_dict):
     
     return fig
 
-
+#-----------------------------------------------------------------------
 def work_for_time_loop(datafile, track_dict, map_info, figdir):
     """
     Process data for a single frame and make the plot.
@@ -318,10 +398,21 @@ def work_for_time_loop(datafile, track_dict, map_info, figdir):
     Returns:
         1.
     """
+    
+    map_extent = map_info.get('map_extent', None)
 
     # Read pixel-level data
     ds = xr.open_dataset(datafile)
     pixel_bt = ds.time.data
+
+    # Get map extent from data
+    if map_extent is None:
+        lonmin = ds['longitude'].min().item()
+        lonmax = ds['longitude'].max().item()
+        latmin = ds['latitude'].min().item()
+        latmax = ds['latitude'].max().item()
+        map_extent = [lonmin, lonmax, latmin, latmax]
+        map_info['map_extent'] = map_extent
 
     # Make dilation structure (larger values make thicker outlines)
     # perim_thick = 1
@@ -335,10 +426,10 @@ def work_for_time_loop(datafile, track_dict, map_info, figdir):
     # Only plot if there is cell in the frame
     if (np.nanmax(tn) > 0):
         # Subset pixel data within the map domain
-        map_extend = map_info['map_extend']
+        map_extent = map_info['map_extent']
         buffer = 0.05  # buffer area for subset
-        lonmin, lonmax = map_extend[0]-buffer, map_extend[1]+buffer
-        latmin, latmax = map_extend[2]-buffer, map_extend[3]+buffer
+        lonmin, lonmax = map_extent[0]-buffer, map_extent[1]+buffer
+        latmin, latmax = map_extent[2]-buffer, map_extent[3]+buffer
         mask = (ds['longitude'] >= lonmin) & (ds['longitude'] <= lonmax) & (ds['latitude'] >= latmin) & (ds['latitude'] <= latmax)
         xx_sub = mask.where(mask == True, drop=True).lon.data
         yy_sub = mask.where(mask == True, drop=True).lat.data
@@ -392,6 +483,7 @@ def work_for_time_loop(datafile, track_dict, map_info, figdir):
             'cbticks': cbticks, 
             'timestr': timestr, 
             'figname': figname,
+            'figsize': map_info['figsize'],
         }
         # Call plotting function
         fig = plot_map(pixel_dict, plot_info, map_info, track_dict)
@@ -402,26 +494,30 @@ def work_for_time_loop(datafile, track_dict, map_info, figdir):
     return 1
 
 
+
 if __name__ == "__main__":
 
     # Get the command-line arguments...
-    start_datetime, end_datetime, run_parallel, config_file, out_dir = parse_cmd_args()
+    args_dict = parse_cmd_args()
+    start_datetime = args_dict.get('start_datetime')
+    end_datetime = args_dict.get('end_datetime')
+    run_parallel = args_dict.get('run_parallel')
+    config_file = args_dict.get('config_file')
+    radar_lat = args_dict.get('radar_lat')
+    radar_lon = args_dict.get('radar_lon')
+    map_extent = args_dict.get('extent')
+    figsize = args_dict.get('figsize', [10, 10])
+    out_dir = args_dict.get('out_dir')
 
-    # Set subset map domain
-    map_extend = [-65.9, -63.6, -33.1, -31.15]
-    # Set lat/lon labels
-    lon_bin = 1
-    lat_bin = 1
-    lonv = np.arange(-65.5, -63.01, 0.5)
-    latv = np.arange(-33, -31.01, 0.5)
-    radar_lon, radar_lat = -64.7284, -32.1264
-    # lonv = np.arange(map_extend[0], map_extend[1]+0.001, lon_bin)
-    # latv = np.arange(map_extend[2], map_extend[3]+0.001, lat_bin)
+    # Customize lat/lon labels
+    lonv = None
+    latv = None
     # Put map info in a dictionary
     map_info = {
-        'map_extend': map_extend,
+        'map_extent': map_extent,
         'lonv': lonv,
         'latv': latv,
+        'figsize': figsize,
         'radar_lon': radar_lon,
         'radar_lat': radar_lat,
     }
@@ -429,8 +525,6 @@ if __name__ == "__main__":
     # Tracks that end longer than this threshold from the current pixel-level frame are not plotted
     # This treshold controls the time window to retain previous tracks
     track_retain_time_min = 15
-    # Define long-lived track lifetime [hour]
-    lifetime_longtracks = 0.25
 
     # Create a timedelta threshold in minutes
     dt_thres = datetime.timedelta(minutes=track_retain_time_min)
@@ -470,47 +564,8 @@ if __name__ == "__main__":
         figdir = out_dir
     os.makedirs(figdir, exist_ok=True)
 
-
-    # Read track stats file
-    dss = xr.open_dataset(trackstats_file)
-    stats_starttime = dss.base_time.isel(times=0)
-    # Convert input datetime to np.datetime64
-    stime = np.datetime64(start_datetime)
-    etime = np.datetime64(end_datetime)
-    time_res = dss.attrs['time_resolution_hour']
-
-    # Find track initiated within the time window
-    idx = np.where((stats_starttime >= stime) & (stats_starttime <= etime))[0]
-    ntracks = len(idx)
-    print(f'Number of tracks within input period: {ntracks}')
-
-    # Calculate cell lifetime
-    lifetime = dss.track_duration.isel(tracks=idx) * time_res
-
-    # # Select long-lived tracks
-    # idx_long = np.where(lifetime > lifetime_longtracks)[0]
-    # ntracks_long = len(idx_long)
-    # lifetime_long = lifetime.isel(tracks=idx_long)
-    # print(f'Number of long tracks within input period: {ntracks_long}')
-
-    # Subset these tracks and put in a dictionary
-    track_dict = {
-        'dt_thres': dt_thres,
-        'ntracks' : ntracks,
-        'lifetime' : lifetime,
-        'cell_bt' : dss['base_time'].isel(tracks=idx),
-        'cell_lon' : dss['cell_meanlon'].isel(tracks=idx),
-        'cell_lat' : dss['cell_meanlat'].isel(tracks=idx),
-        'start_split_tracknumber' : dss['start_split_tracknumber'].isel(tracks=idx),
-        'end_merge_tracknumber' : dss['end_merge_tracknumber'].isel(tracks=idx),
-        # # Long-lived tracks
-        # 'lifetime_long': lifetime_long,
-        # 'cell_bt_long' : dss['base_time'].isel(tracks=idx_long),
-        # 'cell_lon_long' : dss['cell_meanlon'].isel(tracks=idx_long),
-        # 'cell_lat_long' : dss['cell_meanlat'].isel(tracks=idx_long),
-        # 'start_split_tracknumber_long' : dss['start_split_tracknumber'].isel(tracks=idx_long),
-        # 'end_merge_tracknumber_long' : dss['end_merge_tracknumber'].isel(tracks=idx_long),
-    }
+    # Get track stats data
+    track_dict = get_track_stats(trackstats_file, start_datetime, end_datetime, dt_thres)
 
     # Serial option
     if run_parallel == 0:

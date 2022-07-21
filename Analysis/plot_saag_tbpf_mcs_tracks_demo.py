@@ -14,6 +14,7 @@ import datetime
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
+import colorcet as cc
 import cartopy.crs as ccrs
 import cartopy.feature as cfeature
 from cartopy.mpl.ticker import LongitudeFormatter, LatitudeFormatter
@@ -281,7 +282,8 @@ def work_for_time_loop(datafile, ntracks, lifetime, track_bt, track_ccs_lon, tra
         # Truncate colormaps
         cmap_tb = truncate_colormap(plt.get_cmap('jet'), minval=0.05, maxval=0.95)
         cmap_pcp = truncate_colormap(plt.get_cmap('viridis'), minval=0.2, maxval=1.0)
-        cmap_mcs = truncate_colormap(plt.get_cmap('jet_r'), minval=0.05, maxval=0.95)
+        # cmap_mcs = truncate_colormap(plt.get_cmap('jet_r'), minval=0.05, maxval=0.95)
+        cmap_mcs = cc.cm["glasbey_light"]
         cmaps = [cmap_tb, cmap_pcp, cmap_mcs]
         titles = ['(a) IR Brightness Temperature','(b) Precipitation (Tracked MCSs Shaded)']
 

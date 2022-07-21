@@ -1,5 +1,5 @@
 """
-Loop over LASSO runs to plot quicklook plots.
+Loop over LASSO runs to make quicklook plots.
 """
 import subprocess
 
@@ -9,14 +9,6 @@ if __name__ == "__main__":
     # ]
     # ens_members = [
     #     "gefs_en18", 
-    # ]
-    # start_dates = [
-    #     "20190123", 
-    #     "20190129", "20190129",
-    # ]
-    # ens_members = [
-    #     "eda05", 
-    #     "eda09", "gefs11",
     # ]
     # Full set of runs
     start_dates = [
@@ -62,6 +54,10 @@ if __name__ == "__main__":
     # domain = 'd3'
     # domain = 'd4'
     # domain = 'd4_15min'
+    figsize = [8,7]
+    extent = [-65.9, -63.6, -33.1, -31.15]
+    radar_lon, radar_lat = -64.7284, -32.1264
+    parallel = 1
 
     for ii in range(0, len(start_dates)):
         idate = start_dates[ii]
@@ -73,10 +69,9 @@ if __name__ == "__main__":
         edate = f'{year}-{month}-{day}T23:55'
         config = f'{config_basename}{idate}_{imember}.yml'
         out_dir = f'{out_dir_root}/{idate}/{imember}/{domain}/'        
-        cmd = f'python {code_name} -s {sdate} -e {edate} -c {config} -p 1 -o {out_dir}'
+        cmd = f'python {code_name} -s {sdate} -e {edate} -c {config} -p {parallel} --radar_lat {radar_lat} --radar_lon {radar_lon} ' + \
+              f'--output {out_dir} --figsize {figsize[0]} {figsize[1]} --extent {extent[0]} {extent[1]} {extent[2]} {extent[3]}'
         print(cmd)
         subprocess.run(cmd, shell=True)
         
-    # import pdb; pdb.set_trace()
-
     
