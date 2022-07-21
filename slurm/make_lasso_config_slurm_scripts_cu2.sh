@@ -15,7 +15,7 @@ slurm_template=${slurm_dir}"slurm_lasso_wrf500m_template.sh"
 config_template=${config_dir}"config_lasso_wrf2.5km_template.yml"
 config_basename="config_lasso_"
 slurm_basename="slurm_lasso_"
-submit_job="yes"
+submit_job="no"
 
 # start_dates=(
 #     "20181204"
