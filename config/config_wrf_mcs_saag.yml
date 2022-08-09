@@ -22,12 +22,12 @@ dask_tmp_dir: '/tmp'  # Dask temporary directory if run_parallel=1
 timeout: 360  # [seconds] Dask timeout limit
 
 # Start/end date and time
-# startdate: '20180601.0000'
-# enddate: '20190601.0000'
+startdate: '20180601.0000'
+enddate: '20190601.0000'
 # startdate: '20100601.0000'
 # enddate: '20110601.0000'
-startdate: '20150601.0000'
-enddate: '20160601.0000'
+# startdate: '20150601.0000'
+# enddate: '20160601.0000'
 
 # Specify tracking input data date/time string format
 # This is the preprocessed file that contains Tb & rainrate
