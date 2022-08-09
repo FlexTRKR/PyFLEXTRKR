@@ -14,7 +14,7 @@ contact: Zhe.Feng@pnnl.gov
 
 import argparse
 import numpy as np
-import glob, os, sys
+import os
 import xarray as xr
 import pandas as pd
 from scipy.ndimage import binary_erosion
@@ -560,7 +560,7 @@ if __name__ == "__main__":
     if out_dir is None:
         figdir = f'{pixeltracking_path}quicklooks_trackpaths/'
     else:
-        figdir = out_dir
+        figdir = f'{out_dir}/'
     os.makedirs(figdir, exist_ok=True)
 
     # Get track stats data
