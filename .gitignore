@@ -3,6 +3,7 @@
 */__pycache__/*
 dask-worker-space/*
 .idea
+.ipynb_checkpoints
 
 # Datafiles
 ###########

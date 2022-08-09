@@ -19,3 +19,5 @@ dependencies:
   - astropy
   - wrf-python
   - colorcet
+  - seaborn
+  - scikit-learn

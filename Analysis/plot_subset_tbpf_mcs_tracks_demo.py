@@ -14,7 +14,7 @@ contact: Zhe.Feng@pnnl.gov
 
 import argparse
 import numpy as np
-import glob, os, sys
+import os
 import xarray as xr
 import pandas as pd
 from scipy.ndimage import binary_erosion
@@ -233,7 +233,7 @@ def plot_map_2panels(pixel_dict, plot_info, map_info, track_dict):
     # vertical: left + right panel
     if panel_orientation == 'vertical':
         gs = gridspec.GridSpec(2,2, height_ratios=[1,0.02], width_ratios=[1,1])
-        gs.update(left=0.05, right=0.95, bottom=0.1, top=0.9, wspace=0.15, hspace=0.1)
+        gs.update(left=0.05, right=0.95, bottom=0.1, top=0.9, wspace=0.15, hspace=0.15)
         ax2 = plt.subplot(gs[0,1], projection=proj)        
         cax1 = plt.subplot(gs[1,0])
         cb_orientation = 'horizontal'
@@ -560,7 +560,7 @@ if __name__ == "__main__":
     if out_dir is None:
         figdir = f'{pixeltracking_path}quicklooks_trackpaths/'
     else:
-        figdir = out_dir
+        figdir = f'{out_dir}/'
     os.makedirs(figdir, exist_ok=True)
 
     # Get track stats data

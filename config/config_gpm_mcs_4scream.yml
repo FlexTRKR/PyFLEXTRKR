@@ -3,21 +3,20 @@
 # Tracking uses collocated Tb + Precipitation
 
 # Processing steps:
-# Maybe worth nesting these in sets of dictionaries
-run_idfeature : True
-run_tracksingle : True
-run_gettracks : True
-run_trackstats : True
-run_identifymcs : True
-run_matchpf : True
-run_robustmcs : True
+run_idfeature : False
+run_tracksingle : False
+run_gettracks : False
+run_trackstats : False
+run_identifymcs : False
+run_matchpf : False
+run_robustmcs : False
 run_mapfeature : True
-run_speed: True
+run_speed : True
 
 # Parallel processing set up
 # run_parallel: 1 (local cluster), 2 (Dask MPI)
 run_parallel: 1
-nprocesses : 32  # Number of processors to use if run_parallel=1
+nprocesses : 16  # Number of processors to use if run_parallel=1
 dask_tmp_dir: '/tmp'  # Dask temporary directory if run_parallel=1
 timeout: 360  # [seconds] Dask timeout limit
 
@@ -38,8 +37,9 @@ clouddata_path: '/global/cscratch1/sd/feng045/E3SM/SCREAMv0/gpm_1200x3600/tbpcp/
 root_path: '/global/cscratch1/sd/feng045/E3SM/SCREAMv0/gpm_1200x3600/pyflex/'
 # Working sub-directory names
 tracking_path_name: 'tracking'
-stats_path_name: 'stats'
-pixel_path_name: 'mcstracking'
+# stats_path_name: 'stats'
+stats_path_name: 'stats_ccs2h10k_pf0duration'
+pixel_path_name: 'mcstracking_ccs2h10k_pf0duration'
 
 # Land mask file
 landmask_filename: '/global/cscratch1/sd/feng045/E3SM/SCREAMv0/maps/IMERG_Tb_landseamask_1200x3600_0-360.nc'
@@ -99,15 +99,15 @@ trackstats_dense_netcdf: 1
 match_tbpf_dt_thresh: 60.0  # seconds
 
 # MCS Tb parameters
-mcs_tb_area_thresh: 40000  # [km^2] Tb area threshold
-mcs_tb_duration_thresh:  4  # [hour] Tb minimum length of a mcs
+mcs_tb_area_thresh: 10000  # [km^2] Tb area threshold
+mcs_tb_duration_thresh:  2  # [hour] Tb minimum length of a mcs
 mcs_tb_split_duration:  12  # [hour] Tb tracks smaller or equal to this length will be included with the MCS splits from
 mcs_tb_merge_duration:  12  # [hour] Tb tracks smaller or equal to this length will be included with the MCS merges into
 mcs_tb_gap: 1  # [unitless] Allowable temporal gap in Tb data for MCS area threshold
 # MCS PF parameters
 mcs_pf_majoraxis_thresh:  100  # [km] MCS PF major axis length lower limit
 max_pf_majoraxis_thresh:  1800  # [km] MCS PF major axis length upper limit
-mcs_pf_durationthresh:  4  # [hour] PF minimum length of mcs
+mcs_pf_durationthresh:  2  # [hour] PF minimum length of mcs
 mcs_pf_majoraxis_for_lifetime:  20  # [km] Minimum PF size to count PF lifetime
 mcs_pf_gap:  1  # [unitless] Allowable temporal gap in PF data for MCS characteristics
 landfrac_thresh: 90  # [%] Define threshold for PF land fraction
@@ -121,27 +121,30 @@ heavy_rainrate_thresh:  10.0  # Heavy rain rate threshold [mm/hr]
 
 # MCS PF parameter coefficients [intercept, slope]
 # These parameters are derived with pf_rr_thres:  2 mm/h
+coefs_pf_area:  [0, 0]           # 1% [changed slope to 0: independent of lifetime]
 # coefs_pf_area:  [1962.11, -14.598]      # 1%
-# coefs_pf_area:  [1962.11, 0]           # 1% [changed slope to 0: independent of lifetime]
 # coefs_pf_area:  [2119.02, 61.143]      # 3%
-coefs_pf_area:  [2874.05, 89.825]  # 5% [recommended]
+# coefs_pf_area:  [2874.05, 89.825]  # 5% [recommended]
 # coefs_pf_area:  [4160.82, 93.077]      # 7%
 # coefs_pf_area:  [4988.15, 138.172]      # 10%
 
+coefs_pf_rr:  [2.72873, 0.0]
 # coefs_pf_rr:  [2.72873, 0.0008317]      # 1%
 # coefs_pf_rr:  [2.81982, 0.0135463]      # 3%
-coefs_pf_rr:  [3.01657, 0.0144461]  # 5% [recommended]
+# coefs_pf_rr:  [3.01657, 0.0144461]  # 5% [recommended]
 # coefs_pf_rr:  [3.14895, 0.0150174]      # 7%
 # coefs_pf_rr:  [3.34859, 0.0172043]      # 10%
 
+coefs_pf_skew:  [0.036384, 0]
 # coefs_pf_skew:  [0.036384, 0.0022199]      # 1%
 # coefs_pf_skew:  [0.072809, 0.0104444]      # 3%
-coefs_pf_skew:  [0.194462, 0.0100072]  # 5% [recommended]
+# coefs_pf_skew:  [0.194462, 0.0100072]  # 5% [recommended]
 # coefs_pf_skew:  [0.256639, 0.0106527]      # 7%
 # coefs_pf_skew:  [0.376142, 0.0095545]      # 10%
 
+coefs_pf_heavyratio:  [0.750260, 0]
 # coefs_pf_heavyratio:  [0.750260, 0.4133300]  # 5%
-coefs_pf_heavyratio:  [3.419024, 0.4387090]  # 10% [recommended]
+# coefs_pf_heavyratio:  [3.419024, 0.4387090]  # 10% [recommended]
 # coefs_pf_heavyratio:  [4.753215, 0.4886454]  # 15%
 # coefs_pf_heavyratio:  [4.592209, 0.6107371]  # 20%
 # coefs_pf_heavyratio:  [8.389616, 0.5079337]  # 25%
