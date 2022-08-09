@@ -369,7 +369,7 @@ def idclouds_tbpf(
 
                 else:
                     logger.info(filename)
-                    logger.info("To much missing data")
+                    logger.info("Too much missing data")
             else:
                 logger.info(filename)
                 logger.info(
