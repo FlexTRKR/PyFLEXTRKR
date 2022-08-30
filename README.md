@@ -6,7 +6,7 @@ To use PyFLEXTRKR please use the attached environment.yml file and create a cond
 ```bash
 conda env create -f environment.yml --prefix /conda_env_dir/flextrkr
 ```
-Then when running pyflextrkr you can first activate its virtual environment with
+When running PyFLEXTRKR, first activate its virtual environment with
 ```bash
 conda activate flextrkr
 ```
@@ -14,7 +14,7 @@ Then the package can be installed (in editable/dev mode for now) with
 ```bash
 pip install -e .
 ```
-Then any changes to the source code will be reflected in the running version.  
+Any changes to the source code will be reflected in the running version.  
 
 Example to run the code:
 ```bash
