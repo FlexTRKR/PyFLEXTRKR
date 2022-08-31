@@ -17,10 +17,14 @@ All tracking parameters are set in a config file (*config.yml*). Each tracking s
 To run the code, type the following in the command line:
 
 Activate PyFLEXTRKR virtual environment (see README.md on how to create a virtual environment and install PyFLEXTRKR):
+```bash
 >conda activate flextrkr
+```
 
 Run PyFLEXTRKR:
+```bash
 >python run_mcs_tbpf.py config.yml
+```
 
 ## **2.2.	Key parameters in the config file**
 
@@ -83,28 +87,34 @@ Running the code in parallel mode significantly reduces the time it takes to fin
 Note that running the code in parallel shares the total system memory available among the number of processors. For large datasets, this may result in out-ot-memory error if the number of tracks is too large. In that case, reducing the number of processors usually helps. Not all steps in PyFLEXTRKR have parallel options, but all codes will run regardless of parallel options. See **Figure 3** for which steps support parallel option.
 
 Running [Dask distributed](http://distributed.dask.org/en/stable/) is an experimental feature and the capability is still being tested. Setting run_parallel=2 requires providing a Dask scheduler json file at run time like this:
+```bash
 >python run_mcs_tbpf.py config.yml scheduler.json
+```
 
 The scheduler file can be created by:
->srun -N 10 --ntasks-per-node=16 dask-worker <br>
---scheduler-file=$SCRATCH/scheduler.json <br>
---memory-limit='6GB' <br>
---worker-class distributed.Worker <br>
+```bash
+>srun -N 10 --ntasks-per-node=16 dask-worker 
+--scheduler-file=$SCRATCH/scheduler.json 
+--memory-limit='6GB' 
+--worker-class distributed.Worker 
 --local-directory=/tmp &
+```
 
 Or by using dask-mpi:
+```bash
 >srun -u dask-mpi \
---scheduler-file=$SCRATCH/scheduler.json <br>
---nthreads=1 <br>
---memory-limit='auto' <br>
---worker-class distributed.Worker <br>
+--scheduler-file=$SCRATCH/scheduler.json
+--nthreads=1 
+--memory-limit='auto' 
+--worker-class distributed.Worker 
 --local-directory=/tmp &
+```
 
 Refer to the slurm script (under [/slurm](https://github.com/FlexTRKR/PyFLEXTRKR/tree/main/slurm) directory) to see an example set up on the DOE NERSC system.
 
 ## **2.4.	Preparing input data**
 
-In theory, any input data is supported if a reader code is provided. Currently, PyFLEXTRKR supports: 1) tracking MCSs using Tb data, with optional collocated precipitation data to identify robust MCS (Feng et al., 2021), see run script [`run_mcs_tbpf.py`](https://github.com/FlexTRKR/PyFLEXTRKR/blob/main/runscripts/run_mcs_tbpf.py); 2) tracking convective cells using radar data (Feng et al., 2022), see run script [`run_cacti_csapr.py`](https://github.com/FlexTRKR/PyFLEXTRKR/blob/main/runscripts/run_cacti_csapr.py). 
+In theory, any input data is supported if a reader code is provided. Currently, PyFLEXTRKR supports: 1) tracking MCSs using Tb data, with optional collocated precipitation data to identify robust MCS ([`Feng et al. 2021`](https://doi.org/10.1029/2020JD034202)), see run script [`run_mcs_tbpf.py`](https://github.com/FlexTRKR/PyFLEXTRKR/blob/main/runscripts/run_mcs_tbpf.py); 2) tracking convective cells using radar data ([`Feng et al. 2022`](https://doi.org/10.1175/MWR-D-21-0237.1)), see run script [`run_cacti_csapr.py`](https://github.com/FlexTRKR/PyFLEXTRKR/blob/main/runscripts/run_cacti_csapr.py). 
 
 For using these two specific features, the input data must be in netCDF format, with required variables in this order *[time, y, x]*. PyFLEXTRKR only supports data on a 2D grid, irregular grid such as those in E3SM or MPAS must first be regridded to a regular grid before tracking. Additional variable names and coordinate names are specified in the config file.
 
@@ -189,7 +199,7 @@ For features at the same time, the feature identification file created in Step-1
 
 In parallel processing, each feature identification file is handled by a task, after the statistics are collected when all the tasks are completed, a single netCDF file containing the track statistics is written. By default, a sparse array format netCDF is written for 2D variables (those that change by [tracks, times], e.g., *base_time*, *area*, etc.) to reduce memory usage and output file size. Optional dense (square) array format can be written by setting trackstats_dense_netcdf=1 in the config file. A function is also provided in `ft_functions.py` `(convert_trackstats_sparse2dense)` to convert sparse track statistics file to dense format.
 
-**Output:** `stats_path_name/trackstats_ startdate_enddate.nc`
+**Output:** `stats_path_name/trackstats_startdate_enddate.nc`
 
 ## **Step 5. Map track numbers to native grid (parallel)**
 
