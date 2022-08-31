@@ -17,13 +17,15 @@ All tracking parameters are set in a config file (*config.yml*). Each tracking s
 To run the code, type the following in the command line:
 
 Activate PyFLEXTRKR virtual environment (see README.md on how to create a virtual environment and install PyFLEXTRKR):
+
 ```bash
->conda activate flextrkr
+conda activate flextrkr
 ```
 
 Run PyFLEXTRKR:
+
 ```bash
->python run_mcs_tbpf.py config.yml
+python run_mcs_tbpf.py config.yml
 ```
 
 ## **2.2.	Key parameters in the config file**
@@ -87,27 +89,30 @@ Running the code in parallel mode significantly reduces the time it takes to fin
 Note that running the code in parallel shares the total system memory available among the number of processors. For large datasets, this may result in out-ot-memory error if the number of tracks is too large. In that case, reducing the number of processors usually helps. Not all steps in PyFLEXTRKR have parallel options, but all codes will run regardless of parallel options. See **Figure 3** for which steps support parallel option.
 
 Running [Dask distributed](http://distributed.dask.org/en/stable/) is an experimental feature and the capability is still being tested. Setting run_parallel=2 requires providing a Dask scheduler json file at run time like this:
+
 ```bash
->python run_mcs_tbpf.py config.yml scheduler.json
+python run_mcs_tbpf.py config.yml scheduler.json
 ```
 
 The scheduler file can be created by:
+
 ```bash
->srun -N 10 --ntasks-per-node=16 dask-worker 
---scheduler-file=$SCRATCH/scheduler.json 
---memory-limit='6GB' 
---worker-class distributed.Worker 
---local-directory=/tmp &
+srun -N 10 --ntasks-per-node=16 dask-worker 
+    --scheduler-file=$SCRATCH/scheduler.json 
+    --memory-limit='6GB' 
+    --worker-class distributed.Worker 
+    --local-directory=/tmp &
 ```
 
 Or by using dask-mpi:
+
 ```bash
->srun -u dask-mpi \
---scheduler-file=$SCRATCH/scheduler.json
---nthreads=1 
---memory-limit='auto' 
---worker-class distributed.Worker 
---local-directory=/tmp &
+srun -u dask-mpi \
+    --scheduler-file=$SCRATCH/scheduler.json
+    --nthreads=1 
+    --memory-limit='auto' 
+    --worker-class distributed.Worker 
+    --local-directory=/tmp &
 ```
 
 Refer to the slurm script (under [/slurm](https://github.com/FlexTRKR/PyFLEXTRKR/tree/main/slurm) directory) to see an example set up on the DOE NERSC system.
@@ -129,7 +134,7 @@ For using these two specific features, the input data must be in netCDF format, 
 A pre-processing code for WRF data that produces Tb and precipitation for MCS tracking is provided:
 [`/pyflextrkr/preprocess_wrf_tb_rainrate.py`](https://github.com/FlexTRKR/PyFLEXTRKR/blob/main/pyflextrkr/preprocess_wrf_tb_rainrate.py)
 
-The code works with standard WRF output data that contains OLR, RAINNC and RAINC. It converts OLR to Tb using a simple empirical relationship and calculates rain rates between consecutive times. An example config file for WRF MCS tracking is provide in `/config/config_wrfda_goamazon_mcs.yml`. Other model simulation outputs can be preprocessed following the same procedure. 
+The code works with standard WRF output data that contains OLR, RAINNC and RAINC. It converts OLR to Tb using a simple empirical relationship and calculates rain rates between consecutive times. An example config file for WRF MCS tracking is provide in [`/config/config_wrfda_goamazon_mcs.yml`](https://github.com/FlexTRKR/PyFLEXTRKR/blob/main/config/config_wrfda_goamazon_mcs.yml). Other model simulation outputs can be preprocessed following the same procedure. 
 
 **Generic feature tracking input data requirement**
 
@@ -139,7 +144,7 @@ For tracking generic features, a reader code is needed to produce the variables 
 
 | Variable Name in config file | Example Generic Name | Explanation |
 | ---------------------------- | -------------------- | -------------- |
-| feature_varname              | feature_mask         | A 2D array with features of interest labeled by unique numbers. A simple example is labeling contiguous features with values larger than a threshold, using the SciPy function: scipy.ndimage.label. |
+| feature_varname              | feature_mask         | A 2D array with features of interest labeled by unique numbers. A simple example is labeling contiguous features with values larger than a threshold, using the SciPy function: [scipy.ndimage.label](https://docs.scipy.org/doc/scipy/reference/generated/scipy.ndimage.label.html). |
 | nfeature_varname             |	nfeatures            | Number of features in the file.
 | featuresize_varname          |	npix_feature         | A 1D array with the number of pixels (i.e., size) for each labeled feature |
 | |	time |	Epoch time of the file |
@@ -193,11 +198,11 @@ Extend the linked feature pairs between two consecutive time steps from Step 2 t
 
 ## **Step 4. Calculate track statistics (parallel)**
 
-Reorganize tracks to a format [tracks, times]. The “tracks” dimension contains the track number, and the “times” dimension is the relative time for each track. That is, times=0 is the initiation time for each track. Square dense arrays are created to store various statistics for the tracks, if a track duration is shorter than the “times” dimension, they are filled with missing values (hatched color showing “No Data” in **Figure 1d**). 
+Reorganize tracks to a format *[tracks, times]*. The *“tracks”* dimension contains the track number, and the *“times”* dimension is the relative time for each track. That is, *times=0* is the initiation time for each track. Square dense arrays are created to store various statistics for the tracks, if a track duration is shorter than the *“times”* dimension, they are filled with missing values (hatched color showing “No Data” in **Figure 1d**). 
 
-For features at the same time, the feature identification file created in Step-1 is processed to calculate various statistics and put back to the [tracks, times] format (denoted by color arrows and color blocks in **Figure 1d**), such as location, size, etc. 
+For features at the same time, the feature identification file created in Step-1 is processed to calculate various statistics and put back to the *[tracks, times]* format (denoted by color arrows and color blocks in **Figure 1d**), such as location, size, etc. 
 
-In parallel processing, each feature identification file is handled by a task, after the statistics are collected when all the tasks are completed, a single netCDF file containing the track statistics is written. By default, a sparse array format netCDF is written for 2D variables (those that change by [tracks, times], e.g., *base_time*, *area*, etc.) to reduce memory usage and output file size. Optional dense (square) array format can be written by setting trackstats_dense_netcdf=1 in the config file. A function is also provided in `ft_functions.py` `(convert_trackstats_sparse2dense)` to convert sparse track statistics file to dense format.
+In parallel processing, each feature identification file is handled by a task, after the statistics are collected when all the tasks are completed, a single netCDF file containing the track statistics is written. By default, a sparse array format netCDF is written for 2D variables (those that change by *[tracks, times]*, e.g., *base_time*, *area*, etc.) to reduce memory usage and output file size. Optional dense (square) array format can be written by setting `trackstats_dense_netcdf=1` in the config file. A function is also provided in [ft_functions.py](https://github.com/FlexTRKR/PyFLEXTRKR/blob/main/pyflextrkr/ftfunctions.py) `(convert_trackstats_sparse2dense)` to convert sparse track statistics file to dense format.
 
 **Output:** `stats_path_name/trackstats_startdate_enddate.nc`
 
@@ -216,14 +221,15 @@ In parallel processing, the track numbers belonging to the same time are first r
 
 # **4.	MCS tracking algorithm**
 
-Tracking of MCS consists of nine steps (**Figure 2**), with the first four steps the same as that shown in **Figure 1**. Tracking is performed primarily on infrared brightness temperature (Tb) defined cold cloud systems (CCSs, which include cold cloud cores and cold anvils), with additional information provided by precipitation data to improve the identification of robust MCSs.
+Tracking of MCS consists of a total of nine steps. The first four steps are the same as that shown in **Figure 1**, and the additional 5 steps are shown in **Figure 2**. Tracking is performed primarily on infrared brightness temperature (Tb) defined cold cloud systems (CCSs, which include cold cloud cores and cold anvils), with optional information provided by precipitation data to improve the identification of robust MCSs.
 
 Since the first 4 steps are the same as tracking any features, the additional steps 5-9 specifically designed for MCSs are explained below:
 
 ## **Step 5. Identify MCS using Tb area and duration (serial)**
 
 Identify MCSs based on the CCS area and duration criteria. A track with CCS area > x km2 and persists for longer than x hour, and contains a cold core is defined as an MCS (**Figure 2a**). Tracks that meet MCS criteria are kept in the track statistics file. Smaller CCSs that merge with or split from those MCSs are also kept. Other tracks that are not associated with MCSs are removed. The CCS thresholds are set in the config file.
-*If there is no precipitation data available with the Tb data, this step is considered the final step of the MCS identification. Some modification of the code in Step 8 (see below) is needed to map the tracked MCS number to the pixel-level files.
+
+If there is no precipitation data available with the Tb data, this step is considered the final step of the MCS identification. Some modification of the code in Step 8 (see below) is needed to map the tracked MCS number to the pixel-level files.
 
 **Output: **`stats_outpath/mcs_tracks_startdate_enddate.nc`
 
