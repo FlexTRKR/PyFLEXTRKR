@@ -113,6 +113,7 @@ def process_file(infilename, config):
     # print(source_nexrad, source_mltlvl)
     outdir = config['clouddata_path']
     outbasename = config['databasename']
+    t_dimname = config['t_dimname']
     x_dimname = config['x_dimname']
     y_dimname = config['y_dimname']
     z_dimname = config['z_dimname']
@@ -128,8 +129,8 @@ def process_file(infilename, config):
 
     # Read input data
     ds = xr.open_dataset(infilename)
-    Analysis_time = ds['time'].dt.strftime('%Y-%m-%dT%H:%M:%S').item()
-    Analysis_month = ds['time'].dt.strftime('%m').item()
+    # Reorder the dimensions using dimension names to [time, z, y, x]
+    ds = ds.transpose(t_dimname, z_dimname, y_dimname, x_dimname)
     # Get data dimensions
     nx = ds.sizes[x_dimname]
     ny = ds.sizes[y_dimname]
@@ -138,6 +139,9 @@ def process_file(infilename, config):
     lon2d = ds[x_varname].data
     lat2d = ds[y_varname].data
     height = ds[z_varname].data
+    # Get data time
+    Analysis_time = ds['time'].dt.strftime('%Y-%m-%dT%H:%M:%S').item()
+    Analysis_month = ds['time'].dt.strftime('%m').item()
     # Get data variables
     refl3d = ds[reflectivity_varname].squeeze()
     reflArray = refl3d.data

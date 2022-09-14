@@ -94,6 +94,7 @@ updraft_ReflGradiant_MaxHeight:  7.0
 updraft_CompRefl_Thresh:  40.0
 # Number of vertical level gaps allowed in calculating echo-top height
 echotop_gap: 1
+t_dimname: 'time'
 x_dimname: 'lon'
 y_dimname: 'lat'
 z_dimname: 'level'

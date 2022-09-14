@@ -1,34 +1,47 @@
 import numpy as np
 import math
 from scipy import ndimage
-# import matplotlib.pyplot as plt
 
-#-----------------------------------------------------------------------------------------
-def shift_fast(arr, xshift, yshift):
+# #-----------------------------------------------------------------------------------------
+# def shift_fast(arr, yshift, xshift):
+#     """
+#     Shifts a 2D array by a number of grids
 
-    fill_value=np.nan
-    result = np.empty_like(arr)
-    if xshift > 0:
-        result[:xshift,:] = fill_value
-        result[xshift:,:] = arr[:-xshift,:]
-    elif xshift < 0:
-        result[xshift:,:] = fill_value
-        result[:xshift,:] = arr[-xshift:,:]
-    else:
-        result[:,:] = arr
+#     Args:
+#         arr: np.array
+#             Input numpy array
+#         yshift: int
+#             Number of grids to shift in y-direction
+#         xshift: int
+#             Number of grids to shift in x-direction
 
-    result2 = np.empty_like(result)
-    if yshift > 0:
-        result2[:,:yshift] = fill_value
-        result2[:,yshift:] = result[:,:-yshift]
-    elif yshift < 0:
-        result2[:,yshift:] = fill_value
-        result2[:,:yshift] = result[:,-yshift:]
-    else:
-        result2[:,:] = result
+#     Returns:
+#         arr_out: np.array
+#             Shifted numpy array
+#     """
 
-    del result
-    return result2
+#     fill_value=np.nan
+#     arr_y = np.empty_like(arr)
+#     if yshift > 0:
+#         arr_y[:yshift,:] = fill_value
+#         arr_y[yshift:,:] = arr[:-yshift,:]
+#     elif yshift < 0:
+#         arr_y[yshift:,:] = fill_value
+#         arr_y[:yshift,:] = arr[-yshift:,:]
+#     else:
+#         arr_y[:,:] = arr
+
+#     arr_out = np.empty_like(arr_y)
+#     if xshift > 0:
+#         arr_out[:,:xshift] = fill_value
+#         arr_out[:,xshift:] = arr_y[:,:-xshift]
+#     elif xshift < 0:
+#         arr_out[:,xshift:] = fill_value
+#         arr_out[:,:xshift] = arr_y[:,-xshift:]
+#     else:
+#         arr_out[:,:] = arr_y
+
+#     return arr_out
 
 #-----------------------------------------------------------------------------------------
 def gridrad_sl3d(data, config, **kwargs):
@@ -200,33 +213,29 @@ def gridrad_sl3d(data, config, **kwargs):
         # According to this thread: 
         # https://forum.image.sc/t/skimage-filters-median-using-mask-for-floating-point-image-with-nans/57289
         # scipy.ndimage.median_filter v1.7 (same as skimage.filters.median v0.17) above ignores NaN
-        # Perhaps could give it a try to simplify the codes here
+        # But it produces incorrect values at the edge of the domain
+        # These values will be removed at the end of the code
         peak[k,:,:] = tmp - ndimage.median_filter(tmp, size=nsearch)
-        # import pdb; pdb.set_trace()
 
-        # #ndimage.median_filter cannot handle with the nan problem
-        # #peak[:,:,k]=tmp-ndimage.median_filter(tmp, size=nsearch)
-        # #produce array for median calculation
-        # formedianarr = np.empty((nx,ny,nsearch*nsearch),dtype=tmp.dtype)
-        # for shiftsize_x in range(-ngrids,ngrids+1):
-        #     for shiftsize_y in range(-ngrids,ngrids+1):
-        #         formedianarr[:,:,(shiftsize_x+ngrids)*nsearch+shiftsize_y+ngrids] = shift_fast(tmp, shiftsize_x, shiftsize_y)
+        # # Instead, uses a custom function to compute median values
+        # # produce array for median calculation
+        # formedianarr = np.empty((ny,nx,nsearch*nsearch), dtype=tmp.dtype)
+        # for shiftsize_y in range(-ngrids, ngrids+1):
+        #     for shiftsize_x in range(-ngrids, ngrids+1):
+        #         formedianarr[:, :, (shiftsize_y + ngrids) * nsearch + shiftsize_x + ngrids] = \
+        #             shift_fast(tmp, shiftsize_y, shiftsize_x)
 
         # # calculate median
         # medianarr = np.nanmedian(formedianarr, axis=2)
-        # medianarr[0:ngrids,:] = tmp[0:ngrids,:]
-        # medianarr[-ngrids:,:] = tmp[-ngrids:,:]
-        # medianarr[:,0:ngrids] = tmp[:,0:ngrids]
-        # medianarr[:,-ngrids:] = tmp[:,-ngrids:]
+        # medianarr[0:ngrids, :] = tmp[0:ngrids, :]
+        # medianarr[-ngrids:, :] = tmp[-ngrids:, :]
+        # medianarr[:, 0:ngrids] = tmp[:, 0:ngrids]
+        # medianarr[:, -ngrids:] = tmp[:, -ngrids:]
         # del formedianarr
 
-        # #print(tmp.dtype)
-        # #print(medianarr.dtype)
-        # #print(peak.dtype)
         # #Compute peakedness at each altitude level
-        # peak[:,:,k]=tmp-medianarr
-        # del tmp
-
+        # peak[k,:,:] = tmp - medianarr
+        # del tmp, medianarr
 
     # Compute peakedness threshold for reflectivity value
     tmp = 10.0 - ((data['Z_H']['values'][0:k9km+1,:,:])**2) / 337.5
@@ -317,5 +326,12 @@ def gridrad_sl3d(data, config, **kwargs):
     # Replace single grid point updraft classifications with median local neighborhood classification
     if (nremove > 0): sl3dclass[iremove] = (ndimage.median_filter(sl3dclass, size=3))[iremove]
 
-    # import pdb; pdb.set_trace()
+    # Set boundary grids to 0
+    # The classification results near the boundary are problematic because 
+    # median_filter and uniform_filter near the edge are not well defined
+    sl3dclass[0:ngrids, :] = 0
+    sl3dclass[-ngrids:, :] = 0
+    sl3dclass[:, 0:ngrids] = 0
+    sl3dclass[:, -ngrids:] = 0
+
     return sl3dclass
