@@ -1,7 +1,7 @@
 import numpy as np
-from scipy import ndimage
+from scipy import ndimage, signal
 
-def background_intensity(refl, mask_goodvalues, dx, dy, bkg_rad):
+def background_intensity(refl, mask_goodvalues, dx, dy, bkg_rad, convolve_method):
     """
     Calculate background reflectivity intensity
     ----------
@@ -13,6 +13,8 @@ def background_intensity(refl, mask_goodvalues, dx, dy, bkg_rad):
         Resolution on y-direction (meters)
     bkg_rad: float
         Background radius value to calculate reflectivity intensity (meters)
+    convolve_method: string, optional
+        Choose which convolution method to use in Scipy: 'ndimage' (default), or 'signal'
 
     Returns
     ----------
@@ -36,11 +38,19 @@ def background_intensity(refl, mask_goodvalues, dx, dy, bkg_rad):
     # Convert to linear unit
     linrefl = np.zeros(refl.shape)
     linrefl[mask_goodvalues==1] = 10. ** (refl[mask_goodvalues==1] / 10.)
-    # Apply convolution filter 
-    bkg_linrefl = ndimage.convolve(linrefl, mask, mode='constant', cval=0.0)
-    numPixs = ndimage.convolve(mask_goodvalues, mask, mode='constant', cval=0.0)
-    bkg_linrefl[mask_goodvalues==0]=0
-    numPixs[mask_goodvalues==0]=0
+    # Apply convolution filter
+    if convolve_method == 'ndimage':
+        # Use Scipy.ndimage
+        bkg_linrefl = ndimage.convolve(linrefl, mask, mode='constant', cval=0.0)
+        numPixs = ndimage.convolve(mask_goodvalues, mask, mode='constant', cval=0.0)
+    if convolve_method == 'signal':
+        # Use Scipy.signal convolve, by setting method='auto',
+        # it automatically chooses direct or Fourier method based on an estimate of which is faster (default)
+        bkg_linrefl = signal.convolve(linrefl, mask, mode='same', method='auto')
+        numPixs = signal.convolve(mask_goodvalues, mask, mode='same', method='auto')
+    # Mask bad values
+    bkg_linrefl[mask_goodvalues==0] = 0
+    numPixs[mask_goodvalues==0] = 0
     
     # Calculate average linear reflectivity and convert to log values
     refl_bkg = np.zeros(refl.shape)
@@ -430,6 +440,7 @@ def steiner_classification(
         dBZforMaxConvRadius,
         truncZconvThres,
         weakEchoThres,
+        convolve_method='ndimage',
 ):
     """
     We perform the Steiner et al. (1995) algorithm for echo classification
@@ -455,6 +466,18 @@ def steiner_classification(
         Resolution on y-direction (meters)
     bkg_rad: float
         Radius to calculate background reflectivity intensity (in meters).
+    minZdiff: float
+        Minimum reflectivity difference between grid point and background for the convecitve core cosine function
+    absConvThres: float
+    mindBZuse: float
+    maxConvRadius: float
+    dBZforMaxConvRadius: float
+    truncZconvThres: float
+        Reflectivity threshold to define convective core (Ze > truncZconvThres automatically convective)
+    weakEchoThres: float
+        Reflectivity threshold to define weak echo (Ze < weakEchoThres is weak echo)
+    convolve_method: string, optional
+        Choose which convolution method to use in Scipy: 'ndimage' (default), or 'signal'
 
     Returns:
     ========
@@ -472,7 +495,7 @@ def steiner_classification(
     ny, nx = refl.shape
     
     # Calculate background reflectivity
-    refl_bkg = background_intensity(refl, mask_goodvalues, dx, dy, bkg_rad)
+    refl_bkg = background_intensity(refl, mask_goodvalues, dx, dy, bkg_rad, convolve_method=convolve_method)
 
     # If refl below truncZconvThres, use peakedness criteria
     peak = peakedness(refl_bkg, mask_goodvalues, minZdiff, absConvThres)
@@ -514,6 +537,7 @@ def mod_steiner_classification(
         min_corearea=1,
         remove_smallcores=True,
         return_diag=False,
+        convolve_method='ndimage',
 ):
     """
     Modified Steiner et al. (1995) algorithm for echo classification using the reflectivity field
@@ -554,6 +578,8 @@ def mod_steiner_classification(
         A flag to remove convective cores smaller than min_corearea (default True)
     return_diag: bool, optional
         A flag to return more fields for diagnostic purpose (default False)
+    convolve_method: string, optional
+        Choose which convolution method to use in Scipy: 'ndimage' (default), or 'signal'
 
     Returns:
     ===========
@@ -564,9 +590,8 @@ def mod_steiner_classification(
     score_dilate: ndarray <int>
         Dilated convetive core, same size as refl
     """
-
     # Calculate background reflectivity
-    refl_bkg = background_intensity(refl, mask_goodvalues, dx, dy, bkg_rad)
+    refl_bkg = background_intensity(refl, mask_goodvalues, dx, dy, bkg_rad, convolve_method=convolve_method)
 
     # If refl below truncZconvThres, use peakedness criteria
     peak = peakedness(refl_bkg, mask_goodvalues, minZdiff, absConvThres)

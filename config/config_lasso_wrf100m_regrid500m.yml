@@ -86,6 +86,8 @@ conv_rad_increment: 0.5
 conv_rad_start: 1.0
 # Background reflectivity step-function increment [dB]
 bkg_refl_increment: 5
+# Convolution method to calculate background reflectivity: 'ndimage' (default), 'signal' (FFT)
+convolve_method: 'ndimage'
 # Maximum convective radius dilation [km]
 maxConvRadius: 5
 # Define a set of radii for final step of convective cell expansion [km]
