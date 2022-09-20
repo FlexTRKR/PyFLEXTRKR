@@ -541,15 +541,17 @@ def get_composite_reflectivity_csapr_cacti(input_filename, config):
     sfc_dz_min = config['sfc_dz_min']
     sfc_dz_max = config['sfc_dz_max']
     radar_sensitivity = config['radar_sensitivity']
-    time_dimname = config.get("time", "time")
-    x_dimname = config.get("x_dimname", "x")
-    y_dimname = config.get("y_dimname", "y")
-    z_dimname = config.get("z_dimname", "z")
+    time_dimname = config.get('time', 'time')
+    x_dimname = config.get('x_dimname', 'x')
+    y_dimname = config.get('y_dimname', 'y')
+    z_dimname = config.get('z_dimname', 'z')
     x_varname = config['x_varname']
     y_varname = config['y_varname']
     z_varname = config['z_varname']
+    lon_varname = config['lon_varname']
+    lat_varname = config['lat_varname']
     reflectivity_varname = config['reflectivity_varname']
-    fillval = config["fillval"]
+    fillval = config['fillval']
     terrain_file = config.get('terrain_file', None)
 
     # Read radar file
@@ -557,7 +559,7 @@ def get_composite_reflectivity_csapr_cacti(input_filename, config):
     # Create time_coords
     time_coords = ds[time_dimname]
     # time_coords = ds.time[0].expand_dims('time',axis=0)
-    out_ftime = time_coords.dt.strftime("%Y%m%d.%H%M%S").item()
+    out_ftime = time_coords.dt.strftime('%Y%m%d.%H%M%S').item()
     # Get data coordinates and dimensions
     height = ds[z_dimname].squeeze().data
     nx = ds.sizes[x_dimname]
@@ -565,13 +567,16 @@ def get_composite_reflectivity_csapr_cacti(input_filename, config):
     nz = ds.sizes[z_dimname]
     y_coords = ds[y_varname].data
     x_coords = ds[x_varname].data
-    radar_lon = ds.origin_longitude
-    radar_lat = ds.origin_latitude
-    grid_lon = ds.point_longitude.isel(z=0)
-    grid_lat = ds.point_latitude.isel(z=0)
+    # Below are somewhat specific to the radar dataset
+    radar_lon = ds['origin_longitude']
+    radar_lat = ds['origin_latitude']
+    radar_alt = ds['alt']
+    grid_lon = ds[lon_varname].isel(z=0)
+    grid_lat = ds[lat_varname].isel(z=0)
+    import pdb; pdb.set_trace()
 
     # Change radar height coordinate from AGL to MSL
-    z_agl = ds[z_dimname] + 1141
+    z_agl = ds[z_dimname] + radar_alt
     ds[z_dimname] = z_agl
     # Read terrain file
     dster = xr.open_dataset(terrain_file)
