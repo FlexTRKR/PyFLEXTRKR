@@ -18,7 +18,7 @@ run_mapfeature: True
 # Parallel processing set up
 # run_parallel: 1 (local cluster), 2 (Dask MPI)
 run_parallel: 1
-nprocesses: 12  # Number of processors to use if run_parallel=1
+nprocesses: 24  # Number of processors to use if run_parallel=1
 dask_tmp_dir: '/tmp'  # Dask temporary directory if run_parallel=1
 timeout: 360  # [seconds] Dask timeout limit
 
@@ -36,9 +36,9 @@ time_format: 'yyyymodd??_?hhmmss'
 databasename: 'corlasso_sub_cloudOnHamsl.M1.m1.ENSMEMBER_'
 
 # Input files directory
-clouddata_path: '/gpfs/wolf/cli120/proj-shared/zfeng/cacti/les/STARTDATE/ENSMEMBER/d3/run/'
+clouddata_path: '/gpfs/wolf/atm131/proj-shared/zfeng/cacti/les/STARTDATE/ENSMEMBER/d3/run/'
 # Working directory for the tracking data
-root_path: '/gpfs/wolf/cli120/proj-shared/zfeng/cacti/les/STARTDATE/ENSMEMBER/d3/'
+root_path: '/gpfs/wolf/atm131/proj-shared/zfeng/cacti/les/STARTDATE/ENSMEMBER/d3/'
 # Working sub-directory names
 tracking_path_name: 'tracking'
 stats_path_name: 'stats'
@@ -80,6 +80,8 @@ conv_rad_increment: 0.5
 conv_rad_start: 1.0
 # Background reflectivity step-function increment [dB]
 bkg_refl_increment: 5
+# Convolution method to calculate background reflectivity: 'ndimage' (default), 'signal' (FFT)
+convolve_method: 'ndimage'
 # Maximum convective radius dilation [km]
 maxConvRadius: 5
 # Define a set of radii for final step of convective cell expansion [km]

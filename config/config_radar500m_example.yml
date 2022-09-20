@@ -1,5 +1,5 @@
 ---
-# LASSO WRF simulated radar cell tracking configuration file
+# Example radar cell tracking configuration file (500m resolution)
 
 # Identify features to track
 run_idfeature: True
@@ -22,29 +22,28 @@ dask_tmp_dir: '/tmp'  # Dask temporary directory if run_parallel=1
 timeout: 360  # [seconds] Dask timeout limit
 
 # Start/end date and time
-startdate: '20181204.1200'
-enddate: '20181205.0000'
-# startdate: '20181204.2000'
-# enddate: '20181204.2100'
+startdate: '20190125.1200'
+enddate: '20190126.0000'
 
 # Specify tracking input data date/time string format
 # This is the preprocessed file that contains Tb & rainrate
 # E.g., databasename20181101.011503.nc --> yyyymodd.hhmmss
 # E.g., databasename2018-11-01_01:15:00 --> yyyy-mo-dd_hh:mm:ss
-time_format: 'yyyy-mo-dd_hh_mm_ss'
-databasename: wrfout_d02_
+time_format: 'yyyymodd.hhmmss'
+databasename: taranis_corcsapr2cfrppiqcM1.c1.
 
 # Input files directory
-# clouddata_path: '/gpfs/wolf/cli120/proj-shared/d3m088/cacti/production/meso/CASEDATE/ENSNAME/'
-clouddata_path: '/gpfs/wolf/cli120/proj-shared/d3m088/cacti/production/meso/20181204/gefs_en18/run_d12/'
+clouddata_path: '/gpfs/wolf/atm131/proj-shared/zfeng/pyflextrkr_paper/radar/input/'
 # Working directory for the tracking data
-root_path: '/gpfs/wolf/cli120/proj-shared/zfeng/cacti/meso/20181204/gefs_en18/run_d12/'
+root_path: '/gpfs/wolf/atm131/proj-shared/zfeng/pyflextrkr_paper/radar/'
 # Working sub-directory names
 tracking_path_name: 'tracking'
 stats_path_name: 'stats'
 pixel_path_name: 'celltracking'
 
-# Range mask variable (for compatibility purpose with radar data only)
+# Terrain file
+terrain_file: '/gpfs/wolf/atm131/proj-shared/zfeng/cacti/csapr/corgridded_terrain.c0/CSAPR2_Taranis_Gridded_500m.Terrain_RangeMask.nc'
+# Range mask variable to use in terrain file
 rangemask_varname: 'mask110'
 
 # Specify types of feature being tracked
@@ -56,7 +55,7 @@ advection_field_threshold: 10    # radar reflectivity threshold [dBZ]
 advection_med_filt_len: 9         # median filter length for advection speed time seires [number of points]
 advection_max_movement_mps: 60    # maximum advection speed allowed [m/s]
 advection_mask_method: 'greater'  # masking method
-advection_buffer: 6  # number of grid points around the edge of domain to buffer
+advection_buffer: 30  # number of grid points around the edge of domain to buffer
 advection_size_threshold: 10  # number of min valid points to calculate advection
 advection_tiles: [1,1]   # number of tiles to calculate advection [y,x]
 advection_filename: 'advection_'
@@ -71,26 +70,28 @@ minZdiff: 10
 # Any grid point reflectivity > truncZconvThres [dBZ] is automatically a convective core
 truncZconvThres: 55
 # These two reflectivity values sets up the step function background Ze values
-# They control the dilation of grids surrounding the convective cores to be included as "convective region" zhixiao 25
+# They control the dilation of grids surrounding the convective cores to be included as "convective region"
 mindBZuse: 25
 dBZforMaxConvRadius: 60
 # Convective radius step-function increment [km]
 conv_rad_increment: 0.5
 # Convective radius step-function start value [km]
-conv_rad_start: 4.5
+conv_rad_start: 1.0
 # Background reflectivity step-function increment [dB]
 bkg_refl_increment: 5
+# Convolution method to calculate background reflectivity: 'ndimage' (default), 'signal' (FFT)
+convolve_method: 'ndimage'
 # Maximum convective radius dilation [km]
 maxConvRadius: 5
 # Define a set of radii for final step of convective cell expansion [km]
 # This is for the purpose of making the convective region larger for tracking convective cells
-radii_expand: [1,2,3,4,5,6,7]
+radii_expand: [1,2,3,4,5]
 # Weak echo threshold [dBZ]
 weakEchoThres: 15
 # Background radius to calculate background reflectivity intensity [km]
-bkgrndRadius: 11.25
+bkgrndRadius: 11
 # Minimum area threshold to be a convective core [km^2]
-min_corearea: 6.25
+min_corearea: 4
 # Number of vertical level gaps allowed in calculating echo-top height
 echotop_gap: 4
 # Minimum height above surface elevation to filter the data
@@ -101,25 +102,26 @@ sfc_dz_max: 3000
 # Set equivalent radar sensitivity [dBZ]
 radar_sensitivity: 0.0
 # Flag to output additional Steiner variables for diagnostic purpose
-return_diag: False
+return_diag: True
 # Radar file data dimensions and reflectivity variable name
-dx: 2500  # meter
-dy: 2500  # meter
-x_dimname: "west_east"
-y_dimname: "south_north"
-z_dimname: "bottom_top"
-x_varname: "XLONG"
-y_varname: "XLAT"
-reflectivity_varname: 'REFL_10CM'
-# Input data source: 'radar', 'wrf'
-input_source: 'wrf'
+dx: 500  # meter
+dy: 500  # meter
+x_dimname: 'x'
+y_dimname: 'y'
+z_dimname: 'z'
+time_dimname: 'time'
+x_varname: 'x'
+y_varname: 'y'
+z_varname: 'z'
+lon_varname: 'point_longitude'
+lat_varname: 'point_latitude'
+reflectivity_varname: 'taranis_attenuation_corrected_reflectivity'
+# Input data source: 'radar', 'wrf', 'wrf_regrid'
+input_source: 'csapr_cacti'
 
 # Specify data structure
-datatimeresolution: 0.25     # hour
-pixel_radius: 2.5      # km
-#x_dimname: 'x'
-#y_dimname: 'y'
-time_dimname: 'time'
+datatimeresolution: 0.25     # hours
+pixel_radius: 0.5      # km
 ref_varname: 'dbz_comp'
 
 # Tracking parameters

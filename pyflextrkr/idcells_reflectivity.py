@@ -1,4 +1,4 @@
-import os, sys
+import sys
 import numpy as np
 import xarray as xr
 import logging
@@ -52,6 +52,7 @@ def idcells_reflectivity(
     fillval = config['fillval']
     input_source = config['input_source']
     geolimits = config.get('geolimits', None)
+    convolve_method = config.get('convolve_method', 'ndimage')
 
     # Set echo classification type values
     types_powell = {
@@ -85,7 +86,12 @@ def idcells_reflectivity(
     else:
         logger.error(f'Unknown input_source: {input_source}')
         sys.exit()
-    # Get variables
+
+    # Subset domain
+    if (geolimits is not None):
+        comp_dict = subset_domain(comp_dict, geolimits, dx, dy)
+
+    # Get variables from dictionary
     x_coords = comp_dict['x_coords']
     y_coords = comp_dict['y_coords']
     dbz3d_filt = comp_dict['dbz3d_filt']
@@ -99,36 +105,6 @@ def idcells_reflectivity(
     radar_lon = comp_dict['radar_lon']
     refl = comp_dict['refl']
     time_coords = comp_dict['time_coords']
-
-    # Subset domain
-    if geolimits is not None:
-        # Get lat/lon limits
-        buffer = 0
-        lonmin, lonmax = geolimits[0]-buffer, geolimits[1]+buffer
-        latmin, latmax = geolimits[2]-buffer, geolimits[3]+buffer
-        # Make a 2D mask
-        mask = ((grid_lon >= lonmin) & (grid_lon <= lonmax) & \
-                (grid_lat >= latmin) & (grid_lat <= latmax)).squeeze()
-        # Get y/x indices limits from the mask
-        y_idx, x_idx = np.where(mask == True)
-        xmin, xmax = np.min(x_idx), np.max(x_idx)
-        ymin, ymax = np.min(y_idx), np.max(y_idx)
-        # Subset variables
-        dbz3d_filt = dbz3d_filt[:, ymin:ymax+1, xmin:xmax+1]
-        dbz_comp = dbz_comp[ymin:ymax+1, xmin:xmax+1]
-        dbz_lowlevel = dbz_lowlevel[ymin:ymax+1, xmin:xmax+1]
-        mask_goodvalues = mask_goodvalues[ymin:ymax+1, xmin:xmax+1]
-        refl = refl[ymin:ymax+1, xmin:xmax+1]
-        grid_lon = grid_lon[ymin:ymax+1, xmin:xmax+1]
-        grid_lat = grid_lat[ymin:ymax+1, xmin:xmax+1]
-        # Vertical coordinate
-        if height.ndim > 1:
-            height = height[:, ymin:ymax+1, xmin:xmax+1]
-        # Horizontal coordinates
-        nx = xmax - xmin + 1
-        ny = ymax - ymin + 1
-        x_coords = np.arange(0, nx) * dx
-        y_coords = np.arange(0, ny) * dy
 
     # Convert radii_expand from a list to a numpy array
     radii_expand = np.array(radii_expand)
@@ -159,6 +135,7 @@ def idcells_reflectivity(
             min_corearea=min_corearea,
             remove_smallcores=True,
             return_diag=return_diag,
+            convolve_method=convolve_method,
         )
 
     if return_diag == True:
@@ -179,10 +156,11 @@ def idcells_reflectivity(
             min_corearea=min_corearea,
             remove_smallcores=True,
             return_diag=return_diag,
+            convolve_method=convolve_method,
         )
     
-    # Expand convective cores outward to a set of radii to
-    # make the convective region larger for better tracking convective cells
+    # Expand convective cell masks outward to a set of radii to
+    # increase the convective cell footprint for better tracking convective cells
     core_expand, core_sorted = expand_conv_core(
         core_dilate, radii_expand, dx, dy, min_corenpix=0)
 
@@ -332,6 +310,86 @@ def idcells_reflectivity(
 
     return cloudid_outfile
 
+def subset_domain(comp_dict, geolimits, dx, dy):
+    """
+    Subset variables within a domain.
+
+    Args:
+        comp_dict: dictionary
+            Dictionary containing input variables
+        geolimits: list
+            Subset domain lat/lon limits [lon_min, lat_min, lon_max, lat_max]
+        dx: float
+            Grid spacing in x-direction
+        dy: float
+            Grid spacing in y-direction
+
+    Returns:
+        comp_dict: dictionary
+            Dictionary containing output variables
+    """
+    # Get variables from dictionary
+    x_coords = comp_dict['x_coords']
+    y_coords = comp_dict['y_coords']
+    dbz3d_filt = comp_dict['dbz3d_filt']
+    dbz_comp = comp_dict['dbz_comp']
+    dbz_lowlevel = comp_dict['dbz_lowlevel']
+    grid_lat = comp_dict['grid_lat']
+    grid_lon = comp_dict['grid_lon']
+    height = comp_dict['height']
+    mask_goodvalues = comp_dict['mask_goodvalues']
+    radar_lat = comp_dict['radar_lat']
+    radar_lon = comp_dict['radar_lon']
+    refl = comp_dict['refl']
+    time_coords = comp_dict['time_coords']
+
+    # Subset domain
+    if geolimits is not None:
+        # Get lat/lon limits
+        buffer = 0
+        lonmin, lonmax = geolimits[0]-buffer, geolimits[2]+buffer
+        latmin, latmax = geolimits[1]-buffer, geolimits[3]+buffer
+        # Make a 2D mask
+        mask = ((grid_lon >= lonmin) & (grid_lon <= lonmax) & \
+                (grid_lat >= latmin) & (grid_lat <= latmax)).squeeze()
+        # Get y/x indices limits from the mask
+        y_idx, x_idx = np.where(mask == True)
+        xmin, xmax = np.min(x_idx), np.max(x_idx)
+        ymin, ymax = np.min(y_idx), np.max(y_idx)
+        # Subset variables
+        dbz3d_filt = dbz3d_filt[:, ymin:ymax+1, xmin:xmax+1]
+        dbz_comp = dbz_comp[ymin:ymax+1, xmin:xmax+1]
+        dbz_lowlevel = dbz_lowlevel[ymin:ymax+1, xmin:xmax+1]
+        mask_goodvalues = mask_goodvalues[ymin:ymax+1, xmin:xmax+1]
+        refl = refl[ymin:ymax+1, xmin:xmax+1]
+        grid_lon = grid_lon[ymin:ymax+1, xmin:xmax+1]
+        grid_lat = grid_lat[ymin:ymax+1, xmin:xmax+1]
+        # Vertical coordinate
+        if height.ndim > 1:
+            height = height[:, ymin:ymax+1, xmin:xmax+1]
+        # Horizontal coordinates
+        nx = xmax - xmin + 1
+        ny = ymax - ymin + 1
+        x_coords = np.arange(0, nx) * dx
+        y_coords = np.arange(0, ny) * dy
+
+    # Update variables in the dictionary
+    comp_dict['x_coords'] = x_coords
+    comp_dict['y_coords'] = y_coords
+    comp_dict['dbz3d_filt'] = dbz3d_filt
+    comp_dict['dbz_comp'] = dbz_comp
+    comp_dict['dbz_lowlevel'] = dbz_lowlevel
+    comp_dict['grid_lat'] = grid_lat
+    comp_dict['grid_lon'] = grid_lon
+    comp_dict['height'] = height
+    comp_dict['mask_goodvalues'] = mask_goodvalues
+    comp_dict['radar_lat'] = radar_lat
+    comp_dict['radar_lon'] = radar_lon
+    comp_dict['refl'] = refl
+    comp_dict['time_coords'] = time_coords
+
+    return comp_dict
+
 
 def get_composite_reflectivity_wrf(input_filename, config):
     """
@@ -362,7 +420,6 @@ def get_composite_reflectivity_wrf(input_filename, config):
 
     # Read WRF file
     ds = xr.open_dataset(input_filename)
-
     # Drop XTIME dimension, and rename 'Time' dimension to 'time'
     ds = ds.reset_coords(names='XTIME', drop=False).rename({'Time': time_dimname})
     # Rounds up to second, some model converted datetimes do not contain round second
@@ -381,8 +438,6 @@ def get_composite_reflectivity_wrf(input_filename, config):
     # Create a fake radar lat/lon
     radar_lon, radar_lat = 0, 0
     # Convert to DataArray
-    # x_coords = xr.DataArray(x_coords, dims=['x'], attrs={'long_name': 'x distance', 'units': 'm'})
-    # y_coords = xr.DataArray(y_coords, dims=['y'], attrs={'long_name': 'y distance', 'units': 'm'})
     radar_lon = xr.DataArray(radar_lon, attrs={'long_name': 'Radar longitude'})
     radar_lat = xr.DataArray(radar_lat, attrs={'long_name': 'Radar latitude'})
     grid_lon = ds[x_varname].squeeze()
@@ -541,38 +596,48 @@ def get_composite_reflectivity_csapr_cacti(input_filename, config):
     sfc_dz_min = config['sfc_dz_min']
     sfc_dz_max = config['sfc_dz_max']
     radar_sensitivity = config['radar_sensitivity']
-    time_dimname = config.get("time", "time")
-    x_dimname = config.get("x_dimname", "x")
-    y_dimname = config.get("y_dimname", "y")
-    z_dimname = config.get("z_dimname", "z")
+    time_dimname = config.get('time', 'time')
+    x_dimname = config.get('x_dimname', 'x')
+    y_dimname = config.get('y_dimname', 'y')
+    z_dimname = config.get('z_dimname', 'z')
     x_varname = config['x_varname']
     y_varname = config['y_varname']
     z_varname = config['z_varname']
+    lon_varname = config['lon_varname']
+    lat_varname = config['lat_varname']
     reflectivity_varname = config['reflectivity_varname']
-    fillval = config["fillval"]
+    fillval = config['fillval']
     terrain_file = config.get('terrain_file', None)
 
     # Read radar file
     ds = xr.open_dataset(input_filename)
+    # Reorder the dimensions using dimension names to [time, z, y, x]
+    ds = ds.transpose(time_dimname, z_dimname, y_dimname, x_dimname)
     # Create time_coords
     time_coords = ds[time_dimname]
     # time_coords = ds.time[0].expand_dims('time',axis=0)
-    out_ftime = time_coords.dt.strftime("%Y%m%d.%H%M%S").item()
+    # out_ftime = time_coords.dt.strftime('%Y%m%d.%H%M%S').item()
     # Get data coordinates and dimensions
     height = ds[z_dimname].squeeze().data
-    nx = ds.sizes[x_dimname]
-    ny = ds.sizes[y_dimname]
-    nz = ds.sizes[z_dimname]
+    # nx = ds.sizes[x_dimname]
+    # ny = ds.sizes[y_dimname]
+    # nz = ds.sizes[z_dimname]
     y_coords = ds[y_varname].data
     x_coords = ds[x_varname].data
-    radar_lon = ds.origin_longitude
-    radar_lat = ds.origin_latitude
-    grid_lon = ds.point_longitude.isel(z=0)
-    grid_lat = ds.point_latitude.isel(z=0)
+    # Below are variables specific to the radar dataset
+    # The CACTI CSAPR gridded data are produced by PyART
+    # These coordinate variables are default outputs from PyART
+    radar_lon = ds['origin_longitude']
+    radar_lat = ds['origin_latitude']
+    radar_alt = ds['alt']
+    # Take the first vertical level from 3D lat/lon
+    grid_lon = ds[lon_varname].isel(z=0)
+    grid_lat = ds[lat_varname].isel(z=0)
 
     # Change radar height coordinate from AGL to MSL
-    z_agl = ds[z_dimname] + 1141
+    z_agl = ds[z_dimname] + radar_alt
     ds[z_dimname] = z_agl
+
     # Read terrain file
     dster = xr.open_dataset(terrain_file)
     # Change terrain file dimension name to be consistent with radar file
@@ -580,9 +645,11 @@ def get_composite_reflectivity_csapr_cacti(input_filename, config):
     # Assign coordinate from radar file to the terrain file so they have the same coordinates
     dster = dster.assign_coords({y_dimname: (ds[y_varname]), x_dimname: (ds[x_varname])})
     sfc_elev = dster['hgt']
+
     # Get radar variables
     dbz3d = ds[reflectivity_varname].squeeze()
     ncp = ds['normalized_coherent_power'].squeeze()
+
     # Some combination of masks may be better to apply here to filter out bad signals
     # including clutter, second trip, low signal side lobes
     # but when this program was written, that optimal combination was not yet determined

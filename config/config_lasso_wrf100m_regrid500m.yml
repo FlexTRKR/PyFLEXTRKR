@@ -42,9 +42,9 @@ raw_databasename: 'corlasso_sub_cloudOnHamsl.M1.m1.'
 databasename: 'reg_refl_'
 
 # Input files directory
-clouddata_path: '/gpfs/wolf/cli120/proj-shared/zfeng/cacti/les/20181204/gefs18/run/merged/'
+clouddata_path: '/gpfs/wolf/atm131/proj-shared/zfeng/cacti/les/20181204/gefs18/run/merged/'
 # Working directory for the tracking data
-root_path: '/gpfs/wolf/cli120/proj-shared/zfeng/cacti/les/20181204/gefs18/'
+root_path: '/gpfs/wolf/atm131/proj-shared/zfeng/cacti/les/20181204/gefs18/'
 # Working sub-directory names
 tracking_path_name: 'tracking'
 stats_path_name: 'stats'
@@ -86,6 +86,8 @@ conv_rad_increment: 0.5
 conv_rad_start: 1.0
 # Background reflectivity step-function increment [dB]
 bkg_refl_increment: 5
+# Convolution method to calculate background reflectivity: 'ndimage' (default), 'signal' (FFT)
+convolve_method: 'ndimage'
 # Maximum convective radius dilation [km]
 maxConvRadius: 5
 # Define a set of radii for final step of convective cell expansion [km]
