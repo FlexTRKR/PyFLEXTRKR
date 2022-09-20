@@ -104,8 +104,8 @@ def idcells_reflectivity(
     if geolimits is not None:
         # Get lat/lon limits
         buffer = 0
-        lonmin, lonmax = geolimits[0]-buffer, geolimits[1]+buffer
-        latmin, latmax = geolimits[2]-buffer, geolimits[3]+buffer
+        lonmin, lonmax = geolimits[0]-buffer, geolimits[2]+buffer
+        latmin, latmax = geolimits[1]-buffer, geolimits[3]+buffer
         # Make a 2D mask
         mask = ((grid_lon >= lonmin) & (grid_lon <= lonmax) & \
                 (grid_lat >= latmin) & (grid_lat <= latmax)).squeeze()

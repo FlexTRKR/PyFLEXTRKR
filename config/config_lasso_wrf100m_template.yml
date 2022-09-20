@@ -44,11 +44,11 @@ rawdatabasename: 'corlasso_sub_cloudOnHamsl.M1.m1.'
 databasename: 'reg_refl_'
 
 # Raw input files directory
-rawdata_path: '/gpfs/wolf/cli120/proj-shared/zfeng/cacti/les/STARTDATE/ENSMEMBER/d4/run/'
+rawdata_path: '/gpfs/wolf/atm131/proj-shared/zfeng/cacti/les/STARTDATE/ENSMEMBER/d4/run/'
 # Regrid reflectivity files directory
-clouddata_path: '/gpfs/wolf/cli120/proj-shared/zfeng/cacti/les/STARTDATE/ENSMEMBER/d4/run/'
+clouddata_path: '/gpfs/wolf/atm131/proj-shared/zfeng/cacti/les/STARTDATE/ENSMEMBER/d4/run/'
 # Working directory for the tracking data
-root_path: '/gpfs/wolf/cli120/proj-shared/zfeng/cacti/les/STARTDATE/ENSMEMBER/d4/'
+root_path: '/gpfs/wolf/atm131/proj-shared/zfeng/cacti/les/STARTDATE/ENSMEMBER/d4/'
 # Working sub-directory names
 tracking_path_name: 'tracking'
 stats_path_name: 'stats'

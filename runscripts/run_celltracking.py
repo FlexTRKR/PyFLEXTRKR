@@ -27,7 +27,7 @@ if __name__ == '__main__':
         dask_tmp_dir = config.get("dask_tmp_dir", "./")
         dask.config.set({'temporary-directory': dask_tmp_dir})
         # Local cluster
-        cluster = LocalCluster(n_workers=config['nprocesses'], threads_per_worker=1, silence_logs=False)
+        cluster = LocalCluster(n_workers=config['nprocesses'], threads_per_worker=1)
         client = Client(cluster)
 
     # Step 1 - Identify features
