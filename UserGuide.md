@@ -119,15 +119,27 @@ Refer to the slurm script (under [/slurm](https://github.com/FlexTRKR/PyFLEXTRKR
 
 ## **2.4.	Preparing input data**
 
-In theory, any input data is supported if a reader code is provided. Currently, PyFLEXTRKR supports: 1) tracking MCSs using Tb data, with optional collocated precipitation data to identify robust MCS ([`Feng et al. 2021`](https://doi.org/10.1029/2020JD034202)), see run script [`run_mcs_tbpf.py`](https://github.com/FlexTRKR/PyFLEXTRKR/blob/main/runscripts/run_mcs_tbpf.py); 2) tracking convective cells using radar data ([`Feng et al. 2022`](https://doi.org/10.1175/MWR-D-21-0237.1)), see run script [`run_cacti_csapr.py`](https://github.com/FlexTRKR/PyFLEXTRKR/blob/main/runscripts/run_cacti_csapr.py). 
+In theory, any input data is supported if a reader code is provided. Currently, PyFLEXTRKR supports: 1) tracking MCSs using Tb data, with optional collocated precipitation data to identify robust MCS ([`Feng et al. 2021`](https://doi.org/10.1029/2020JD034202)), see run script [`run_mcs_tbpf.py`](https://github.com/FlexTRKR/PyFLEXTRKR/blob/main/runscripts/run_mcs_tbpf.py); 2) tracking convective cells using radar data ([`Feng et al. 2022`](https://doi.org/10.1175/MWR-D-21-0237.1)), see run script [`run_celltracking.py`](https://github.com/FlexTRKR/PyFLEXTRKR/blob/main/runscripts/run_celltracking.py). 
 
-For using these two specific features, the input data must be in netCDF format, with required variables in this order *[time, y, x]*. PyFLEXTRKR only supports data on a 2D grid, irregular grid such as those in E3SM or MPAS must first be regridded to a regular grid before tracking. Additional variable names and coordinate names are specified in the config file.
+For using these two specific features, the input data must be in netCDF format, with required variables in this order *[time, y, x]*. PyFLEXTRKR only supports tracking data on 2D arrays, irregular grid such as those in E3SM or MPAS must first be regridded to a regular grid before tracking. Additional variable names and coordinate names are specified in the config file.
 
 **Example input data for supported feature tracking:**
 
 * [GPM Tb+IMERG precipitation data](https://portal.nersc.gov/project/m1867/PyFLEXTRKR/sample_data/tb_pcp/gpm_tb_imerg.tar.gz)
 * [C-SAPR radar data](https://portal.nersc.gov/project/m1867/PyFLEXTRKR/sample_data/radar/taranis_corcsapr2.tar.gz)
 * [WRF post-processed Tb + precipitation data](https://portal.nersc.gov/project/m1867/PyFLEXTRKR/sample_data/tb_pcp/wrf_tbpcp.tar.gz)
+
+**Example run commands and config files**
+
+* MCS tracking with example WRF Tb + precipitation data:
+```bash
+python run_mcs_tbpf.py config_wrf_mcs_saag.yml
+```
+
+* Cell tracking with example C-SAPR radar data
+```bash
+python run_celltracking.py config_radar500m_example.yml
+```
 
 **Example pre-processing code for WRF**
 
