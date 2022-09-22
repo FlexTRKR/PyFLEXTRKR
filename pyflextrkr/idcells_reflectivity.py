@@ -74,7 +74,10 @@ def idcells_reflectivity(
     }
 
     # Get composite reflectivity
-    if input_source == 'csapr_cacti':
+    if input_source == 'radar':
+        comp_dict = get_composite_reflectivity_radar(
+            input_filename, config)
+    elif input_source == 'csapr_cacti':
         comp_dict = get_composite_reflectivity_csapr_cacti(
             input_filename, config)
     elif input_source == 'wrf':
@@ -166,7 +169,9 @@ def idcells_reflectivity(
 
     # Calculate echo-top heights for various reflectivity thresholds
     shape_2d = refl.shape
-    if (input_source == 'csapr_cacti') or (input_source == 'wrf_regrid'):
+    if (input_source == 'radar') or \
+        (input_source == 'csapr_cacti') or \
+        (input_source == 'wrf_regrid'):
         echotop10 = echotop_height(dbz3d_filt, height, z_dimname, shape_2d,
                                    dbz_thresh=10, gap=echotop_gap, min_thick=0)
         echotop20 = echotop_height(dbz3d_filt, height, z_dimname, shape_2d,
@@ -310,6 +315,7 @@ def idcells_reflectivity(
 
     return cloudid_outfile
 
+#--------------------------------------------------------------------------------
 def subset_domain(comp_dict, geolimits, dx, dy):
     """
     Subset variables within a domain.
@@ -347,8 +353,8 @@ def subset_domain(comp_dict, geolimits, dx, dy):
     if geolimits is not None:
         # Get lat/lon limits
         buffer = 0
-        lonmin, lonmax = geolimits[0]-buffer, geolimits[2]+buffer
-        latmin, latmax = geolimits[1]-buffer, geolimits[3]+buffer
+        latmin, latmax = geolimits[0]-buffer, geolimits[2]+buffer
+        lonmin, lonmax = geolimits[1]-buffer, geolimits[3]+buffer
         # Make a 2D mask
         mask = ((grid_lon >= lonmin) & (grid_lon <= lonmax) & \
                 (grid_lat >= latmin) & (grid_lat <= latmax)).squeeze()
@@ -390,7 +396,7 @@ def subset_domain(comp_dict, geolimits, dx, dy):
 
     return comp_dict
 
-
+#--------------------------------------------------------------------------------
 def get_composite_reflectivity_wrf(input_filename, config):
     """
     Get composite reflectivity from WRF.
@@ -479,7 +485,7 @@ def get_composite_reflectivity_wrf(input_filename, config):
     }
     return comp_dict
 
-
+#--------------------------------------------------------------------------------
 def get_composite_reflectivity_wrf_regrid(input_filename, config):
     """
     Get composite reflectivity from regridded WRF.
@@ -578,7 +584,127 @@ def get_composite_reflectivity_wrf_regrid(input_filename, config):
     }
     return comp_dict
 
+#--------------------------------------------------------------------------------
+def get_composite_reflectivity_radar(input_filename, config):
+    """
+    Get composite reflectivity from generic radar data.
 
+    Args:
+        input_filename: string
+            Input data filename
+        config: dictionary
+            Dictionary containing config parameters
+
+    Returns:
+        comp_dict: dictionary
+            Dictionary containing output variables
+    """
+    sfc_dz_min = config['sfc_dz_min']
+    sfc_dz_max = config['sfc_dz_max']
+    radar_sensitivity = config['radar_sensitivity']
+    time_dimname = config.get('time', 'time')
+    x_dimname = config.get('x_dimname', 'x')
+    y_dimname = config.get('y_dimname', 'y')
+    z_dimname = config.get('z_dimname', 'z')
+    nradar_dimname = config.get('nradar_dimname', None)
+    x_varname = config['x_varname']
+    y_varname = config['y_varname']
+    z_varname = config['z_varname']
+    lon_varname = config['lon_varname']
+    lat_varname = config['lat_varname']
+    reflectivity_varname = config['reflectivity_varname']
+    fillval = config['fillval']
+    terrain_file = config.get('terrain_file', None)
+    elev_varname = config.get('elev_varname', None)
+    rangemask_varname = config.get('rangemask_varname', None)
+
+    # Read radar file
+    ds = xr.open_dataset(input_filename)
+    # Squeeze nradar_dimname if it is 1
+    if nradar_dimname is not None:
+        if ds.dims[nradar_dimname] == 1:
+            ds = ds.squeeze(dim=nradar_dimname)  
+    # Reorder the dimensions using dimension names to [time, z, y, x]
+    ds = ds.transpose(time_dimname, z_dimname, y_dimname, x_dimname)
+    # Create time_coords
+    time_coords = ds[time_dimname]
+    # Get data coordinates and dimensions
+    height = ds[z_dimname].squeeze().data
+    y_coords = ds[y_varname].data
+    x_coords = ds[x_varname].data
+    # Below are variables produced by PyART gridding
+    radar_lon = ds['origin_longitude']
+    radar_lat = ds['origin_latitude']
+    radar_alt = ds['alt']
+    # Take the first vertical level from 3D lat/lon
+    grid_lon = ds[lon_varname].isel(z=0)
+    grid_lat = ds[lat_varname].isel(z=0)
+
+    # Change radar height coordinate from AGL to MSL
+    z_agl = ds[z_dimname] + radar_alt
+    ds[z_dimname] = z_agl
+
+    if terrain_file is not None:
+        # Read terrain file
+        dster = xr.open_dataset(terrain_file)
+        # Assign coordinate from radar file to the terrain file so they have the same coordinates
+        dster = dster.assign_coords({y_dimname: (ds[y_varname]), x_dimname: (ds[x_varname])})
+        sfc_elev = dster[elev_varname]
+        mask_goodvalues = dster[rangemask_varname].data.astype(int)
+    else:
+        # Create elevation array filled with 0
+        nx = ds.sizes[x_dimname]
+        ny = ds.sizes[y_dimname]
+        sfc_elev = np.zeros((ny, nx), dtype=float)
+        # Convert to DataArray, needed to use for masking 3D variables
+        sfc_elev = xr.DataArray(sfc_elev, coords={y_dimname:y_coords, x_dimname:x_coords}, dims=(y_dimname, x_dimname))
+        # Create a good value mask
+        mask_goodvalues = np.full((ny, nx), 1, dtype=int)
+
+    # Get radar variables
+    dbz3d = ds[reflectivity_varname].squeeze()
+    # ncp = ds['normalized_coherent_power'].squeeze()
+
+    # Some combination of masks may be better to apply here to filter out bad signals
+    # including clutter, second trip, low signal side lobes
+    # but when this program was written, that optimal combination was not yet determined
+    # and one needs to be careful not to remove good echoes
+    # This NCP filter works well as a substitute
+    # dbz3d = dbz3d.where(ncp >= 0.5)
+
+    # Filter reflectivity below certain elevation height
+    dbz3d_filt = dbz3d.where(ds[z_varname] > (sfc_elev + sfc_dz_min))
+    # Filter reflectivity outside the low-level
+    dbz3d_lowlevel = dbz3d.where((ds[z_varname] >= sfc_dz_min) & (ds[z_varname] <= sfc_dz_max))
+    # Get composite reflectivity
+    dbz_comp = dbz3d_filt.max(dim=z_dimname)
+    # Get low-level composite reflectivity
+    dbz_lowlevel = dbz3d_lowlevel.max(dim=z_dimname)
+    # Make a copy of the composite reflectivity (must do this or the dbz_comp will be altered)
+    refl = np.copy(dbz_comp.data)
+    # Replace all values less than min radar sensitivity, including NAN, to be equal to the sensitivity value
+    # The purpose is to include areas surrounding isolated cells below radar sensitivity in the background intensity calculation
+    # This differs from Steiner.
+    refl[(refl < radar_sensitivity) | np.isnan(refl)] = radar_sensitivity
+    # Put output variables in a dictionary
+    comp_dict = {
+        'x_coords': x_coords,
+        'y_coords': y_coords,
+        'dbz3d_filt': dbz3d_filt,
+        'dbz_comp': dbz_comp,
+        'dbz_lowlevel': dbz_lowlevel,
+        'grid_lat': grid_lat,
+        'grid_lon': grid_lon,
+        'height': height,
+        'mask_goodvalues': mask_goodvalues,
+        'radar_lat': radar_lat,
+        'radar_lon': radar_lon,
+        'refl': refl,
+        'time_coords':time_coords,
+    }
+    return comp_dict
+
+#--------------------------------------------------------------------------------
 def get_composite_reflectivity_csapr_cacti(input_filename, config):
     """
     Get composite reflectivity from CACTI CSAPR data.
@@ -608,6 +734,8 @@ def get_composite_reflectivity_csapr_cacti(input_filename, config):
     reflectivity_varname = config['reflectivity_varname']
     fillval = config['fillval']
     terrain_file = config.get('terrain_file', None)
+    elev_varname = config.get('elev_varname', None)
+    rangemask_varname = config.get('rangemask_varname', None)
 
     # Read radar file
     ds = xr.open_dataset(input_filename)
@@ -615,18 +743,11 @@ def get_composite_reflectivity_csapr_cacti(input_filename, config):
     ds = ds.transpose(time_dimname, z_dimname, y_dimname, x_dimname)
     # Create time_coords
     time_coords = ds[time_dimname]
-    # time_coords = ds.time[0].expand_dims('time',axis=0)
-    # out_ftime = time_coords.dt.strftime('%Y%m%d.%H%M%S').item()
     # Get data coordinates and dimensions
     height = ds[z_dimname].squeeze().data
-    # nx = ds.sizes[x_dimname]
-    # ny = ds.sizes[y_dimname]
-    # nz = ds.sizes[z_dimname]
     y_coords = ds[y_varname].data
     x_coords = ds[x_varname].data
-    # Below are variables specific to the radar dataset
-    # The CACTI CSAPR gridded data are produced by PyART
-    # These coordinate variables are default outputs from PyART
+    # Below are variables produced by PyART gridding
     radar_lon = ds['origin_longitude']
     radar_lat = ds['origin_latitude']
     radar_alt = ds['alt']
@@ -644,7 +765,14 @@ def get_composite_reflectivity_csapr_cacti(input_filename, config):
     # dster = dster.rename({'latdim':y_dimname, 'londim':x_dimname})
     # Assign coordinate from radar file to the terrain file so they have the same coordinates
     dster = dster.assign_coords({y_dimname: (ds[y_varname]), x_dimname: (ds[x_varname])})
-    sfc_elev = dster['hgt']
+    sfc_elev = dster[elev_varname]
+    # Create a good value mask
+    # Use 110 km radius range mask as good value mask, make sure to convert boolean array to integer type
+    # The mask_goodvalues is used in calculating background reflectivity using ndimage.convolve
+    # The background_intensity function needs to calculate the number of points within a circular radius,
+    # then divide the convolved (averarged) reflectivity with by the number of points to get the background reflectivity
+    # The mask_goodvalues must be 0 or 1 for that to work
+    mask_goodvalues = dster[rangemask_varname].data.astype(int)
 
     # Get radar variables
     dbz3d = ds[reflectivity_varname].squeeze()
@@ -670,13 +798,6 @@ def get_composite_reflectivity_csapr_cacti(input_filename, config):
     # The purpose is to include areas surrounding isolated cells below radar sensitivity in the background intensity calculation
     # This differs from Steiner.
     refl[(refl < radar_sensitivity) | np.isnan(refl)] = radar_sensitivity
-    # Create a good value mask
-    # Use 110 km radius range mask as good value mask, make sure to convert boolean array to integer type
-    # The mask_goodvalues is used in calculating background reflectivity using ndimage.convolve
-    # The background_intensity function needs to calculate the number of points within a circular radius,
-    # then divide the convolved (averarged) reflectivity with by the number of points to get the background reflectivity
-    # The mask_goodvalues must be 0 or 1 for that to work
-    mask_goodvalues = dster['mask110'].values.astype(int)
 
     # Put output variables in a dictionary
     comp_dict = {

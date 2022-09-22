@@ -1,8 +1,6 @@
 ---
-# LASSO WRF simulated radar cell tracking configuration file
+# Example radar cell tracking configuration file (500m resolution)
 
-# Regrid input reflectivity
-run_regridreflectivity: True
 # Identify features to track
 run_idfeature: True
 # Tracking steps to run
@@ -15,43 +13,40 @@ run_gettracks: True
 run_trackstats: True
 # Map tracking to pixel files
 run_mapfeature: True
-# Regrid pixel files to original grid
-run_regridmask: True
 
 # Parallel processing set up
 # run_parallel: 1 (local cluster), 2 (Dask MPI)
 run_parallel: 1
-nprocesses: 12  # Number of processors to use if run_parallel=1
+nprocesses: 24  # Number of processors to use if run_parallel=1
 dask_tmp_dir: '/tmp'  # Dask temporary directory if run_parallel=1
 timeout: 360  # [seconds] Dask timeout limit
 
 # Start/end date and time
-startdate: '20181204.1200'
-enddate: '20181205.0000'
-# Ensemble member name
-ensmember: 'gefs18'
-# Time frequency of input used for tracking (e.g., '5min', '15min')
-sample_time_freq: '5min'
+# startdate: '20140810.1000'
+# enddate: '20140811.0000'
+startdate: '20130101.0000'
+enddate: '20130102.0000'
 
 # Specify tracking input data date/time string format
 # This is the preprocessed file that contains Tb & rainrate
 # E.g., databasename20181101.011503.nc --> yyyymodd.hhmmss
 # E.g., databasename2018-11-01_01:15:00 --> yyyy-mo-dd_hh:mm:ss
-time_format: 'yyyymodd??_?hhmmss'
-raw_databasename: 'corlasso_sub_cloudOnHamsl.M1.m1.'
-databasename: 'reg_refl_'
+time_format: 'yyyymodd.hhmmss'
+databasename: ''
 
 # Input files directory
-clouddata_path: '/gpfs/wolf/atm131/proj-shared/zfeng/cacti/les/20181204/gefs18/run/merged/'
+clouddata_path: '/gpfs/wolf/atm131/scratch/zhe1feng1/KHGX/gridded/'
 # Working directory for the tracking data
-root_path: '/gpfs/wolf/atm131/proj-shared/zfeng/cacti/les/20181204/gefs18/'
+root_path: '/gpfs/wolf/atm131/scratch/zhe1feng1/KHGX/'
 # Working sub-directory names
 tracking_path_name: 'tracking'
 stats_path_name: 'stats'
 pixel_path_name: 'celltracking'
 
-# Range mask variable (for compatibility purpose with radar data only)
-rangemask_varname: 'mask110'
+# Terrain file
+# terrain_file: 
+# Range mask variable to use in terrain file
+# rangemask_varname: 'mask110'
 
 # Specify types of feature being tracked
 # This adds additional feature-specific statistics to be computed
@@ -113,29 +108,31 @@ return_diag: True
 # Radar file data dimensions and reflectivity variable name
 dx: 500  # meter
 dy: 500  # meter
-x_dimname: "west_east"
-y_dimname: "south_north"
-z_dimname: "HAMSL"
-x_varname: "XLONG"
-y_varname: "XLAT"
-z_varname: "HAMSL"
-reflectivity_varname: 'REFL_10CM'
-composite_reflectivity_varname: 'REFL_10CM_MAX'
+x_dimname: 'x'
+y_dimname: 'y'
+z_dimname: 'z'
+time_dimname: 'time'
+nradar_dimname: 'nradar'
+x_varname: 'x'
+y_varname: 'y'
+z_varname: 'z'
+lon_varname: 'point_longitude'
+lat_varname: 'point_latitude'
+reflectivity_varname: 'reflectivity'
 # Input data source: 'radar', 'wrf', 'wrf_regrid'
-input_source: 'wrf_regrid'
+input_source: 'radar'
 
 # Specify data structure
-datatimeresolution: 0.08333     # hour
+datatimeresolution: 0.0833     # hours
 pixel_radius: 0.5      # km
-time_dimname: 'Time'
 ref_varname: 'dbz_comp'
 
 # Tracking parameters
-timegap: 0.5           # hour
+timegap: 0.25           # hour
 othresh: 0.3           # overlap percentage threshold
 maxnclouds: 1000       # Maximum number of clouds in one snapshot
 nmaxlinks: 10          # Maximum number of clouds that any single cloud can be linked to
-duration_range: [2, 200]   # A vector [minlength,maxlength] to specify the duration range for the tracks
+duration_range: [2, 100]   # A vector [minlength,maxlength] to specify the duration range for the tracks
 # Flag to remove short-lived tracks [< min(duration_range)] that are not mergers/splits with other tracks
 # 0:keep all tracks; 1:remove short tracks
 remove_shorttracks: 1

@@ -43,6 +43,8 @@ pixel_path_name: 'celltracking'
 
 # Terrain file
 terrain_file: '/gpfs/wolf/atm131/proj-shared/zfeng/cacti/csapr/corgridded_terrain.c0/CSAPR2_Taranis_Gridded_500m.Terrain_RangeMask.nc'
+# Elevation variable to use in terrain file
+elev_varname: 'hgt'
 # Range mask variable to use in terrain file
 rangemask_varname: 'mask110'
 

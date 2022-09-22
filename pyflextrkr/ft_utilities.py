@@ -39,7 +39,7 @@ def load_config(config_file):
 
     # Optional parameters (default values if not in config file)
     trackstats_dense_netcdf = config.get("trackstats_dense_netcdf", 0)
-    geolimits = config.get("geolimits", [-90., -180., 90., 180.])
+    geolimits = config.get("geolimits", [-90., -360., 90., 360.])
 
     # Create output directories
     os.makedirs(tracking_outpath, exist_ok=True)
