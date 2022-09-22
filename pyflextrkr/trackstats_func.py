@@ -45,7 +45,7 @@ def calc_stats_singlefile(
     pixel_radius = config["pixel_radius"]
     feature_type = config.get("feature_type", None)
     terrain_file = config.get("terrain_file", None)
-    rangemask_varname = config.get("rangemask_varname", None)
+    rangemask_varname = config.get("rangemask_varname", 'None')
     feature_varname = config.get("feature_varname", "feature_number")
 
     # Only process file if that file contains a track

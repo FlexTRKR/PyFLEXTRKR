@@ -48,7 +48,7 @@ def parse_cmd_args():
     parser.add_argument("--radar_lat", help="radar latitude", type=float, required=True)
     parser.add_argument("--radar_lon", help="radar longitude", type=float, required=True)
     parser.add_argument("--extent", nargs='+', help="map extent (lonmin, lonmax, latmin, latmax)", type=float, default=None)
-    parser.add_argument("--figsize", nargs='+', help="figure size (width, height) in inches", type=float, default=None)
+    parser.add_argument("--figsize", nargs='+', help="figure size (width, height) in inches", type=float, default=[8,7])
     parser.add_argument("--output", help="ouput directory", default=None)
     args = parser.parse_args()
 
@@ -506,7 +506,7 @@ if __name__ == "__main__":
     radar_lat = args_dict.get('radar_lat')
     radar_lon = args_dict.get('radar_lon')
     map_extent = args_dict.get('extent')
-    figsize = args_dict.get('figsize', [10, 10])
+    figsize = args_dict.get('figsize')
     out_dir = args_dict.get('out_dir')
 
     # Customize lat/lon labels

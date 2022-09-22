@@ -47,7 +47,7 @@ def parse_cmd_args():
     parser.add_argument("-o", "--orientation", help="panel orientation ('vertical' or 'horizontal')", required=True)
     parser.add_argument("-p", "--parallel", help="flag to run in parallel (0:serial, 1:parallel)", type=int, default=0)
     parser.add_argument("--extent", nargs='+', help="map extent (lonmin, lonmax, latmin, latmax)", type=float, default=None)
-    parser.add_argument("--figsize", nargs='+', help="figure size (width, height) in inches", type=float, default=None)
+    parser.add_argument("--figsize", nargs='+', help="figure size (width, height) in inches", type=float, default=[10, 10])
     parser.add_argument("--output", help="ouput directory", default=None)
     args = parser.parse_args()
 
@@ -507,7 +507,7 @@ if __name__ == "__main__":
     config_file = args_dict.get('config_file')
     panel_orientation = args_dict.get('panel_orientation')
     map_extent = args_dict.get('extent')
-    figsize = args_dict.get('figsize', [10, 10])
+    figsize = args_dict.get('figsize')
     out_dir = args_dict.get('out_dir')
 
     # Customize lat/lon labels

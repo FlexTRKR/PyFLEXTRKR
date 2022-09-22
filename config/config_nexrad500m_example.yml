@@ -17,36 +17,36 @@ run_mapfeature: True
 # Parallel processing set up
 # run_parallel: 1 (local cluster), 2 (Dask MPI)
 run_parallel: 1
-nprocesses: 12  # Number of processors to use if run_parallel=1
+nprocesses: 24  # Number of processors to use if run_parallel=1
 dask_tmp_dir: '/tmp'  # Dask temporary directory if run_parallel=1
 timeout: 360  # [seconds] Dask timeout limit
 
 # Start/end date and time
-startdate: '20190125.1200'
-enddate: '20190126.0000'
+# startdate: '20140810.1000'
+# enddate: '20140811.0000'
+startdate: '20130101.0000'
+enddate: '20130102.0000'
 
 # Specify tracking input data date/time string format
 # This is the preprocessed file that contains Tb & rainrate
 # E.g., databasename20181101.011503.nc --> yyyymodd.hhmmss
 # E.g., databasename2018-11-01_01:15:00 --> yyyy-mo-dd_hh:mm:ss
 time_format: 'yyyymodd.hhmmss'
-databasename: taranis_corcsapr2cfrppiqcM1.c1.
+databasename: ''
 
 # Input files directory
-clouddata_path: '/gpfs/wolf/atm131/proj-shared/zfeng/pyflextrkr_paper/radar/input/'
+clouddata_path: '/gpfs/wolf/atm131/scratch/zhe1feng1/KHGX/gridded/'
 # Working directory for the tracking data
-root_path: '/gpfs/wolf/atm131/proj-shared/zfeng/pyflextrkr_paper/radar/'
+root_path: '/gpfs/wolf/atm131/scratch/zhe1feng1/KHGX/'
 # Working sub-directory names
 tracking_path_name: 'tracking'
 stats_path_name: 'stats'
 pixel_path_name: 'celltracking'
 
 # Terrain file
-terrain_file: '/gpfs/wolf/atm131/proj-shared/zfeng/cacti/csapr/corgridded_terrain.c0/CSAPR2_Taranis_Gridded_500m.Terrain_RangeMask.nc'
-# Elevation variable to use in terrain file
-elev_varname: 'hgt'
+# terrain_file: 
 # Range mask variable to use in terrain file
-rangemask_varname: 'mask110'
+# rangemask_varname: 'mask110'
 
 # Specify types of feature being tracked
 # This adds additional feature-specific statistics to be computed
@@ -112,26 +112,27 @@ x_dimname: 'x'
 y_dimname: 'y'
 z_dimname: 'z'
 time_dimname: 'time'
+nradar_dimname: 'nradar'
 x_varname: 'x'
 y_varname: 'y'
 z_varname: 'z'
 lon_varname: 'point_longitude'
 lat_varname: 'point_latitude'
-reflectivity_varname: 'taranis_attenuation_corrected_reflectivity'
+reflectivity_varname: 'reflectivity'
 # Input data source: 'radar', 'wrf', 'wrf_regrid'
-input_source: 'csapr_cacti'
+input_source: 'radar'
 
 # Specify data structure
-datatimeresolution: 0.25     # hours
+datatimeresolution: 0.0833     # hours
 pixel_radius: 0.5      # km
 ref_varname: 'dbz_comp'
 
 # Tracking parameters
-timegap: 0.5           # hour
+timegap: 0.25           # hour
 othresh: 0.3           # overlap percentage threshold
 maxnclouds: 1000       # Maximum number of clouds in one snapshot
 nmaxlinks: 10          # Maximum number of clouds that any single cloud can be linked to
-duration_range: [2, 60]   # A vector [minlength,maxlength] to specify the duration range for the tracks
+duration_range: [2, 100]   # A vector [minlength,maxlength] to specify the duration range for the tracks
 # Flag to remove short-lived tracks [< min(duration_range)] that are not mergers/splits with other tracks
 # 0:keep all tracks; 1:remove short tracks
 remove_shorttracks: 1
