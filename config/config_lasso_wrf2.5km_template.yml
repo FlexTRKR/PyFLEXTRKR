@@ -17,7 +17,7 @@ run_mapfeature: True
 # Parallel processing set up
 # run_parallel: 1 (local cluster), 2 (Dask MPI)
 run_parallel: 1
-nprocesses: 12  # Number of processors to use if run_parallel=1
+nprocesses: 24  # Number of processors to use if run_parallel=1
 dask_tmp_dir: '/tmp'  # Dask temporary directory if run_parallel=1
 timeout: 360  # [seconds] Dask timeout limit
 
@@ -28,7 +28,7 @@ enddate: 'ENDDATE.0000'
 ensmember: 'ENSMEMBER'
 
 # Specify tracking input data date/time string format
-# This is the preprocessed file that contains Tb & rainrate
+# This is only used to identify the files within the tracking period
 # E.g., databasename20181101.011503.nc --> yyyymodd.hhmmss
 # E.g., databasename2018-11-01_01:15:00 --> yyyy-mo-dd_hh:mm:ss
 time_format: 'yyyy-mo-dd_hh_mm_ss'
@@ -72,7 +72,7 @@ minZdiff: 10
 # Any grid point reflectivity > truncZconvThres [dBZ] is automatically a convective core
 truncZconvThres: 55
 # These two reflectivity values sets up the step function background Ze values
-# They control the dilation of grids surrounding the convective cores to be included as "convective region" zhixiao 25
+# They control the dilation of grids surrounding the convective cores to be included as "convective region"
 mindBZuse: 25
 dBZforMaxConvRadius: 60
 # Convective radius step-function increment [km]

@@ -29,11 +29,11 @@ enddate: 'ENDDATE.0000'
 ensmember: 'ENSMEMBER'
 
 # Specify tracking input data date/time string format
-# This is the preprocessed file that contains Tb & rainrate
+# This is only used to identify the files within the tracking period
 # E.g., databasename20181101.011503.nc --> yyyymodd.hhmmss
 # E.g., databasename2018-11-01_01:15:00 --> yyyy-mo-dd_hh:mm:ss
-time_format: 'yyyymodd??_?hhmmss'
-databasename: 'corlasso_sub_cloudOnHamsl.M1.m1.ENSMEMBER_'
+time_format: 'yyyymodd.hhmmss'
+databasename: 'corlasso.cldhamsl.STARTDATE00ENSMEMBERd3.base.M1.m1.'
 
 # Input files directory
 clouddata_path: '/gpfs/wolf/atm131/proj-shared/zfeng/cacti/les/STARTDATE/ENSMEMBER/d3/run/'

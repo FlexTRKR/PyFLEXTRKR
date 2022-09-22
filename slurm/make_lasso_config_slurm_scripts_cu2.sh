@@ -1,21 +1,24 @@
 #!/bin/bash
 # Create LASSO cell tracking config and slurm scripts
 
+submit_job="no"
+# Specify resolution: 'LES' or 'MESO'
+resolution="LES"
+
 config_dir="/ccsopen/home/zhe1feng1/program/PyFLEXTRKR/config/"
 slurm_dir="/ccsopen/home/zhe1feng1/program/PyFLEXTRKR/slurm/"
 # D4 (100m) 5min tracking
 config_template=${config_dir}"config_lasso_wrf100m_template.yml"
 # D4 (100m) 15min tracking
 # config_template=${config_dir}"config_lasso_wrf100m_15min_template.yml"
-# slurm_template=${slurm_dir}"slurm_lasso_wrf100m_template.sh"
-# D3 (500m) 15min tracking
+slurm_template=${slurm_dir}"slurm_lasso_wrf100m_template.sh"
+
+# D3 (500m) tracking
 # config_template=${config_dir}"config_lasso_wrf500m_template.yml"
-slurm_template=${slurm_dir}"slurm_lasso_wrf500m_template.sh"
+# slurm_template=${slurm_dir}"slurm_lasso_wrf500m_template.sh"
+
 # D2 (2.5km) tracking
-config_template=${config_dir}"config_lasso_wrf2.5km_template.yml"
-config_basename="config_lasso_"
-slurm_basename="slurm_lasso_"
-submit_job="no"
+# config_template=${config_dir}"config_lasso_wrf2.5km_template.yml"
 
 # start_dates=(
 #     "20181204"
@@ -23,7 +26,8 @@ submit_job="no"
 # ens_members=(
 #     "gefs_en18"
 # )
-# # Full list of runs
+
+# Full list of case days
 start_dates=(
     "20181129" "20181129" 
     "20181204" "20181204" 
@@ -35,32 +39,42 @@ start_dates=(
     "20190129" "20190129"
     "20190208" "20190208"
 )
-# # LES
-# ens_members=(
-#     "gefs00" "gefs03" 
-#     "gefs18" "gefs19" 
-#     "gefs01" 
-#     "eda09" 
-#     "gefs01" 
-#     "eda05"
-#     "eda07" "gefs11"
-#     "eda09" "gefs11"
-#     "eda03" "eda08"
-# )
-# MESO
-ens_members=(
-    "gefs_en00" "gefs_en03" 
-    "gefs_en18" "gefs_en19" 
-    "gefs_en01" 
-    "eda_en09" 
-    "gefs_en01" 
-    "eda_en05"
-    "eda_en07" "gefs_en11"
-    "eda_en09" "gefs_en11"
-    "eda_en03" "eda_en08"
-)
 
-# Loop over list
+if [ ${resolution} == "LES" ]
+then
+    # LES ensemble member names
+    ens_members=(
+        "gefs00" "gefs03" 
+        "gefs18" "gefs19" 
+        "gefs01" 
+        "eda09" 
+        "gefs01" 
+        "eda05"
+        "eda07" "gefs11"
+        "eda09" "gefs11"
+        "eda03" "eda08"
+    )
+fi
+if [ ${resolution} == "MESO" ]
+then
+    # MESO ensemble member names
+    ens_members=(
+        "gefs_en00" "gefs_en03" 
+        "gefs_en18" "gefs_en19" 
+        "gefs_en01" 
+        "eda_en09" 
+        "gefs_en01" 
+        "eda_en05"
+        "eda_en07" "gefs_en11"
+        "eda_en09" "gefs_en11"
+        "eda_en03" "eda_en08"
+    )
+fi
+
+config_basename="config_lasso_"
+slurm_basename="slurm_lasso_"
+
+# Loop over case list
 for ((i = 0; i < ${#start_dates[@]}; ++i)); do   
     sdate=${start_dates[$i]}
     # edate=${end_dates[$i]}

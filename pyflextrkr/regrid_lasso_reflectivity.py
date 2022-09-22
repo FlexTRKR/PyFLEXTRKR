@@ -26,8 +26,7 @@ def regrid_lasso_reflectivity(config):
     logger.info('Regridding LASSO reflectivity')
 
     in_dir = config['rawdata_path']
-    ensmember = config['ensmember']
-    in_basename = config['rawdatabasename'] + ensmember + '_'
+    in_basename = config['rawdatabasename']
     out_dir = config["clouddata_path"]
     out_basename = config['databasename']
     run_parallel = config['run_parallel']
@@ -41,15 +40,13 @@ def regrid_lasso_reflectivity(config):
     start_datetime = pd.to_datetime(start_basetime, unit='s')
     end_datetime = pd.to_datetime(end_basetime, unit='s')
     datetimes = pd.date_range(start=start_datetime, end=end_datetime, freq=sample_time_freq)
-    init_datetime = datetimes[0].strftime('%Y%m%d00')
-    forecast_datetimes = datetimes.strftime('%H%M%S')
-    file_datetimes = init_datetime + '_f' + forecast_datetimes
+    file_datetimes = datetimes.strftime('%Y%m%d.%H%M%S')
 
     #########################################################################################
     # Identify files to process
     in_files = []
     for tt in range(0, len(file_datetimes)):
-        in_files.extend(sorted(glob.glob(f'{in_dir}{in_basename}{file_datetimes[tt]}*d4.nc')))
+        in_files.extend(sorted(glob.glob(f'{in_dir}{in_basename}{file_datetimes[tt]}.nc')))
     logger.info(f'Number of files to process: {len(in_files)}')
 
     results = []

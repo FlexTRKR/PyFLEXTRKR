@@ -37,11 +37,11 @@ ensmember: 'ENSMEMBER'
 sample_time_freq: '15min'
 
 # Specify tracking input data date/time string format
-# This is the preprocessed file that contains Tb & rainrate
+# This is only used to identify the files within the tracking period
 # E.g., databasename20181101.011503.nc --> yyyymodd.hhmmss
 # E.g., databasename2018-11-01_01:15:00 --> yyyy-mo-dd_hh:mm:ss
-time_format: 'yyyymodd??_?hhmmss'
-rawdatabasename: 'corlasso_sub_cloudOnHamsl.M1.m1.'
+time_format: 'yyyymodd.hhmmss'
+rawdatabasename: 'corlasso.cldhamsl.STARTDATE00ENSMEMBERd4.base.M1.m1.'
 databasename: 'reg_refl_'
 
 # Raw input files directory
@@ -91,6 +91,8 @@ conv_rad_increment: 0.5
 conv_rad_start: 1.0
 # Background reflectivity step-function increment [dB]
 bkg_refl_increment: 5
+# Convolution method to calculate background reflectivity: 'ndimage' (default), 'signal' (FFT)
+convolve_method: 'ndimage'
 # Maximum convective radius dilation [km]
 maxConvRadius: 5
 # Define a set of radii for final step of convective cell expansion [km]
