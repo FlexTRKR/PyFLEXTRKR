@@ -3,7 +3,7 @@ import sys
 import logging
 import dask
 from dask.distributed import Client, LocalCluster
-from pyflextrkr.ft_utilities import load_config
+from pyflextrkr.ft_utilities import load_config, setup_logging
 from pyflextrkr.idfeature_driver import idfeature_driver
 from pyflextrkr.advection_tiles import calc_mean_advection
 from pyflextrkr.tracksingle_driver import tracksingle_driver
@@ -12,8 +12,9 @@ from pyflextrkr.trackstats_driver import trackstats_driver
 from pyflextrkr.mapfeature_driver import mapfeature_driver
 
 if __name__ == '__main__':
+
     # Set the logging message level
-    logging.basicConfig(format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO)
+    setup_logging()
     logger = logging.getLogger(__name__)
 
     # Load configuration file
@@ -29,6 +30,14 @@ if __name__ == '__main__':
         # Local cluster
         cluster = LocalCluster(n_workers=config['nprocesses'], threads_per_worker=1)
         client = Client(cluster)
+        client.run(setup_logging)
+    elif config['run_parallel'] == 2:
+        # Dask-MPI
+        scheduler_file = os.path.join(os.environ["SCRATCH"], "scheduler.json")
+        client = Client(scheduler_file=scheduler_file)
+        client.run(setup_logging)
+    else:
+        logger.info(f"Running in serial.")
 
     # Step 1 - Identify features
     if config['run_idfeature']:
