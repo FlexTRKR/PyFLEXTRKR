@@ -7,6 +7,18 @@ import xarray as xr
 import logging
 from scipy.sparse import csr_matrix
 
+def setup_logging():
+    """
+    Set the logging message level
+
+    Args:
+        None.
+
+    Returns:
+        None.
+    """
+    logging.basicConfig(format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO)
+
 def load_config(config_file):
     """
     Load configuration file, set paths and update the configuration dictionary.

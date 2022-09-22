@@ -3,7 +3,7 @@ import sys
 import logging
 import dask
 from dask.distributed import Client, LocalCluster
-from pyflextrkr.ft_utilities import load_config
+from pyflextrkr.ft_utilities import load_config, setup_logging
 from pyflextrkr.idfeature_driver import idfeature_driver
 from pyflextrkr.tracksingle_driver import tracksingle_driver
 from pyflextrkr.gettracks import gettracknumbers
@@ -17,7 +17,7 @@ from pyflextrkr.movement_speed import movement_speed
 if __name__ == '__main__':
 
     # Set the logging message level
-    logging.basicConfig(format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO)
+    setup_logging()
     logger = logging.getLogger(__name__)
 
     # Load configuration file
@@ -38,6 +38,7 @@ if __name__ == '__main__':
         # Local cluster
         cluster = LocalCluster(n_workers=config['nprocesses'], threads_per_worker=1, silence_logs=False)
         client = Client(cluster)
+        client.run(setup_logging)
     elif config['run_parallel'] == 2:
         # Dask-MPI
         # Get the scheduler filename from input argument
@@ -46,6 +47,7 @@ if __name__ == '__main__':
         timeout = config.get("timeout", 120)
         client = Client(scheduler_file=scheduler_file)
         client.wait_for_workers(n_workers=n_workers, timeout=timeout)
+        client.run(setup_logging)
     else:
         logger.info(f"Running in serial.")
 
