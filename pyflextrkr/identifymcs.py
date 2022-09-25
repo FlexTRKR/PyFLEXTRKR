@@ -196,9 +196,17 @@ def identifymcs_tb(config):
                     timematch = np.where(mergingbasetime == imcsbasetime[int(t)])[0]
                     nmergers = len(timematch)
                     if nmergers > 0:
-                        mcs_merge_cloudnumber[imcs, int(t), 0:nmergers] = mergingcloudnumber[timematch]
-                        mcs_merge_status[imcs, int(t), 0:nmergers] = mergingstatus[timematch]
-                        mcs_merge_ccsarea[imcs, int(t), 0:nmergers] = mergingccsarea[timematch]
+                        # Find the smaller value between the two
+                        # to make sure it fits into the array
+                        nmergers_sav = np.min([nmergers, nmaxmerge])
+                        mcs_merge_cloudnumber[imcs, int(t), 0:nmergers_sav] = mergingcloudnumber[timematch[0:nmergers_sav]]
+                        mcs_merge_status[imcs, int(t), 0:nmergers_sav] = mergingstatus[timematch[0:nmergers_sav]]
+                        mcs_merge_ccsarea[imcs, int(t), 0:nmergers_sav] = mergingccsarea[timematch[0:nmergers_sav]]
+                        if (nmergers > nmaxmerge):
+                            logger.warning(f'WARNING: nmergers ({nmergers}) > nmaxmerge ({nmaxmerge}), ' + \
+                                'only partial merge clouds are saved.')
+                            logger.warning(f'MCS track index: {imcs}')
+                            logger.warning(f'Increase nmaxmerge to avoid this WARNING.')
 
         ###################################################################################
         # Find tracks that split from the MCS
@@ -226,9 +234,17 @@ def identifymcs_tb(config):
                     timematch = np.where(splittingbasetime == imcsbasetime[int(t)])[0]
                     nspliters = len(timematch)
                     if nspliters > 0:
-                        mcs_split_cloudnumber[imcs, int(t), 0:nspliters] = splittingcloudnumber[timematch]
-                        mcs_split_status[imcs, int(t), 0:nspliters] = splittingstatus[timematch]
-                        mcs_split_ccsarea[imcs, int(t), 0:nspliters] = splittingccsarea[timematch]
+                        # Find the smaller value between the two
+                        # to make sure it fits into the array
+                        nspliters_sav = np.min([nspliters, nmaxmerge])
+                        mcs_split_cloudnumber[imcs, int(t), 0:nspliters_sav] = splittingcloudnumber[timematch[0:nspliters_sav]]
+                        mcs_split_status[imcs, int(t), 0:nspliters_sav] = splittingstatus[timematch[0:nspliters_sav]]
+                        mcs_split_ccsarea[imcs, int(t), 0:nspliters_sav] = splittingccsarea[timematch[0:nspliters_sav]]
+                        if (nspliters > nmaxmerge):
+                            logger.warning(f'WARNING: nspliters ({nspliters}) > nmaxmerge ({nmaxmerge}), ' + \
+                                'only partial split clouds are saved.')
+                            logger.warning(f'MCS track index: {imcs}')
+                            logger.warning(f'Increase nmaxmerge to avoid this WARNING.')
 
 
     ###########################################################################

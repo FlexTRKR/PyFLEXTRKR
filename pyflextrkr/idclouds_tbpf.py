@@ -7,6 +7,9 @@ from scipy.signal import medfilt2d
 from scipy.ndimage import label, filters
 from pyflextrkr import netcdf_io as net
 from pyflextrkr.ftfunctions import olr_to_tb
+from pyflextrkr.futyan3 import futyan3
+from pyflextrkr.label_and_grow_cold_clouds import label_and_grow_cold_clouds
+from pyflextrkr.ftfunctions import sort_renumber, sort_renumber2vars, link_pf_tb
 
 def idclouds_tbpf(
     filename,
@@ -82,7 +85,10 @@ def idclouds_tbpf(
     rawdata = xr.open_dataset(filename)
     # Get number of dimensions
     ndims = len(rawdata.dims)
-    if ndims == 3:
+    if ndims == 2:
+        # Reorder dimensions: [y, x]
+        rawdata = rawdata.transpose(y_dimname, x_dimname)
+    elif ndims == 3:
         # Reorder dimensions: [time, y, x]
         rawdata = rawdata.transpose(time_dimname, y_dimname, x_dimname)
     elif ndims == 4:
@@ -102,8 +108,8 @@ def idclouds_tbpf(
         logger.error("Tracking will now exit.")
         sys.exit()
 
-    lat = rawdata[ycoord_name].values
-    lon = rawdata[xcoord_name].values
+    lat = rawdata[ycoord_name].data
+    lon = rawdata[xcoord_name].data
     time_decode = rawdata[tcoord_name]
     # Convert OLR to Tb if olr2tb flag is set
     if olr2tb is True:
@@ -191,16 +197,13 @@ def idclouds_tbpf(
                 ######################################################
                 # proceed only if number of missing data does not exceed an accepable threshold
                 # determine number of missing data
-                # missingcount = len(np.array(np.where(np.isnan(out_ir)))[0, :])
                 missingcount = np.count_nonzero(np.isnan(out_ir))
                 ny, nx = np.shape(out_ir)
 
                 if np.divide(missingcount, (ny * nx)) < miss_thresh:
                     ######################################################
-                    # call idclouds subroutine
+                    # Call idclouds subroutine
                     if cloudidmethod == "futyan3":
-                        from pyflextrkr.futyan3 import futyan3
-
                         clouddata = futyan3(
                             out_ir,
                             pixel_radius,
@@ -209,10 +212,6 @@ def idclouds_tbpf(
                             warmanvilexpansion,
                         )
                     elif cloudidmethod == "label_grow":
-                        from pyflextrkr.label_and_grow_cold_clouds import (
-                            label_and_grow_cold_clouds,
-                        )
-
                         clouddata = label_and_grow_cold_clouds(
                             out_ir,
                             pixel_radius,
@@ -224,7 +223,7 @@ def idclouds_tbpf(
                         )
 
                     ######################################################
-                    # separate output into the separate variables
+                    # Separate output into the separate variables
                     final_nclouds = np.array([clouddata["final_nclouds"]])
                     final_ncorepix = clouddata["final_ncorepix"]
                     final_ncoldpix = clouddata["final_ncoldpix"]
@@ -238,11 +237,6 @@ def idclouds_tbpf(
 
                     # Option to linkpf
                     if linkpf == 1:
-                        from pyflextrkr.ftfunctions import (
-                            sort_renumber,
-                            sort_renumber2vars,
-                            link_pf_tb,
-                        )
 
                         # Proceed if there is at least 1 cloud
                         if final_nclouds > 0:
