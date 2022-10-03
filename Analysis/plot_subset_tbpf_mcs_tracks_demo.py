@@ -49,6 +49,7 @@ def parse_cmd_args():
     parser.add_argument("--extent", nargs='+', help="map extent (lonmin, lonmax, latmin, latmax)", type=float, default=None)
     parser.add_argument("--figsize", nargs='+', help="figure size (width, height) in inches", type=float, default=[10, 10])
     parser.add_argument("--output", help="ouput directory", default=None)
+    parser.add_argument("--figbasename", help="output figure base name", default="")
     args = parser.parse_args()
 
     # Put arguments in a dictionary
@@ -61,6 +62,7 @@ def parse_cmd_args():
         'extent': args.extent,
         'figsize': args.figsize,
         'out_dir': args.output,
+        'figbasename': args.figbasename,
     }
 
     return args_dict
@@ -221,7 +223,8 @@ def plot_map_2panels(pixel_dict, plot_info, map_info, track_dict):
     # norm_lifetime = mpl.colors.BoundaryNorm(lev_lifetime, ncolors=cmap_lifetime.N, clip=True)
 
     # Set up map projection
-    proj = ccrs.PlateCarree()
+    proj = ccrs.PlateCarree(central_longitude=180)
+    data_proj = ccrs.PlateCarree(central_longitude=0)
     resolution = '50m'
     land = cfeature.NaturalEarthFeature('physical', 'land', resolution)
     borders = cfeature.NaturalEarthFeature('cultural', 'admin_0_boundary_lines_land', resolution)
@@ -234,7 +237,7 @@ def plot_map_2panels(pixel_dict, plot_info, map_info, track_dict):
     if panel_orientation == 'vertical':
         gs = gridspec.GridSpec(2,2, height_ratios=[1,0.02], width_ratios=[1,1])
         gs.update(left=0.05, right=0.95, bottom=0.1, top=0.9, wspace=0.15, hspace=0.15)
-        ax2 = plt.subplot(gs[0,1], projection=proj)        
+        ax2 = plt.subplot(gs[0,1], projection=proj)
         cax1 = plt.subplot(gs[1,0])
         cb_orientation = 'horizontal'
     # horizontal: top + bottom panel
@@ -250,13 +253,13 @@ def plot_map_2panels(pixel_dict, plot_info, map_info, track_dict):
     #################################################################
     # Tb Panel
     ax1 = plt.subplot(gs[0,0], projection=proj)
-    ax1.set_extent(map_extent, crs=proj)
+    ax1.set_extent(map_extent, crs=data_proj)
     ax1.add_feature(land, facecolor='none', edgecolor='k', zorder=3)
     if draw_border == True:
         ax1.add_feature(borders, edgecolor='k', facecolor='none', linewidth=0.8, zorder=3)
     ax1.set_aspect('auto', adjustable=None)
     ax1.set_title(titles['tb_title'], loc='left')
-    gl = ax1.gridlines(crs=proj, draw_labels=True, linestyle='--', linewidth=0.5)
+    gl = ax1.gridlines(crs=data_proj, draw_labels=True, linestyle='--', linewidth=0.5)
     gl.right_labels = False
     gl.top_labels = False
     if (lonv is not None) & (latv is not None):
@@ -270,7 +273,7 @@ def plot_map_2panels(pixel_dict, plot_info, map_info, track_dict):
     cmap = plt.get_cmap(cmaps['tb_cmap'])
     norm = mpl.colors.BoundaryNorm(levels['tb_levels'], ncolors=cmap.N, clip=True)
     tb_masked = np.ma.masked_where((np.isnan(tb)), tb)
-    cf1 = ax1.pcolormesh(lon, lat, tb_masked, norm=norm, cmap=cmap, transform=proj, zorder=2)
+    cf1 = ax1.pcolormesh(lon, lat, tb_masked, norm=norm, cmap=cmap, transform=data_proj, zorder=2)
     # Overplot cloudtracknumber boundary
     tn = np.copy(tracknumber.data)
     # Replace all valid cloudtracknumber with a constant, and invalid cloudtracknumber with 0
@@ -279,19 +282,19 @@ def plot_map_2panels(pixel_dict, plot_info, map_info, track_dict):
     # Overlay boundary of cloudtracknumber on Tb
     Tn = np.ma.masked_where(tn_perim == 0, tn_perim)
     Tn[Tn > 0] = 10
-    tn1 = ax1.pcolormesh(lon, lat, Tn, cmap='cool_r', transform=proj, zorder=3)
+    tn1 = ax1.pcolormesh(lon, lat, Tn, cmap='cool_r', transform=data_proj, zorder=3)
     # Tb Colorbar
     cb1 = plt.colorbar(cf1, cax=cax1, label=cblabels['tb_label'], ticks=cbticks['tb_ticks'], extend='both', orientation=cb_orientation)
     
     #################################################################
     # Precipitation Panel
-    ax2.set_extent(map_extent, crs=proj)
+    ax2.set_extent(map_extent, crs=data_proj)
     ax2.add_feature(land, facecolor='none', edgecolor='k', zorder=3)
     if draw_border == True:
         ax2.add_feature(borders, edgecolor='k', facecolor='none', linewidth=0.8, zorder=3)
     ax2.set_aspect('auto', adjustable=None)
     ax2.set_title(titles['pcp_title'], loc='left')
-    gl = ax2.gridlines(crs=proj, draw_labels=True, linestyle='--', linewidth=0.5)
+    gl = ax2.gridlines(crs=data_proj, draw_labels=True, linestyle='--', linewidth=0.5)
     gl.right_labels = False
     gl.top_labels = False
     if (lonv is not None) & (latv is not None):
@@ -307,13 +310,13 @@ def plot_map_2panels(pixel_dict, plot_info, map_info, track_dict):
     norm = mpl.colors.BoundaryNorm(levels['tn_levels'], ncolors=cmap.N, clip=True)
     # norm = mpl.colors.BoundaryNorm(levels['tn_levels'], ncolors=cmap.N, clip=False)
     tracknumber_masked = np.ma.masked_invalid(tracknumber)
-    cm1 = ax2.pcolormesh(lon, lat, tracknumber_masked, norm=norm, cmap=cmap, transform=proj, zorder=2, alpha=0.7)
+    cm1 = ax2.pcolormesh(lon, lat, tracknumber_masked, norm=norm, cmap=cmap, transform=data_proj, zorder=2, alpha=0.7)
     
     # Precipitation
     cmap = plt.get_cmap(cmaps['pcp_cmap'])
     norm = mpl.colors.BoundaryNorm(levels['pcp_levels'], ncolors=cmap.N, clip=True)
     pcp_masked = np.ma.masked_where(((pcp < min(levels['pcp_levels']))), pcp)
-    cf2 = ax2.pcolormesh(lon, lat, pcp_masked, norm=norm, cmap=cmap, transform=proj, zorder=2)
+    cf2 = ax2.pcolormesh(lon, lat, pcp_masked, norm=norm, cmap=cmap, transform=data_proj, zorder=2)
     # Colorbar
     cax2 = plt.subplot(gs[1,1])
     cb2 = plt.colorbar(cf2, cax=cax2, label=cblabels['pcp_label'], ticks=cbticks['pcp_ticks'], extend='both', orientation=cb_orientation)
@@ -342,11 +345,11 @@ def plot_map_2panels(pixel_dict, plot_info, map_info, track_dict):
                 color_vals = np.repeat(ilifetime, idur_cut)
                 size_vals = np.repeat(size_c, idur_cut)
                 size_vals[0] = size_c * 2
-                cc1 = ax1.plot(track_ccs_lon.data[itrack,idx_cut], track_ccs_lat.data[itrack,idx_cut], lw=lw_c, ls='-', color=trackpath_color, transform=proj, zorder=3)
-                cc2 = ax2.plot(track_ccs_lon.data[itrack,idx_cut], track_ccs_lat.data[itrack,idx_cut], lw=lw_c, ls='-', color=trackpath_color, transform=proj, zorder=3)
+                cc1 = ax1.plot(track_ccs_lon.data[itrack,idx_cut], track_ccs_lat.data[itrack,idx_cut], lw=lw_c, ls='-', color=trackpath_color, transform=data_proj, zorder=3)
+                cc2 = ax2.plot(track_ccs_lon.data[itrack,idx_cut], track_ccs_lat.data[itrack,idx_cut], lw=lw_c, ls='-', color=trackpath_color, transform=data_proj, zorder=3)
                 # Initiation location
-                cl1 = ax1.scatter(track_ccs_lon.data[itrack,0], track_ccs_lat.data[itrack,0], s=size_c*2, transform=proj, zorder=4, **marker_style)
-                cl2 = ax2.scatter(track_ccs_lon.data[itrack,0], track_ccs_lat.data[itrack,0], s=size_c*2, transform=proj, zorder=4, **marker_style)
+                cl1 = ax1.scatter(track_ccs_lon.data[itrack,0], track_ccs_lat.data[itrack,0], s=size_c*2, transform=data_proj, zorder=4, **marker_style)
+                cl2 = ax2.scatter(track_ccs_lon.data[itrack,0], track_ccs_lat.data[itrack,0], s=size_c*2, transform=data_proj, zorder=4, **marker_style)
                 
         # Find the closest time from track times
         idt = np.abs((ibt - pixel_bt).astype('timedelta64[m]'))
@@ -365,8 +368,8 @@ def plot_map_2panels(pixel_dict, plot_info, map_info, track_dict):
                 ipfcircle = ax2.tissot(rad_km=_irad*2, lons=_ilon, lats=_ilat, n_samples=100, facecolor='None', edgecolor=pfdiam_color, lw=lw_r, zorder=3)
             # Overplot tracknumbers at current frame
             if (_iccslon > map_extent[0]) & (_iccslon < map_extent[1]) & (_iccslat > map_extent[2]) & (_iccslat < map_extent[3]):
-                ax1.text(_iccslon+0.05, _iccslat+0.05, f'{itracknum:.0f}', color='k', size=8, weight='bold', ha='left', va='center', transform=proj, zorder=3)
-                ax2.text(_iccslon+0.05, _iccslat+0.05, f'{itracknum:.0f}', color='k', size=8, weight='bold', ha='left', va='center', transform=proj, zorder=3)
+                ax1.text(_iccslon+0.05, _iccslat+0.05, f'{itracknum:.0f}', color='k', size=8, weight='bold', ha='left', va='center', transform=data_proj, zorder=3)
+                ax2.text(_iccslon+0.05, _iccslat+0.05, f'{itracknum:.0f}', color='k', size=8, weight='bold', ha='left', va='center', transform=data_proj, zorder=3)
     
     # Custom legend for track paths
     legend_elements1 = [
@@ -388,7 +391,7 @@ def plot_map_2panels(pixel_dict, plot_info, map_info, track_dict):
     return fig
 
 #-----------------------------------------------------------------------
-def work_for_time_loop(datafile, track_dict, map_info, figdir):
+def work_for_time_loop(datafile, track_dict, map_info, figdir, figbasename=''):
     """
     Work with a pixel-level file.
 
@@ -401,6 +404,8 @@ def work_for_time_loop(datafile, track_dict, map_info, figdir):
             Dictionary containing map boundary info.
         figdir: string
             Directory name for figures.
+        figbasename: string, optional, default=''
+            Base name for figures.
             
     Returns:
         1: success.            
@@ -475,7 +480,7 @@ def work_for_time_loop(datafile, track_dict, map_info, figdir):
         }
         fdatetime = pd.to_datetime(ds['time'].data.item()).strftime('%Y%m%d_%H%M')
         timestr = pd.to_datetime(ds['time'].data.item()).strftime('%Y-%m-%d %H:%M UTC')
-        figname = f'{figdir}{fdatetime}.png'
+        figname = f'{figdir}{figbasename}{fdatetime}.png'
         # print(timestr)
         plot_info = {
             'levels': levels, 
@@ -509,6 +514,7 @@ if __name__ == "__main__":
     map_extent = args_dict.get('extent')
     figsize = args_dict.get('figsize')
     out_dir = args_dict.get('out_dir')
+    figbasename = args_dict.get('figbasename')
 
     # Customize lat/lon labels
     lonv = None
@@ -571,7 +577,7 @@ if __name__ == "__main__":
         for ifile in range(len(datafiles)):
             print(datafiles[ifile])
             result = work_for_time_loop(
-                datafiles[ifile], track_dict, map_info, figdir,
+                datafiles[ifile], track_dict, map_info, figdir, figbasename,
             )
 
     # Parallel option
@@ -586,7 +592,7 @@ if __name__ == "__main__":
         for ifile in range(len(datafiles)):
             print(datafiles[ifile])
             result = dask.delayed(work_for_time_loop)(
-                datafiles[ifile], track_dict, map_info, figdir,
+                datafiles[ifile], track_dict, map_info, figdir, figbasename,
             )
             results.append(result)
 
