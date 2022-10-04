@@ -1,7 +1,10 @@
 """
 Map Tb+PF robust MCS tracking statistics back to native pixel-level grid and save monthly mean data to a netCDF file.
 """
+import datetime as dt
+from pathlib import Path
 import numpy as np
+import pandas as pd
 import xarray as xr
 from netCDF4 import Dataset
 import sys, glob, os
@@ -9,20 +12,33 @@ import time, datetime, calendar, pytz
 from pytz import utc
 from pyflextrkr.ft_utilities import load_config
 
-def make_base_time(filename):
-    """
-    Create basetime from a filename.
-    This is a much faster way, if basetime in the file is exactly the same as filename.
-    """
-    timestr = os.path.basename(filename)[-16:-3]
-    year = int(timestr[0:4])
-    month = int(timestr[4:6])
-    day = int(timestr[6:8])
-    hour = int(timestr[9:11])
-    minute = int(timestr[11:13])
-    second = 0
-    bt = calendar.timegm(datetime.datetime(year, month, day, hour, minute, second, tzinfo=utc).timetuple())
-    return bt, filename
+# The times have a small offset from the exact times -- e.g. 34500 ns off. Correct this.
+def round_times_to_nearest_second(dstracks, fields):
+    def remove_time_incaccuracy(t):
+        # To make this an array operation, you have to use the ns version of datetime64, like so:
+        return (np.round(t.astype(int) / 1e9) * 1e9).astype("datetime64[ns]")
+
+    for field in fields:
+        dstracks[field].load()
+        tmask = ~np.isnan(dstracks[field].values)
+        dstracks[field].values[tmask] = remove_time_incaccuracy(
+            dstracks[field].values[tmask]
+        )
+
+# def make_base_time(filename):
+#     """
+#     Create basetime from a filename.
+#     This is a much faster way, if basetime in the file is exactly the same as filename.
+#     """
+#     timestr = os.path.basename(filename)[-16:-3]
+#     year = int(timestr[0:4])
+#     month = int(timestr[4:6])
+#     day = int(timestr[6:8])
+#     hour = int(timestr[9:11])
+#     minute = int(timestr[11:13])
+#     second = 0
+#     bt = calendar.timegm(datetime.datetime(year, month, day, hour, minute, second, tzinfo=utc).timetuple())
+#     return bt, filename
 
 def datetime_to_timestamp(dtime):
     """
@@ -34,12 +50,42 @@ def datetime_to_timestamp(dtime):
         return int(dtime.tolist()/1e9)
 
 
+def map_datetime2pixelfile(pixel_dir, mcs_pixelfilebase):
+    """
+    Make a dictionary to map datetime to pixel file names.
+
+    Args:
+        pixel_dir: string
+            String for pixel-level file directory
+        mcs_pixelfilebase: string
+            String for pixel-level file basename
+
+    Return:
+        pixel_files: list
+            Pixel filenames.
+        date_path_map: dictionary
+            Dictionary key by datetimes and value by pixel filenames.
+    """
+    # Find all pixel files
+    pixel_files = sorted(Path(pixel_dir).glob(f'{mcs_pixelfilebase}*.nc'))
+    print(f'Found {len(pixel_files)} pixel files')
+    # Make a dictionary to access pixel files by datetime
+    date_path_map = {
+        # Get the filename without path and suffix [.stem], 
+        # remove mcs_pixelfilebase and keep the time strings only [len(mcs_pixelfilebase):],
+        # then convert it to Pandas datetime as key, and the file name as value
+        pd.to_datetime(p.stem[len(mcs_pixelfilebase):], format="%Y%m%d_%H%M"): p
+        for p in pixel_files
+    }    
+    return pixel_files, date_path_map
+
 if __name__ == "__main__":
 
     # Get inputs from command line
     config_file = sys.argv[1]
     year = int(sys.argv[2])
     month = int(sys.argv[3])
+    day = int(sys.argv[4])
 
     # Get inputs from configuration file
     config = load_config(config_file)
@@ -53,19 +99,22 @@ if __name__ == "__main__":
 
     yearstr = str(year)
     monthstr = str(month).zfill(2)
+    # daystr = str(day).zfill(2)
     # Track stats file
     stats_file = f'{stats_dir}{mcs_statsfilebase}{startdate}_{enddate}.nc'
     # Output file name
     output_filename = f'{output_monthly_dir}mcs_statsmap_{yearstr}{monthstr}.nc'
+    # output_filename = f'{output_monthly_dir}mcs_statsmap_{yearstr}{monthstr}{daystr}.nc'
     os.makedirs(output_monthly_dir, exist_ok=True)
 
     # Open stats file
     print(f'MCS stats file: {stats_file}')
     stats = xr.open_dataset(stats_file).load()
+    # Round base_time
+    round_times_to_nearest_second(stats, ['base_time', 'start_basetime', 'end_basetime'])
 
-    # Find all pixel files
-    pixel_files = sorted(glob.glob(f'{pixel_dir}{mcs_pixelfilebase}*.nc'))
-    print(f'Found {len(pixel_files)} pixel files')
+    # Make a dictionary to map datetime to pixel file names
+    pixel_files, date_path_map = map_datetime2pixelfile(pixel_dir, mcs_pixelfilebase)
 
     # Get map dimensions
     dspix = xr.open_dataset(pixel_files[0])
@@ -76,17 +125,19 @@ if __name__ == "__main__":
 
     # Set up a dictionary that keyed by base_time, valued by filename.
     # This is a way to move between time and pixel files
-    time_to_pixfilename = {key:value for key, value in map(make_base_time, pixel_files)}
+    # time_to_pixfilename = {key:value for key, value in map(make_base_time, pixel_files)}
 
     # Get initial time for each track
     inittime = stats['base_time'].isel(times=0)
     # Get the month
     initmonth = inittime.dt.month
+    initday = inittime.dt.day
     # Get max track length
     ntimes = stats.dims['times']
 
     # Select track indices with initial time within the current month
     trackidx = stats['tracks'].where((initmonth == month), drop=True)
+    # trackidx = stats.tracks.where((initmonth == month) & (initday == day), drop=True)
     nmcs = len(trackidx)
     print('Number of MCS: ', nmcs)
     # Convert track indices to integer
@@ -121,11 +172,9 @@ if __name__ == "__main__":
     # Convert datetime64 (when reading base_time from netCDF) to epoch time
     base_times = np.array([datetime_to_timestamp(t) for t in base_time.data.ravel()])
     base_times = np.reshape(base_times, base_time.shape)
-    # import pdb; pdb.set_trace()
 
     # Double check if datetime matches the filename keyed from the dictionary
     #base_times.data[5,1], time_to_pixfilename[base_times[5,1]]
-
 
     # Create variables for maps
     nt_uniq = len(np.unique(base_times))
@@ -167,11 +216,18 @@ if __name__ == "__main__":
         # Loop over each time
         for it in range(ntimes):
             imcsstatus = mcs_status.values[imcs,it]
+            ibasetime = base_time.data[imcs, it]
+
+            # Round off base_time to minute, then convert to Pandas Timestamp
+            iTimestamp = pd.to_datetime(ibasetime.astype('datetime64[m]'))
             
-            if np.isnan(base_times[imcs, it]):
+            if np.isnan(ibasetime):
                 continue
             else:
-                pixfname = time_to_pixfilename.get(base_times[imcs, it], None)
+                pixfname = date_path_map.get(iTimestamp, None)
+
+            # itrack_date = pd.Timestamp(ibasetime).to_pydatetime()
+            # import pdb; pdb.set_trace()
             # Check to make sure the basetime key exist in the dictionary before proceeding
             if (pixfname is not None):
     #             print(pixfname)
