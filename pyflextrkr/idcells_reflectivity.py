@@ -2,6 +2,7 @@ import sys
 import numpy as np
 import xarray as xr
 import logging
+from datetime import datetime
 from pyflextrkr.steiner_func import make_dilation_step_func
 from pyflextrkr.steiner_func import mod_steiner_classification
 from pyflextrkr.steiner_func import expand_conv_core
@@ -226,9 +227,16 @@ def idcells_reflectivity(
     nfeatures = np.nanmax(feature_mask)
 
     # Get date/time and make output filename
+    timestamp = time_coords[0]
+    # Convert to basetime (i.e., Epoch time)
+    # This is a more flexible way that can handle non-standard 360 day calendar
+    # file_basetime = np.array([(np.datetime64(timestamp).item() - datetime(1970,1,1,0,0,0)).total_seconds()])
     file_basetime = time_coords[0].values.tolist() / 1e9
-    file_datestring = time_coords.dt.strftime("%Y%m%d").item()
-    file_timestring = time_coords.dt.strftime("%H%M").item()
+    # Convert to strings
+    file_datestring = timestamp.dt.strftime("%Y%m%d").item()
+    file_timestring = timestamp.dt.strftime("%H%M").item()
+    # file_datestring = timestamp.strftime("%Y%m%d")
+    # file_timestring = timestamp.strftime("%H%M")
     cloudid_outfile = (
         config["tracking_outpath"] +
         config["cloudid_filebase"] +
@@ -606,7 +614,6 @@ def get_composite_reflectivity_radar(input_filename, config):
     x_dimname = config.get('x_dimname', 'x')
     y_dimname = config.get('y_dimname', 'y')
     z_dimname = config.get('z_dimname', 'z')
-    nradar_dimname = config.get('nradar_dimname', None)
     x_varname = config['x_varname']
     y_varname = config['y_varname']
     z_varname = config['z_varname']
@@ -620,13 +627,16 @@ def get_composite_reflectivity_radar(input_filename, config):
 
     # Read radar file
     ds = xr.open_dataset(input_filename)
-    # Squeeze nradar_dimname if it is 1
-    if nradar_dimname is not None:
-        if ds.dims[nradar_dimname] == 1:
-            ds = ds.squeeze(dim=nradar_dimname)  
-    # Reorder the dimensions using dimension names to [time, z, y, x]
-    ds = ds.transpose(time_dimname, z_dimname, y_dimname, x_dimname)
+    # Get dimension names from the file
+    dims_file = []
+    for key in ds.dims: dims_file.append(key)
+    # Find extra dimensions beyond [time, z, y, x]
+    dims_keep = [time_dimname, z_dimname, y_dimname, x_dimname]
+    dims_drop = list(set(dims_file) - set(dims_keep))
+    # Drop extra dimensions, reorder to [time, z, y, x]
+    ds = ds.drop_dims(dims_drop).transpose(time_dimname, z_dimname, y_dimname, x_dimname) 
     # Create time_coords
+    # time_coords = ds.indexes['time']
     time_coords = ds[time_dimname]
     # Get data coordinates and dimensions
     height = ds[z_dimname].squeeze().data

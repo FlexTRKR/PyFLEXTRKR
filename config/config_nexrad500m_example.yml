@@ -1,5 +1,5 @@
 ---
-# CACTI CSAPR-2 radar cell tracking configuration file
+# Example radar cell tracking configuration file (500m resolution)
 
 # Identify features to track
 run_idfeature: True
@@ -17,32 +17,34 @@ run_mapfeature: True
 # Parallel processing set up
 # run_parallel: 1 (local cluster), 2 (Dask MPI)
 run_parallel: 1
-nprocesses: 4  # Number of processors to use if run_parallel=1
+nprocesses: 12  # Number of processors to use if run_parallel=1
 dask_tmp_dir: '/tmp'  # Dask temporary directory if run_parallel=1
 timeout: 360  # [seconds] Dask timeout limit
 
 # Start/end date and time
-startdate: '20181205.1900'
-enddate: '20181205.2200'
+startdate: '20140807.1200'
+enddate: '20140807.1500'
 
 # Specify tracking input data date/time string format
 # This is the preprocessed file that contains Tb & rainrate
 # E.g., databasename20181101.011503.nc --> yyyymodd.hhmmss
 # E.g., databasename2018-11-01_01:15:00 --> yyyy-mo-dd_hh:mm:ss
 time_format: 'yyyymodd.hhmmss'
-databasename: taranis_corcsapr2cfrppiqcM1.c1.
+databasename: 'KHGX'
 
 # Input files directory
-clouddata_path: '/Users/feng045/data/iclass/cacti/csapr/taranis_corcsapr2cfrppiqcM1_gridded.c1/'
+clouddata_path: 'INPUT_DIR/'
 # Working directory for the tracking data
-root_path: '/Users/feng045/data/iclass/cacti/csapr/taranis_corcsapr2cfrppiqcM1_celltracking.c1/'
+root_path: 'TRACK_DIR/'
 # Working sub-directory names
 tracking_path_name: 'tracking'
 stats_path_name: 'stats'
 pixel_path_name: 'celltracking'
 
 # Terrain file
-terrain_file: '/Users/feng045/data/iclass/cacti/csapr/CSAPR2_Taranis_Gridded_500m.Terrain_RangeMask.nc'
+terrain_file: 'INPUT_DIR/Terrain_RangeMask.nc'
+# Elevation variable to use in terrain file
+elev_varname: 'hgt'
 # Range mask variable to use in terrain file
 rangemask_varname: 'mask110'
 
@@ -79,6 +81,8 @@ conv_rad_increment: 0.5
 conv_rad_start: 1.0
 # Background reflectivity step-function increment [dB]
 bkg_refl_increment: 5
+# Convolution method to calculate background reflectivity: 'ndimage' (default), 'signal' (FFT)
+convolve_method: 'ndimage'
 # Maximum convective radius dilation [km]
 maxConvRadius: 5
 # Define a set of radii for final step of convective cell expansion [km]
@@ -93,8 +97,8 @@ min_corearea: 4
 # Number of vertical level gaps allowed in calculating echo-top height
 echotop_gap: 4
 # Minimum height above surface elevation to filter the data
-sfc_dz_min: 500
-# Maximum height above surface to calculate low-level max reflectivity
+sfc_dz_min: 1000
+# Maximum height above surface [m] to calculate low-level max reflectivity
 # (similar to lowest-level composite reflectiivty)
 sfc_dz_max: 3000
 # Set equivalent radar sensitivity [dBZ]
@@ -104,30 +108,30 @@ return_diag: True
 # Radar file data dimensions and reflectivity variable name
 dx: 500  # meter
 dy: 500  # meter
-x_dimname: "x"
-y_dimname: "y"
-z_dimname: "z"
-x_varname: "x"
-y_varname: "y"
-z_varname: "z"
-reflectivity_varname: "taranis_attenuation_corrected_reflectivity"
-# Input data source: 'csapr_cacti', 'wrf'
-input_source: 'csapr_cacti'
+x_dimname: 'x'
+y_dimname: 'y'
+z_dimname: 'z'
+time_dimname: 'time'
+x_varname: 'x'
+y_varname: 'y'
+z_varname: 'z'
+lon_varname: 'point_longitude'
+lat_varname: 'point_latitude'
+reflectivity_varname: 'reflectivity'
+# Input data source: 'radar', 'wrf', 'wrf_regrid'
+input_source: 'radar'
 
 # Specify data structure
-datatimeresolution: 0.25     # hours
+datatimeresolution: 0.0833     # hours
 pixel_radius: 0.5      # km
-#x_dimname: 'x'
-#y_dimname: 'y'
-time_dimname: 'time'
 ref_varname: 'dbz_comp'
 
 # Tracking parameters
-timegap: 0.5           # hour
+timegap: 0.25           # hour
 othresh: 0.3           # overlap percentage threshold
 maxnclouds: 1000       # Maximum number of clouds in one snapshot
 nmaxlinks: 10          # Maximum number of clouds that any single cloud can be linked to
-duration_range: [2, 60]   # A vector [minlength,maxlength] to specify the duration range for the tracks
+duration_range: [2, 100]   # A vector [minlength,maxlength] to specify the duration range for the tracks
 # Flag to remove short-lived tracks [< min(duration_range)] that are not mergers/splits with other tracks
 # 0:keep all tracks; 1:remove short tracks
 remove_shorttracks: 1

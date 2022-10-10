@@ -35,7 +35,7 @@ databasename: 'wrfout_rainrate_tb_'  # Note: include all strings before the time
 wrfout_path: 'WRFOUT_DIR'
 wrfout_basename: 'wrfout_d01_'
 # Tracking input files directory
-clouddata_path: 'TB_RR_DIR/'
+clouddata_path: 'INPUT_DIR/'
 # Working directory for the tracking data
 root_path: 'TRACK_DIR/'
 # Working sub-directory names
@@ -44,7 +44,7 @@ stats_path_name: 'stats'
 pixel_path_name: 'mcstracking'
 
 # Land mask file
-landmask_filename: 'TB_RR_DIR/wrf_landmask.nc'
+landmask_filename: 'INPUT_DIR/wrf_landmask.nc'
 landmask_varname: 'LANDMASK'
 
 # Input dataset structure

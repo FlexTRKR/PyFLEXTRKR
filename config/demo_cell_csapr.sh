@@ -1,20 +1,18 @@
 #!/bin/bash
 ###############################################################################################
-# This script demonstrates running MCS tracking on WRF Tb + precipitation data
+# This script demonstrates running cell tracking on CACTI CSAPR2 data
 # To run this demo script:
 # 1. Modify the dir_demo to a directory on your computer to download the sample data
-# 2. Run the script: bash demo_mcs_wrf.sh
+# 2. Run the script: bash demo_cell_csapr.sh
 # 
 # By default the demo config uses 4 processors for parallel processing, 
 #    assuming most computers have at least 4 CPU cores. 
 #    If your computer has more than 4 processors, you may modify 'nprocesses' 
-#    in config_wrf4km_mcs_tbpf_example.yml to reduce the run time.
-#    Running with more processors will run the demo faster since the demo WRF data is 
-#    a real simulation with a decent size domain 949 x 1449 (lat x lon) and 48 time frames.
+#    in config_csapr500m_example.yml to reduce the run time.
 ###############################################################################################
 
 # Specify directory for the demo data
-dir_demo='/global/cscratch1/sd/feng045/pyflextrkr_test/mcs_tbpf/wrf/'
+dir_demo='/global/cscratch1/sd/feng045/pyflextrkr_test/cell_radar/csapr/'
 
 # Demo input data directory
 dir_input=${dir_demo}'input/'
@@ -22,24 +20,24 @@ dir_input=${dir_demo}'input/'
 # Create the demo directory
 mkdir -p ${dir_input}
 
-# Download sample WRF Tb+Precipitation data:
+# Download sample ARM CSAPR reflectivity data:
 echo 'Downloading demo input data ...'
-wget https://portal.nersc.gov/project/m1867/PyFLEXTRKR/sample_data/tb_pcp/wrf_tbpcp.tar.gz -O ${dir_input}/wrf_tbpcp.tar.gz
+wget https://portal.nersc.gov/project/m1867/PyFLEXTRKR/sample_data/radar/taranis_corcsapr2.tar.gz -O ${dir_input}/taranis_corcsapr2.tar.gz
 
 # Extract intput data
 echo 'Extracting demo input data ...'
-tar -xvzf ${dir_input}wrf_tbpcp.tar.gz -C ${dir_input}
+tar -xvzf ${dir_input}taranis_corcsapr2.tar.gz -C ${dir_input}
 # Remove downloaded tar file
-rm -fv ${dir_input}wrf_tbpcp.tar.gz
+rm -fv ${dir_input}taranis_corcsapr2.tar.gz
 
 # Example config file name
-config_demo='config_mcs_demo.yml'
+config_demo='config_cell_demo.yml'
 
 # Add '\' to each '/' in directory names
 dir_input1=$(echo ${dir_input} | sed 's_/_\\/_g')
 dir_demo1=$(echo ${dir_demo} | sed 's_/_\\/_g')
 # Replace input directory names in example config file
-sed 's/INPUT_DIR/'${dir_input1}'/g;s/TRACK_DIR/'${dir_demo1}'/g' config_wrf4km_mcs_tbpf_example.yml > ${config_demo}
+sed 's/INPUT_DIR/'${dir_input1}'/g;s/TRACK_DIR/'${dir_demo1}'/g' config_csapr500m_example.yml > ${config_demo}
 echo 'Created new config file: '${config_demo}
 
 # Activate PyFLEXTRKR conda environment
@@ -48,13 +46,13 @@ conda activate testflex
 
 # Run tracking
 echo 'Running PyFLEXTRKR ...'
-python ../runscripts/run_mcs_tbpf.py ${config_demo}
+python ../runscripts/run_celltracking.py ${config_demo}
 echo 'Tracking is done.'
 
 # Make quicklook plots
 echo 'Making quicklook plots ...'
 quicklook_dir=${dir_demo}'/quicklooks_trackpaths/'
-python ../Analysis/plot_subset_tbpf_mcs_tracks_demo.py -s '2014-03-19T00' -e '2014-03-21T00' -c ${config_demo} -o horizontal -p 1 --figsize 9 10 --output ${quicklook_dir}
+python ../Analysis/plot_subset_cell_tracks_demo.py -s '2019-01-25T12' -e '2019-01-26T00' -c ${config_demo} --radar_lat -32.12641 --radar_lon -64.72837 -p 1 --figsize 8 7 --output ${quicklook_dir}
 echo 'View quicklook plots here: '${quicklook_dir}
 
 # Make animation using ffmpeg

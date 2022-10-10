@@ -310,13 +310,6 @@ def calc_stats_singlefile(
                         out_cell_rangeflag[itrack] = np.min(
                             rangemask[dilatedcell_indices[0], dilatedcell_indices[1]])
 
-            # import pdb;
-            # import matplotlib.pyplot as plt
-            # if itrack == 3:
-            #     pdb.set_trace()
-                # tmp = file_corecold_cloudnumber * 0
-                # tmp[indices[0], indices[1]] = 1
-
             out_basetime[itrack] = file_basetime
             out_cloudnumber[itrack] = cloudnumber_map
             # out_cloudidfile[itrack][:] = fname

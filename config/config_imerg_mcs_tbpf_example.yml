@@ -17,13 +17,13 @@ run_speed: True
 # Parallel processing set up
 # run_parallel: 1 (local cluster), 2 (Dask MPI)
 run_parallel: 1
-nprocesses : 32  # Number of processors to use if run_parallel=1
+nprocesses : 4  # Number of processors to use if run_parallel=1
 dask_tmp_dir: '/tmp'  # Dask temporary directory if run_parallel=1
 timeout: 360  # [seconds] Dask timeout limit
 
 # Start/end date and time
-startdate: 'STARTDATE'
-enddate: 'ENDDATE'
+startdate: '20190125.0000'
+enddate: '20190127.0000'
 
 # Specify tracking input data date/time string format
 # This is the preprocessed file that contains Tb & rainrate
@@ -33,16 +33,16 @@ time_format: 'yyyymoddhh'
 databasename:  'merg_'  # Note: include all strings before the time (including "_", ".")
 
 # Input files directory
-clouddata_path: '/global/cscratch1/sd/feng045/waccem/IR_IMERG_Combined/'
+clouddata_path: 'INPUT_DIR/'
 # Working directory for the tracking data
-root_path: '/global/cscratch1/sd/feng045/waccem/mcs_global/global/'
+root_path: 'TRACK_DIR/'
 # Working sub-directory names
 tracking_path_name: 'tracking'
 stats_path_name: 'stats'
 pixel_path_name: 'mcstracking'
 
 # Land mask file (optional)
-landmask_filename: '/global/cscratch1/sd/feng045/waccem/mcs_global/map_data/IMERG_landmask_180W-180E_60S-60N.nc'
+landmask_filename: 'INPUT_DIR/IMERG_landmask_saag.nc'
 landmask_varname: 'landseamask'
 
 # Specific to GPM Tb+IMERG combined dataset
@@ -121,8 +121,7 @@ heavy_rainrate_thresh:  10.0  # Heavy rain rate threshold [mm/hr]
 
 # MCS PF parameter coefficients [intercept, slope]
 # These parameters are derived with pf_rr_thres:  2 mm/h
-# coefs_pf_area:  [1962.11, -14.598]      # 1%
-# coefs_pf_area:  [1962.11, 0]           # 1% [changed slope to 0: independent of lifetime]
+# coefs_pf_area:  [1962, 0]           # 1% [changed slope to 0: independent of lifetime]
 # coefs_pf_area:  [2119.02, 61.143]      # 3%
 coefs_pf_area:  [2874.05, 89.825]  # 5% [recommended]
 # coefs_pf_area:  [4160.82, 93.077]      # 7%

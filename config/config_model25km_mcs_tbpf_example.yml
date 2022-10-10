@@ -16,7 +16,7 @@ run_speed : True
 # Parallel processing set up
 # run_parallel: 1 (local cluster), 2 (Dask MPI)
 run_parallel: 1
-nprocesses : 4  # Number of processors to use if run_parallel=1
+nprocesses : 24  # Number of processors to use if run_parallel=1
 dask_tmp_dir: '/tmp'  # Dask temporary directory if run_parallel=1
 timeout: 360  # [seconds] Dask timeout limit
 
@@ -32,10 +32,8 @@ time_format: 'yyyy-mo-dd'
 databasename: 'earlyscience.FC5AV1C-H01A.ne120.sp1_64x1_1000m.cam.h1.'  # Note: include all strings before the time (including "_", ".")
 
 # Tracking input files directory
-# clouddata_path: 'TB_RR_DIR/'
-clouddata_path: 'TB_RR_DIR/'
+clouddata_path: 'INPUT_DIR/'
 # Working directory for the tracking data
-# root_path: 'TRACK_DIR/'
 root_path: 'TRACK_DIR/'
 # Working sub-directory names
 tracking_path_name: 'tracking'
