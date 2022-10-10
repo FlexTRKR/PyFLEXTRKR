@@ -16,56 +16,64 @@ run_speed : True
 # Parallel processing set up
 # run_parallel: 1 (local cluster), 2 (Dask MPI)
 run_parallel: 1
-nprocesses : 30  # Number of processors to use if run_parallel=1
+nprocesses : 24  # Number of processors to use if run_parallel=1
+dask_tmp_dir: '/tmp'  # Dask temporary directory if run_parallel=1
+timeout: 360  # [seconds] Dask timeout limit
 
 # Start/end date and time
-startdate: '20140319.0000'
-enddate: '20140321.0000'
+startdate: '20070507.0000'
+enddate: '20070512.0000'
 
 # Specify tracking input data date/time string format
 # This is the preprocessed file that contains Tb & rainrate
 # E.g., databasename20181101.011503.nc --> yyyymodd.hhmmss
 # E.g., databasename2018-11-01_01:15:00 --> yyyy-mo-dd_hh:mm:ss
-time_format: 'yyyy-mo-dd_hh:mm:ss'
-databasename: 'wrfout_rainrate_tb_'  # Note: include all strings before the time (including "_", ".")
+time_format: 'yyyy-mo-dd'
+databasename: 'earlyscience.FC5AV1C-H01A.ne120.sp1_64x1_1000m.cam.h1.'  # Note: include all strings before the time (including "_", ".")
 
-# WRF raw data
-wrfout_path: '/global/cscratch1/sd/tais958/tozhe/20140320_12_24/'
-wrfout_basename: 'wrfout_d01_'
 # Tracking input files directory
-clouddata_path: '/global/cscratch1/sd/feng045/iclass/goamazon/wrfda/tb_rr/'
+clouddata_path: 'INPUT_DIR/'
 # Working directory for the tracking data
-root_path: '/global/cscratch1/sd/feng045/iclass/goamazon/wrfda/'
+root_path: 'TRACK_DIR/'
 # Working sub-directory names
 tracking_path_name: 'tracking'
 stats_path_name: 'stats'
 pixel_path_name: 'mcstracking'
 
 # Land mask file
-landmask_filename: '/global/cscratch1/sd/feng045/iclass/goamazon/wrfda/map_data/wrf_landmask.nc'
+landmask_filename: ''
 landmask_varname: 'LANDMASK'
 
 # Input dataset structure
-pixel_radius:  4.0  # [km] Spatial resolution of the input data
+pixel_radius:  25.0  # [km] Spatial resolution of the input data
 datatimeresolution: 1.0  # [hour] Temporal resolution of the input data
 # Variable names in the input dat
-tb_varname:  'tb'
-pcp_varname: 'rainrate'
+olr2tb: True
+# Default precipitation unit is [mm/hour]
+# Set conversion factor to convert input precipitation unit:
+pcp_convert_factor: 3600000.0  # This factor will be multiplied to precipitation
+olr_varname: 'FLNT'
+pcp_varname: 'PRECT'
 clouddatasource: 'model'
 pfdatasource:  'wrf'
-xcoord_name: 'lon2d'
-ycoord_name: 'lat2d'
+x_dimname: 'lon'
+y_dimname: 'lat'
+time_dimname: 'time'
+xcoord_name: 'lon'
+ycoord_name: 'lat'
+# Minimum time difference threshold to match track stats with cloudid files
+match_tbpf_dt_thresh: 60.0  # seconds
 
 # Specify types of feature being tracked
 # This adds additional feature-specific statistics to be computed
 feature_type: 'tb_pf'
 
 # Cloud identification parameters
-mincoldcorepix:  4  # Minimum number of pixels for the cold core
-smoothwindowdimensions:  25  # Dimension of the Box2DKernel filter on Tb.
+mincoldcorepix:  1  # Minimum number of pixels for the cold core
+smoothwindowdimensions:  4  # Dimension of the Box2DKernel filter on Tb.
 medfiltsize: 5      # Window size to perform medfilt2d to fill missing Tb pixels, must be an odd number
 geolimits: [-90, -360, 90, 360] # 4-element array to subset domain boundaries [lat_min, lon_min, lat_max, lon_max]
-area_thresh:  800  # [km^2] Minimum area to define a cloud
+area_thresh:  625  # [km^2] Minimum area to define a cloud
 miss_thresh:  0.35  # Missing data fraction threshold. If missing data exceeds this, the time frame will be omitted.
 cloudtb_core:  225.0  # [K]
 cloudtb_cold:  241.0  # [K]
@@ -77,8 +85,8 @@ cloudidmethod: 'label_grow'
 # Specific parameters to link cloud objects using PF
 linkpf:  1  # Set to 1 to turn on linkpf option; default: 0
 pf_smooth_window:  10  # Smoothing window for identifying PF
-pf_dbz_thresh:  3  # [dBZ] for reflectivity, or [mm/h] for rainrate
-pf_link_area_thresh:  648.0  # [km^2]
+pf_dbz_thresh:  0.5  # [dBZ] for reflectivity, or [mm/h] for rainrate
+pf_link_area_thresh:  5000.0  # [km^2]
 
 # Tracking parameters
 othresh: 0.5  # overlap fraction threshold. Clouds that overlap more than this between times are tracked.
@@ -110,38 +118,25 @@ mcs_pf_gap:  1  # [unitless] Allowable temporal gap in PF data for MCS character
 landfrac_thresh: 90  # [%] Define threshold for PF land fraction
 
 # Specify rain rate parameters
-pf_rr_thres:  2.0  # Rain rate threshold [mm/hr]
+pf_rr_thres:  0.5  # Rain rate threshold [mm/hr]
 nmaxpf: 3  # Maximum number of precipitation features that can be within a cloud feature
 nmaxcore: 20  # Maximum number of convective cores that can be within a cloud feature
-pcp_thresh:  1.0  # Pixels with hourly precipitation larger than this will be labeled with track number
-heavy_rainrate_thresh:  10.0  # Heavy rain rate threshold [mm/hr]
+pcp_thresh:  0.5  # Pixels with hourly precipitation larger than this will be labeled with track number
+heavy_rainrate_thresh:  2.0  # Heavy rain rate threshold [mm/hr]
 
 # MCS PF parameter coefficients [intercept, slope]
-# These parameters are derived with pf_rr_thres:  2 mm/h
-# coefs_pf_area:  [1962.11, -14.598]      # 1%
-# coefs_pf_area:  [1962.11, 0]           # 1% [changed slope to 0: independent of lifetime]
-# coefs_pf_area:  [2119.02, 61.143]      # 3%
-coefs_pf_area:  [2874.05, 89.825]  # 5% [recommended]
-# coefs_pf_area:  [4160.82, 93.077]      # 7%
-# coefs_pf_area:  [4988.15, 138.172]      # 10%
+# These parameters are derived with pf_rr_thres:  0.5 mm/h
+# Setting the slope parameter to 0 is equivalent to changing the thresholds to be independent of PF lifetime
+# coefs_pf_area: [4960.52, 102.286]  # 3%
+coefs_pf_area: [6567.88, 125.883]  # 5% [recommended]
 
-# coefs_pf_rr:  [2.72873, 0.0008317]      # 1%
-# coefs_pf_rr:  [2.81982, 0.0135463]      # 3%
-coefs_pf_rr:  [3.01657, 0.0144461]  # 5% [recommended]
-# coefs_pf_rr:  [3.14895, 0.0150174]      # 7%
-# coefs_pf_rr:  [3.34859, 0.0172043]      # 10%
+# coefs_pf_rr: [ 1.535, 0.0104793]  # 3%
+coefs_pf_rr: [1.68134, 0.012203]  # 5% [recommended]
 
-# coefs_pf_skew:  [0.036384, 0.0022199]      # 1%
-# coefs_pf_skew:  [0.072809, 0.0104444]      # 3%
-coefs_pf_skew:  [0.194462, 0.0100072]  # 5% [recommended]
-# coefs_pf_skew:  [0.256639, 0.0106527]      # 7%
-# coefs_pf_skew:  [0.376142, 0.0095545]      # 10%
+# coefs_pf_skew: [0.23114, 0.0101002]    # 3%
+coefs_pf_skew: [0.370187, 0.00992256]  # 5% [recommended]
 
-# coefs_pf_heavyratio:  [0.750260, 0.4133300]  # 5%
-coefs_pf_heavyratio:  [3.419024, 0.4387090]  # 10% [recommended]
-# coefs_pf_heavyratio:  [4.753215, 0.4886454]  # 15%
-# coefs_pf_heavyratio:  [4.592209, 0.6107371]  # 20%
-# coefs_pf_heavyratio:  [8.389616, 0.5079337]  # 25%
+coefs_pf_heavyratio:  [0, 0]  # Set to 0 to ignore this parameter
 
 # Define tracked feature variable names
 feature_varname: 'feature_number'

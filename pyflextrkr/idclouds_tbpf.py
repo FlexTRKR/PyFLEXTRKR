@@ -3,6 +3,7 @@ import sys
 import logging
 import numpy as np
 import xarray as xr
+from datetime import datetime
 from scipy.signal import medfilt2d
 from scipy.ndimage import label, filters
 from pyflextrkr import netcdf_io as net
@@ -50,7 +51,7 @@ def idclouds_tbpf(
     thresh_cloud = config['cloudtb_cloud']
     cloudtb_threshs = [thresh_core, thresh_cold, thresh_warm, thresh_cloud]
     miss_thresh = config['miss_thresh']
-    tb_varname = config["tb_varname"]
+    tb_varname = config.get("tb_varname", 'tb')
     geolimits = config['geolimits']
     cloudidmethod = config['cloudidmethod']
     pixel_radius = config['pixel_radius']
@@ -63,6 +64,7 @@ def idclouds_tbpf(
     # PF parameters
     linkpf = config.get('linkpf', 0)
     pcp_varname = config['pcp_varname']
+    pcp_convert_factor = config.get('pcp_convert_factor', 1)
     pf_smooth_window = config.get('pf_smooth_window', 0)
     pf_dbz_thresh = config.get('pf_dbz_thresh', 0)
     pf_link_area_thresh = config.get('pf_link_area_thresh', 0)
@@ -76,7 +78,6 @@ def idclouds_tbpf(
     time_dimname = config.get('time_dimname', 'time')
     x_dimname = config.get('x_dimname', 'lon')
     y_dimname = config.get('y_dimname', 'lat')
-    bnds_dimname = config.get('bnds_dimname', 'bnds')
 
     cloudid_outfile = None
     logger.debug(filename)
@@ -91,17 +92,15 @@ def idclouds_tbpf(
     elif ndims == 3:
         # Reorder dimensions: [time, y, x]
         rawdata = rawdata.transpose(time_dimname, y_dimname, x_dimname)
-    elif ndims == 4:
-        # Assume data has an extra dimension: bnds_dimname 
-        if bnds_dimname is not None:
-            if rawdata.dims[bnds_dimname] > 0:
-                # Reorder dimensions: [time, bnds, y, x]
-                rawdata = rawdata.transpose(time_dimname, bnds_dimname, y_dimname, x_dimname)
-        else:
-            logger.error(f"ERROR: Input data dimensions: {rawdata.dims}")
-            logger.error(f"Must specify extra dimension name besides: time_dimname, y_dimname, x_dimname")
-            logger.error("Tracking will now exit.")
-            sys.exit()
+    elif ndims >= 4:
+        # Get dimension names from the file
+        dims_file = []
+        for key in rawdata.dims: dims_file.append(key)
+        # Find extra dimensions beyond [time, y, x]
+        dims_keep = [time_dimname, y_dimname, x_dimname]
+        dims_drop = list(set(dims_file) - set(dims_keep))
+        # Drop extra dimensions, reorder to [time, y, x]
+        rawdata = rawdata.drop_dims(dims_drop).transpose(time_dimname, y_dimname, x_dimname)
     else:
         logger.error(f"ERROR: Unexpected input data dimensions: {rawdata.dims}")
         logger.error("Must add codes to handle reading.")
@@ -111,6 +110,7 @@ def idclouds_tbpf(
     lat = rawdata[ycoord_name].data
     lon = rawdata[xcoord_name].data
     time_decode = rawdata[tcoord_name]
+
     # Convert OLR to Tb if olr2tb flag is set
     if olr2tb is True:
         olr = rawdata[olr_varname].data
@@ -136,12 +136,14 @@ def idclouds_tbpf(
 
     # Loop over each time
     for tt in range(0, len(time_decode)):
-
-        iTime = time_decode[tt]
-        file_basetime = np.array([iTime.values.tolist() / 1e9])
-        file_datestring = iTime.dt.strftime("%Y%m%d").item()
-        file_timestring = iTime.dt.strftime("%H%M").item()
-        iminute = iTime.dt.minute.item()
+        # Process time variable
+        iTime = rawdata.indexes['time'][tt]
+        # Convert to basetime (i.e., Epoch time)
+        file_basetime = np.array([(np.datetime64(iTime).item() - datetime(1970,1,1,0,0,0)).total_seconds()])
+        # Convert to strings
+        file_datestring = iTime.strftime("%Y%m%d")
+        file_timestring = iTime.strftime("%H%M")
+        iminute = iTime.minute
 
         # If idclouds_hourly is set to 1, then check if iminutes is
         # within the allowed difference from idclouds_dt_thresh
@@ -242,7 +244,8 @@ def idclouds_tbpf(
                         if final_nclouds > 0:
                             # Read precipitation
                             rawdata = xr.open_dataset(filename, mask_and_scale=False)
-                            pcp = rawdata[pcp_varname].values
+                            # Convert precipitation factor to unit [mm/hour]
+                            pcp = rawdata[pcp_varname].data * pcp_convert_factor
                             rawdata.close()
 
                             # For 'gpmirimerg', precipitation is averaged to 1-hourly
