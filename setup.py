@@ -8,10 +8,10 @@ with open('requirements.txt') as f:
 
 setuptools.setup(
     name="pyflextrkr",
-    version="0.1.0",
+    version="1.0.0",
     author="Zhe Feng, Hannah Barnes, Joseph Hardin",
     author_email="zhe.feng@pnnl.gov",
-    description="A Python package for Cell and MCS tracking.",
+    description="A Python package for atmospheric feature tracking.",
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/pypa/sampleproject",

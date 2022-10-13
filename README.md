@@ -16,8 +16,36 @@ PyFLEXTRKR works with netCDF files using Xarray's capability to handle N-dimensi
 
 The input data must contain at least 3 dimensions: *time, y, x*, with corresponding coordinates of *time, latitude, longitude*. The *latitude* and *longitude* coordinates can  be either 1D or 2D. But the data must be on a fixed 2D grid (any projection is fine) since PyFLEXTRKR only supports tracking data on 2D arrays. Irregular grids such as those in E3SM or MPAS model must first be regridded to a regular grid before tracking. Additional variable names and coordinate names are specified in the config file.
 
+# **3. Installing PyFLEXTRKR**
 
-# **3. Example Data and Runscripts**
+---
+Clone PyFLEXTRKR to your local computer (e.g., /PyFLEXTRKR), and go to that directory:
+
+```bash
+cd /PyFLEXTRKR
+```
+
+Use the included environment.yml file to create a Conda virtual environment:
+
+```bash
+conda env create -f environment.yml --prefix /conda_env_dir/flextrkr
+```
+
+After setting up the Conda virtual environment, activate it with:
+
+```bash
+conda activate flextrkr
+```
+
+Then install the package with:
+
+```bash
+pip install -e .
+```
+
+Any changes to the source code will be reflected in the running version.  
+
+# **4. Example Data and Runscripts**
 
 ---
 Several scripts are provided to download example input data, run tracking, and produce visualizations of the tracking results below:
@@ -43,31 +71,7 @@ To run these demo scripts, download the script, modify the `dir_demo` in the scr
 bash demo_cell_nexrad.sh
 ```
 
-The script downloads and untar the sample data, runs the tracking code, and generates visualizations. Once the demo script finishes running, a sub-directory within the `dir_demo` named `quicklooks_trackpaths` will be created that contains quicklook visualization of the tracking results, as shown in the example animations above.
-
-
-# **4. Installing PyFLEXTRKR**
-
----
-To use PyFLEXTRKR use the included environment.yml file to create a Conda virtual environment:
-
-```bash
-conda env create -f environment.yml --prefix /conda_env_dir/flextrkr
-```
-
-After setting up the Conda virtual environment, activate it with:
-
-```bash
-conda activate flextrkr
-```
-
-Then install the package with:
-
-```bash
-pip install -e .
-```
-
-Any changes to the source code will be reflected in the running version.  
+The demo script downloads and untar the sample data, runs the tracking code, and generates visualizations. Once the demo script finishes running, a sub-directory within the `dir_demo` named `quicklooks_trackpaths` will be created that contains quicklook visualization of the tracking results, as shown in the example animations above.
 
 
 # **5. Running PyFLEXTRKR**
