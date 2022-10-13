@@ -21,3 +21,4 @@ dependencies:
   - colorcet
   - seaborn
   - scikit-learn
+  - ffmpeg
