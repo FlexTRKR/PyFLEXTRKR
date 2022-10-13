@@ -4,15 +4,64 @@
 
 **Pacific Northwest National Laboratory**
 
-# **1. Introduction**
+# **1. Running PyFLEXTRKR**
 
-The Python FLEXible object TRacKeR (PyFLEXTRKR) algorithm V1.0 can be used as a generic feature tracking software, with two specific capabilities to track 1) convective cells using radar data, and 2) mesoscale convective systems (MCSs) using infrared brightness temperature (Tb) and precipitation data.
-
-# **2. Running PyFLEXTRKR**
-
+---
 All tracking parameters are set in a config file (*config.yml*). Each tracking step produces netCDF file(s) as output and can be run separately if consistent output netCDF files from previous steps are available. This design allows certain time-consuming steps to be run in parallel and only need to be only once. For example, once feature identification and consecutive linking in Step 1 and 2 (see **Section 2.2**) are produced during a period, tracking during any sub-periods only requires running Step 3 and subsequent steps.
 
-## **2.1.	Running the tracking code**
+## **1.1.	Preparing input data**
+
+PyFLEXTRKR works with netCDF files using Xarray's capability to handle N-dimension arrays of gridded data. Currently, PyFLEXTRKR supports: 
+
+1. Tracking convective cells using radar reflectivity data [[Feng et al. (2022), MWR](https://doi.org/10.1175/MWR-D-21-0237.1)]; 
+2. Tracking MCSs using infrared brightness temperature (Tb) data from geostationary satellites, or outgoing longwave radiation (OLR) data from model simulations, with optional collocated precipitation data to identify robust MCSs [[Feng et al. (2021), JGR](https://doi.org/10.1029/2020JD034202)]; 
+3. Tracking generic 2D objects defined by simple threshold-based connectivity masks.
+
+The input data must contain at least 3 dimensions: *time, y, x*, with corresponding coordinates of *time, latitude, longitude*. The *latitude* and *longitude* coordinates can  be either 1D or 2D. But the data must be on a fixed 2D grid (any projection is fine) since PyFLEXTRKR only supports tracking data on 2D arrays. Irregular grids such as those in E3SM or MPAS model must first be regridded to a regular grid before tracking. Additional variable names and coordinate names are specified in the config file.
+
+**Example input data for supported feature tracking:**
+
+* [NEXRAD radar data](https://portal.nersc.gov/project/m1867/PyFLEXTRKR/sample_data/radar/nexrad_reflectivity1.tar.gz)
+* [ARM C-SAPR radar data](https://portal.nersc.gov/project/m1867/PyFLEXTRKR/sample_data/radar/taranis_corcsapr2.tar.gz)
+* [GPM Tb+IMERG precipitation data](https://portal.nersc.gov/project/m1867/PyFLEXTRKR/sample_data/tb_pcp/gpm_tb_imerg.tar.gz)
+* [WRF post-processed Tb + precipitation data](https://portal.nersc.gov/project/m1867/PyFLEXTRKR/sample_data/tb_pcp/wrf_tbpcp.tar.gz)
+* [E3SM regridded OLR + precipitation data](https://portal.nersc.gov/project/m1867/PyFLEXTRKR/sample_data/tb_pcp/e3sm_tbpcp.tar.gz)
+
+**Example pre-processing code for WRF**
+
+A pre-processing code for WRF data that produces Tb and rain rate for MCS tracking is provided:
+[`/pyflextrkr/preprocess_wrf_tb_rainrate.py`](https://github.com/FlexTRKR/PyFLEXTRKR/blob/main/pyflextrkr/preprocess_wrf_tb_rainrate.py)
+
+The code works with standard WRF output data that contains OLR, RAINNC and RAINC. It converts OLR to Tb using a simple empirical relationship and calculates rain rates between consecutive times. An example config file for WRF MCS tracking is provide in [`/config/config_wrf4km_mcs_tbpf_example.yml`](https://github.com/FlexTRKR/PyFLEXTRKR/blob/main/config/config_wrf4km_mcs_tbpf_example.yml). 
+
+For model simulation outputs that contains OLR and rain rate (unlike accumulated precipitation in WRF), set `olr2tb : True` to convert OLR [W/m^2] to Tb [K], and provide `pcp_convert_factor` to convert rain rate to the unit of [mm/hour] in the config file. See example config file: [`config_model25km_mcs_tbpf_example.yml`
+](https://github.com/FlexTRKR/PyFLEXTRKR/blob/main/config/config_model25km_mcs_tbpf_example.yml)
+
+**Generic feature tracking input data requirement**
+
+For tracking generic features, a reader code is needed to produce the variables listed in **Table 1**.
+
+**Table 1. Variables required for generic feature tracking**
+
+| Variable Name in config file | Example Generic Name | Explanation |
+| ---------------------------- | -------------------- | -------------- |
+| feature_varname              | feature_mask         | A 2D array with features of interest labeled by unique numbers. A simple example is labeling contiguous features with values larger than a threshold, using the SciPy function: [scipy.ndimage.label](https://docs.scipy.org/doc/scipy/reference/generated/scipy.ndimage.label.html). |
+| nfeature_varname             |	nfeatures            | Number of features in the file.
+| featuresize_varname          |	npix_feature         | A 1D array with the number of pixels (i.e., size) for each labeled feature |
+| |	time |	Epoch time of the file |
+
+An example of labeling vorticity features is provided in [`/pyflextrkr/idvorticity_era5.py`](https://github.com/FlexTRKR/PyFLEXTRKR/blob/main/pyflextrkr/idvorticity_era5.py)
+
+After providing the reader code, add it to the [`idefeature_driver.py`](https://github.com/FlexTRKR/PyFLEXTRKR/blob/main/pyflextrkr/idfeature_driver.py), and specify the *feature_type* in the config file (see example [`config_era5_vorticity.yml`](https://github.com/FlexTRKR/PyFLEXTRKR/blob/main/config/config_era5_vorticity.yml)). Here’s an example for vorticity:
+
+```python
+if feature_type == "vorticity":
+    from pyflextrkr.idvorticity_era5 import idvorticity_era5 as id_feature
+```
+
+With this reader code, PyFLEXTRKR will run for any generic feature tracking and produce track statistics and labeled tracked numbers on the native grid (see **Section 3 Algorithm and workflow** and **Figure 1**). The track statistics contains basic statistics such as *track_duration*, *base_time*, *meanlat*, *meanlon*, *area*, etc. If more feature-specific statistics is desired, they can be added in [`/pyflextrkr/trackstats_func.py`](https://github.com/FlexTRKR/PyFLEXTRKR/blob/main/pyflextrkr/trackstats_func.py). All added track statistics variables in that function will be written in the output track statistics files automatically by the [`/pyflextrkr/trackstats_driver.py`](https://github.com/FlexTRKR/PyFLEXTRKR/blob/main/pyflextrkr/trackstats_driver.py). Refer to the examples from `feature_type == ‘tb_pf’` or `‘radar_cells’` in that function.
+
+## **1.2.	Running the tracking code**
 
 To run the code, type the following in the command line:
 
@@ -28,11 +77,15 @@ Run PyFLEXTRKR:
 python run_mcs_tbpf.py config.yml
 ```
 
-## **2.2.	Key parameters in the config file**
+### **Example run scripts and config files are in the highlighted directories:**
+![](https://portal.nersc.gov/project/m1867/PyFLEXTRKR/figures/run_command_explanation.png)
 
-The flags in **Table 1** and **Table 2** control each of the steps to be run, and they should be set to True to run the desired steps. For more detail explanations of the steps, refer to **Section 3 Algorithm** and workflow and **Figure 1** and **Figure 2**.
 
-**Table 1. Controls for each tracking steps for all feature tracking.**
+## **1.3.	Key parameters in the config file**
+
+The flags in **Table 2** and **Table 3** control each of the steps to be run, and they should be set to True to run the desired steps. For more detail explanations of the steps, refer to **Section 3 Algorithm** and workflow and **Figure 1** and **Figure 2**.
+
+**Table 2. Controls for each tracking steps for all feature tracking.**
 
 | Parameter       | Explanation |
 | -----------     | ----------- |
@@ -42,7 +95,7 @@ The flags in **Table 1** and **Table 2** control each of the steps to be run, an
 | run_trackstats  | Step 4: Calculate track statistics |
 | run_mapfeature  | Step 5: Map tracked feature numbers to native pixel files |
 
-**Table 2. Controls for each tracking steps for MCS tracking.**
+**Table 3. Controls for each tracking steps for MCS tracking.**
 
 | Parameter       | Explanation |
 | -----------     | ----------- |
@@ -57,9 +110,9 @@ The flags in **Table 1** and **Table 2** control each of the steps to be run, an
 | run_speed       |	Step 9: Calculate MCS movement statistics |
 
 
-The key parameters in the config file that need to be changed before running PyFLEXTRKR are listed in **Table 1**.
+The key parameters in the config file that need to be changed before running PyFLEXTRKR are listed in **Table 4**.
 
-**Table 3. Key parameters in the config file.**
+**Table 4. Key parameters in the config file.**
 
 | Parameter          | Explanation |
 | ------------------ | ----------- |
@@ -74,11 +127,12 @@ clouddata_path       |	Input data file directory |
 | landmask_filename  | Land mask netCDF file name (optional). If provided, then tracked MCS statistics will have a pf_landfrac variable that can be used to distinguish MCS over land or ocean. Set this to an empty string “” if no land mask file is available |
 | landmask_varname   | Land mask variable name (optional) |
 
-## **2.3.	Parallel options (local cluster & distributed)**
 
-Running the code in parallel mode significantly reduces the time it takes to finish, particularly for larger datasets and/or longer continuous tracking period. There are two parallel options, controlled by setting the *run_parallel* value, as explained in **Table 4**.
+## **1.4.	Parallel options (local cluster & distributed)**
 
-**Table 4. Parallel processing options.**
+Running the code in parallel mode significantly reduces the time it takes to finish, particularly for larger datasets and/or longer continuous tracking period. There are two parallel options, controlled by setting the *run_parallel* value, as explained in **Table 5**.
+
+**Table 5. Parallel processing options.**
 
 | Parameter          | Explanation |
 | ------------------ | ----------- |
@@ -86,7 +140,7 @@ Running the code in parallel mode significantly reduces the time it takes to fin
 | nprocesses         |	Number of processors to use. Only applicable if run_parallel=1. |
 | timeout            |	Dask distributed timeout limit [second]. Only applicable if run_parallel=2.|
 
-Note that running the code in parallel shares the total system memory available among the number of processors. For large datasets, this may result in out-ot-memory error if the number of tracks is too large. In that case, reducing the number of processors usually helps. Not all steps in PyFLEXTRKR have parallel options, but all codes will run regardless of parallel options. See **Figure 3** for which steps support parallel option.
+Note that running the code in parallel shares the total system memory available among the number of processors. For very large datasets such as global high resolution data (e.g., 3600x1800 pixels), this may result in out-ot-memory error if the number of tracks is too large (e.g., tracking for 1 year with hourly data). In that case, reducing the number of processors usually helps.
 
 Running [Dask distributed](http://distributed.dask.org/en/stable/) is an experimental feature and the capability is still being tested. Setting run_parallel=2 requires providing a Dask scheduler json file at run time like this:
 
@@ -117,62 +171,9 @@ srun -u dask-mpi \
 
 Refer to the slurm script (under [/slurm](https://github.com/FlexTRKR/PyFLEXTRKR/tree/main/slurm) directory) to see an example set up on the DOE NERSC system.
 
-## **2.4.	Preparing input data**
 
-In theory, any input data is supported if a reader code is provided. Currently, PyFLEXTRKR supports: 1) tracking MCSs using Tb data, with optional collocated precipitation data to identify robust MCS ([`Feng et al. 2021`](https://doi.org/10.1029/2020JD034202)), see run script [`run_mcs_tbpf.py`](https://github.com/FlexTRKR/PyFLEXTRKR/blob/main/runscripts/run_mcs_tbpf.py); 2) tracking convective cells using radar data ([`Feng et al. 2022`](https://doi.org/10.1175/MWR-D-21-0237.1)), see run script [`run_celltracking.py`](https://github.com/FlexTRKR/PyFLEXTRKR/blob/main/runscripts/run_celltracking.py). 
 
-For using these two specific features, the input data must be in netCDF format, with required variables in this order *[time, y, x]*. PyFLEXTRKR only supports tracking data on 2D arrays, irregular grid such as those in E3SM or MPAS must first be regridded to a regular grid before tracking. Additional variable names and coordinate names are specified in the config file.
-
-**Example input data for supported feature tracking:**
-
-* [GPM Tb+IMERG precipitation data](https://portal.nersc.gov/project/m1867/PyFLEXTRKR/sample_data/tb_pcp/gpm_tb_imerg.tar.gz)
-* [C-SAPR radar data](https://portal.nersc.gov/project/m1867/PyFLEXTRKR/sample_data/radar/taranis_corcsapr2.tar.gz)
-* [WRF post-processed Tb + precipitation data](https://portal.nersc.gov/project/m1867/PyFLEXTRKR/sample_data/tb_pcp/wrf_tbpcp.tar.gz)
-
-**Example run commands and config files**
-
-* MCS tracking with example WRF Tb + precipitation data:
-```bash
-python run_mcs_tbpf.py config_wrf_mcs_saag.yml
-```
-
-* Cell tracking with example C-SAPR radar data
-```bash
-python run_celltracking.py config_radar500m_example.yml
-```
-
-**Example pre-processing code for WRF**
-
-A pre-processing code for WRF data that produces Tb and precipitation for MCS tracking is provided:
-[`/pyflextrkr/preprocess_wrf_tb_rainrate.py`](https://github.com/FlexTRKR/PyFLEXTRKR/blob/main/pyflextrkr/preprocess_wrf_tb_rainrate.py)
-
-The code works with standard WRF output data that contains OLR, RAINNC and RAINC. It converts OLR to Tb using a simple empirical relationship and calculates rain rates between consecutive times. An example config file for WRF MCS tracking is provide in [`/config/config_wrfda_goamazon_mcs.yml`](https://github.com/FlexTRKR/PyFLEXTRKR/blob/main/config/config_wrfda_goamazon_mcs.yml). Other model simulation outputs can be preprocessed following the same procedure. 
-
-**Generic feature tracking input data requirement**
-
-For tracking generic features, a reader code is needed to produce the variables listed in **Table 5**.
-
-**Table 5. Variables required for generic feature tracking**
-
-| Variable Name in config file | Example Generic Name | Explanation |
-| ---------------------------- | -------------------- | -------------- |
-| feature_varname              | feature_mask         | A 2D array with features of interest labeled by unique numbers. A simple example is labeling contiguous features with values larger than a threshold, using the SciPy function: [scipy.ndimage.label](https://docs.scipy.org/doc/scipy/reference/generated/scipy.ndimage.label.html). |
-| nfeature_varname             |	nfeatures            | Number of features in the file.
-| featuresize_varname          |	npix_feature         | A 1D array with the number of pixels (i.e., size) for each labeled feature |
-| |	time |	Epoch time of the file |
-
-An example of labeling vorticity features is provided in [`/pyflextrkr/idvorticity_era5.py`](https://github.com/FlexTRKR/PyFLEXTRKR/blob/main/pyflextrkr/idvorticity_era5.py)
-
-After providing the reader code, add it to the [`idefeature_driver.py`](https://github.com/FlexTRKR/PyFLEXTRKR/blob/main/pyflextrkr/idfeature_driver.py), and specify the *feature_type* in the config file (see example [`config_era5_vorticity.yml`](https://github.com/FlexTRKR/PyFLEXTRKR/blob/main/config/config_era5_vorticity.yml)). Here’s an example for vorticity:
-
-```python
-if feature_type == "vorticity":
-    from pyflextrkr.idvorticity_era5 import idvorticity_era5 as id_feature
-```
-
-With this reader code, PyFLEXTRKR will run for any generic feature tracking and produce track statistics and labeled tracked numbers on the native grid (see **Section 3 Algorithm and workflow** and **Figure 1**). The track statistics contains basic statistics such as *track_duration*, *base_time*, *meanlat*, *meanlon*, *area*, etc. If more feature-specific statistics is desired, they can be added in [`/pyflextrkr/trackstats_func.py`](https://github.com/FlexTRKR/PyFLEXTRKR/blob/main/pyflextrkr/trackstats_func.py). All added track statistics variables in that function will be written in the output track statistics files automatically by the [`/pyflextrkr/trackstats_driver.py`](https://github.com/FlexTRKR/PyFLEXTRKR/blob/main/pyflextrkr/trackstats_driver.py). Refer to the examples from `feature_type == ‘tb_pf’` or `‘radar_cells’` in that function.
-
-## **2.5.	Expected output data**
+## **1.5.	Expected output data**
 
 Expected output files at the completion of generic feature tracking are listed in **Table 6**.
 
@@ -186,8 +187,9 @@ Expected output files at the completion of generic feature tracking are listed i
 | `pixel_path_name` <br> (Track mask pixel files) | `[pixeltracking_filebase]datetime.nc` | Individual pixel files containing track number masks from Step 5. |
 
 
-# **3.	Algorithm and workflow**
+# **2.	Algorithm and Workflow**
 
+---
 The main workflow of PyFLEXTRKR is illustrated in **Figure 1**. Explanation on the purpose for each of the steps are provided below.
 
 ## **Step 1. Identify features (parallel)**
@@ -221,7 +223,7 @@ In parallel processing, each feature identification file is handled by a task, a
 ## **Step 5. Map track numbers to native grid (parallel)**
 
 Writes the track numbers back to the labeled feature masks on the native pixel-level files at each time. Each labeled feature from Step-1 is written with a unique track number during the tracking period, so that they are the same for the same track across different times (e.g., same color patches denote the same tracked feature in **Figure 1e**).
- 
+
 In parallel processing, the track numbers belonging to the same time are first read from the trackstats file from Step-4, then they are sent to a task to match the feature identification file from Step-1, and a netCDF file is written by the task. 
 
 **Output:** `pixel_path_name/pixeltracking_filebase_yyyymmdd_hhmm.nc`
@@ -231,8 +233,9 @@ In parallel processing, the track numbers belonging to the same time are first r
 ### **Figure 1.** PyFLEXTRKR key workflow illustration.
 
 
-# **4.	MCS tracking algorithm**
+# **3.	MCS Tracking Algorithm**
 
+---
 Tracking of MCS consists of a total of nine steps. The first four steps are the same as that shown in **Figure 1**, and the additional 5 steps are shown in **Figure 2**. Tracking is performed primarily on infrared brightness temperature (Tb) defined cold cloud systems (CCSs, which include cold cloud cores and cold anvils), with optional information provided by precipitation data to improve the identification of robust MCSs.
 
 Since the first 4 steps are the same as tracking any features, the additional steps 5-9 specifically designed for MCSs are explained below:
