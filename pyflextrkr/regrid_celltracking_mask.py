@@ -105,8 +105,14 @@ def regrid_file(in_filename, in_basename, out_dir, out_basename):
     cloudnumber = ds['cloudnumber']
     merge_tracknumber = ds['merge_tracknumber']
     split_tracknumber = ds['split_tracknumber']
+    conv_core = ds['conv_core']
+    conv_mask = ds['conv_mask']
+    comp_ref = ds['comp_ref']
+    dbz_lowlevel = ds['dbz_lowlevel']
+    echotop10 = ds['echotop10']
 
     # Remap to the full coordinate
+    # Mask variables
     tracknumber_out = tracknumber.interp(
         lon=xcoord_out, lat=ycoord_out, method='nearest', 
         assume_sorted=True, kwargs={"fill_value": "extrapolate"},
@@ -131,6 +137,27 @@ def regrid_file(in_filename, in_basename, out_dir, out_basename):
         lon=xcoord_out, lat=ycoord_out, method='nearest', 
         assume_sorted=True, kwargs={"fill_value": "extrapolate"},
     ).data.astype(int)
+    conv_core_out = conv_core.interp(
+        lon=xcoord_out, lat=ycoord_out, method='nearest', 
+        assume_sorted=True, kwargs={"fill_value": "extrapolate"},
+    ).data.astype(int)
+    conv_mask_out = conv_mask.interp(
+        lon=xcoord_out, lat=ycoord_out, method='nearest', 
+        assume_sorted=True, kwargs={"fill_value": "extrapolate"},
+    ).data.astype(int)
+    # Radar variables
+    comp_ref_out = comp_ref.interp(
+        lon=xcoord_out, lat=ycoord_out, method='nearest', 
+        assume_sorted=True, kwargs={"fill_value": "extrapolate"},
+    ).data
+    dbz_lowlevel_out = dbz_lowlevel.interp(
+        lon=xcoord_out, lat=ycoord_out, method='nearest', 
+        assume_sorted=True, kwargs={"fill_value": "extrapolate"},
+    ).data
+    echotop10_out = echotop10.interp(
+        lon=xcoord_out, lat=ycoord_out, method='nearest', 
+        assume_sorted=True, kwargs={"fill_value": "extrapolate"},
+    ).data
 
     # Make output filename
     nleadingchar = len(f'{in_basename}')
@@ -144,17 +171,17 @@ def regrid_file(in_filename, in_basename, out_dir, out_basename):
         # "longitude": (["lat", "lon"], longitude),
         # "latitude": (["lat", "lon"], latitude),
         "nclouds": (["time"], ds['nclouds'].data, ds['nclouds'].attrs),
-        # "comp_ref": (["time", "lat", "lon"], comp_ref),
-        # "dbz_lowlevel": (["time", "lat", "lon"], dbz_lowlevel),
-        # "conv_core": (["time", "lat", "lon"], conv_core),
-        # "conv_mask": (["time", "lat", "lon"], conv_mask),
+        "comp_ref": (["time", "lat", "lon"], comp_ref_out, comp_ref.attrs),
+        "dbz_lowlevel": (["time", "lat", "lon"], dbz_lowlevel_out, dbz_lowlevel.attrs),
+        "conv_core": (["time", "lat", "lon"], conv_core_out, conv_core.attrs),
+        "conv_mask": (["time", "lat", "lon"], conv_mask_out, conv_mask.attrs),
         "tracknumber": (["time", "lat", "lon"], tracknumber_out, tracknumber.attrs),
         "tracknumber_cmask": (["time", "lat", "lon"], tracknumber_cmask_out, tracknumber_cmask.attrs),
         "track_status": (["time", "lat", "lon"], track_status_out, track_status.attrs),
         "cloudnumber": (["time", "lat", "lon"], cloudnumber_out, cloudnumber.attrs),
         "merge_tracknumber": (["time", "lat", "lon"], merge_tracknumber_out, merge_tracknumber.attrs),
         "split_tracknumber": (["time", "lat", "lon"], split_tracknumber_out, split_tracknumber.attrs),
-        # "echotop10": (["time", "lat", "lon"], echotop10),
+        "echotop10": (["time", "lat", "lon"], echotop10_out, echotop10.attrs),
         # "echotop20": (["time", "lat", "lon"], echotop20),
         # "echotop30": (["time", "lat", "lon"], echotop30),
         # "echotop40": (["time", "lat", "lon"], echotop40),

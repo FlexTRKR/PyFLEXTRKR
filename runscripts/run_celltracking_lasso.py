@@ -4,7 +4,7 @@ import logging
 import dask
 from dask.distributed import Client, LocalCluster
 from pyflextrkr.ft_utilities import load_config, setup_logging
-from pyflextrkr.regrid_lasso_reflectivity import regrid_lasso_reflectivity
+# from pyflextrkr.regrid_lasso_reflectivity import regrid_lasso_reflectivity
 from pyflextrkr.idfeature_driver import idfeature_driver
 from pyflextrkr.advection_tiles import calc_mean_advection
 from pyflextrkr.tracksingle_driver import tracksingle_driver
@@ -42,7 +42,13 @@ if __name__ == '__main__':
 
     # Step 0 - Regrid reflectivity
     if config['run_regridreflectivity']:
-        regrid_lasso_reflectivity(config)
+        # Load function depending on feature_type
+        if config['input_source'] == 'wrf_regrid':
+            from pyflextrkr.regrid_lasso_reflectivity import regrid_lasso_reflectivity as regrid_func
+        elif config['input_source'] == 'csapr_cacti':
+            from pyflextrkr.regrid_csapr_reflectivity import regrid_csapr_reflectivity as regrid_func
+        regrid_func(config)
+        # regrid_lasso_reflectivity(config)
 
     # Step 1 - Identify features
     if config['run_idfeature']:

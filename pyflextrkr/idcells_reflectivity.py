@@ -760,7 +760,7 @@ def get_composite_reflectivity_csapr_cacti(input_filename, config):
     # Below are variables produced by PyART gridding
     radar_lon = ds['origin_longitude']
     radar_lat = ds['origin_latitude']
-    radar_alt = ds['alt']
+    radar_alt = ds['alt'].squeeze()
     # Take the first vertical level from 3D lat/lon
     grid_lon = ds[lon_varname].isel(z=0)
     grid_lat = ds[lat_varname].isel(z=0)
