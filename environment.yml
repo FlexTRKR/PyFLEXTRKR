@@ -15,6 +15,7 @@ dependencies:
   - scikit-image>=0.16
   - joblib>=0.14
   - ipython>7.0
+  - basemap
   - pip
   - astropy
   - wrf-python

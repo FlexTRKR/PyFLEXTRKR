@@ -19,13 +19,19 @@ The input data must contain at least 3 dimensions: *time, y, x*, with correspond
 # **3. Installing PyFLEXTRKR**
 
 ---
-Clone PyFLEXTRKR to your local computer (e.g., /PyFLEXTRKR), and go to that directory:
+Clone PyFLEXTRKR to your local computer (e.g., /PyFLEXTRKR):
+
+```bash
+git clone https://github.com/FlexTRKR/PyFLEXTRKR.git
+```
+
+Go to that directory:
 
 ```bash
 cd /PyFLEXTRKR
 ```
 
-Use the included environment.yml file to create a Conda virtual environment:
+Use the included environment.yml file to create a Conda virtual environment, make sure you change `conda_env_dir` to where your conda environments are installed:
 
 ```bash
 conda env create -f environment.yml --prefix /conda_env_dir/flextrkr
