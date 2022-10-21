@@ -130,7 +130,12 @@ clouddata_path       |	Input data file directory |
 
 ## **1.4.	Parallel options (local cluster & distributed)**
 
-Running the code in parallel mode significantly reduces the time it takes to finish, particularly for larger datasets and/or longer continuous tracking period. There are two parallel options, controlled by setting the *run_parallel* value, as explained in **Table 5**.
+Running the code in parallel mode significantly reduces the time it takes to finish, particularly for larger datasets and/or longer continuous tracking period. For example, the figure below shows the performance scaling of tracking MCSs over South America for a one-month period using different number of processors (CPUs). Running with 16 processors (parallel) results in ~10x speed up compared to using a single processor (serial), cutting down the processing time from ~30 min (serial) to ~3 min (parallel). The performance scaling varies with the size of the dataset, but larger datasets likely scales better with more processors. The size of the dataset used in this performance test is moderate to small (690 x 480 pixels with 744 time frames).
+
+![](https://portal.nersc.gov/project/m1867/PyFLEXTRKR/figures/performance_test_small.png)
+
+
+There are two parallel options, controlled by setting the *run_parallel* value, as explained in **Table 5**.
 
 **Table 5. Parallel processing options.**
 
