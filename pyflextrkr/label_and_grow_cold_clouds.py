@@ -361,11 +361,11 @@ def label_and_grow_cold_clouds(
             final_ncorecoldpix = final_ncorepix + final_ncoldpix
         else:
             final_corecoldnumber = np.zeros((ny, nx), dtype=int)
+            final_corecoldwarmnumber = np.zeros((ny, nx), dtype=int)
             final_ncorecold = 0
             final_ncorepix = np.zeros((1,), dtype=int)
             final_ncoldpix = np.zeros((1,), dtype=int)
             final_nwarmpix = np.zeros((1,), dtype=int)
-
             final_ncorecoldpix = np.zeros((1,), dtype=int)
 
     ###################################################
