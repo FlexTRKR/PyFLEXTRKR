@@ -12,7 +12,7 @@
 ###############################################################################################
 
 # Specify directory for the demo data
-dir_demo='/global/cscratch1/sd/feng045/junk/'
+dir_demo='/global/cscratch1/sd/feng045/pyflextrkr_test/cell_radar/nexrad/'
 
 # Demo input data directory
 dir_input=${dir_demo}'input/'
@@ -42,7 +42,7 @@ echo 'Created new config file: '${config_demo}
 
 # Activate PyFLEXTRKR conda environment
 echo 'Activating PyFLEXTRKR environment ...'
-conda activate testflex
+conda activate flextrkr
 
 # Run tracking
 echo 'Running PyFLEXTRKR ...'
