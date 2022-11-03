@@ -70,10 +70,10 @@ feature_type: 'tb_pf'
 
 # Cloud identification parameters
 mincoldcorepix:  1  # Minimum number of pixels for the cold core
-smoothwindowdimensions:  4  # Dimension of the Box2DKernel filter on Tb.
+smoothwindowdimensions:  2  # Dimension of the Box2DKernel filter on Tb.
 medfiltsize: 5      # Window size to perform medfilt2d to fill missing Tb pixels, must be an odd number
 geolimits: [-90, -360, 90, 360] # 4-element array to subset domain boundaries [lat_min, lon_min, lat_max, lon_max]
-area_thresh:  625  # [km^2] Minimum area to define a cloud
+area_thresh:  100  # [km^2] Minimum area to define a cloud
 miss_thresh:  0.35  # Missing data fraction threshold. If missing data exceeds this, the time frame will be omitted.
 cloudtb_core:  225.0  # [K]
 cloudtb_cold:  241.0  # [K]
@@ -84,7 +84,7 @@ warmanvilexpansion:  0  # Not working yet, set this to 0 for now
 cloudidmethod: 'label_grow'
 # Specific parameters to link cloud objects using PF
 linkpf:  1  # Set to 1 to turn on linkpf option; default: 0
-pf_smooth_window:  10  # Smoothing window for identifying PF
+pf_smooth_window:  1  # Smoothing window for identifying PF
 pf_dbz_thresh:  0.5  # [dBZ] for reflectivity, or [mm/h] for rainrate
 pf_link_area_thresh:  5000.0  # [km^2]
 
@@ -104,16 +104,16 @@ trackstats_dense_netcdf: 1
 match_tbpf_dt_thresh: 60.0  # seconds
 
 # MCS Tb parameters
-mcs_tb_area_thresh: 40000  # [km^2] Tb area threshold
-mcs_tb_duration_thresh:  4  # [hour] Tb minimum length of a mcs
+mcs_tb_area_thresh: 60000  # [km^2] Tb area threshold
+mcs_tb_duration_thresh:  6  # [hour] Tb minimum length of a mcs
 mcs_tb_split_duration:  12  # [hour] Tb tracks smaller or equal to this length will be included with the MCS splits from
 mcs_tb_merge_duration:  12  # [hour] Tb tracks smaller or equal to this length will be included with the MCS merges into
 mcs_tb_gap: 1  # [unitless] Allowable temporal gap in Tb data for MCS area threshold
 # MCS PF parameters
-mcs_pf_majoraxis_thresh:  100  # [km] MCS PF major axis length lower limit
+mcs_pf_majoraxis_thresh:  150  # [km] MCS PF major axis length lower limit
 max_pf_majoraxis_thresh:  1800  # [km] MCS PF major axis length upper limit
-mcs_pf_durationthresh:  4  # [hour] PF minimum length of mcs
-mcs_pf_majoraxis_for_lifetime:  20  # [km] Minimum PF size to count PF lifetime
+mcs_pf_durationthresh:  5  # [hour] PF minimum length of mcs
+mcs_pf_majoraxis_for_lifetime:  50  # [km] Minimum PF size to count PF lifetime
 mcs_pf_gap:  1  # [unitless] Allowable temporal gap in PF data for MCS characteristics
 landfrac_thresh: 90  # [%] Define threshold for PF land fraction
 
