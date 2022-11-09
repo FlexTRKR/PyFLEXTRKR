@@ -44,7 +44,7 @@ echo 'Created new config file: '${config_demo}
 
 # Activate PyFLEXTRKR conda environment
 echo 'Activating PyFLEXTRKR environment ...'
-conda activate testflex
+conda activate flextrkr
 
 # Run tracking
 echo 'Running PyFLEXTRKR ...'
