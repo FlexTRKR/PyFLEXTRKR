@@ -85,7 +85,7 @@ if __name__ == "__main__":
     config_file = sys.argv[1]
     year = int(sys.argv[2])
     month = int(sys.argv[3])
-    day = int(sys.argv[4])
+    # day = int(sys.argv[4])
 
     # Get inputs from configuration file
     config = load_config(config_file)
