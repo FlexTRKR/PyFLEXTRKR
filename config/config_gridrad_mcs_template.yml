@@ -1,0 +1,58 @@
+---
+# MCS tracking configuration file
+# Tracking uses collocated Tb + Radar Reflectivity
+
+# Processing steps:
+run_idfeature : True
+run_tracksingle : True
+run_gettracks : True
+run_trackstats : True
+run_identifymcs : True
+run_matchpf : True
+run_robustmcs : True
+run_mapfeature : True
+run_speed : True
+
+# Parallel processing set up
+# run_parallel: 1 (local cluster), 2 (Dask MPI)
+run_parallel: 0
+nprocesses : 32  # Number of processors to use if run_parallel=1
+dask_tmp_dir: '/tmp'  # Dask temporary directory if run_parallel=1
+timeout: 360  # [seconds] Dask timeout limit
+
+# Start/end date and time
+startdate: 'STARTDATE'
+enddate: 'ENDDATE'
+
+# Specify tracking input data date/time string format
+# This is the preprocessed file that contains Tb & rainrate
+# E.g., databasename20181101.011503.nc --> yyyymodd.hhmmss
+# E.g., databasename2018-11-01_01:15:00 --> yyyy-mo-dd_hh:mm:ss
+time_format: 'yyyymodd_hhmmss'
+databasename: 'sl3d_'   # SL3D data basename
+
+# Tracking input files directory
+clouddata_path: '/global/cscratch1/sd/feng045/usa/gridrad_v2/'
+# Working directory for the tracking data
+root_path: '/global/cscratch1/sd/feng045/usa/gridrad_v2/'
+# Working sub-directory names
+tracking_path_name: 'tracking'
+stats_path_name: 'stats_linkpf'
+pixel_path_name: 'mcstracking_linkpf'
+
+# Land mask file
+landmask_filename: '/global/cscratch1/sd/feng045/usa/gridrad_v2/map_data/mergir4km_grid_terrain_landmask.nc'
+landmask_varname: 'LANDMASK'
+
+# Track statistics output file dimension names
+tracks_dimname: 'tracks'
+times_dimname: 'times'
+pf_dimname: 'nmaxpf'
+fillval: -9999
+# MCS track stats file base names
+mcstbstats_filebase: 'mcs_tracks_'
+mcspfstats_filebase: 'mcs_tracks_pf_'
+mcsrobust_filebase: 'mcs_tracks_robust_'
+pixeltracking_filebase: 'mcstrack_'
+# mcsfinal_filebase: 'mcs_tracks_final_'
+mcsfinal_filebase: 'robust_mcs_tracks_'
