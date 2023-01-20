@@ -247,7 +247,7 @@ def plot_map_2panels(pixel_dict, plot_info, map_info, track_dict):
     if panel_orientation == 'vertical':
         gs = gridspec.GridSpec(2,2, height_ratios=[1,0.02], width_ratios=[1,1])
         gs.update(left=0.05, right=0.95, bottom=0.1, top=0.9, wspace=0.15, hspace=0.15)
-        ax2 = plt.subplot(gs[0,1], projection=proj)        
+        ax2 = plt.subplot(gs[0,1], projection=proj)
         cax1 = plt.subplot(gs[1,0])
         cb_orientation = 'horizontal'
     # horizontal: top + bottom panel
@@ -294,7 +294,7 @@ def plot_map_2panels(pixel_dict, plot_info, map_info, track_dict):
     # Overlay boundary of cloudtracknumber on Tb
     Tn = np.ma.masked_where(tn_perim == 0, tn_perim)
     Tn[Tn > 0] = 10
-    tn1 = ax1.pcolormesh(lon, lat, Tn, cmap='cool_r', transform=proj, zorder=3)
+    tn1 = ax1.pcolormesh(lon, lat, Tn, cmap='cool_r', transform=data_proj, zorder=3)
     # Tb Colorbar
     cb1 = plt.colorbar(cf1, cax=cax1, label=cblabels['tb_label'], ticks=cbticks['tb_ticks'], extend='both', orientation=cb_orientation)
     

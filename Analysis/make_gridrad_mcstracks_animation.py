@@ -7,8 +7,10 @@ import subprocess
 
 if __name__ == "__main__":
 
-    start_year = 2021
-    end_year = 2021
+    # Get inputs from command line
+    start_year = int(sys.argv[1])
+    end_year = int(sys.argv[2])
+    # Start/end months
     start_month = 4
     end_month = 8
 

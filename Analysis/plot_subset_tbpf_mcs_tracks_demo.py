@@ -5,8 +5,10 @@ Demonstrates ploting MCS tracks on Tb, precipitation snapshots for a subset doma
 Optional arguments:
 -p 0 (serial), 1 (parallel)
 --extent lonmin lonmax latmin latmax (subset domain boundary)
+--subset 0 (no), 1 (yes) (subset data before plotting)
 --figsize width height (figure size in inches)
 --output output_directory (output figure directory)
+--figbasename figure base name (output figure base name)
 
 Zhe Feng, PNNL
 contact: Zhe.Feng@pnnl.gov
@@ -47,7 +49,8 @@ def parse_cmd_args():
     parser.add_argument("-o", "--orientation", help="panel orientation ('vertical' or 'horizontal')", required=True)
     parser.add_argument("-p", "--parallel", help="flag to run in parallel (0:serial, 1:parallel)", type=int, default=0)
     parser.add_argument("--extent", nargs='+', help="map extent (lonmin, lonmax, latmin, latmax)", type=float, default=None)
-    parser.add_argument("--figsize", nargs='+', help="figure size (width, height) in inches", type=float, default=[10, 10])
+    parser.add_argument("--subset", help="flag to subset data (0:no, 1:yes)", type=int, default=0)
+    parser.add_argument("--figsize", nargs='+', help="figure size (width, height) in inches", type=float, default=None)
     parser.add_argument("--output", help="ouput directory", default=None)
     parser.add_argument("--figbasename", help="output figure base name", default="")
     args = parser.parse_args()
@@ -60,6 +63,7 @@ def parse_cmd_args():
         'config_file': args.config,
         'panel_orientation': args.orientation,
         'extent': args.extent,
+        'subset': args.subset,
         'figsize': args.figsize,
         'out_dir': args.output,
         'figbasename': args.figbasename,
@@ -203,6 +207,7 @@ def plot_map_2panels(pixel_dict, plot_info, map_info, track_dict):
     lonv = map_info.get('lonv', None)
     latv = map_info.get('latv', None)
     draw_border = map_info.get('draw_border', False)
+    draw_state = map_info.get('draw_state', False)
             
     # Time difference matching pixel-time and track time
     dt_match = 1  # [min]
@@ -228,6 +233,7 @@ def plot_map_2panels(pixel_dict, plot_info, map_info, track_dict):
     resolution = '50m'
     land = cfeature.NaturalEarthFeature('physical', 'land', resolution)
     borders = cfeature.NaturalEarthFeature('cultural', 'admin_0_boundary_lines_land', resolution)
+    states = cfeature.NaturalEarthFeature('cultural', 'admin_1_states_provinces_lakes', resolution)
 
     # Set up figure
     mpl.rcParams['font.size'] = 12
@@ -257,6 +263,8 @@ def plot_map_2panels(pixel_dict, plot_info, map_info, track_dict):
     ax1.add_feature(land, facecolor='none', edgecolor='k', zorder=3)
     if draw_border == True:
         ax1.add_feature(borders, edgecolor='k', facecolor='none', linewidth=0.8, zorder=3)
+    if draw_state == True:
+        ax1.add_feature(states, edgecolor='k', facecolor='none', linewidth=0.8, zorder=3)
     ax1.set_aspect('auto', adjustable=None)
     ax1.set_title(titles['tb_title'], loc='left')
     gl = ax1.gridlines(crs=data_proj, draw_labels=True, linestyle='--', linewidth=0.5)
@@ -292,6 +300,8 @@ def plot_map_2panels(pixel_dict, plot_info, map_info, track_dict):
     ax2.add_feature(land, facecolor='none', edgecolor='k', zorder=3)
     if draw_border == True:
         ax2.add_feature(borders, edgecolor='k', facecolor='none', linewidth=0.8, zorder=3)
+    if draw_state == True:
+        ax2.add_feature(states, edgecolor='k', facecolor='none', linewidth=0.8, zorder=3)
     ax2.set_aspect('auto', adjustable=None)
     ax2.set_title(titles['pcp_title'], loc='left')
     gl = ax2.gridlines(crs=data_proj, draw_labels=True, linestyle='--', linewidth=0.5)
@@ -425,7 +435,8 @@ def work_for_time_loop(datafile, track_dict, map_info, figdir, figbasename=''):
         latmax = ds['latitude'].max().item()
         map_extent = [lonmin, lonmax, latmin, latmax]
         map_info['map_extent'] = map_extent
-    
+        map_info['subset'] = subset
+
     # Make dilation structure (larger values make thicker outlines)
     perim_thick = 6
     dilationstructure = np.zeros((perim_thick+1,perim_thick+1), dtype=int)
@@ -457,17 +468,24 @@ def work_for_time_loop(datafile, track_dict, map_info, figdir, figbasename=''):
         titles = {'tb_title':'(a) IR Brightness Temperature', 'pcp_title':'(b) Precipitation (Tracked MCSs Shaded)'}
 
         # Subset pixel data within the map domain        
-        lonmin, lonmax = map_extent[0], map_extent[1]
-        latmin, latmax = map_extent[2], map_extent[3]
-        mask = (ds['longitude'] >= lonmin) & (ds['longitude'] <= lonmax) & (ds['latitude'] >= latmin) & (ds['latitude'] <= latmax)
-        tb_sub = ds['tb'].where(mask == True, drop=True).squeeze()
-        pcp_sub = ds['precipitation'].where(mask == True, drop=True).squeeze()
-        tracknumber_sub = ds['cloudtracknumber'].where(mask == True, drop=True).squeeze()
-        lon_sub = ds['longitude'].where(mask == True, drop=True)
-        lat_sub = ds['latitude'].where(mask == True, drop=True)
+        if subset == 1:
+            lonmin, lonmax = map_extent[0], map_extent[1]
+            latmin, latmax = map_extent[2], map_extent[3]
+            mask = (ds['longitude'] >= lonmin) & (ds['longitude'] <= lonmax) & (ds['latitude'] >= latmin) & (ds['latitude'] <= latmax)
+            tb_sub = ds['tb'].where(mask == True, drop=True).squeeze()
+            pcp_sub = ds['precipitation'].where(mask == True, drop=True).squeeze()
+            tracknumber_sub = ds['cloudtracknumber'].where(mask == True, drop=True).squeeze()
+            lon_sub = ds['longitude'].where(mask == True, drop=True)
+            lat_sub = ds['latitude'].where(mask == True, drop=True)
+        else:
+            tb_sub = ds['tb'].squeeze()
+            pcp_sub = ds['precipitation'].squeeze()
+            tracknumber_sub = ds['cloudtracknumber'].squeeze()
+            lon_sub = ds['longitude']
+            lat_sub = ds['latitude']
         # Get object perimeters
         tn_perim = label_perimeter(tracknumber_sub.data, dilationstructure)
-
+        
         # Put pixel data in a dictionary
         pixel_dict = {
             'lon': lon_sub, 
@@ -512,7 +530,8 @@ if __name__ == "__main__":
     config_file = args_dict.get('config_file')
     panel_orientation = args_dict.get('panel_orientation')
     map_extent = args_dict.get('extent')
-    figsize = args_dict.get('figsize')
+    subset = args_dict.get('subset')
+    figsize = args_dict.get('figsize', [10, 10])
     out_dir = args_dict.get('out_dir')
     figbasename = args_dict.get('figbasename')
 
@@ -522,11 +541,13 @@ if __name__ == "__main__":
     # Put map info in a dictionary
     map_info = {
         'map_extent': map_extent,
+        'subset' : subset,
         'lonv': lonv,
         'latv': latv,
         'figsize': figsize,
         'panel_orientation': panel_orientation,
         'draw_border': False,
+        'draw_state': False,
     }
 
     # Create a timedelta threshold
@@ -546,8 +567,13 @@ if __name__ == "__main__":
     n_workers = config["nprocesses"]
 
     # Convert datetime string to Epoch time (base time)
+    # These are for searching pixel-level files
     start_basetime = pd.to_datetime(start_datetime).timestamp()
     end_basetime = pd.to_datetime(end_datetime).timestamp()
+    # Subtract start_datetime by TimeDelta to include tracks 
+    # that start before the start_datetime but may not have ended yet
+    TimeDelta = pd.Timedelta(days=4)
+    start_datetime_4stats = (pd.to_datetime(start_datetime) - TimeDelta).strftime('%Y-%m-%dT%H')
 
     # Find all pixel-level files that match the input datetime
     datafiles, \
@@ -570,7 +596,7 @@ if __name__ == "__main__":
     os.makedirs(figdir, exist_ok=True)
 
     # Get track stats data
-    track_dict = get_track_stats(trackstats_file, start_datetime, end_datetime, dt_thres)
+    track_dict = get_track_stats(trackstats_file, start_datetime_4stats, end_datetime, dt_thres)
 
     # Serial option
     if run_parallel == 0:
