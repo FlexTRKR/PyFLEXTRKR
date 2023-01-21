@@ -1,8 +1,8 @@
 #!/bin/bash
 # Create GridRad MCS tracking config and slurm scripts
 
-START_YEAR=2004
-END_YEAR=2017
+START_YEAR=2018
+END_YEAR=2021
 
 submit_job="no"
 
@@ -19,10 +19,10 @@ slurm_basename="slurm_gridrad_mcs_"
 # Loop over year
 for year in $(seq $START_YEAR $END_YEAR); do
     # Start/end date for tracking period
-    # sdate=${year}0401.0000
-    # edate=${year}0831.0000
-    sdate=${year}0101.0000
-    edate=${year}1231.0000
+    sdate=${year}0401.0000
+    edate=${year}0831.0000
+    # sdate=${year}0101.0000
+    # edate=${year}1231.0000
 
     config_file=${config_dir}${config_basename}${year}.yml
     # slurm_file=${slurm_dir}${slurm_basename}${sdate}_${edate}.sh
