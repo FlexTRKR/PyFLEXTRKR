@@ -106,5 +106,16 @@ python ./runscripts/run_mcs_tbpf.py ./config/config_wrf4km_mcs_tbpf_example.yml
 ![](https://portal.nersc.gov/project/m1867/PyFLEXTRKR/figures/run_command_explanation.png)
 
 
+# **6. References**
+
+---
+
+Feng, Z., Hardin, J., Barnes, H. C., Leung, L. R., Varble, A., & Zhang, Z. (2022). PyFLEXTRKR: a Flexible Feature Tracking Python Software for Convective Cloud Analysis. EGUsphere [preprint]. [https://doi.org/10.5194/egusphere-2022-1136]()
+
+Feng, Z., Varble, A., Hardin, J., Marquis, J., Hunzinger, A., Zhang, Z., & Thieman, M. (2022). Deep Convection Initiation, Growth, and Environments in the Complex Terrain of Central Argentina during CACTI. Monthly Weather Review, 150(5), 1135-1155. [https://doi.org/10.1175/MWR-D-21-0237.1]()
+
+Feng, Z., Leung, L. R., Liu, N., Wang, J., Houze, R. A., Li, J., et al. (2021). A Global High‐Resolution Mesoscale Convective System Database Using Satellite‐Derived Cloud Tops, Surface Precipitation, and Tracking. Journal of Geophysical Research: Atmospheres, 126(8). [https://doi.org/10.1029/2020JD034202]()
+
+---
 
 ## For a more detailed user guide, click [this link](https://github.com/FlexTRKR/PyFLEXTRKR/blob/main/UserGuide.md).
