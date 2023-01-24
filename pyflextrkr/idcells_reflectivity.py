@@ -81,6 +81,10 @@ def idcells_reflectivity(
     elif input_source == 'csapr_cacti':
         comp_dict = get_composite_reflectivity_csapr_cacti(
             input_filename, config)
+    elif input_source == 'wrf_composite':
+        comp_dict = get_composite_reflectivity_wrf_composite(
+            input_filename, config
+        )
     elif input_source == 'wrf':
         comp_dict = get_composite_reflectivity_wrf(
             input_filename, config)
@@ -564,6 +568,96 @@ def get_composite_reflectivity_wrf_regrid(input_filename, config):
 
     # Make a copy of the composite reflectivity (must do this or the dbz_comp will be altered)
     refl = np.copy(dbz_comp.data)
+    # Replace all values less than min radar sensitivity, including NAN, to be equal to the sensitivity value
+    # The purpose is to include areas surrounding isolated cells below radar sensitivity
+    # in the background intensity calculation.
+    # This differs from Steiner.
+    refl[(refl < radar_sensitivity) | np.isnan(refl)] = radar_sensitivity
+    # Create a good value mask (everywhere is good for WRF)
+    # dster = xr.open_dataset(terrain_file)
+    # mask_goodvalues = dster.mask110.values.astype(int)
+    mask_goodvalues = np.full(refl.shape, 1, dtype=int)
+
+    # Put output variables in a dictionary
+    comp_dict = {
+        'x_coords': x_coords,
+        'y_coords': y_coords,
+        'dbz3d_filt': dbz3d_filt,
+        'dbz_comp': dbz_comp,
+        'dbz_lowlevel': dbz_lowlevel,
+        'grid_lat': grid_lat,
+        'grid_lon': grid_lon,
+        'height': height,
+        'mask_goodvalues': mask_goodvalues,
+        'radar_lat': radar_lat,
+        'radar_lon': radar_lon,
+        'refl': refl,
+        'time_coords': time_coords,
+    }
+    return comp_dict
+
+#--------------------------------------------------------------------------------
+def get_composite_reflectivity_wrf_composite(input_filename, config):
+    """
+    Get composite reflectivity from WRF composite reflectivity.
+
+    Args:
+        input_filename: string
+            Input data filename
+        config: dictionary
+            Dictionary containing config parameters
+
+    Returns:
+        comp_dict: dictionary
+            Dictionary containing output variables
+    """
+    # sfc_dz_min = config['sfc_dz_min']
+    # sfc_dz_max = config['sfc_dz_max']
+    radar_sensitivity = config['radar_sensitivity']
+    time_dimname = config.get('time', 'time')
+    x_dimname = config.get('x_dimname', 'x')
+    y_dimname = config.get('y_dimname', 'y')
+    # z_dimname = config.get('z_dimname', 'z')
+    x_varname = config['x_varname']
+    y_varname = config['y_varname']
+    # z_varname = config['z_varname']
+    reflectivity_varname = config['reflectivity_varname']
+    # fillval = config['fillval']
+
+    # Read WRF file
+    ds = xr.open_dataset(input_filename)
+    import pdb; pdb.set_trace()
+    # Drop XTIME dimension, and rename 'Time' dimension to 'time'
+    ds = ds.reset_coords(names='XTIME', drop=False).rename({'Time': time_dimname})
+    # Rounds up to second, some model converted datetimes do not contain round second
+    time_coords = ds.XTIME.dt.round('S')
+    # Get data coordinates and dimensions
+    # Get WRF height values
+    height = (ds['PH'] + ds['PHB']).squeeze().data / 9.80665
+    nx = ds.sizes[x_dimname]
+    ny = ds.sizes[y_dimname]
+    # nz = ds.sizes[z_dimname]
+    # Create x, y coordinates to mimic radar
+    dx = ds.attrs['DX']
+    dy = ds.attrs['DY']
+    x_coords = np.arange(0, nx) * dx
+    y_coords = np.arange(0, ny) * dy
+    # Create a fake radar lat/lon
+    radar_lon, radar_lat = 0, 0
+    # Convert to DataArray
+    radar_lon = xr.DataArray(radar_lon, attrs={'long_name': 'Radar longitude'})
+    radar_lat = xr.DataArray(radar_lat, attrs={'long_name': 'Radar latitude'})
+    grid_lon = ds[x_varname].squeeze()
+    grid_lat = ds[y_varname].squeeze()
+    # Get radar variables
+    dbz3d = ds[reflectivity_varname].squeeze()
+    dbz3d_filt = dbz3d
+    # Get composite reflectivity
+    dbz_comp = dbz3d_filt.max(dim=z_dimname)
+    # Get low-level reflectivity
+    dbz_lowlevel = dbz3d_filt.isel(bottom_top=1)
+    # Make a copy of the composite reflectivity (must do this or the dbz_comp will be altered)
+    refl = np.copy(dbz_comp.values)
     # Replace all values less than min radar sensitivity, including NAN, to be equal to the sensitivity value
     # The purpose is to include areas surrounding isolated cells below radar sensitivity
     # in the background intensity calculation.
