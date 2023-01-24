@@ -38,7 +38,7 @@ root_path: '/global/cscratch1/sd/feng045/usa/gridrad_v2/'
 # Working sub-directory names
 tracking_path_name: 'tracking'
 stats_path_name: 'stats_linkpf'
-pixel_path_name: 'mcstracking_linkpf'
+pixel_path_name: 'mcstracking_maxze'
 
 # Land mask file
 landmask_filename: '/global/cscratch1/sd/feng045/usa/gridrad_v2/map_data/mergir4km_grid_terrain_landmask.nc'

@@ -21,7 +21,7 @@ if __name__ == "__main__":
     scale = '1200:-1'
 
     # Input figures root directory
-    in_dir_root = f'/global/cscratch1/sd/feng045/usa/gridrad_v2/quicklooks/'
+    in_dir_root = f'/global/cscratch1/sd/feng045/usa/gridrad_v2/quicklooks_maxze/'
     # Output animation directory
     out_dir = f'{in_dir_root}animation/'
     os.makedirs(out_dir, exist_ok=True)

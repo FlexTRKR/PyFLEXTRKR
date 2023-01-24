@@ -446,6 +446,12 @@ def work_for_time_loop(datafile, track_dict, map_info, figdir, figbasename=''):
         map_info['map_extent'] = map_extent
         map_info['subset'] = subset
 
+    # Data variable names
+    tb_varname = 'tb'
+    pcp_varname = 'precipitation_st4'
+    dbz_varname = 'compositeradar'
+    # dbz_varname = 'reflectivity'
+
     # Make dilation structure (larger values make thicker outlines)
     perim_thick = 6
     dilationstructure = np.zeros((perim_thick+1,perim_thick+1), dtype=int)
@@ -471,7 +477,7 @@ def work_for_time_loop(datafile, track_dict, map_info, figdir, figbasename=''):
     tn_levels = np.linspace(np.min(tracknumbers)+1, np.max(tracknumbers)+1, tn_nlev)
     levels = {'tb_levels':tb_levels, 'pcp_levels':pcp_levels, 'dbz_levels':dbz_levels, 'tn_levels':tn_levels}
     cbticks = {'tb_ticks':tb_ticks, 'pcp_ticks':pcp_ticks, 'dbz_ticks':dbz_ticks}
-    cblabels = {'tb_label':'Tb (K)', 'pcp_label':'Precipitation (mm h$^{-1}$)', 'dbz_label':'Reflectivity (dBZ)'}
+    cblabels = {'tb_label':'Tb (K)', 'pcp_label':'Precipitation (mm h$^{-1}$)', 'dbz_label':'Max Reflectivity (dBZ)'}
     # Truncate colormaps
     tb_cmap = truncate_colormap(plt.get_cmap('jet'), minval=0.05, maxval=0.95)
     pcp_cmap = truncate_colormap(plt.get_cmap('viridis'), minval=0.2, maxval=1.0)
@@ -485,16 +491,17 @@ def work_for_time_loop(datafile, track_dict, map_info, figdir, figbasename=''):
         lonmin, lonmax = map_extent[0], map_extent[1]
         latmin, latmax = map_extent[2], map_extent[3]
         mask = (ds['longitude'] >= lonmin) & (ds['longitude'] <= lonmax) & (ds['latitude'] >= latmin) & (ds['latitude'] <= latmax)
-        tb_sub = ds['tb'].where(mask == True, drop=True).squeeze()
-        pcp_sub = ds['precipitation_st4'].where(mask == True, drop=True).squeeze()
-        dbz_sub = ds['reflectivity'].where(mask == True, drop=True).squeeze()
+        tb_sub = ds[tb_varname].where(mask == True, drop=True).squeeze()
+        pcp_sub = ds[pcp_varname].where(mask == True, drop=True).squeeze()
+        # dbz_sub = ds['reflectivity'].where(mask == True, drop=True).squeeze()
+        dbz_sub = ds[dbz_varname].where(mask == True, drop=True).squeeze()
         tracknumber_sub = ds['cloudtracknumber'].where(mask == True, drop=True).squeeze()
         lon_sub = ds['longitude'].where(mask == True, drop=True)
         lat_sub = ds['latitude'].where(mask == True, drop=True)
     else:
-        tb_sub = ds['tb'].squeeze()
-        pcp_sub = ds['precipitation_st4'].squeeze()
-        dbz_sub = ds['reflectivity'].squeeze()
+        tb_sub = ds[tb_varname].squeeze()
+        pcp_sub = ds[pcp_varname].squeeze()
+        dbz_sub = ds[dbz_varname].squeeze()
         tracknumber_sub = ds['cloudtracknumber'].squeeze()
         lon_sub = ds['longitude']
         lat_sub = ds['latitude']
@@ -576,12 +583,13 @@ if __name__ == "__main__":
     stats_path = config["stats_outpath"]
     # pixeltracking_path = config["pixeltracking_outpath"]
     pixeltracking_filebase = config["pixeltracking_filebase"]
+    pixel_path_name = config['pixel_path_name']
     mcsfinal_filebase = config["mcsfinal_filebase"]
     startdate = config["startdate"]
     enddate = config["enddate"]
     _startdate = startdate[0:8]
     _enddate = enddate[0:8]
-    pixeltracking_path = config['root_path'] + 'mcstracking_linkpf/' + _startdate + '_' + _enddate +'/'
+    pixeltracking_path = f"{config['root_path']}{pixel_path_name}/{_startdate}_{_enddate}/"
     trackstats_file = f"{stats_path}{mcsfinal_filebase}{_startdate}_{_enddate}.nc"
     n_workers = config["nprocesses"]
 

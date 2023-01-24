@@ -39,7 +39,7 @@ if __name__ == "__main__":
     config_dir = "/global/homes/f/feng045/program/PyFLEXTRKR/config/"
     config_basename = "config_gridrad_mcs_"
 
-    fig_dir = "/global/cscratch1/sd/feng045/usa/gridrad_v2/quicklooks/"
+    fig_dir = "/global/cscratch1/sd/feng045/usa/gridrad_v2/quicklooks_maxze/"
     figbasename = "mcs_"
     figsize = "10 13"
 

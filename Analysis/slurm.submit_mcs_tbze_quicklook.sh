@@ -10,7 +10,7 @@
 #SBATCH --output=log_mcs_tbze_quicklook_%A_%a.log
 #SBATCH --mail-type=END
 #SBATCH --mail-user=zhe.feng@pnnl.gov
-#SBATCH --array=1-14
+#SBATCH --array=1-18
 
 date
 source activate flextrkr
