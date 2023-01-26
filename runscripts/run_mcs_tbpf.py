@@ -24,6 +24,12 @@ if __name__ == '__main__':
     config_file = sys.argv[1]
     config = load_config(config_file)
 
+    # Specify track statistics file basename for mapping track numbers to pixel files
+    # trackstats_filebase_4map = config['trackstats_filebase']  # All Tb tracks
+    # trackstats_filebase_4map = config['mcstbstats_filebase']  # MCS tracks defined by Tb-only
+    trackstats_filebase_4map = config['mcsrobust_filebase']   # MCS tracks defined by Tb+PF
+
+
     ################################################################################################
     # Parallel processing options
     if config['run_parallel'] == 1:
@@ -72,7 +78,7 @@ if __name__ == '__main__':
 
     # Step 8 - Map tracking to pixel files
     if config['run_mapfeature']:
-        mapfeature_driver(config)
+        mapfeature_driver(config, trackstats_filebase_4map)
 
     # Step 9 - Movement speed calculation
     if config['run_speed']:

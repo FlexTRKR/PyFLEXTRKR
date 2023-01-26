@@ -82,7 +82,7 @@ def write_cloudid_tb(
 
     # Define global attributes
     gattr_dict = {
-        "title": "Cloudid file from "
+        "Title": "Cloudid file from "
         + file_datestring[0:4]
         + "/"
         + file_datestring[4:6]
@@ -93,9 +93,9 @@ def write_cloudid_tb(
         + ":"
         + file_timestring[2:4]
         + " UTC",
-        'institution': 'Pacific Northwest National Laboratory',
-        'contact': 'Zhe Feng: zhe.feng@pnnl.gov',
-        "created_on": time.ctime(time.time()),
+        'Institution': 'Pacific Northwest National Laboratory',
+        'Contact': 'Zhe Feng: zhe.feng@pnnl.gov',
+        "Created_on": time.ctime(time.time()),
         "tb_threshold_core": cloudtb_threshs[0],
         "tb_threshold_coldanvil": cloudtb_threshs[1],
         "tb_threshold_warmanvil": cloudtb_threshs[2],

@@ -95,7 +95,7 @@ remove_shorttracks: 1
 # Note that for datasets with lots of tracks, the memory consumption could be large
 trackstats_dense_netcdf: 1
 # Minimum time difference threshold to match track stats with cloudid files
-match_tbpf_dt_thresh: 60.0  # seconds
+match_pixel_dt_thresh: 60.0  # seconds
 
 # MCS Tb parameters
 mcs_tb_area_thresh: 60000  # [km^2] Tb area threshold

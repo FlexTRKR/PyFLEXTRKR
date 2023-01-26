@@ -138,6 +138,8 @@ remove_shorttracks: 1
 # Set this flag to 1 to write a dense (2D) trackstats netCDF file
 # Note that for datasets with lots of tracks, the memory consumption could be very large
 trackstats_dense_netcdf: 1
+# Minimum time difference threshold to match track stats with cloudid pixel files
+match_pixel_dt_thresh: 60.0  # seconds
 
 # Define tracked feature variable names
 feature_varname: 'feature_number'
