@@ -8,15 +8,26 @@ from dask.distributed import wait
 from pyflextrkr.ft_utilities import subset_files_timerange
 from pyflextrkr.mapfeature_func import map_feature
 
-def mapfeature_driver(config, trackstats_filebase="trackstats_"):
+def mapfeature_driver(
+        config,
+        trackstats_filebase="trackstats_",
+        outpath=None,
+        outbasename=None,
+):
     """
-    Map tracked features to pixel level files.
+    Map tracked features to pixel-level files.
 
     Args:
         config: dictionary
             Dictionary containing config parameters.
         trackstats_filebase: string, default="trackstats_"
             Track statistics file basename.
+        outpath: string, default=None
+            Output directory for pixel-level files.
+            If None, defaults to use config["pixeltracking_outpath"].
+        outbasename: string, default=None
+            Output pixel-level file basename.
+            If None, defaults to use config["pixeltracking_filebase"].
 
     Returns:
         None.
@@ -25,7 +36,14 @@ def mapfeature_driver(config, trackstats_filebase="trackstats_"):
     logger.info('Mapping tracked features to pixel-level files')
 
     stats_path = config["stats_outpath"]
-    pixeltracking_outpath = config["pixeltracking_outpath"]
+    if outpath is None:
+        pixeltracking_outpath = config["pixeltracking_outpath"]
+    else:
+        pixeltracking_outpath = f'{config["root_path"]}{outpath}/{config["startdate"]}_{config["enddate"]}/'
+    if outbasename is None:
+        pixeltracking_filebase = config["pixeltracking_filebase"]
+    else:
+        pixeltracking_filebase = outbasename
     tracking_outpath = config["tracking_outpath"]
     cloudid_filebase = config["cloudid_filebase"]
     startdate = config["startdate"]
@@ -40,7 +58,6 @@ def mapfeature_driver(config, trackstats_filebase="trackstats_"):
     tracks_dimname = config.get("tracks_dimname", "tracks")
     times_dimname = config.get("times_dimname", "times")
     fillval = config.get("fillval", -9999)
-
 
     #########################################################################################
     # Read track stats
@@ -139,6 +156,8 @@ def mapfeature_driver(config, trackstats_filebase="trackstats_"):
                 file_splitcloudnumber,
                 trackstats_comments,
                 config,
+                pixeltracking_outpath,
+                pixeltracking_filebase,
             )
         # Parallel
         elif run_parallel >= 1:
@@ -154,6 +173,8 @@ def mapfeature_driver(config, trackstats_filebase="trackstats_"):
                 file_splitcloudnumber,
                 trackstats_comments,
                 config,
+                pixeltracking_outpath,
+                pixeltracking_filebase,
             )
             results.append(result)
         else:

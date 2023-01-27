@@ -5,17 +5,19 @@ import logging
 import xarray as xr
 
 def map_feature(
-    cloudid_filename,
-    filebasetime,
-    file_trackindex,
-    file_cloudnumber,
-    file_trackstatus,
-    file_mergetracknumber,
-    file_splittracknumber,
-    file_mergecloudnumber,
-    file_splitcloudnumber,
-    trackstats_comments,
-    config,
+        cloudid_filename,
+        filebasetime,
+        file_trackindex,
+        file_cloudnumber,
+        file_trackstatus,
+        file_mergetracknumber,
+        file_splittracknumber,
+        file_mergecloudnumber,
+        file_splitcloudnumber,
+        trackstats_comments,
+        config,
+        pixeltracking_outpath,
+        pixeltracking_filebase,
 ):
     """
     Map track numbers to pixel level files for all feature tracking.
@@ -43,6 +45,10 @@ def map_feature(
             Track status explanation.
         config: dictionary
             Dictionary containing config parameters.
+        pixeltracking_outpath: string
+            Output directory for pixel-level files.
+        pixeltracking_filebase: string
+            Output pixel-level file basename.
 
     Returns:
         tracksmap_outfile: string
@@ -219,21 +225,25 @@ def map_feature(
         "long_name": "Track number including merge/split",
         "units": "unitless",
         "_FillValue": 0,
+        "comments": "This mask renumbers small merge/split tracks to the main track (e.g., MCS)",
     }
     trackmap_m_attrs = {
         "long_name": "Track number for small merge tracks",
         "units": "unitless",
         "_FillValue": 0,
+        "comments": "This mask marks small merge tracks renumbered to the main track (e.g., MCS)",
     }
     trackmap_s_attrs = {
         "long_name": "Track number for small split tracks",
         "units": "unitless",
         "_FillValue": 0,
+        "comments": "This mask marks small split tracks renumbered to the main track (e.g., MCS)",
     }
     pcptrackmap_attrs = {
         "long_name": "Track number including merge/split for precipitation",
         "units": "unitless",
         "_FillValue": 0,
+        "precipitation_threshold": pcp_thresh,
     }
     # Convert numpy arrays to Xarray DataArrays
     trackmap = xr.DataArray(trackmap, coords=coords, dims=dims_keep, attrs=trackmap_attrs)
@@ -269,8 +279,8 @@ def map_feature(
 
     # Define output filename
     tracksmap_outfile = (
-        config["pixeltracking_outpath"] +
-        config["pixeltracking_filebase"] +
+        pixeltracking_outpath +
+        pixeltracking_filebase +
         file_datetime + ".nc"
     )
 
