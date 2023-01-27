@@ -2,16 +2,21 @@ import numpy as np
 
 def sort_renumber(
     labelcell_number2d,
-    min_cellpix,
+    min_size,
+    grid_area=None,
 ):
     """
-    Sorts 2D labeled cells by size, and removes cells smaller than min_cellpix.
+    Sorts 2D labeled cells by size, and removes cells smaller than min_size.
 
     Args:
         labelcell_number2d: np.ndarray()
             Labeled cell number array in 2D.
-        min_cellpix: float
-            Minimum number of pixel to count as a cell.
+        min_size: float
+            Minimum size to count as a cell.
+            If grid_area is None, this should be the minimum number of pixels.
+            If grid_area is supplied, this should be the minimum area.
+        grid_area: np.ndarray(), optional, default=None
+            Area of each grid. Dimensions must match labelcell_number2d.
 
     Returns:
         sortedlabelcell_number2d: np.ndarray(int)
@@ -34,9 +39,18 @@ def sort_renumber(
         for ilabelcell in range(1, nlabelcells + 1):
             # Count number of pixels for the cell
             ilabelcell_npix = np.count_nonzero(labelcell_number2d == ilabelcell)
-            # Check if cell satisfies size threshold
-            if ilabelcell_npix > min_cellpix:
-                labelcell_npix[ilabelcell - 1] = ilabelcell_npix
+            # Check if grid_area is supplied
+            if grid_area is None:
+                # If cell npix > min size threshold
+                if ilabelcell_npix > min_size:
+                    labelcell_npix[ilabelcell - 1] = ilabelcell_npix
+            else:
+                # If grid_area is supplied, sum grid area for the cell
+                ilabelcell_area = np.sum(grid_area[labelcell_number2d == ilabelcell])
+                # If cell area > min size threshold
+                if ilabelcell_area > min_size:
+                    labelcell_npix[ilabelcell - 1] = ilabelcell_npix
+
 
         # # This faster approach does not work
         # # Because when labelcell_number2d is not sequentially numbered (e.g., when some cells are removed)
@@ -45,7 +59,7 @@ def sort_renumber(
         # cellnum, labelcell_npix = np.unique(labelcell_number2d, return_counts=True)
         # # Remove background and cells below size threshold
         # labelcell_npix = labelcell_npix[(cellnum > 0)]
-        # labelcell_npix[(labelcell_npix <= min_cellpix)] = -999
+        # labelcell_npix[(labelcell_npix <= min_size)] = -999
 
         # Check if any of the cells passes the size threshold test
         ivalidcells = np.where(labelcell_npix > 0)[0]
@@ -74,7 +88,6 @@ def sort_renumber(
                     labelcell_number2d == sortedcell_number1d[icell]
                 )
                 # Get one of the dimensions from the 2D indices to count the size
-                #             nsortedcellindices = np.shape(sortedcell_indices)[1]
                 nsortedcellindices = len(sortedcell_indices[1])
                 # Check if the size matches the sorted cell size
                 if nsortedcellindices == sortedcell_npix[icell]:

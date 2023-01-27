@@ -221,12 +221,12 @@ def map_feature(
         "_FillValue": 0,
     }
     trackmap_m_attrs = {
-        "long_name": "Track number for merge",
+        "long_name": "Track number for small merge tracks",
         "units": "unitless",
         "_FillValue": 0,
     }
     trackmap_s_attrs = {
-        "long_name": "Track number for split",
+        "long_name": "Track number for small split tracks",
         "units": "unitless",
         "_FillValue": 0,
     }
@@ -239,7 +239,7 @@ def map_feature(
     trackmap = xr.DataArray(trackmap, coords=coords, dims=dims_keep, attrs=trackmap_attrs)
     allmergemap = xr.DataArray(allmergemap, coords=coords, dims=dims_keep, attrs=allmergemap_attrs)
     allsplitmap = xr.DataArray(allsplitmap, coords=coords, dims=dims_keep, attrs=allsplitmap_attrs)
-    # statusmap = xr.DataArray(statusmap, coords=coords, dims=dims_keep, attrs=statusmap_attrs)
+    statusmap = xr.DataArray(statusmap, coords=coords, dims=dims_keep, attrs=statusmap_attrs)
     trackmap_include_ms = xr.DataArray(trackmap_include_ms, coords=coords, dims=dims_keep, attrs=trackmap_ms_attrs)
     trackmap_merge = xr.DataArray(trackmap_merge, coords=coords, dims=dims_keep, attrs=trackmap_m_attrs)
     trackmap_split = xr.DataArray(trackmap_split, coords=coords, dims=dims_keep, attrs=trackmap_s_attrs)
@@ -253,10 +253,10 @@ def map_feature(
     ds_out = ds_out.assign(tracknumber=trackmap)
     ds_out = ds_out.assign(merge_tracknumber=allmergemap)
     ds_out = ds_out.assign(split_tracknumber=allsplitmap)
-    # ds_out = ds_out.assign(track_status=statusmap_xr)
+    ds_out = ds_out.assign(track_status=statusmap)
     ds_out = ds_out.assign(cloudtracknumber=trackmap_include_ms)
-    ds_out = ds_out.assign(merge_tracknumber=trackmap_merge)
-    ds_out = ds_out.assign(split_tracknumber=trackmap_split)
+    ds_out = ds_out.assign(cloudmerge_tracknumber=trackmap_merge)
+    ds_out = ds_out.assign(cloudsplit_tracknumber=trackmap_split)
     if feature_type == "tb_pf":
         ds_out = ds_out.assign(pcptracknumber=pcptrackmap)
 
