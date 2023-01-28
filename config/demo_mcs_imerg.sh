@@ -14,6 +14,9 @@
 # Specify directory for the demo data
 dir_demo='/global/cscratch1/sd/feng045/pyflextrkr_test/mcs_tbpf/imerg/'
 
+# Example config file name
+config_demo='config_mcs_demo.yml'
+
 # Demo input data directory
 dir_input=${dir_demo}'input/'
 
@@ -29,9 +32,6 @@ echo 'Extracting demo input data ...'
 tar -xvzf ${dir_input}gpm_tb_imerg.tar.gz -C ${dir_input}
 # Remove downloaded tar file
 rm -fv ${dir_input}gpm_tb_imerg.tar.gz
-
-# Example config file name
-config_demo='config_mcs_demo.yml'
 
 # Add '\' to each '/' in directory names
 dir_input1=$(echo ${dir_input} | sed 's_/_\\/_g')
@@ -52,12 +52,14 @@ echo 'Tracking is done.'
 # Make quicklook plots
 echo 'Making quicklook plots ...'
 quicklook_dir=${dir_demo}'/quicklooks_trackpaths/'
-python ../Analysis/plot_subset_tbpf_mcs_tracks_demo.py -s '2019-01-25T00' -e '2019-01-27T00' -c ${config_demo} -o vertical -p 1 --figsize 10 8 --output ${quicklook_dir}
+python ../Analysis/plot_subset_tbpf_mcs_tracks_demo.py -s '2019-01-25T00' -e '2019-01-27T00' \
+    -c ${config_demo} -o vertical -p 1 --figsize 10 8 --output ${quicklook_dir}
 echo 'View quicklook plots here: '${quicklook_dir}
 
 # Make animation using ffmpeg
 echo 'Making animations from quicklook plots ...'
-ffmpeg -framerate 2 -pattern_type glob -i ${quicklook_dir}'*.png' -c:v libx264 -r 10 -crf 20 -pix_fmt yuv420p -y ${quicklook_dir}quicklook_animation.mp4
+ffmpeg -framerate 2 -pattern_type glob -i ${quicklook_dir}'*.png' -c:v libx264 -r 10 -crf 20 -pix_fmt yuv420p \
+    -y ${quicklook_dir}quicklook_animation.mp4
 echo 'View animation here: '${quicklook_dir}quicklook_animation.mp4
 
 echo 'Demo completed!'

@@ -50,12 +50,14 @@ echo 'Tracking is done.'
 # Make quicklook plots
 echo 'Making quicklook plots ...'
 quicklook_dir=${dir_demo}'/quicklooks_trackpaths/'
-python ../Analysis/plot_subset_generic_tracks_demo.py -s '1979-06-01' -e '1979-08-31' -c ${config_demo} --figsize 8 4 -p 1 --output ${quicklook_dir}
+python ../Analysis/plot_subset_generic_tracks_demo.py -s '1979-06-01' -e '1979-08-31' \
+    -c ${config_demo} --figsize 8 4 -p 1 --output ${quicklook_dir}
 echo 'View quicklook plots here: '${quicklook_dir}
 
 # Make animation using ffmpeg
 echo 'Making animations from quicklook plots ...'
-ffmpeg -framerate 4 -pattern_type glob -i ${quicklook_dir}'*.png' -c:v libx264 -r 10 -crf 20 -pix_fmt yuv420p -y ${quicklook_dir}quicklook_animation.mp4
+ffmpeg -framerate 4 -pattern_type glob -i ${quicklook_dir}'*.png' -c:v libx264 -r 10 -crf 20 -pix_fmt yuv420p \
+    -y ${quicklook_dir}quicklook_animation.mp4
 echo 'View animation here: '${quicklook_dir}quicklook_animation.mp4
 
 echo 'Demo completed!'
