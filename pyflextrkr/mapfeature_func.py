@@ -239,12 +239,6 @@ def map_feature(
         "_FillValue": 0,
         "comments": "This mask marks small split tracks renumbered to the main track (e.g., MCS)",
     }
-    pcptrackmap_attrs = {
-        "long_name": "Track number including merge/split for precipitation",
-        "units": "unitless",
-        "_FillValue": 0,
-        "precipitation_threshold": pcp_thresh,
-    }
     # Convert numpy arrays to Xarray DataArrays
     trackmap = xr.DataArray(trackmap, coords=coords, dims=dims_keep, attrs=trackmap_attrs)
     allmergemap = xr.DataArray(allmergemap, coords=coords, dims=dims_keep, attrs=allmergemap_attrs)
@@ -254,6 +248,12 @@ def map_feature(
     trackmap_merge = xr.DataArray(trackmap_merge, coords=coords, dims=dims_keep, attrs=trackmap_m_attrs)
     trackmap_split = xr.DataArray(trackmap_split, coords=coords, dims=dims_keep, attrs=trackmap_s_attrs)
     if feature_type == "tb_pf":
+        pcptrackmap_attrs = {
+            "long_name": "Track number including merge/split for precipitation",
+            "units": "unitless",
+            "_FillValue": 0,
+            "precipitation_threshold": pcp_thresh,
+        }
         pcptrackmap = xr.DataArray(pcptrackmap, coords=coords, dims=dims_keep, attrs=pcptrackmap_attrs)
 
     # Create a copy of the input dataset

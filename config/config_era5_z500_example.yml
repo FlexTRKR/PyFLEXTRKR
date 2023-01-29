@@ -9,6 +9,8 @@ run_tracksingle: True
 run_gettracks: True
 # Calculate feature statistics
 run_trackstats: True
+# Link merge/split tracks
+run_mergesplit: True
 # Map tracking to pixel files
 run_mapfeature: True
 
@@ -68,6 +70,12 @@ trackstats_dense_netcdf: 1
 # Minimum time difference threshold to match track stats with cloudid pixel files
 match_pixel_dt_thresh: 60.0  # seconds
 
+# Link merge/split parameters to main tracks
+maintrack_area_thresh: 10000  # [km^2] Main track area threshold
+maintrack_lifetime_thresh: 96  # [hour] Main track duration threshold
+split_duration: 96  # [hour] Split tracks <= this length is linked to the main tracks
+merge_duration: 96  # [hour] Merge tracks <= this length is linked to the main tracks
+
 # Define tracked feature variable names
 feature_varname: 'feature_number'
 nfeature_varname: 'nfeatures'
@@ -77,4 +85,6 @@ featuresize_varname: 'npix_feature'
 tracks_dimname: 'tracks'
 times_dimname: 'times'
 fillval: -9999
+# Output file base names
+finalstats_filebase: 'trackstats_final_'
 pixeltracking_filebase: 'z500tracks_'

@@ -81,9 +81,9 @@ if __name__ == '__main__':
     # Step 8 - Map tracking to pixel files
     if config['run_mapfeature']:
         # Map robust MCS track numbers to pixel files (default)
-        mapfeature_driver(config, mcsrobust_filebase)
+        mapfeature_driver(config, trackstats_filebase=mcsrobust_filebase)
         # Map Tb-only MCS track numbers to pixel files (provide outpath keyword)
-        mapfeature_driver(config, mcstbstats_filebase, outpath=mcstbmap_outpath)
+        mapfeature_driver(config, trackstats_filebase=mcstbstats_filebase, outpath=mcstbmap_outpath)
         # Map all Tb track numbers to pixel level files (provide outpath keyword)
         # mapfeature_driver(config, trackstats_filebase, outpath=alltrackmap_outpath)
 

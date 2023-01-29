@@ -8,6 +8,7 @@ from pyflextrkr.idfeature_driver import idfeature_driver
 from pyflextrkr.tracksingle_driver import tracksingle_driver
 from pyflextrkr.gettracks import gettracknumbers
 from pyflextrkr.trackstats_driver import trackstats_driver
+from pyflextrkr.link_mergesplit_tracks import link_mergesplit_tracks
 from pyflextrkr.mapfeature_driver import mapfeature_driver
 
 # Purpose: Main script for tracking generic features
@@ -22,6 +23,10 @@ if __name__ == '__main__':
     # Load configuration file
     config_file = sys.argv[1]
     config = load_config(config_file)
+
+    # Specify track statistics file basename and pixel-level output directory
+    # for mapping track numbers to pixel files
+    finalstats_filebase = config['finalstats_filebase']  # MCS tracks defined by Tb-only
 
     ################################################################################################
     # Parallel processing options
@@ -57,7 +62,16 @@ if __name__ == '__main__':
     if config['run_trackstats']:
         trackstats_filename = trackstats_driver(config)
 
-    # Step 5 - Map tracking to pixel files
-    if config['run_mapfeature']:
-        mapfeature_driver(config)
+    # Step 5 - Link merge/split tracks to main tracks
+    if config['run_mergesplit']:
+        finaltrackstats_filename = link_mergesplit_tracks(config)
 
+    # Step 6 - Map tracking to pixel files
+    if config['run_mapfeature']:
+        mapfeature_driver(config, trackstats_filebase=finalstats_filebase)
+
+    # If Step 5 (link merge/split tracks) is not desired, it can be skipped (comment it out)
+    # In that case, use the following for Step 6 (no need to provide trackstats_filebase argument)
+    # # Step 6 - Map tracking to pixel files
+    # if config['run_mapfeature']:
+    #     mapfeature_driver(config)

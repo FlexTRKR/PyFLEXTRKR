@@ -155,8 +155,8 @@ def get_track_stats(trackstats_file, start_datetime, end_datetime, dt_thres):
         'base_time': dss['base_time'].isel(tracks=idx),
         'meanlon': dss['meanlon'].isel(tracks=idx),
         'meanlat': dss['meanlat'].isel(tracks=idx),
-        'start_split_tracknumber': dss['start_split_tracknumber'].isel(tracks=idx),
-        'end_merge_tracknumber': dss['end_merge_tracknumber'].isel(tracks=idx),
+        # 'start_split_tracknumber': dss['start_split_tracknumber'].isel(tracks=idx),
+        # 'end_merge_tracknumber': dss['end_merge_tracknumber'].isel(tracks=idx),
         'dt_thres': dt_thres,
         'time_res': time_res,
     }
@@ -199,6 +199,7 @@ def plot_map(pixel_dict, plot_info, map_info, track_dict):
     meanlon = track_dict['meanlon']
     meanlat = track_dict['meanlat']
     # Get plot info from dictionary
+    fontsize = plot_info['fontsize']
     levels = plot_info['levels']
     cmap = plot_info['cmap']
     # titles = plot_info['titles']
@@ -233,7 +234,7 @@ def plot_map(pixel_dict, plot_info, map_info, track_dict):
     states = cfeature.NaturalEarthFeature('cultural', 'admin_1_states_provinces_lakes', map_resolution)
 
     # Set up figure
-    mpl.rcParams['font.size'] = 13
+    mpl.rcParams['font.size'] = fontsize
     mpl.rcParams['font.family'] = 'Helvetica'
     fig = plt.figure(figsize=figsize, dpi=200)
     gs = gridspec.GridSpec(1,2, height_ratios=[1], width_ratios=[1,0.03])
@@ -360,7 +361,7 @@ def work_for_time_loop(datafile, track_dict, map_info, plot_info, config):
     field_varname = config["field_varname"]
 
     # Get tracknumbers
-    # tn = ds['tracknumber'].squeeze()
+    # tn = ds['cloudtracknumber'].squeeze()
 
     # Only plot if there is feature in the frame
     # if (np.nanmax(tn) > 0):
@@ -378,10 +379,10 @@ def work_for_time_loop(datafile, track_dict, map_info, plot_info, config):
         lon_sub = ds['longitude'].isel(lon=slice(xmin,xmax), lat=slice(ymin,ymax)).data
         lat_sub = ds['latitude'].isel(lon=slice(xmin,xmax), lat=slice(ymin,ymax)).data
         fvar = ds[field_varname].isel(lon=slice(xmin,xmax), lat=slice(ymin,ymax)).squeeze()
-        tracknumber_sub = ds['tracknumber'].isel(lon=slice(xmin,xmax), lat=slice(ymin,ymax)).squeeze()
+        tracknumber_sub = ds['cloudtracknumber'].isel(lon=slice(xmin,xmax), lat=slice(ymin,ymax)).squeeze()
     else:
         fvar = ds[field_varname].squeeze()
-        tracknumber_sub = ds['tracknumber'].squeeze()
+        tracknumber_sub = ds['cloudtracknumber'].squeeze()
         lon_sub = ds['longitude'].data
         lat_sub = ds['latitude'].data
 
@@ -437,16 +438,17 @@ if __name__ == "__main__":
 
     # Specify plotting info
     plot_info = {
-        'cmap': 'RdBu_r',
-        'levels': np.arange(-4, 4.01, 0.2),
-        'cbticks': np.arange(-4, 4.01, 1),
-        'cblabels': 'Z500 Anomaly (m$^{2}$ s$^{-1}$)',
-        'marker_size': 8,
-        'trackpath_linewidth': 1.5,
-        'trackpath_color': 'blueviolet',
-        'map_edgecolor': 'gray',
-        'map_resolution': '110m',
-        'map_central_lon': 180,
+        'fontsize': 13,     # plot font size
+        'cmap': 'RdBu_r',   # colormap
+        'levels': np.arange(-4, 4.01, 0.2),  # shading levels
+        'cbticks': np.arange(-4, 4.01, 1),  # colorbar ticks
+        'cblabels': 'Z500 Anomaly (m$^{2}$ s$^{-1}$)',  # colorbar label
+        'marker_size': 8,   # track symbol marker size
+        'trackpath_linewidth': 1.5, # track path line width
+        'trackpath_color': 'blueviolet',    # track path color
+        'map_edgecolor': 'gray',    # background map edge color
+        'map_resolution': '110m',   # background map resolution ('110m', '50m', 10m')
+        'map_central_lon': 180,     # map projection central longitude (for global map)
         'figsize': figsize,
         'figbasename': figbasename,
     }
@@ -477,10 +479,16 @@ if __name__ == "__main__":
     pixeltracking_path = config["pixeltracking_outpath"]
     pixeltracking_filebase = config["pixeltracking_filebase"]
     trackstats_filebase = config["trackstats_filebase"]
+    finalstats_filebase = config.get("finalstats_filebase", None)
     startdate = config["startdate"]
     enddate = config["enddate"]
-    trackstats_file = f"{stats_path}{trackstats_filebase}{startdate}_{enddate}.nc"
     n_workers = config["nprocesses"]
+
+    # If finalstats_filebase is present, use it (links merge/split tracks)
+    if finalstats_filebase is None:
+        trackstats_file = f"{stats_path}{trackstats_filebase}{startdate}_{enddate}.nc"
+    else:
+        trackstats_file = f"{stats_path}{finalstats_filebase}{startdate}_{enddate}.nc"
 
     # Output figure directory
     if out_dir is None:
