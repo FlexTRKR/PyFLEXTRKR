@@ -12,24 +12,38 @@ import dask
 from dask.distributed import wait
 from pyflextrkr.ft_utilities import subset_files_timerange
 
-def movement_speed(config):
+def movement_speed(
+        config,
+        trackstats_filebase=None,
+        trackstats_outfilebase=None,
+        pixelpath_basename=None,
+        pixeltracking_filebase=None,
+):
     """
     Calculate movement speed using pixel level tracked feature.
 
     Args:
         config: dictionary
             Dictionary containing config parameters.
+        trackstats_filebase: string, default=None
+            Input track statistics file basename.
+        trackstats_outfilebase: string, default=None
+            Output track statistics file basename.
+        pixelpath_basename: string, default=None,
+            Pixel-level files base path name.
+            If None, pixeltracking_outpath defaults to config["pixeltracking_outpath"].
+            Otherwise, pixeltracking_outpath is constructed using the config info:
+                f'{config["root_path"]}/{pixelpath_basename}/{config["startdate"]}_{config["enddate"]}/'
+        pixeltracking_filebase=None, default=None
+            Pixel-level file basename.
+            If None, defaults to config["pixeltracking_filebase"].
 
     Returns:
         statistics_outfile: string
             MCS track statistics file name.
     """
 
-    pixeltracking_outpath = config["pixeltracking_outpath"]
-    pixeltracking_filebase = config["pixeltracking_filebase"]
     stats_outpath = config["stats_outpath"]
-    mcsrobust_filebase = config["mcsrobust_filebase"]
-    mcsfinal_filebase = config["mcsfinal_filebase"]
     startdate = config["startdate"]
     enddate = config["enddate"]
     start_basetime = config["start_basetime"]
@@ -45,12 +59,25 @@ def movement_speed(config):
     logger = logging.getLogger(__name__)
     logger.info('Calculating movement speed using pixel-level tracked feature')
 
+    # Set trackstats file basenames
+    if trackstats_filebase is None:
+        trackstats_filebase = config["mcsrobust_filebase"]
+    if trackstats_outfilebase is None:
+        trackstats_outfilebase = config["mcsfinal_filebase"]
+    # Set pixel file path and basename
+    if pixelpath_basename is None:
+        pixeltracking_outpath = config["pixeltracking_outpath"]
+    else:
+        pixeltracking_outpath = f'{config["root_path"]}/{pixelpath_basename}/{config["startdate"]}_{config["enddate"]}/'
+    if pixeltracking_filebase is None:
+        pixeltracking_filebase = config["pixeltracking_filebase"]
+
     # Stats file name
     if feature_type == 'tb_pf':
         # Robust MCS track stats filename
-        statistics_file = f"{stats_outpath}{mcsrobust_filebase}{startdate}_{enddate}.nc"
+        statistics_file = f"{stats_outpath}{trackstats_filebase}{startdate}_{enddate}.nc"
         # Output MCS track stats filename
-        statistics_outfile = f"{stats_outpath}{mcsfinal_filebase}{startdate}_{enddate}.nc"
+        statistics_outfile = f"{stats_outpath}{trackstats_outfilebase}{startdate}_{enddate}.nc"
 
     # Identify pixel files to process
     filelist, \
@@ -61,6 +88,7 @@ def movement_speed(config):
                                               start_basetime,
                                               end_basetime)
     nfiles = len(filelist)
+    logger.info(f"Total number of files to process: {nfiles}")
 
     # Open stats file to get maximum number of storms to track.
     ds_stats = xr.open_dataset(statistics_file,
@@ -152,7 +180,7 @@ def movement_speed(config):
                     format="NETCDF4", unlimited_dims=tracks_dimname, encoding=encoding)
     logger.info(f"{statistics_outfile}")
 
-    return
+    return statistics_outfile
 
 
 

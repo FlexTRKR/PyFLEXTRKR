@@ -11,8 +11,8 @@ from pyflextrkr.mapfeature_func import map_feature
 def mapfeature_driver(
         config,
         trackstats_filebase="trackstats_",
-        outpath=None,
-        outbasename=None,
+        outpath_basename=None,
+        outfile_basename=None,
 ):
     """
     Map tracked features to pixel-level files.
@@ -22,10 +22,12 @@ def mapfeature_driver(
             Dictionary containing config parameters.
         trackstats_filebase: string, default="trackstats_"
             Track statistics file basename.
-        outpath: string, default=None
-            Output directory for pixel-level files.
-            If None, defaults to use config["pixeltracking_outpath"].
-        outbasename: string, default=None
+        outpath_basename: string, default=None
+            Output path basename for pixel-level files.
+            If None, pixeltracking_outpath defaults to config["pixeltracking_outpath"].
+            Otherwise, pixeltracking_outpath is constructed using the config file:
+                f'{config["root_path"]}/{outpath_basename}/{config["startdate"]}_{config["enddate"]}/'
+        outfile_basename: string, default=None
             Output pixel-level file basename.
             If None, defaults to use config["pixeltracking_filebase"].
 
@@ -36,14 +38,14 @@ def mapfeature_driver(
     logger.info('Mapping tracked features to pixel-level files')
 
     stats_path = config["stats_outpath"]
-    if outpath is None:
+    if outpath_basename is None:
         pixeltracking_outpath = config["pixeltracking_outpath"]
     else:
-        pixeltracking_outpath = f'{config["root_path"]}{outpath}/{config["startdate"]}_{config["enddate"]}/'
-    if outbasename is None:
+        pixeltracking_outpath = f'{config["root_path"]}/{outpath_basename}/{config["startdate"]}_{config["enddate"]}/'
+    if outfile_basename is None:
         pixeltracking_filebase = config["pixeltracking_filebase"]
     else:
-        pixeltracking_filebase = outbasename
+        pixeltracking_filebase = outfile_basename
     tracking_outpath = config["tracking_outpath"]
     cloudid_filebase = config["cloudid_filebase"]
     startdate = config["startdate"]
