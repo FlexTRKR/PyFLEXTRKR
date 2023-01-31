@@ -1,4 +1,5 @@
 import numpy as np
+from collections import deque
 
 def sort_renumber(
     labelcell_number2d,
@@ -377,3 +378,77 @@ def olr_to_tb(OLR):
     tf = (OLR/sigma)**0.25
     tb = (-a + np.sqrt(a**2 + 4*b*tf))/(2*b)
     return tb
+
+def get_neighborhood(point, grid):
+    """
+    Given a grid of labeled points with 0=unlabeled, -1 to be processed, other # to be proccesed.
+
+    Args:
+        point: np.array
+            Array containing seed points for growing
+        grid: np.array
+            Array containing labels.
+    
+    Returns:
+        next_points: np.array
+            Neighboring points.
+    """
+    shape = grid.shape
+    point_grid = [
+        [x + point[0], y + point[1]] for x in range(-1, 2) for y in range(-1, 2)
+    ]
+    next_points = []
+
+    for idx, i_point in enumerate(point_grid):
+        if i_point[0] < 0 or i_point[0] >= shape[0]:
+            continue
+        if i_point[1] < 0 or i_point[1] >= shape[1]:
+            continue
+        if i_point[0] == point[0] and i_point[1] == point[1]:
+            continue
+        else:  # We're good
+            if grid[i_point[0], i_point[1]] == 0:
+                next_points.append([i_point[0], i_point[1]])
+    return next_points  # Would probably be faster to pass in deque and directly add rather than a sublist.
+
+
+def grow_cells(grid):
+    """
+    Fast algorithm to grow and label areas based on nearest distance to the seeded regions.
+
+    Args:
+        grid: np.array
+            Array containing labeled seeded regions (values > 0).
+            Areas for growing = 0, areas excluded = -1.
+
+    Returns:
+        grid: np.array
+            Array containing labels after growth.
+    """
+    seed_points = np.where(grid > 0)
+    point_que = deque(
+        [
+            [seed_points[0][i], seed_points[1][i]]
+            for i in range(np.count_nonzero(seed_points[0]))
+        ]
+    )
+    while len(point_que) > 0:
+        current_pt = point_que.popleft()
+        neighbor_values = grid[
+            max(current_pt[0] - 1, 0) : current_pt[0] + 2,
+            max(0, current_pt[1] - 1) : current_pt[1] + 2,
+        ]
+        neighbors = get_neighborhood(current_pt, grid)
+
+        for point in neighbors:
+            grid[point[0], point[1]] = -1
+            point_que.append(point)
+        if (
+            grid[current_pt[0], current_pt[1]] < 1
+        ):  # Lets not reclassify currently classified points grabbed in beginning selection
+            counts_v, counts_i = np.unique(
+                neighbor_values[neighbor_values > 0], return_counts=True
+            )
+            mode_val = counts_v[np.argmax(counts_i)]
+            grid[current_pt[0], current_pt[1]] = mode_val
+    return grid

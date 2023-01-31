@@ -1,8 +1,10 @@
+import logging
 from collections import deque
 import numpy as np
 from scipy.ndimage import label, binary_dilation, generate_binary_structure, filters
 from astropy.convolution import Box2DKernel, convolve
-import logging
+from pyflextrkr.ftfunctions import grow_cells
+
 
 def label_and_grow_cold_clouds(
     ir,
@@ -581,55 +583,3 @@ def generate_pixel_identification_from_threshold(
         clear_flag[clear_indices] = 1
         final_cloudid[clear_indices] = 5
     return coldanvil_flag, core_flag, final_cloudid
-
-
-# There are a few ways to speed this up. I could use some more hardcoded values. Bigger setting domain, etc.
-def get_neighborhood(point, grid):
-    """Given a grid of labeled points with 0=unlabeled, -1 to be processed, other # to be  proccesed."""
-    shape = grid.shape
-    point_grid = [
-        [x + point[0], y + point[1]] for x in range(-1, 2) for y in range(-1, 2)
-    ]
-    next_points = []
-
-    for idx, i_point in enumerate(point_grid):
-        if i_point[0] < 0 or i_point[0] >= shape[0]:
-            continue
-        if i_point[1] < 0 or i_point[1] >= shape[1]:
-            continue
-        if i_point[0] == point[0] and i_point[1] == point[1]:
-            continue
-        else:  # We're good
-            if grid[i_point[0], i_point[1]] == 0:
-                next_points.append([i_point[0], i_point[1]])
-    return next_points  # Would probably be faster to pass in deque and directly add rather than a sublist.
-
-
-def grow_cells(grid):
-    seed_points = np.where(grid > 0)
-    point_que = deque(
-        [
-            [seed_points[0][i], seed_points[1][i]]
-            for i in range(np.count_nonzero(seed_points[0]))
-        ]
-    )
-    while len(point_que) > 0:
-        current_pt = point_que.popleft()
-        neighbor_values = grid[
-            max(current_pt[0] - 1, 0) : current_pt[0] + 2,
-            max(0, current_pt[1] - 1) : current_pt[1] + 2,
-        ]
-        neighbors = get_neighborhood(current_pt, grid)
-
-        for point in neighbors:
-            grid[point[0], point[1]] = -1
-            point_que.append(point)
-        if (
-            grid[current_pt[0], current_pt[1]] < 1
-        ):  # Lets not reclassify currently classified points grabbed in beginning selection
-            counts_v, counts_i = np.unique(
-                neighbor_values[neighbor_values > 0], return_counts=True
-            )
-            mode_val = counts_v[np.argmax(counts_i)]
-            grid[current_pt[0], current_pt[1]] = mode_val
-    return grid
