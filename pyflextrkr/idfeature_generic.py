@@ -4,9 +4,9 @@ import numpy as np
 import time
 import xarray as xr
 import logging
-from scipy.ndimage import label
-from pyflextrkr.ftfunctions import sort_renumber
 from datetime import datetime
+from scipy.ndimage import label
+from pyflextrkr.ftfunctions import sort_renumber, skimage_watershed
 
 def idfeature_generic(
     input_filename,
@@ -86,8 +86,8 @@ def idfeature_generic(
     # Calculate mean lat/lon grid distance (assuming fix grid size)
     # dlon = np.array(x_coord[2] - x_coord[1])
     # dlat = np.array(y_coord[2] - y_coord[1])
-    dlon = np.mean(np.diff(x_coord))
-    dlat = np.mean(np.diff(y_coord))
+    dlon = np.mean(np.abs(np.diff(x_coord)))
+    dlat = np.mean(np.abs(np.diff(y_coord)))
 
     # Calculate grid cell area (simple cosine adjustment)
     grid_area = (R_earth**2) * np.cos(np.deg2rad(lat2d)) * np.deg2rad(dlat) * np.deg2rad(dlon)
@@ -115,6 +115,12 @@ def idfeature_generic(
         # Label feature with simple threshold & connectivity method
         if label_method == 'ndimage.label':
             var_number, nblobs = label((field_thresh_min < fvar) & (fvar < field_thresh_max))
+            param_dict = {
+                'field_thresh': field_thresh,
+            }
+
+        if label_method == 'skimage.watershed':
+            var_number, param_dict = skimage_watershed(fvar, config)
 
         # Sort and renumber features, filter features < min_size or grid_area
         feature_mask, npix_feature = sort_renumber(var_number, min_size, grid_area=grid_area)
@@ -182,9 +188,12 @@ def idfeature_generic(
             "Institution": "Pacific Northwest National Laboratory",
             "Contact": "Zhe Feng: zhe.feng@pnnl.gov",
             "Created_on": time.ctime(time.time()),
-            "field_thresh": field_thresh,
             "min_size": min_size,
         }
+        # Add each parameter to global attribute dictionary
+        for key in param_dict:
+            gattr_dict[key] = param_dict[key]
+
         # Define xarray dataset
         dsout = xr.Dataset(var_dict, coords=coord_dict, attrs=gattr_dict)
 

@@ -1,5 +1,7 @@
 import numpy as np
 from collections import deque
+from skimage.segmentation import watershed
+from skimage.feature import peak_local_max
 
 def sort_renumber(
     labelcell_number2d,
@@ -452,3 +454,56 @@ def grow_cells(grid):
             mode_val = counts_v[np.argmax(counts_i)]
             grid[current_pt[0], current_pt[1]] = mode_val
     return grid
+
+
+def skimage_watershed(fvar, config):
+    """
+    Label objects with skimage.watershed function
+
+    Args:
+        fvar: np.array
+            2D array containing data for segmentation.
+        config: dictionary
+            Dictionary containing config parameters
+
+    Returns:
+        var_number: np.array
+            Array containing labeled objects.
+        param_dict: dictionary
+            Dictionary containing parameters used from config.
+    """
+
+    # Get thresholds from config
+    plm_min_distance = config['plm_min_distance']
+    plm_exclude_border = config['plm_exclude_border']
+    plm_threshold_abs = config['plm_threshold_abs']
+    cont_thresh = config['cont_thresh']
+    compa = config['compa']
+
+    # Put parameters in a dictionary
+    param_dict = {
+        'plm_min_distance': plm_min_distance,
+        'plm_exclude_border': plm_exclude_border,
+        'plm_threshold_abs': plm_threshold_abs,
+        'cont_thresh': cont_thresh,
+        'compa': compa,
+    }
+
+    # Get grid indices of local maxima
+    local_maxes = peak_local_max(fvar, min_distance=plm_min_distance, exclude_border=plm_exclude_border, threshold_abs=plm_threshold_abs)
+    cc, dd = local_maxes.shape
+    
+    # Generate 2D field with shape of favr, local maxima locations marked by the maxima number
+    # Field is zero where maxima not present
+    markers = np.zeros(fvar.shape, dtype=int)
+    for p in range(cc):
+        markers[local_maxes[p,0], local_maxes[p,1]] = p + 1    # plus 1 because dont want a marker = 0.
+
+    # Define a binary mask used in watershed algorithm
+    Pmask = np.zeros(fvar.shape, dtype=int)
+    Pmask[fvar > cont_thresh] = 1
+
+    # Use watershed to define objects:
+    var_number = watershed(-fvar, markers, mask=Pmask, watershed_line=True, compactness=compa)
+
+    return var_number, param_dict
