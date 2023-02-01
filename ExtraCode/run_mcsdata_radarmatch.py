@@ -426,7 +426,7 @@ if run_labelmcs == 1:
         # Process files
 
         # Load function 
-        from pyflextrkr.mapmcs import mapmcs_pf
+        from pyflextrkr.depreciated.mapmcs import mapmcs_pf
 
         # Generate input list
         list_robustmcsstat_filebase = [robustmcs_filebase]*nuniquebasetime

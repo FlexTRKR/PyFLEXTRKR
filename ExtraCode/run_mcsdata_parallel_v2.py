@@ -354,7 +354,7 @@ if run_labelmcs == 1:
         # Process files
 
         # Load function 
-        from pyflextrkr.mapmcs import mapmcs_mergedir
+        from pyflextrkr.depreciated.mapmcs import mapmcs_mergedir
 
         # Generate input list
         list_mcstrackstat_filebase = [mcsstats_filebase]*nuniquebasetime

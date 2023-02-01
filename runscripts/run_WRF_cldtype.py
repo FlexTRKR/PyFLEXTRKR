@@ -709,7 +709,7 @@ if run_labelmcspf == 1:
     # Process files
 
     # Load function 
-    from pyflextrkr.mapmcspf import mapmcs_wrf_pf
+    from pyflextrkr.depreciated.mapmcspf import mapmcs_wrf_pf
 
     # Generate input list
     list_robustmcsstat_filebase = [robustmcs_filebase]*(cloudidfilestep-1)

@@ -423,7 +423,7 @@ if run_labelcell == 1:
     # Process files
 
     # Load function 
-    from pyflextrkr.mapcell import mapcell_LES
+    from pyflextrkr.depreciated.mapcell import mapcell_LES
 
     # Generate input list
     list_cellstat_filebase = [cellstats_filebase]*(cloudidfilestep-1)
