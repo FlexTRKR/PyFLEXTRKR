@@ -3,7 +3,7 @@
 # **1. Introduction**
 
 ---
-The Python FLEXible object TRacKeR (PyFLEXTRKR) is a flexible atmospheric feature tracking software package. The software can track any 2D objects and handle merging and splitting explicityly. PyFLEXTRKR has specific capabilities to track convective clouds from a variety of observations and model simulations, including: 1) individual convective cells, and 2) mesoscale convective systems (MCSs) using radar, satellite, and model data. The package has scalable parallelization options and has been optimized to work on large datasets including global high resolution data.
+The Python FLEXible object TRacKeR (PyFLEXTRKR) is a flexible atmospheric feature tracking software package. The software can track any 2D objects and handle merging and splitting explicitly. PyFLEXTRKR has specific capabilities to track convective clouds from a variety of observations and model simulations, including: 1) individual convective cells, and 2) mesoscale convective systems (MCSs) using radar, satellite, and model data. The package has scalable parallelization options and has been optimized to work on large datasets including global high resolution data.
 
 # **2. Input Data Requirements**
 
@@ -14,7 +14,7 @@ PyFLEXTRKR works with netCDF files using Xarray's capability to handle N-dimensi
 2. Tracking MCSs using infrared brightness temperature (Tb) data from geostationary satellites, or outgoing longwave radiation (OLR) data from model simulations, with optional collocated precipitation data to identify robust MCSs [[Feng et al. (2021), JGR](https://doi.org/10.1029/2020JD034202)]; 
 3. Tracking generic 2D objects defined by simple threshold-based connectivity masks.
 
-The input data must contain at least 3 dimensions: *time, y, x*, with corresponding coordinates of *time, latitude, longitude*. The *latitude* and *longitude* coordinates can  be either 1D or 2D. But the data must be on a fixed 2D grid (any projection is fine) since PyFLEXTRKR only supports tracking data on 2D arrays. Irregular grids such as those in E3SM or MPAS model must first be regridded to a regular grid before tracking. Additional variable names and coordinate names are specified in the config file.
+The input data must contain at least 3 dimensions: *time, y, x*, with corresponding coordinates of *time, latitude, longitude*. The *latitude* and *longitude* coordinates can  be either 1D or 2D. But the data must be on a fixed 2D grid (any projection is fine) since PyFLEXTRKR only supports tracking data on 2D arrays. Irregular grids such as those in E3SM or MPAS model must first be regridded to a regular grid before tracking. Additional variable names and coordinate names are specified in the config file. See [user guide](https://github.com/FlexTRKR/PyFLEXTRKR/blob/main/UserGuide.md) for more details in preparing the input dataset.
 
 # **3. Installing PyFLEXTRKR**
 
@@ -35,6 +35,12 @@ Use the included environment.yml file to create a Conda virtual environment, mak
 
 ```bash
 conda env create -f environment.yml --prefix /conda_env_dir/flextrkr
+```
+
+**Pro Tips:** using [mamba](https://anaconda.org/conda-forge/mamba) to create the virtual environment is much faster:
+
+```bash
+mamba env create -f environment.yml --prefix /conda_env_dir/flextrkr
 ```
 
 After setting up the Conda virtual environment, activate it with:
@@ -70,8 +76,12 @@ Several scripts are provided to download example input data, run tracking, and p
 
 ![](https://portal.nersc.gov/project/m1867/PyFLEXTRKR/figures/imerg_mcstracking_animation_small.gif)
 
+6. [Generic feature tracking (e.g., 500 hPa geopotential height anomaly)](https://github.com/FlexTRKR/PyFLEXTRKR/blob/main/config/demo_generic_tracking.sh)
+
+![](https://portal.nersc.gov/project/m1867/PyFLEXTRKR/figures/z500_tracking_animation_small.gif)
 
 To run these demo scripts, download the script, modify the `dir_demo` in the script to a directory on your computer to store the sample data, and run the following command:
+
 
 ```bash
 bash demo_cell_nexrad.sh
