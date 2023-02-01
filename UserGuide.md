@@ -19,7 +19,9 @@ PyFLEXTRKR works with netCDF files using Xarray's capability to handle N-dimensi
 
 The input data must contain at least 3 dimensions: *time, y, x*, with corresponding coordinates of *time, latitude, longitude*. The *latitude* and *longitude* coordinates can  be either 1D or 2D. But the data must be on a fixed 2D grid (any projection is fine) since PyFLEXTRKR only supports tracking data on 2D arrays. Irregular grids such as those in E3SM or MPAS model must first be regridded to a regular grid before tracking. Additional variable names and coordinate names are specified in the config file.
 
-**Example input data for supported feature tracking:**
+The dimension order in the input data does not need to be in *time, y, x*, as the dimensions are internally reordered when the data are read in. 
+
+### Example input data for supported feature tracking
 
 * [NEXRAD radar data](https://portal.nersc.gov/project/m1867/PyFLEXTRKR/sample_data/radar/nexrad_reflectivity1.tar.gz)
 * [ARM C-SAPR radar data](https://portal.nersc.gov/project/m1867/PyFLEXTRKR/sample_data/radar/taranis_corcsapr2.tar.gz)
@@ -28,19 +30,31 @@ The input data must contain at least 3 dimensions: *time, y, x*, with correspond
 * [E3SM regridded OLR + precipitation data](https://portal.nersc.gov/project/m1867/PyFLEXTRKR/sample_data/tb_pcp/e3sm_tbpcp.tar.gz)
 * [ERA5 500hPa geopotential height anomaly data](https://portal.nersc.gov/project/m1867/PyFLEXTRKR/sample_data/generic/ERA5_z500_anom.tar.gz)
 
-**Example MCS tracking code for WRF**
+### Example code to produce Cartesian gridded radar data
 
-An example run script for tracking MCSs directly from WRF output data is provided in the runscripts directory: [`run_mcs_tbpf_wrf.py`](https://github.com/FlexTRKR/PyFLEXTRKR/blob/main/runscripts/run_mcs_tbpf_wrf.py).
+An example Python script to map NEXRAD Level 2 data to a Cartesian grid netCDF file using [PyART](https://github.com/ARM-DOE/pyart) is provided in [`/pyflextrkr/grid_radar_pyart.py`](https://github.com/FlexTRKR/PyFLEXTRKR/blob/main/pyflextrkr/grid_radar_pyart.py).
+
+The gridded radar data produced by the example script can be used for convective cell tracking. An example of the data can be downloaded from: [sample NEXRAD radar data](https://portal.nersc.gov/project/m1867/PyFLEXTRKR/sample_data/radar/nexrad_reflectivity1.tar.gz).
+
+Note that the `terrain_file` in the [example radar cell tracking config file](https://github.com/FlexTRKR/PyFLEXTRKR/blob/main/config/config_nexrad500m_example.yml) is **optional**. If `terrain_file` is provided, radar reflectivity data below `surface_elevation + sfc_dz_min` is filtered before calculating composite reflectivity to identify convective cells. This helps to minimize ground clutter and anomalous propagation effects on convective cell identification.
+
+**Generating the Terrain_Masking.nc netcdf file:** Use the [`/pyflextrkr/make_terrain_rangemask.py`](https://github.com/FlexTRKR/PyFLEXTRKR/blob/main/pyflextrkr/make_terrain_rangemask.py) script to generate the terrain masking file suited for the radar grids being used for cell tracking. Before running this script, you will need to download the topography (elevation data) file `ETOPO1_Ice_g_gmt4.grd.gz` from [NOAA](https://www.ngdc.noaa.gov/mgg/global/relief/ETOPO1/data/ice_surface/grid_registered/netcdf/). Rename the file as `ETOPO1_Ice_g_gmt4.nc` after downloading and then run the python script to obtain the mask terrain output file.
+
+
+### Example MCS tracking code for WRF
+
+An example run script for tracking MCSs directly from WRF output data is provided in the runscripts directory: [`/runscripts/run_mcs_tbpf_wrf.py`](https://github.com/FlexTRKR/PyFLEXTRKR/blob/main/runscripts/run_mcs_tbpf_wrf.py).
 
 The run script calls a pre-processing function for WRF data that produces Tb and rain rate for MCS tracking:
 [`/pyflextrkr/preprocess_wrf_tb_rainrate.py`](https://github.com/FlexTRKR/PyFLEXTRKR/blob/main/pyflextrkr/preprocess_wrf_tb_rainrate.py)
 
 The pre-processing function works with standard WRF output data that contains OLR, RAINNC and RAINC. It converts OLR to Tb using a simple empirical relationship and calculates rain rates between consecutive times. An example config file for WRF MCS tracking is provide in [`/config/config_wrf4km_mcs_tbpf_example.yml`](https://github.com/FlexTRKR/PyFLEXTRKR/blob/main/config/config_wrf4km_mcs_tbpf_example.yml). 
 
-For model simulation outputs that contains OLR and rain rate (unlike accumulated precipitation in WRF), set `olr2tb : True` to convert OLR [W/m^2] to Tb [K], and provide `pcp_convert_factor` to convert rain rate to the unit of [mm/hour] in the config file. See example config file: [`config_model25km_mcs_tbpf_example.yml`
+For model simulation outputs that contains OLR and rain rate (unlike accumulated precipitation in WRF), set `olr2tb : True` to convert OLR [W/m^2] to Tb [K], and provide `pcp_convert_factor` to convert rain rate to the unit of [mm/hour] in the config file. See example config file: [`/config/config_model25km_mcs_tbpf_example.yml`
 ](https://github.com/FlexTRKR/PyFLEXTRKR/blob/main/config/config_model25km_mcs_tbpf_example.yml)
 
-**Generic feature tracking input data requirement**
+
+### Generic feature tracking input data requirement
 
 For tracking generic features, a reader code is needed to produce the variables listed in **Table 1**.
 
@@ -58,7 +72,7 @@ An example of labeling generic features is provided in [`/pyflextrkr/idfeature_g
 * Simple thresholds and connectivity (using [ndimage.label](https://docs.scipy.org/doc/scipy/reference/generated/scipy.ndimage.label.html) function)
 * Watershed segmentation (using [skimage.watershed](https://scikit-image.org/docs/stable/auto_examples/segmentation/plot_watershed.html) function)
 
-After providing the reader code, add it to the [`idefeature_driver.py`](https://github.com/FlexTRKR/PyFLEXTRKR/blob/main/pyflextrkr/idfeature_driver.py), and specify the *feature_type* in the config file (see example [`config_era5_z500_example.yml`](https://github.com/FlexTRKR/PyFLEXTRKR/blob/main/config/config_era5_z500_example.yml)). Here’s an example for generic feature identification:
+After providing the reader code, add it to the [`idefeature_driver.py`](https://github.com/FlexTRKR/PyFLEXTRKR/blob/main/pyflextrkr/idfeature_driver.py), and specify the `feature_type` in the config file (see example [`/config/config_era5_z500_example.yml`](https://github.com/FlexTRKR/PyFLEXTRKR/blob/main/config/config_era5_z500_example.yml)). Here’s an example for generic feature identification:
 
 ```python
 if feature_type == "generic":
