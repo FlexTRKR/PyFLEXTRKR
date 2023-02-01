@@ -35,8 +35,8 @@ def match_tbpf_tracks(config):
     pf_dimname = config["pf_dimname"]
     run_parallel = config["run_parallel"]
     fillval = config["fillval"]
-    # Minimum time difference threshold [second] to match track stats and cloudid files
-    match_tbpf_dt_thresh = config.get("match_tbpf_dt_thresh", 60)
+    # Minimum time difference threshold [second] to match track stats and cloudid pixel files
+    match_pixel_dt_thresh = config["match_pixel_dt_thresh"]
 
     np.set_printoptions(threshold=np.inf)
     logger = logging.getLogger(__name__)
@@ -90,7 +90,7 @@ def match_tbpf_tracks(config):
         filename = cloudidfile_list[ifile]
 
         # Find all matching time indices from MCS stats file to the current cloudid file
-        matchindices = np.array(np.where(np.abs(ir_basetime - cloudidfile_basetime[ifile]) < match_tbpf_dt_thresh))
+        matchindices = np.array(np.where(np.abs(ir_basetime - cloudidfile_basetime[ifile]) < match_pixel_dt_thresh))
         # The returned match indices are for [tracks, times] dimensions respectively
         idx_track = matchindices[0]
         idx_time = matchindices[1]

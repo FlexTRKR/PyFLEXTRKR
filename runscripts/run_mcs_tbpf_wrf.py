@@ -4,13 +4,14 @@ import logging
 import dask
 from dask.distributed import Client, LocalCluster
 from pyflextrkr.ft_utilities import load_config, setup_logging
+from pyflextrkr.preprocess_wrf_tb_rainrate import preprocess_wrf_tb_rainrate
 from pyflextrkr.idfeature_driver import idfeature_driver
 from pyflextrkr.tracksingle_driver import tracksingle_driver
 from pyflextrkr.gettracks import gettracknumbers
 from pyflextrkr.trackstats_driver import trackstats_driver
 from pyflextrkr.identifymcs import identifymcs_tb
 from pyflextrkr.matchtbpf_driver import match_tbpf_tracks
-from pyflextrkr.robustmcspf_saag import define_robust_mcs_pf
+from pyflextrkr.robustmcspf import define_robust_mcs_pf
 from pyflextrkr.mapfeature_driver import mapfeature_driver
 from pyflextrkr.movement_speed import movement_speed
 
@@ -31,6 +32,10 @@ if __name__ == '__main__':
     mcsrobust_filebase = config['mcsrobust_filebase']   # MCS tracks defined by Tb+PF
     mcstbmap_outpath = 'mcstracking_tb'     # Output directory for Tb-only MCS
     alltrackmap_outpath = 'ccstracking'     # Output directory for all Tb tracks
+
+    # Step 0 - Preprocess wrfout files to get Tb, rainrate
+    if config['run_preprocess']:
+        preprocess_wrf_tb_rainrate(config)
 
     ################################################################################################
     # Parallel processing options

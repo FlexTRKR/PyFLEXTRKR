@@ -8,11 +8,11 @@ from pyflextrkr.idfeature_driver import idfeature_driver
 from pyflextrkr.tracksingle_driver import tracksingle_driver
 from pyflextrkr.gettracks import gettracknumbers
 from pyflextrkr.trackstats_driver import trackstats_driver
-from pyflextrkr.identifymcs import identifymcs_tb
-from pyflextrkr.matchtbpf_driver import match_tbpf_tracks
-from pyflextrkr.robustmcspf_saag import define_robust_mcs_pf
+from pyflextrkr.link_mergesplit_tracks import link_mergesplit_tracks
 from pyflextrkr.mapfeature_driver import mapfeature_driver
-from pyflextrkr.movement_speed import movement_speed
+
+# Purpose: Main script for tracking generic features
+# Author: Zhe Feng (zhe.feng@pnnl.gov)
 
 if __name__ == '__main__':
 
@@ -26,11 +26,7 @@ if __name__ == '__main__':
 
     # Specify track statistics file basename and pixel-level output directory
     # for mapping track numbers to pixel files
-    trackstats_filebase = config['trackstats_filebase']  # All Tb tracks
-    mcstbstats_filebase = config['mcstbstats_filebase']  # MCS tracks defined by Tb-only
-    mcsrobust_filebase = config['mcsrobust_filebase']   # MCS tracks defined by Tb+PF
-    mcstbmap_outpath = 'mcstracking_tb'     # Output directory for Tb-only MCS
-    alltrackmap_outpath = 'ccstracking'     # Output directory for all Tb tracks
+    finalstats_filebase = config['finalstats_filebase']  # MCS tracks defined by Tb-only
 
     ################################################################################################
     # Parallel processing options
@@ -66,27 +62,16 @@ if __name__ == '__main__':
     if config['run_trackstats']:
         trackstats_filename = trackstats_driver(config)
 
-    # Step 5 - Identify MCS using Tb
-    if config['run_identifymcs']:
-        mcsstats_filename = identifymcs_tb(config)
+    # Step 5 - Link merge/split tracks to main tracks
+    if config['run_mergesplit']:
+        finaltrackstats_filename = link_mergesplit_tracks(config)
 
-    # Step 6 - Match PF to MCS
-    if config['run_matchpf']:
-        pfstats_filename = match_tbpf_tracks(config)
-
-    # Step 7 - Identify robust MCS
-    if config['run_robustmcs']:
-        robustmcsstats_filename = define_robust_mcs_pf(config)
-
-    # Step 8 - Map tracking to pixel files
+    # Step 6 - Map tracking to pixel files
     if config['run_mapfeature']:
-        # Map robust MCS track numbers to pixel files (default)
-        mapfeature_driver(config, trackstats_filebase=mcsrobust_filebase)
-        # Map Tb-only MCS track numbers to pixel files (provide outpath_basename keyword)
-        # mapfeature_driver(config, trackstats_filebase=mcstbstats_filebase, outpath_basename=mcstbmap_outpath)
-        # Map all Tb track numbers to pixel level files (provide outpath_basename keyword)
-        # mapfeature_driver(config, trackstats_filebase, outpath_basename=alltrackmap_outpath)
+        mapfeature_driver(config, trackstats_filebase=finalstats_filebase)
 
-    # Step 9 - Movement speed calculation
-    if config['run_speed']:
-        movement_speed(config)
+    # If Step 5 (link merge/split tracks) is not desired, it can be skipped (comment it out)
+    # In that case, use the following for Step 6 (no need to provide trackstats_filebase argument)
+    # # Step 6 - Map tracking to pixel files
+    # if config['run_mapfeature']:
+    #     mapfeature_driver(config)

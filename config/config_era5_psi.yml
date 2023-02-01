@@ -1,0 +1,100 @@
+---
+# ERA5 PSI anomaly tracking configuration file
+
+# Identify features to track
+run_idfeature: True
+# Track single consecutive feature files
+run_tracksingle: True
+# Run tracking for all files
+run_gettracks: True
+# Calculate feature statistics
+run_trackstats: True
+# Link merge/split tracks
+run_mergesplit: True
+# Map tracking to pixel files
+run_mapfeature: True
+
+# Start/end date and time
+startdate: '20120501.0000'
+enddate: '20120901.0000'
+
+# Parallel processing set up
+# run_parallel: 1 (local cluster), 2 (Dask MPI)
+run_parallel: 1
+nprocesses: 32  # Number of processors to use if run_parallel=1
+
+databasename: ERA5_SFvortPV_
+# Specify date/time string format in the file name
+# E.g., radar_20181101.011503.nc --> yyyymodd.hhmmss
+# E.g., wrfout_2018-11-01_01:15:00 --> yyyy-mo-dd_hh:mm:ss
+time_format: 'yyyy-mo-dd'
+# Input files directory
+# clouddata_path: '/global/project/projectdirs/m1867/jmarquis/era5/smooth_test/PertDom_0_360/'
+clouddata_path: '/pscratch/sd/f/feng045/waccem/ERA5_PSI_tracking/input/'
+# Working directory for the tracking data
+# root_path: '/global/cscratch1/sd/feng045/waccem/ERA5_PSI_tracking/'
+root_path: '/pscratch/sd/f/feng045/waccem/ERA5_PSI_tracking/'
+# Working sub-directory names
+tracking_path_name: 'tracking'
+stats_path_name: 'stats'
+pixel_path_name: 'psitracking'
+
+# Specify types of feature being tracked
+# This adds additional feature-specific statistics to be computed
+feature_type: 'generic'
+
+# Specify data structure
+datatimeresolution: 1.0     # hours
+pixel_radius: 25.0      # km
+x_dimname: 'longitude'
+y_dimname: 'latitude'
+time_dimname: 'time'
+field_varname: 'SFp600'
+
+# Feature detection parameters
+label_method: 'skimage.watershed'
+# peak_local_max params:
+plm_min_distance: 15   # min_distance - distance buffer between maxima; num grid points
+plm_exclude_border: 5   # exclude_border - distance buffer between maxima and the domain sides; num grid points
+plm_threshold_abs: 0   # threshold_abs - minimum magnitude of PSI' required to define a maxima
+# watershed params:
+cont_thresh: 5000000   # PSI' contour defining outermost of flood-filled object area
+compa: 0    #"compactness factor" - (how much you'll let a flood fill spread into a neighbor's domain. Zero or < 100 seemed ok.)
+
+# field_thresh: [1.6, 1000]  # variable thresholds
+min_size: 10000.0   # Min area to define a feature (km^2)
+R_earth: 6378.0  # Earth radius (km)
+
+# Tracking parameters
+timegap: 3.0           # hour
+othresh: 0.3           # overlap percentage threshold
+maxnclouds: 60       # Maximum number of features in one snapshot
+nmaxlinks: 10          # Maximum number of overlaps that any single feature can be linked to
+duration_range: [6, 800]   # A vector [minlength,maxlength] to specify the duration range for the tracks
+# Flag to remove short-lived tracks [< min(duration_range)] that are not mergers/splits with other tracks
+# 0:keep all tracks; 1:remove short tracks
+remove_shorttracks: 1
+# Set this flag to 1 to write a dense (2D) trackstats netCDF file
+# Note that for datasets with lots of tracks, the memory consumption could be very large
+trackstats_dense_netcdf: 1
+# Minimum time difference threshold to match track stats with cloudid pixel files
+match_pixel_dt_thresh: 60.0  # seconds
+
+# Link merge/split parameters to main tracks
+maintrack_area_thresh: 10000  # [km^2] Main track area threshold
+maintrack_lifetime_thresh: 12  # [hour] Main track duration threshold
+split_duration: 12  # [hour] Split tracks <= this length is linked to the main tracks
+merge_duration: 12  # [hour] Merge tracks <= this length is linked to the main tracks
+
+# Define tracked feature variable names
+feature_varname: 'feature_number'
+nfeature_varname: 'nfeatures'
+featuresize_varname: 'npix_feature'
+
+# Track statistics output file dimension names
+tracks_dimname: 'tracks'
+times_dimname: 'times'
+fillval: -9999
+# Output file base names
+finalstats_filebase: 'trackstats_final_'
+pixeltracking_filebase: 'psitracks_'

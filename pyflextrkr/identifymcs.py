@@ -4,7 +4,7 @@ import os
 import sys
 import xarray as xr
 import logging
-from scipy.sparse import csr_matrix
+from pyflextrkr.ft_utilities import load_sparse_trackstats
 
 def identifymcs_tb(config):
     """
@@ -397,60 +397,3 @@ def identifymcs_tb(config):
     logger.info(f"{statistics_outfile}")
 
     return statistics_outfile
-
-
-def load_sparse_trackstats(
-        max_trackduration,
-        statistics_file,
-        times_idx_varname,
-        tracks_dimname,
-        tracks_idx_varname,
-):
-    """
-    Load sparse trackstats file and convert to sparse arrays.
-
-    Args:
-        max_trackduration:
-        statistics_file:
-        times_idx_varname:
-        tracks_dimname:
-        tracks_idx_varname:
-
-    Returns:
-        ds_1d: Xarray Dataset
-            Dataset containing 1D track stats variables.
-        sparse_attrs_dict: dictionary
-            Dictionary containing sparse array attributes.
-        sparse_dict: dictionary
-            Dictionary containing sparse array variables.
-    """
-    # xr.set_options(keep_attrs=True)
-    ds_all = xr.open_dataset(statistics_file,
-                             mask_and_scale=False,
-                             decode_times=False)
-    # Get sparse array info
-    sparse_dimname = 'sparse_index'
-    nsparse_data = ds_all.dims[sparse_dimname]
-    ntracks = ds_all.dims[tracks_dimname]
-    # Sparse array indices
-    tracks_idx = ds_all[tracks_idx_varname].values
-    times_idx = ds_all[times_idx_varname].values
-    row_col_ind = (tracks_idx, times_idx)
-    # Sparse array shapes
-    shape_2d = (ntracks, max_trackduration)
-    # Convert sparse arrays and put in a dictionary
-    sparse_dict = {}
-    sparse_attrs_dict = {}
-    for ivar in ds_all.data_vars.keys():
-        # Check dimension name for sparse arrays
-        if ds_all[ivar].dims[0] == sparse_dimname:
-            # Convert to sparse array
-            sparse_dict[ivar] = csr_matrix(
-                (ds_all[ivar].values, row_col_ind), shape=shape_2d, dtype=ds_all[ivar].dtype,
-            )
-            # Collect variable attributes
-            sparse_attrs_dict[ivar] = ds_all[ivar].attrs
-    # Drop all sparse variables and dimension
-    ds_1d = ds_all.drop_dims(sparse_dimname)
-    ds_all.close()
-    return ds_1d, sparse_attrs_dict, sparse_dict

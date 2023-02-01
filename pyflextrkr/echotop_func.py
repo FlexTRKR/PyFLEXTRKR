@@ -26,8 +26,8 @@ def calc_cloud_boundary(height, idxcld, gap, min_thick):
     nLayers = len(Layers)
 
     # Create cloud_base, cloud_top arrays
-    cloud_base = np.zeros(nLayers, dtype=np.float)
-    cloud_top = np.zeros(nLayers, dtype=np.float)
+    cloud_base = np.zeros(nLayers, dtype=np.float32)
+    cloud_top = np.zeros(nLayers, dtype=np.float32)
 
     if nLayers > 0:
         # Loop over each layer

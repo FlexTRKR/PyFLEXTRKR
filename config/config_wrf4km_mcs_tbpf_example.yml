@@ -3,6 +3,7 @@
 # Tracking uses collocated Tb + Precipitation
 
 # Processing steps:
+run_preprocess: False
 run_idfeature : True
 run_tracksingle : True
 run_gettracks : True
@@ -50,7 +51,7 @@ landmask_varname: 'LANDMASK'
 # Input dataset structure
 pixel_radius:  4.0  # [km] Spatial resolution of the input data
 datatimeresolution: 1.0  # [hour] Temporal resolution of the input data
-# Variable names in the input dat
+# Variable names in the input data
 tb_varname:  'tb'
 pcp_varname: 'rainrate'
 clouddatasource: 'model'
@@ -98,7 +99,7 @@ remove_shorttracks: 1
 # Note that for datasets with lots of tracks, the memory consumption could be large
 trackstats_dense_netcdf: 1
 # Minimum time difference threshold to match track stats with cloudid files
-match_tbpf_dt_thresh: 60.0  # seconds
+match_pixel_dt_thresh: 60.0  # seconds
 
 # MCS Tb parameters
 mcs_tb_area_thresh: 40000  # [km^2] Tb area threshold

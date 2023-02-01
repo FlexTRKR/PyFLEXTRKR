@@ -16,7 +16,7 @@ run_speed : True
 # Parallel processing set up
 # run_parallel: 1 (local cluster), 2 (Dask MPI)
 run_parallel: 1
-nprocesses : 24  # Number of processors to use if run_parallel=1
+nprocesses: 4  # Number of processors to use if run_parallel=1
 dask_tmp_dir: '/tmp'  # Dask temporary directory if run_parallel=1
 timeout: 360  # [seconds] Dask timeout limit
 
@@ -62,7 +62,7 @@ time_dimname: 'time'
 xcoord_name: 'lon'
 ycoord_name: 'lat'
 # Minimum time difference threshold to match track stats with cloudid files
-match_tbpf_dt_thresh: 60.0  # seconds
+match_pixel_dt_thresh: 60.0  # seconds
 
 # Specify types of feature being tracked
 # This adds additional feature-specific statistics to be computed
@@ -101,7 +101,7 @@ remove_shorttracks: 1
 # Note that for datasets with lots of tracks, the memory consumption could be large
 trackstats_dense_netcdf: 1
 # Minimum time difference threshold to match track stats with cloudid files
-match_tbpf_dt_thresh: 60.0  # seconds
+match_pixel_dt_thresh: 60.0  # seconds
 
 # MCS Tb parameters
 mcs_tb_area_thresh: 60000  # [km^2] Tb area threshold

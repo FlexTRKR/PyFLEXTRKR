@@ -26,13 +26,16 @@ The input data must contain at least 3 dimensions: *time, y, x*, with correspond
 * [GPM Tb+IMERG precipitation data](https://portal.nersc.gov/project/m1867/PyFLEXTRKR/sample_data/tb_pcp/gpm_tb_imerg.tar.gz)
 * [WRF post-processed Tb + precipitation data](https://portal.nersc.gov/project/m1867/PyFLEXTRKR/sample_data/tb_pcp/wrf_tbpcp.tar.gz)
 * [E3SM regridded OLR + precipitation data](https://portal.nersc.gov/project/m1867/PyFLEXTRKR/sample_data/tb_pcp/e3sm_tbpcp.tar.gz)
+* [ERA5 500hPa geopotential height anomaly data](https://portal.nersc.gov/project/m1867/PyFLEXTRKR/sample_data/generic/ERA5_z500_anom.tar.gz)
 
-**Example pre-processing code for WRF**
+**Example MCS tracking code for WRF**
 
-A pre-processing code for WRF data that produces Tb and rain rate for MCS tracking is provided:
+An example run script for tracking MCSs directly from WRF output data is provided in the runscripts directory: [`run_mcs_tbpf_wrf.py`](https://github.com/FlexTRKR/PyFLEXTRKR/blob/main/runscripts/run_mcs_tbpf_wrf.py).
+
+The run script calls a pre-processing function for WRF data that produces Tb and rain rate for MCS tracking:
 [`/pyflextrkr/preprocess_wrf_tb_rainrate.py`](https://github.com/FlexTRKR/PyFLEXTRKR/blob/main/pyflextrkr/preprocess_wrf_tb_rainrate.py)
 
-The code works with standard WRF output data that contains OLR, RAINNC and RAINC. It converts OLR to Tb using a simple empirical relationship and calculates rain rates between consecutive times. An example config file for WRF MCS tracking is provide in [`/config/config_wrf4km_mcs_tbpf_example.yml`](https://github.com/FlexTRKR/PyFLEXTRKR/blob/main/config/config_wrf4km_mcs_tbpf_example.yml). 
+The pre-processing function works with standard WRF output data that contains OLR, RAINNC and RAINC. It converts OLR to Tb using a simple empirical relationship and calculates rain rates between consecutive times. An example config file for WRF MCS tracking is provide in [`/config/config_wrf4km_mcs_tbpf_example.yml`](https://github.com/FlexTRKR/PyFLEXTRKR/blob/main/config/config_wrf4km_mcs_tbpf_example.yml). 
 
 For model simulation outputs that contains OLR and rain rate (unlike accumulated precipitation in WRF), set `olr2tb : True` to convert OLR [W/m^2] to Tb [K], and provide `pcp_convert_factor` to convert rain rate to the unit of [mm/hour] in the config file. See example config file: [`config_model25km_mcs_tbpf_example.yml`
 ](https://github.com/FlexTRKR/PyFLEXTRKR/blob/main/config/config_model25km_mcs_tbpf_example.yml)
@@ -50,13 +53,16 @@ For tracking generic features, a reader code is needed to produce the variables 
 | featuresize_varname          |	npix_feature         | A 1D array with the number of pixels (i.e., size) for each labeled feature |
 | |	time |	Epoch time of the file |
 
-An example of labeling vorticity features is provided in [`/pyflextrkr/idvorticity_era5.py`](https://github.com/FlexTRKR/PyFLEXTRKR/blob/main/pyflextrkr/idvorticity_era5.py)
+An example of labeling generic features is provided in [`/pyflextrkr/idfeature_generic.py`](https://github.com/FlexTRKR/PyFLEXTRKR/blob/main/pyflextrkr/idfeature_generic.py). The function contains two different methods for labeling features:
 
-After providing the reader code, add it to the [`idefeature_driver.py`](https://github.com/FlexTRKR/PyFLEXTRKR/blob/main/pyflextrkr/idfeature_driver.py), and specify the *feature_type* in the config file (see example [`config_era5_vorticity.yml`](https://github.com/FlexTRKR/PyFLEXTRKR/blob/main/config/config_era5_vorticity.yml)). Here’s an example for vorticity:
+* Simple thresholds and connectivity (using [ndimage.label](https://docs.scipy.org/doc/scipy/reference/generated/scipy.ndimage.label.html) function)
+* Watershed segmentation (using [skimage.watershed](https://scikit-image.org/docs/stable/auto_examples/segmentation/plot_watershed.html) function)
+
+After providing the reader code, add it to the [`idefeature_driver.py`](https://github.com/FlexTRKR/PyFLEXTRKR/blob/main/pyflextrkr/idfeature_driver.py), and specify the *feature_type* in the config file (see example [`config_era5_z500_example.yml`](https://github.com/FlexTRKR/PyFLEXTRKR/blob/main/config/config_era5_z500_example.yml)). Here’s an example for generic feature identification:
 
 ```python
-if feature_type == "vorticity":
-    from pyflextrkr.idvorticity_era5 import idvorticity_era5 as id_feature
+if feature_type == "generic":
+    from pyflextrkr.idfeature_generic import idfeature_generic as id_feature
 ```
 
 With this reader code, PyFLEXTRKR will run for any generic feature tracking and produce track statistics and labeled tracked numbers on the native grid (see **Section 3 Algorithm and workflow** and **Figure 1**). The track statistics contains basic statistics such as *track_duration*, *base_time*, *meanlat*, *meanlon*, *area*, etc. If more feature-specific statistics is desired, they can be added in [`/pyflextrkr/trackstats_func.py`](https://github.com/FlexTRKR/PyFLEXTRKR/blob/main/pyflextrkr/trackstats_func.py). All added track statistics variables in that function will be written in the output track statistics files automatically by the [`/pyflextrkr/trackstats_driver.py`](https://github.com/FlexTRKR/PyFLEXTRKR/blob/main/pyflextrkr/trackstats_driver.py). Refer to the examples from `feature_type == ‘tb_pf’` or `‘radar_cells’` in that function.
