@@ -29,6 +29,14 @@ if __name__ == '__main__':
     config["tracking_outpath"] = f"{config['tracking_outpath']}{year}/"
     os.makedirs(config["tracking_outpath"], exist_ok=True)
 
+    # Specify track statistics file basename and pixel-level output directory
+    # for mapping track numbers to pixel files
+    trackstats_filebase = config['trackstats_filebase']  # All Tb tracks
+    mcstbstats_filebase = config['mcstbstats_filebase']  # MCS tracks defined by Tb-only
+    mcsrobust_filebase = config['mcsrobust_filebase']   # MCS tracks defined by Tb+PF
+    mcstbmap_outpath = 'mcstracking_tb'     # Output directory for Tb-only MCS
+    alltrackmap_outpath = 'ccstracking'     # Output directory for all Tb tracks
+
     ################################################################################################
     # Parallel processing options
     if config['run_parallel'] == 1:
@@ -36,7 +44,7 @@ if __name__ == '__main__':
         dask_tmp_dir = config.get("dask_tmp_dir", "./")
         dask.config.set({'temporary-directory': dask_tmp_dir})
         # Local cluster
-        cluster = LocalCluster(n_workers=config['nprocesses'], threads_per_worker=1, silence_logs=False)
+        cluster = LocalCluster(n_workers=config['nprocesses'], threads_per_worker=1)
         client = Client(cluster)
         client.run(setup_logging)
     elif config['run_parallel'] == 2:
@@ -81,7 +89,12 @@ if __name__ == '__main__':
 
     # Step 8 - Map tracking to pixel files
     if config['run_mapfeature']:
-        mapfeature_driver(config)
+        # Map robust MCS track numbers to pixel files (default)
+        mapfeature_driver(config, trackstats_filebase=mcsrobust_filebase)
+        # Map Tb-only MCS track numbers to pixel files (provide outpath_basename keyword)
+        # mapfeature_driver(config, trackstats_filebase=mcstbstats_filebase, outpath_basename=mcstbmap_outpath)
+        # Map all Tb track numbers to pixel level files (provide outpath_basename keyword)
+        # mapfeature_driver(config, trackstats_filebase, outpath_basename=alltrackmap_outpath)
 
     # Step 9 - Movement speed calculation
     if config['run_speed']:
