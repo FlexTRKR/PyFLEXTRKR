@@ -12,7 +12,7 @@
 ###############################################################################################
 
 # Specify directory for the demo data
-dir_demo='/global/cscratch1/sd/feng045/pyflextrkr_test/mcs_tbpf/imerg/'
+dir_demo='/Users/feng045/data/demo/mcs_tbpf/imerg/'
 
 # Example config file name
 config_demo='config_mcs_demo.yml'
