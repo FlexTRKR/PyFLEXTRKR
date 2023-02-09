@@ -1,0 +1,220 @@
+---
+# MCS tracking configuration file
+# Tracking uses collocated Tb + Precipitation
+
+# Processing steps:
+run_preprocess: False
+run_idfeature : False
+run_tracksingle : False
+run_gettracks : False
+run_trackstats : False
+run_identifymcs : False
+run_matchpf : True
+run_robustmcs : False
+run_mapfeature : False
+run_speed : False
+
+# Parallel processing set up
+# run_parallel: 1 (local cluster), 2 (Dask MPI)
+run_parallel: 1
+nprocesses : 8  # Number of processors to use if run_parallel=1
+dask_tmp_dir: '/tmp'  # Dask temporary directory if run_parallel=1
+timeout: 360  # [seconds] Dask timeout limit
+
+# Start/end date and time
+#startdate: '20150503.0000'
+#enddate: '20150601.0000'
+startdate: '20150509.0000'
+enddate: '20150510.0000'
+
+# Specify tracking input data date/time string format
+# This is the preprocessed file that contains Tb & rainrate
+# E.g., databasename20181101.011503.nc --> yyyymodd.hhmmss
+# E.g., databasename2018-11-01_01:15:00 --> yyyy-mo-dd_hh:mm:ss
+time_format: 'yyyy-mo-dd_hh:mm:ss'
+regrid_basename: 'wrfout_rainrate_tb_zh_mh_'  # Note: include all strings before the time (including "_", ".")
+databasename: 'wrfout_rainrate_tb_zh_mh_'
+# Specify vertical height levels to interpolate reflectivity (unit: km ASL)
+interp_levels: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 
+  11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25]
+
+# WRF raw data
+wrfout_path: '/global/cscratch1/sd/feng045/HyperFACETS/wrf_ext/ctl/wrfout/'
+wrfout_basename: 'wrfout_d01_'
+# Tracking input files directory
+clouddata_path: '/Users/feng045/data/demo/mcs_tbpfradar3d/input/'
+# Working directory for the tracking data
+root_path: '/Users/feng045/data/demo/mcs_tbpfradar3d/'
+# Working sub-directory names
+tracking_path_name: 'tracking'
+stats_path_name: 'stats'
+pixel_path_name: 'mcstracking'
+
+# Land mask file
+landmask_filename: '/Users/feng045/data/demo/mcs_tbpfradar3d/input/wrf_landmask.nc'
+landmask_varname: 'LANDMASK'
+
+# Input dataset structure
+pixel_radius:  3.0  # [km] Spatial resolution of the input data
+datatimeresolution: 1.0  # [hour] Temporal resolution of the input data
+# Variable names in the input dat
+tb_varname:  'tb'
+pcp_varname: 'rainrate'
+linkpf_varname: 'reflectivity_comp'
+dbz_varname: 'reflectivity'
+zmelt_varname: 'meltinglevelheight'
+clouddatasource: 'model'
+radardatasource: 'wrf'
+pfdatasource:  'wrf'
+xcoord_name: 'lon2d'
+ycoord_name: 'lat2d'
+
+# Specify types of feature being tracked
+# This adds additional feature-specific statistics to be computed
+feature_type: 'tb_pf_radar3d'
+
+# SL3D classification parameters
+# Background box size to calculate peakedness [km]
+background_Box:  12.
+# Reflectivity threshold to fill low-level coverage gap [dBZ]
+# Missing echo at 3 km ASL with valid echo at 4 km ASL and
+# reflectivity > threshold at 4 km will be filled with radar reflectivity at 4 km
+ReflThresh_lowlevel_gap:  20.
+# Stratiform rain reflectivity threshold at 3 km ASL [dBZ]
+strat_EchoThresh_3km:  20.
+# Stratiform rain reflectivity threshold below 3 km ASL [dBZ]
+strat_EchoThresh_lt3km:  10.0
+# Column-mean reflectivitiy peakedness fraction threshold to be convective
+col_peakedness_frac:  0.3
+# Above melting level reflectivity threshold [dBZ] to be convective
+abs_ConvThres_aml:  45.
+# 25 dBZ echo-top height threshold [km] to be convective
+etop25dBZ_Thresh:  10.0
+# Composite reflectivity threshold [dBZ] for neighbor points to be convective
+neighbor_CompReflThresh:  25.
+# Reflectivity vertical gradient (low - up) threshold [dB] to be updraft
+updraft_ReflGradiant_Thresh:  8.0
+# Max height [km] to include reflectivity vertical gradient to be updraft
+updraft_ReflGradiant_MaxHeight:  7.0
+# Composite reflectivity threshold [dBZ] to be updraft
+updraft_CompRefl_Thresh:  40.0
+# Number of vertical level gaps allowed in calculating echo-top height
+echotop_gap: 1
+t_dimname: 'time'
+x_dimname: 'lon'
+y_dimname: 'lat'
+z_dimname: 'level'
+x_varname: 'lon2d'
+y_varname: 'lat2d'
+z_varname: 'level'
+reflectivity_varname: 'reflectivity'
+meltlevel_varname: 'meltinglevelheight'
+# Height level (ASL) to save 2D reflectivity [km]
+dbz_lowlevel_asl: 2.0
+
+# Cloud identification parameters
+mincoldcorepix:  4  # Minimum number of pixels for the cold core
+smoothwindowdimensions:  30  # Dimension of the Box2DKernel filter on Tb.
+medfiltsize: 5      # Window size to perform medfilt2d to fill missing Tb pixels, must be an odd number
+geolimits: [-90, -360, 90, 360] # 4-element array to subset domain boundaries [lat_min, lon_min, lat_max, lon_max]
+area_thresh:  36  # [km^2] Minimum area to define a cloud
+miss_thresh:  0.35  # Missing data fraction threshold. If missing data exceeds this, the time frame will be omitted.
+cloudtb_core:  225.0  # [K]
+cloudtb_cold:  241.0  # [K]
+cloudtb_warm:  261.0  # [K]
+cloudtb_cloud:  261.0  # [K]
+absolutetb_threshs: [160, 330]  # K [min, max] absolute Tb range allowed.
+warmanvilexpansion:  0  # Not working yet, set this to 0 for now
+cloudidmethod: 'label_grow'
+# Specific parameters to link cloud objects using PF
+linkpf:  1  # Set to 1 to turn on linkpf option; default: 0
+pf_smooth_window:  10  # Smoothing window for identifying PF
+pf_dbz_thresh:  25  # [dBZ] for reflectivity, or [mm/h] for rainrate
+pf_link_area_thresh:  300.0  # [km^2]
+
+# Tracking parameters
+othresh: 0.5  # overlap fraction threshold. Clouds that overlap more than this between times are tracked.
+timegap: 3.1  # [hour] If missing data duration longer than this, tracking restarts
+nmaxlinks: 200  # Maximum number of clouds that any single cloud can be linked to
+maxnclouds: 2000  # Maximum number of clouds in one snapshot
+duration_range: [2, 300] # A vector [minlength,maxlength] to specify the duration range for the tracks
+# Flag to remove short-lived tracks [< min(duration_range)] that are not mergers/splits with other tracks
+# 0:keep all tracks; 1:remove short tracks
+remove_shorttracks: 1
+# Set this flag to 1 to write a dense (2D) trackstats netCDF file
+# Note that for datasets with lots of tracks, the memory consumption could be large
+trackstats_dense_netcdf: 1
+# Minimum time difference threshold to match track stats with cloudid files
+match_pixel_dt_thresh: 60.0  # seconds
+
+# MCS Tb parameters
+mcs_tb_area_thresh: 40000  # [km^2] Tb area threshold
+mcs_tb_duration_thresh:  4  # [hour] Tb minimum length of a mcs
+mcs_tb_split_duration:  12  # [hour] Tb tracks smaller or equal to this length will be included with the MCS splits from
+mcs_tb_merge_duration:  12  # [hour] Tb tracks smaller or equal to this length will be included with the MCS merges into
+mcs_tb_gap: 1  # [unitless] Allowable temporal gap in Tb data for MCS area threshold
+# MCS PF parameters
+mcs_pf_majoraxis_thresh:  100  # [km] MCS PF major axis length lower limit
+max_pf_majoraxis_thresh:  1800  # [km] MCS PF major axis length upper limit
+mcs_pf_durationthresh:  4  # [hour] PF minimum length of mcs
+mcs_pf_majoraxis_for_lifetime:  20  # [km] Minimum PF size to count PF lifetime
+mcs_pf_gap:  1  # [unitless] Allowable temporal gap in PF data for MCS characteristics
+landfrac_thresh: 90  # [%] Define threshold for PF land fraction
+
+# Specify rain rate parameters
+pf_rr_thres:  2.0  # Rain rate threshold [mm/hr]
+nmaxpf: 3  # Maximum number of precipitation features that can be within a cloud feature
+nmaxcore: 20  # Maximum number of convective cores that can be within a cloud feature
+pcp_thresh:  1.0  # Pixels with hourly precipitation larger than this will be labeled with track number
+heavy_rainrate_thresh:  10.0  # Heavy rain rate threshold [mm/hr]
+
+# MCS PF parameter coefficients [intercept, slope]
+# These parameters are derived with pf_rr_thres:  2 mm/h
+# coefs_pf_area:  [1962.11, -14.598]      # 1%
+# coefs_pf_area:  [1962.11, 0]           # 1% [changed slope to 0: independent of lifetime]
+# coefs_pf_area:  [2119.02, 61.143]      # 3%
+coefs_pf_area:  [2874.05, 89.825]  # 5% [recommended]
+# coefs_pf_area:  [4160.82, 93.077]      # 7%
+# coefs_pf_area:  [4988.15, 138.172]      # 10%
+
+# coefs_pf_rr:  [2.72873, 0.0008317]      # 1%
+# coefs_pf_rr:  [2.81982, 0.0135463]      # 3%
+coefs_pf_rr:  [3.01657, 0.0144461]  # 5% [recommended]
+# coefs_pf_rr:  [3.14895, 0.0150174]      # 7%
+# coefs_pf_rr:  [3.34859, 0.0172043]      # 10%
+
+# coefs_pf_skew:  [0.036384, 0.0022199]      # 1%
+# coefs_pf_skew:  [0.072809, 0.0104444]      # 3%
+coefs_pf_skew:  [0.194462, 0.0100072]  # 5% [recommended]
+# coefs_pf_skew:  [0.256639, 0.0106527]      # 7%
+# coefs_pf_skew:  [0.376142, 0.0095545]      # 10%
+
+# coefs_pf_heavyratio:  [0.750260, 0.4133300]  # 5%
+coefs_pf_heavyratio:  [3.419024, 0.4387090]  # 10% [recommended]
+# coefs_pf_heavyratio:  [4.753215, 0.4886454]  # 15%
+# coefs_pf_heavyratio:  [4.592209, 0.6107371]  # 20%
+# coefs_pf_heavyratio:  [8.389616, 0.5079337]  # 25%
+
+# Define tracked feature variable names
+feature_varname: 'feature_number'
+nfeature_varname: 'nfeatures'
+featuresize_varname: 'npix_feature'
+
+# Track statistics output file dimension names
+tracks_dimname: 'tracks'
+times_dimname: 'times'
+pf_dimname: 'nmaxpf'
+fillval: -9999
+# MCS track stats file base names
+mcstbstats_filebase: 'mcs_tracks_'
+mcspfstats_filebase: 'mcs_tracks_pf_'
+mcsrobust_filebase: 'mcs_tracks_robust_'
+pixeltracking_filebase: 'mcstrack_'
+mcsfinal_filebase: 'mcs_tracks_final_'
+
+# Feature movement speed parameters
+lag_for_speed: 1  # [unitless] lag intervals between tracked features to calculate movement
+track_number_for_speed: "pcptracknumber"
+track_field_for_speed: 'precipitation'
+min_size_thresh_for_speed: 20 # [km] Min PF major axis length to calculate movement
+max_speed_thresh: 50  # [m/s] Speeds larger than this will be replaced by temporal filter
