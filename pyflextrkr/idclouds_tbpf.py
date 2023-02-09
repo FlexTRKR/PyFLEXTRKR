@@ -11,6 +11,7 @@ from pyflextrkr.ftfunctions import olr_to_tb
 from pyflextrkr.futyan3 import futyan3
 from pyflextrkr.label_and_grow_cold_clouds import label_and_grow_cold_clouds
 from pyflextrkr.ftfunctions import sort_renumber, sort_renumber2vars, link_pf_tb
+from pyflextrkr.sl3d_func import run_sl3d
 
 def idclouds_tbpf(
     filename,
@@ -64,10 +65,12 @@ def idclouds_tbpf(
     # PF parameters
     linkpf = config.get('linkpf', 0)
     pcp_varname = config['pcp_varname']
+    linkpf_varname = config.get('linkpf_varname', pcp_varname)
     pcp_convert_factor = config.get('pcp_convert_factor', 1)
     pf_smooth_window = config.get('pf_smooth_window', 0)
     pf_dbz_thresh = config.get('pf_dbz_thresh', 0)
     pf_link_area_thresh = config.get('pf_link_area_thresh', 0)
+    feature_type = config['feature_type']
     # Output file name parameters
     tracking_outpath = config['tracking_outpath']
     cloudid_filebase = config['cloudid_filebase']
@@ -78,9 +81,14 @@ def idclouds_tbpf(
     time_dimname = config.get('time_dimname', 'time')
     x_dimname = config.get('x_dimname', 'lon')
     y_dimname = config.get('y_dimname', 'lat')
+    z_dimname = config.get('z_dimname', 'level')
 
     cloudid_outfile = None
     logger.debug(filename)
+
+    # Initialize optional variables
+    sl3d_dict = None
+    sl3d_attrs = None
 
     # Read in Tb data using xarray
     rawdata = xr.open_dataset(filename)
@@ -92,24 +100,23 @@ def idclouds_tbpf(
     elif ndims == 3:
         # Reorder dimensions: [time, y, x]
         rawdata = rawdata.transpose(time_dimname, y_dimname, x_dimname)
-    elif ndims >= 4:
+    elif ndims == 4:
+        # Reorder dimensions: [time, z, y, x]
+        rawdata = rawdata.transpose(time_dimname, z_dimname, y_dimname, x_dimname)
+    elif ndims >= 5:
         # Get dimension names from the file
         dims_file = []
         for key in rawdata.dims: dims_file.append(key)
-        # Find extra dimensions beyond [time, y, x]
-        dims_keep = [time_dimname, y_dimname, x_dimname]
+        # Find extra dimensions beyond [time, z, y, x]
+        dims_keep = [time_dimname, z_dimname, y_dimname, x_dimname]
         dims_drop = list(set(dims_file) - set(dims_keep))
-        # Drop extra dimensions, reorder to [time, y, x]
-        rawdata = rawdata.drop_dims(dims_drop).transpose(time_dimname, y_dimname, x_dimname)
+        # Drop extra dimensions, reorder to [time, z, y, x]
+        rawdata = rawdata.drop_dims(dims_drop).transpose(time_dimname, z_dimname, y_dimname, x_dimname)
     else:
         logger.error(f"ERROR: Unexpected input data dimensions: {rawdata.dims}")
         logger.error("Must add codes to handle reading.")
         logger.error("Tracking will now exit.")
         sys.exit()
-
-    lat = rawdata[ycoord_name].data
-    lon = rawdata[xcoord_name].data
-    time_decode = rawdata[tcoord_name]
 
     # Convert OLR to Tb if olr2tb flag is set
     if olr2tb is True:
@@ -119,6 +126,10 @@ def idclouds_tbpf(
         # Read Tb from data
         original_ir = rawdata[tb_varname].data
     rawdata.close()
+
+    lat = rawdata[ycoord_name].data
+    lon = rawdata[xcoord_name].data
+    time_decode = rawdata[tcoord_name]
 
     # Check coordinate dimensions
     if (lat.ndim == 1) | (lon.ndim == 1):
@@ -133,6 +144,28 @@ def idclouds_tbpf(
         logger.critical(f"{ycoord_name} dimension: {lat.ndim}")
         logger.critical("Tracking will now exit.")
         sys.exit()
+
+    ##############################################################################
+    # Subset input dataset within geolimits
+    # Find indices within lat/lon range set by geolimits
+    indicesy, indicesx = np.array(
+        np.where(
+            (in_lat >= geolimits[0])
+            & (in_lat <= geolimits[2])
+            & (in_lon >= geolimits[1])
+            & (in_lon <= geolimits[3])
+        )
+    )
+    ymin, ymax = np.nanmin(indicesy), np.nanmax(indicesy) + 1
+    xmin, xmax = np.nanmin(indicesx), np.nanmax(indicesx) + 1
+    # Create a dictionary for dataset subset
+    subset_dict = {
+        y_dimname: slice(ymin, ymax),
+        x_dimname: slice(xmin, xmax),
+    }
+    # Subset dataset
+    rawdata = rawdata[subset_dict]
+    ##############################################################################
 
     # Loop over each time
     for tt in range(0, len(time_decode)):
@@ -174,46 +207,17 @@ def idclouds_tbpf(
             in_ir[in_ir < mintb_thresh] = np.nan
             in_ir[in_ir > maxtb_thresh] = np.nan
 
-            #####################################################
-            # determine geographic region of interest is within the data set.
-            # if it is proceed and limit the data to that geographic region. if not exit the code.
-
-            # isolate data within lat/lon range set by limit
-            indicesy, indicesx = np.array(
-                np.where(
-                    (in_lat >= geolimits[0])
-                    & (in_lat <= geolimits[2])
-                    & (in_lon >= geolimits[1])
-                    & (in_lon <= geolimits[3])
-                )
-            )
-            ymin, ymax = np.nanmin(indicesy), np.nanmax(indicesy) + 1
-            xmin, xmax = np.nanmin(indicesx), np.nanmax(indicesx) + 1
-
             # proceed if file covers the geographic region in interest
             if (len(indicesx) > 0) and (len(indicesy) > 0):
-                out_lat = np.copy(in_lat[ymin:ymax, xmin:xmax])
-                out_lon = np.copy(in_lon[ymin:ymax, xmin:xmax])
-                out_ir = np.copy(in_ir[ymin:ymax, xmin:xmax])
 
-                ######################################################
-                # proceed only if number of missing data does not exceed an accepable threshold
-                # determine number of missing data
+                # Determine number of missing data
                 missingcount = np.count_nonzero(np.isnan(out_ir))
                 ny, nx = np.shape(out_ir)
-
+                # Proceed if fraction of missing data does not exceed threshold
                 if np.divide(missingcount, (ny * nx)) < miss_thresh:
                     ######################################################
                     # Call idclouds subroutine
-                    if cloudidmethod == "futyan3":
-                        clouddata = futyan3(
-                            out_ir,
-                            pixel_radius,
-                            cloudtb_threshs,
-                            area_thresh,
-                            warmanvilexpansion,
-                        )
-                    elif cloudidmethod == "label_grow":
+                    if cloudidmethod == "label_grow":
                         clouddata = label_and_grow_cold_clouds(
                             out_ir,
                             pixel_radius,
@@ -223,6 +227,18 @@ def idclouds_tbpf(
                             smoothwindowdimensions,
                             warmanvilexpansion,
                         )
+                    elif cloudidmethod == "futyan3":
+                        clouddata = futyan3(
+                            out_ir,
+                            pixel_radius,
+                            cloudtb_threshs,
+                            area_thresh,
+                            warmanvilexpansion,
+                        )
+                    else:
+                        logger.critical(f"ERROR: Unknown cloudidmethod: {cloudidmethod}")
+                        logger.critical("Tracking will now exit.")
+                        sys.exit()
 
                     ######################################################
                     # Separate output into the separate variables
@@ -242,11 +258,18 @@ def idclouds_tbpf(
 
                         # Proceed if there is at least 1 cloud
                         if final_nclouds > 0:
-                            # Read precipitation
-                            rawdata = xr.open_dataset(filename, mask_and_scale=False)
+
                             # Convert precipitation factor to unit [mm/hour]
                             pcp = rawdata[pcp_varname].data * pcp_convert_factor
-                            rawdata.close()
+
+                            # Run SL3D algorithm for 3D reflectivity data
+                            if "radar3d" in feature_type:
+                                sl3d_dict, sl3d_attrs = run_sl3d(rawdata, config)
+                                # Set linkpf variable
+                                pcp_linkpf = sl3d_dict[linkpf_varname]
+                            else:
+                                # Use precipitation as linkpf variable
+                                pcp_linkpf = pcp
 
                             # For 'gpmirimerg', precipitation is averaged to 1-hourly
                             # and put in first time dimension
@@ -256,12 +279,9 @@ def idclouds_tbpf(
                                 # For other data source take the same time as tb
                                 pcp = pcp[tt, :, :]
 
-                            # Subset region to match Tb
-                            pcp = pcp[ymin:ymax, xmin:xmax]
-
                             # Smooth PF variable, then label PF exceeding threshold
                             pcp_s = filters.uniform_filter(
-                                np.squeeze(pcp),
+                                np.squeeze(pcp_linkpf),
                                 size=pf_smooth_window,
                                 mode="nearest",
                             )
@@ -274,8 +294,6 @@ def idclouds_tbpf(
 
                             # Sort and renumber PFs, and remove small PFs
                             pf_number, pf_npix = sort_renumber(pf_number, min_npix)
-                            # Update number of PFs after sorting and renumbering
-                            # npf = np.nanmax(pf_number)
 
                             # Call function to link clouds with PFs
                             pf_convcold_cloudnumber, pf_cloudnumber = link_pf_tb(
@@ -317,7 +335,6 @@ def idclouds_tbpf(
                             )
                             final_nclouds = np.array([nclouds_linkpf], dtype=int)
                             final_pf_number = np.expand_dims(pf_number, axis=0)
-                            # final_ncorecoldpix = np.array([npix_convcold_config['linkpf']], dtype=int)
                             final_ncorecoldpix = npix_convcold_linkpf
                             if pcp.ndim == 2:
                                 final_pcp = np.expand_dims(pcp, axis=0)
@@ -374,8 +391,8 @@ def idclouds_tbpf(
                             file_basetime,
                             file_datestring,
                             file_timestring,
-                            out_lat,
-                            out_lon,
+                            in_lat,
+                            in_lon,
                             out_ir,
                             final_cloudtype,
                             final_convcold_cloudnumber,
@@ -392,6 +409,8 @@ def idclouds_tbpf(
                             pf_smooth_window=pf_smooth_window,
                             pf_dbz_thresh=pf_dbz_thresh,
                             pf_link_area_thresh=pf_link_area_thresh,
+                            sl3d_dict=sl3d_dict,
+                            sl3d_attrs=sl3d_attrs,
                         )
                         logger.info(f"{cloudid_outfile}")
 

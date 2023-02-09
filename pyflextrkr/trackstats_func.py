@@ -93,7 +93,7 @@ def calc_stats_singlefile(
                 rangemask = dster[rangemask_varname].values.astype('int8')
                 dster.close()
 
-        if feature_type == "tb_pf":
+        if "tb" in feature_type:
             file_tb = ds["tb"].squeeze().values
             file_cloudtype = ds["cloudtype"].squeeze().values
 
@@ -140,10 +140,12 @@ def calc_stats_singlefile(
             out_cell_rangeflag = np.full(numtracks, fillval, dtype=np.short)
 
         # Satellite Tb
-        if feature_type == "tb_pf":
+        if "tb" in feature_type:
             out_corecold_mintb = np.full(numtracks, fillval_f, dtype=np.float32)
             out_corecold_meantb = np.full(numtracks, fillval_f, dtype=np.float32)
             out_core_meantb = np.full(numtracks, fillval_f, dtype=np.float32)
+            out_mintb_lon = np.full(numtracks, fillval_f, dtype=np.float32)
+            out_mintb_lat = np.full(numtracks, fillval_f, dtype=np.float32)
             out_core_area = np.full(numtracks, fillval_f, dtype=np.float32)
             out_cold_area = np.full(numtracks, fillval_f, dtype=np.float32)
 
@@ -165,7 +167,7 @@ def calc_stats_singlefile(
             dilatednumber1d_uniq, dilatednumber1d_counts, \
             ast_dilatedcellarea, cumcounts_dilatedcellarea = pre_sort_cloudnumber(dilated_cloudnumber_mask)
 
-        if feature_type == "tb_pf":
+        if "tb" in feature_type:
             # Pre-sort core number to get location indices
             core_cloudnumber_mask = file_corecold_cloudnumber * (file_cloudtype == 1)
             corenumber1d_uniq, corenumber1d_counts, \
@@ -209,7 +211,7 @@ def calc_stats_singlefile(
 
                 # Calculate feature specific statistics
                 # Satellite Tb
-                if feature_type == "tb_pf":
+                if "tb" in feature_type:
                     # Get cold core pixel location indices
                     core_npix, core_indices = get_loc_indices(
                         corenumber1d_uniq, corenumber1d_counts,
@@ -228,6 +230,10 @@ def calc_stats_singlefile(
                     out_cold_area[itrack] = cold_npix * pixel_radius ** 2
                     out_corecold_mintb[itrack] = np.nanmin(file_tb[corecold_indices[0], corecold_indices[1]])
                     out_corecold_meantb[itrack] = np.nanmean(file_tb[corecold_indices[0], corecold_indices[1]])
+                    # Get min Tb location
+                    mintb_index = np.argmin(file_tb[corecold_indices[0], corecold_indices[1]])
+                    out_mintb_lat[itrack] = latitude[corecold_indices[0], corecold_indices[1]][mintb_index]
+                    out_mintb_lon[itrack] = longitude[corecold_indices[0], corecold_indices[1]][mintb_index]
                     if core_npix > 0:
                         out_core_meantb[itrack] = np.nanmean(file_tb[core_indices[0], core_indices[1]])
 
@@ -359,11 +365,13 @@ def calc_stats_singlefile(
 
         # Define feature specific extra variables and attributes,
         # and update the baseline dictionaries
-        if feature_type == "tb_pf":
+        if "tb" in feature_type:
             out_dict_attrs_extra, \
-            out_dict_extra = define_extra_tb(fillval_f, out_cold_area, out_core_area,
-                                             out_core_meantb, out_corecold_meantb,
-                                             out_corecold_mintb)
+            out_dict_extra = define_extra_tb(
+                fillval_f, out_cold_area, out_core_area,
+                out_core_meantb, out_corecold_meantb,
+                out_corecold_mintb, out_mintb_lat, out_mintb_lon,
+            )
             # Merge with the baseline dictionaries
             out_dict.update(out_dict_extra)
             out_dict_attrs.update(out_dict_attrs_extra)
@@ -505,18 +513,35 @@ def define_base_vars_dict(file_basetime, fillval, fillval_f, numtracks, out_area
     return out_dict, out_dict_attrs
 
 
-def define_extra_tb(fillval_f, out_cold_area, out_core_area, out_core_meantb, out_corecold_meantb,
-                    out_corecold_mintb):
+def define_extra_tb(
+        fillval_f,
+        out_cold_area,
+        out_core_area,
+        out_core_meantb,
+        out_corecold_meantb,
+        out_corecold_mintb,
+        out_mintb_lat,
+        out_mintb_lon,
+):
     """
     Define extra output variables and attributes dictionary for satellite Tb.
 
     Args:
         fillval_f:
-        out_cold_area:
-        out_core_area:
-        out_core_meantb:
-        out_corecold_meantb:
-        out_corecold_mintb:
+        out_cold_area: np.array
+            Cold cloud area.
+        out_core_area: np.array
+            Cold core area.
+        out_core_meantb: np.array
+            Cold core mean Tb.
+        out_corecold_meantb: np.array
+            Cold core & cold cloud mean Tb.
+        out_corecold_mintb: np.array
+            Cold core & cold cloud min Tb.
+        out_mintb_lat: np.array
+            Latitude with the min Tb.
+        out_mintb_lon: np.array
+            Longitude with the min Tb.
 
     Returns:
         out_dict_attrs_extra: dictionary.
@@ -530,6 +555,8 @@ def define_extra_tb(fillval_f, out_cold_area, out_core_area, out_core_meantb, ou
         "corecold_mintb": out_corecold_mintb,
         "corecold_meantb": out_corecold_meantb,
         "core_meantb": out_core_meantb,
+        "lat_mintb": out_mintb_lat,
+        "lon_mintb": out_mintb_lon,
     }
     out_dict_attrs_extra = {
         "core_area": {
@@ -555,6 +582,16 @@ def define_extra_tb(fillval_f, out_cold_area, out_core_area, out_core_meantb, ou
         "core_meantb": {
             "long_name": "Mean Tb in cold core area",
             "units": "K",
+            "_FillValue": fillval_f,
+        },
+        "lat_mintb": {
+            "long_name": "Latitude with min Tb",
+            "units": "degree",
+            "_FillValue": fillval_f,
+        },
+        "lon_mintb": {
+            "long_name": "Longitude with min Tb",
+            "units": "degree",
             "_FillValue": fillval_f,
         },
     }
