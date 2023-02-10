@@ -65,8 +65,8 @@ def matchtbpf_singlefile(
         # Subset landmask to match geolimit
         dslm = subset_ds_geolimit(
             dslm, config,
-            xcoord_name=landmask_x_coordname,
-            ycoord_name=landmask_y_coordname,
+            x_coordname=landmask_x_coordname,
+            y_coordname=landmask_y_coordname,
             x_dimname=landmask_x_dimname,
             y_dimname=landmask_y_dimname,
         )

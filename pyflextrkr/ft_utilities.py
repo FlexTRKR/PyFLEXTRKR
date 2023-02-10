@@ -241,8 +241,8 @@ def subset_files_timerange(
 def subset_ds_geolimit(
         ds_in,
         config,
-        xcoord_name=None,
-        ycoord_name=None,
+        x_coordname=None,
+        y_coordname=None,
         x_dimname=None,
         y_dimname=None,
 ):
@@ -261,15 +261,15 @@ def subset_ds_geolimit(
     """
     logger = logging.getLogger(__name__)
     # Get coordinate, dimension names from config if not supplied
-    if xcoord_name is None: xcoord_name = config.get('xcoord_name')
-    if ycoord_name is None: ycoord_name = config.get('ycoord_name')
+    if x_coordname is None: x_coordname = config.get('x_coordname')
+    if y_coordname is None: y_coordname = config.get('y_coordname')
     if x_dimname is None: x_dimname = config.get('x_dimname')
     if y_dimname is None: y_dimname = config.get('y_dimname')
     geolimits = config.get('geolimits')
 
     # Get coordinate variables
-    lat = ds_in[ycoord_name].data.squeeze()
-    lon = ds_in[xcoord_name].data.squeeze()
+    lat = ds_in[y_coordname].data.squeeze()
+    lon = ds_in[x_coordname].data.squeeze()
     # Check coordinate dimensions
     if (lat.ndim == 1) | (lon.ndim == 1):
         # Mesh 1D coordinate into 2D
@@ -279,8 +279,8 @@ def subset_ds_geolimit(
         in_lat = lat
     else:
         logger.critical("ERROR in subset_ds_geolimit func: Unexpected input data x, y coordinate dimensions.")
-        logger.critical(f"{xcoord_name} dimension: {lon.ndim}")
-        logger.critical(f"{ycoord_name} dimension: {lat.ndim}")
+        logger.critical(f"{x_coordname} dimension: {lon.ndim}")
+        logger.critical(f"{y_coordname} dimension: {lat.ndim}")
         logger.critical("Tracking will now exit.")
         sys.exit()
 
