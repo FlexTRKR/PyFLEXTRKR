@@ -178,10 +178,16 @@ def match_tbpf_tracks(config):
         "total_rain",
         "total_heavyrain",
         "rainrate_heavyrain",
-        "conv_rain",
-        "strat_rain",
-        "pf_ncore",
     ]
+    # Add extra 2D variables for radar3d feature_type
+    if "radar3d" in feature_type:
+        var_names_2d.extend(
+            [
+                "conv_rain",
+                "strat_rain",
+                "pf_ncore",
+           ]
+        )
     for ivar in var_names_2d:
         pf_dict[ivar] = np.full((numtracks, maxtracklength), np.nan, dtype=np.float32)
 

@@ -41,7 +41,6 @@ def matchtbpf_singlefile(
     """
     logger = logging.getLogger(__name__)
 
-    feature_type = config.get("feature_type")
     feature_varname = config.get("feature_varname", "feature_number")
     pf_rr_thres = config["pf_rr_thres"]
     pf_link_area_thresh = config["pf_link_area_thresh"]
@@ -136,12 +135,12 @@ def matchtbpf_singlefile(
             pf_lat_weightedcentroid = np.full((nmatchcloud, nmaxpf), fillval_f, dtype=float)
             pf_accumrain = np.full((nmatchcloud, nmaxpf), fillval_f, dtype=float)
             pf_accumrainheavy = np.full((nmatchcloud, nmaxpf), fillval_f, dtype=float)
+            pf_lon_maxrainrate = np.full((nmatchcloud, nmaxpf), fillval_f, dtype=float)
+            pf_lat_maxrainrate = np.full((nmatchcloud, nmaxpf), fillval_f, dtype=float)
             basetime = np.full(nmatchcloud, fillval_f, dtype=float)
             # Radar PF variables
             conv_rain = np.full(nmatchcloud, fillval_f, dtype=float)
             strat_rain = np.full(nmatchcloud, fillval_f, dtype=float)
-            pf_lon_maxrainrate = np.full((nmatchcloud, nmaxpf), fillval_f, dtype=float)
-            pf_lat_maxrainrate = np.full((nmatchcloud, nmaxpf), fillval_f, dtype=float)
             pf_ccarea = np.full((nmatchcloud, nmaxpf), fillval_f, dtype=float)
             pf_sfarea = np.full((nmatchcloud, nmaxpf), fillval_f, dtype=float)
             pf_ccrainrate = np.full((nmatchcloud, nmaxpf), fillval_f, dtype=float)
@@ -549,6 +548,8 @@ def matchtbpf_singlefile(
                 "pf_lat_centroid": pf_lat_centroid,
                 "pf_lon_weightedcentroid": pf_lon_weightedcentroid,
                 "pf_lat_weightedcentroid": pf_lat_weightedcentroid,
+                "pf_lon_maxrainrate": pf_lon_maxrainrate,
+                "pf_lat_maxrainrate": pf_lat_maxrainrate,
                 "pf_maxrainrate": pf_maxrainrate,
                 "pf_accumrain": pf_accumrain,
                 "pf_accumrainheavy": pf_accumrainheavy,
@@ -559,8 +560,6 @@ def matchtbpf_singlefile(
                 # Radar PF variables
                 "conv_rain": conv_rain,
                 "strat_rain": strat_rain,
-                "pf_lon_maxrainrate": pf_lon_maxrainrate,
-                "pf_lat_maxrainrate": pf_lat_maxrainrate,
                 "pf_ccarea": pf_ccarea,
                 "pf_sfarea": pf_sfarea,
                 "pf_ccrainrate": pf_ccrainrate,
@@ -717,6 +716,16 @@ def matchtbpf_singlefile(
                     "_FillValue": fillval_f,
                     "heavy_rainrate_threshold": heavy_rainrate_thresh,
                 },
+                "pf_lon_maxrainrate": {
+                    "long_name": "Longitude with max rain rate",
+                    "units": "degree",
+                    "_FillValue": fillval_f,
+                },
+                "pf_lat_maxrainrate": {
+                    "long_name": "Latitude with max rain rate",
+                    "units": "degree",
+                    "_FillValue": fillval_f,
+                },
 
                 # Radar variables
                 "conv_rain": {
@@ -727,16 +736,6 @@ def matchtbpf_singlefile(
                 "strat_rain": {
                     "long_name": "Stratiform rain amount",
                     "units": "mm/h",
-                    "_FillValue": fillval_f,
-                },
-                "pf_lon_maxrainrate": {
-                    "long_name": "Longitude with max rain rate",
-                    "units": "degree",
-                    "_FillValue": fillval_f,
-                },
-                "pf_lat_maxrainrate": {
-                    "long_name": "Latitude with max rain rate",
-                    "units": "degree",
                     "_FillValue": fillval_f,
                 },
                 "pf_ccarea": {
@@ -1477,7 +1476,6 @@ def add_merge_split_cloud_locations(
         for imc in idmergecloudnumber:
             # Find location of the merging cloud
             (
-                # imergelocationt,
                 imergelocationy,
                 imergelocationx,
             ) = np.array(
@@ -1487,9 +1485,6 @@ def add_merge_split_cloud_locations(
 
             # Add merge pixes to mcs pixels
             if nmergepix > 0:
-                # icloudlocationt = np.hstack(
-                #     (icloudlocationt, imergelocationt)
-                # )
                 icloudlocationy = np.hstack(
                     (icloudlocationy, imergelocationy)
                 )
@@ -1506,7 +1501,6 @@ def add_merge_split_cloud_locations(
         for imc in idsplitcloudnumber:
             # Find location of the merging cloud
             (
-                # isplitlocationt,
                 isplitlocationy,
                 isplitlocationx,
             ) = np.array(
@@ -1516,9 +1510,6 @@ def add_merge_split_cloud_locations(
 
             # Add split pixels to mcs pixels
             if nsplitpix > 0:
-                # icloudlocationt = np.hstack(
-                #     (icloudlocationt, isplitlocationt)
-                # )
                 icloudlocationy = np.hstack(
                     (icloudlocationy, isplitlocationy)
                 )
