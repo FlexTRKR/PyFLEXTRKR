@@ -11,7 +11,7 @@ from pyflextrkr.gettracks import gettracknumbers
 from pyflextrkr.trackstats_driver import trackstats_driver
 from pyflextrkr.identifymcs import identifymcs_tb
 from pyflextrkr.matchtbpf_driver import match_tbpf_tracks
-from pyflextrkr.robustmcspf import define_robust_mcs_pf
+from pyflextrkr.robustmcs_radar import define_robust_mcs_radar
 from pyflextrkr.mapfeature_driver import mapfeature_driver
 from pyflextrkr.movement_speed import movement_speed
 
@@ -81,7 +81,7 @@ if __name__ == '__main__':
 
     # Step 7 - Identify robust MCS
     if config['run_robustmcs']:
-        robustmcsstats_filename = define_robust_mcs_pf(config)
+        robustmcsstats_filename = define_robust_mcs_radar(config)
 
     # Step 8 - Map tracking to pixel files
     if config['run_mapfeature']:

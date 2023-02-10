@@ -40,7 +40,7 @@ tracking_path_name: 'tracking'
 stats_path_name: 'stats'
 pixel_path_name: 'mcstracking'
 
-# Land mask file
+# Land mask file (optional, leave it an empty string if not available)
 landmask_filename: ''
 landmask_varname: 'LANDMASK'
 

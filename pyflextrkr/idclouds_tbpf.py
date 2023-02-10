@@ -262,6 +262,14 @@ def idclouds_tbpf(
                             # Convert precipitation factor to unit [mm/hour]
                             pcp = rawdata[pcp_varname].data * pcp_convert_factor
 
+                            # For 'gpmirimerg', precipitation is averaged to 1-hourly
+                            # and put in first time dimension
+                            if clouddatasource == "gpmirimerg":
+                                pcp = pcp[0, :, :]
+                            else:
+                                # For other data source take the same time as tb
+                                pcp = pcp[tt, :, :]
+
                             # Run SL3D algorithm for 3D reflectivity data
                             if "radar3d" in feature_type:
                                 sl3d_dict, sl3d_attrs = run_sl3d(rawdata, config)
@@ -270,14 +278,6 @@ def idclouds_tbpf(
                             else:
                                 # Use precipitation as linkpf variable
                                 pcp_linkpf = pcp
-
-                            # For 'gpmirimerg', precipitation is averaged to 1-hourly
-                            # and put in first time dimension
-                            if clouddatasource == "gpmirimerg":
-                                pcp = pcp[0, :, :]
-                            else:
-                                # For other data source take the same time as tb
-                                pcp = pcp[tt, :, :]
 
                             # Smooth PF variable, then label PF exceeding threshold
                             pcp_s = filters.uniform_filter(

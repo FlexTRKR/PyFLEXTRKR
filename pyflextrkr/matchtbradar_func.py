@@ -7,7 +7,9 @@ from scipy.ndimage import label
 from skimage.measure import regionprops
 from math import pi
 from scipy.stats import skew
+import warnings
 from pyflextrkr.ftfunctions import sort_renumber
+from pyflextrkr.ft_utilities import subset_ds_geolimit
 
 def matchtbpf_singlefile(
     cloudid_filename,
@@ -39,27 +41,44 @@ def matchtbpf_singlefile(
     """
     logger = logging.getLogger(__name__)
 
-    feature_type = config.get("feature_type")
     feature_varname = config.get("feature_varname", "feature_number")
     pf_rr_thres = config["pf_rr_thres"]
     pf_link_area_thresh = config["pf_link_area_thresh"]
     heavy_rainrate_thresh = config["heavy_rainrate_thresh"]
     pixel_radius = config["pixel_radius"]
     nmaxpf = config["nmaxpf"]
+    mcs_core_min_area = config.get("mcs_core_min_area", 0)
+    # ZF: nmaxcore cannot be different from nmaxpf without changing matchtbpf_driver.py
+    # For now, make them the same
+    nmaxcore = nmaxpf
+    # nmaxcore = config.get("nmaxcore", 10)
     pfdatasource = config["pfdatasource"]
     landmask_filename = config.get("landmask_filename", "")
     landmask_varname = config.get("landmask_varname", "")
     landfrac_thresh = config.get("landfrac_thresh", 0)
+    landmask_x_dimname = config.get("landmask_x_dimname", None)
+    landmask_y_dimname = config.get("landmask_y_dimname", None)
+    landmask_x_coordname = config.get("landmask_x_coordname", None)
+    landmask_y_coordname = config.get("landmask_y_coordname", None)
+
     fillval = config["fillval"]
     fillval_f = np.nan
 
     # Read landmask file
     if os.path.isfile(landmask_filename):
         dslm = xr.open_dataset(landmask_filename)
+        # Subset landmask to match geolimit
+        dslm = subset_ds_geolimit(
+            dslm, config,
+            xcoord_name=landmask_x_coordname,
+            ycoord_name=landmask_y_coordname,
+            x_dimname=landmask_x_dimname,
+            y_dimname=landmask_y_dimname,
+        )
         landmask = dslm[landmask_varname].squeeze().data
     else:
         landmask = None
-    # TODO: subset landmask to match geolimit
+
 
     # Read cloudid file
     if os.path.isfile(cloudid_filename):
@@ -76,6 +95,7 @@ def matchtbpf_singlefile(
         cloudid_basetime = ds["base_time"].data.squeeze()
         lon = ds["longitude"].data.squeeze()
         lat = ds["latitude"].data.squeeze()
+        reflectivity = ds["reflectivity_comp"].data.squeeze()
         sl3d = ds["sl3d"].data.squeeze()
         echotop10 = ds["echotop10"].data.squeeze()
         echotop20 = ds["echotop20"].data.squeeze()
@@ -115,12 +135,12 @@ def matchtbpf_singlefile(
             pf_lat_weightedcentroid = np.full((nmatchcloud, nmaxpf), fillval_f, dtype=float)
             pf_accumrain = np.full((nmatchcloud, nmaxpf), fillval_f, dtype=float)
             pf_accumrainheavy = np.full((nmatchcloud, nmaxpf), fillval_f, dtype=float)
-            basetime = np.full(nmatchcloud, fillval_f, dtype=float)
-            # Radar variables
-            conv_rain = np.full(nmatchcloud, fillval_f, dtype=float)
-            strat_rain = np.full(nmatchcloud, fillval_f, dtype=float)
             pf_lon_maxrainrate = np.full((nmatchcloud, nmaxpf), fillval_f, dtype=float)
             pf_lat_maxrainrate = np.full((nmatchcloud, nmaxpf), fillval_f, dtype=float)
+            basetime = np.full(nmatchcloud, fillval_f, dtype=float)
+            # Radar PF variables
+            conv_rain = np.full(nmatchcloud, fillval_f, dtype=float)
+            strat_rain = np.full(nmatchcloud, fillval_f, dtype=float)
             pf_ccarea = np.full((nmatchcloud, nmaxpf), fillval_f, dtype=float)
             pf_sfarea = np.full((nmatchcloud, nmaxpf), fillval_f, dtype=float)
             pf_ccrainrate = np.full((nmatchcloud, nmaxpf), fillval_f, dtype=float)
@@ -136,18 +156,40 @@ def matchtbpf_singlefile(
             pf_ccechotop40area = np.full((nmatchcloud, nmaxpf), fillval_f, dtype=float)
             pf_ccechotop45area = np.full((nmatchcloud, nmaxpf), fillval_f, dtype=float)
             pf_ccechotop50area = np.full((nmatchcloud, nmaxpf), fillval_f, dtype=float)
+            # Radar convective core variables
+            pf_ncore = np.full(nmatchcloud, fillval, dtype=np.int16)
+            pf_corearea = np.full((nmatchcloud, nmaxcore), fillval_f, dtype=float)
+            pf_corelon = np.full((nmatchcloud, nmaxcore), fillval_f, dtype=float)
+            pf_corelat = np.full((nmatchcloud, nmaxcore), fillval_f, dtype=float)
+            pf_corelon_centroid = np.full((nmatchcloud, nmaxcore), fillval_f, dtype=float)
+            pf_corelat_centroid = np.full((nmatchcloud, nmaxcore), fillval_f, dtype=float)
+            pf_corelon_weightedcentroid = np.full((nmatchcloud, nmaxcore), fillval_f, dtype=float)
+            pf_corelat_weightedcentroid = np.full((nmatchcloud, nmaxcore), fillval_f, dtype=float)
+            pf_coremajoraxis = np.full((nmatchcloud, nmaxcore), fillval_f, dtype=float)
+            pf_coreminoraxis = np.full((nmatchcloud, nmaxcore), fillval_f, dtype=float)
+            pf_coreaspectratio = np.full((nmatchcloud, nmaxcore), fillval_f, dtype=float)
+            pf_coreorientation = np.full((nmatchcloud, nmaxcore), fillval_f, dtype=float)
+            pf_coreperimeter = np.full((nmatchcloud, nmaxcore), fillval_f, dtype=float)
+            pf_coreeccentricity = np.full((nmatchcloud, nmaxcore), fillval_f, dtype=float)
+            pf_coremaxechotop10 = np.full((nmatchcloud, nmaxcore), fillval_f, dtype=float)
+            pf_coremaxechotop20 = np.full((nmatchcloud, nmaxcore), fillval_f, dtype=float)
+            pf_coremaxechotop30 = np.full((nmatchcloud, nmaxcore), fillval_f, dtype=float)
+            pf_coremaxechotop40 = np.full((nmatchcloud, nmaxcore), fillval_f, dtype=float)
+            pf_coremaxechotop45 = np.full((nmatchcloud, nmaxcore), fillval_f, dtype=float)
+            pf_coremaxechotop50 = np.full((nmatchcloud, nmaxcore), fillval_f, dtype=float)
 
+            # Loop over each matched cloud number
             for imatchcloud in range(nmatchcloud):
 
                 ittcloudnumber = ir_cloudnumber[imatchcloud]
                 ittmergecloudnumber = ir_mergecloudnumber[imatchcloud]
                 ittsplitcloudnumber = ir_splitcloudnumber[imatchcloud]
                 basetime[imatchcloud] = cloudid_basetime
-                # precip_basetime[imatchcloud] = cloudid_basetime
 
                 #########################################################################
                 # Intialize matrices for only MCS data
                 rainrate_map = np.full((ydim, xdim), np.nan, dtype=float)
+                reflectivity_map = np.full((ydim, xdim), np.nan, dtype=float)
                 sl3d_map = np.full((ydim, xdim), np.nan, dtype=float)
                 echotop10_map = np.full((ydim, xdim), np.nan, dtype=float)
                 echotop20_map = np.full((ydim, xdim), np.nan, dtype=float)
@@ -183,6 +225,9 @@ def matchtbpf_singlefile(
                     rainrate_map[icloudlocationy, icloudlocationx] = np.copy(
                         rawrainratemap[icloudlocationy, icloudlocationx]
                     )
+                    reflectivity_map[icloudlocationy, icloudlocationx] = np.copy(
+                        reflectivity[icloudlocationy, icloudlocationx]
+                    )
                     sl3d_map[icloudlocationy, icloudlocationx] = np.copy(
                         sl3d[icloudlocationy, icloudlocationx]
                     )
@@ -217,6 +262,7 @@ def matchtbpf_singlefile(
 
                     # Isolate region over the cloud shield
                     sub_rainrate_map = np.copy(rainrate_map[miny:maxy, minx:maxx])
+                    sub_reflectivity_map = np.copy(reflectivity_map[miny:maxy, minx:maxx])
                     sub_sl3d_map = np.copy(sl3d_map[miny:maxy, minx:maxx])
                     sub_echotop10_map = np.copy(echotop10_map[miny:maxy, minx:maxx])
                     sub_echotop20_map = np.copy(echotop20_map[miny:maxy, minx:maxx])
@@ -240,6 +286,94 @@ def matchtbpf_singlefile(
                     strat_mask = (sub_sl3d_map == 3)
                     conv_rain[imatchcloud] = np.nansum(sub_rainrate_map[conv_mask])
                     strat_rain[imatchcloud] = np.nansum(sub_rainrate_map[strat_mask])
+
+                    ######################################################
+                    # Derive individual convective core statistics
+                    logger.debug("Calculating convective core statistics")
+
+                    # Get convective grid indices
+                    iccy, iccx = np.array(np.where(
+                        (sub_sl3d_map >= 1) & (sub_sl3d_map <= 2)
+                    ))
+                    ncorepix = len(iccy)
+                    if ncorepix > 0:
+                        ####################################################
+                        # Get dimensions of subset region
+                        subdimy, subdimx = np.shape(sub_sl3d_map)
+                        # Create binary map
+                        binaryccmap = np.zeros((subdimy, subdimx), dtype=int)
+                        binaryccmap[iccy, iccx] = 1
+                        # Label convective cores
+                        ccnumberlabelmap, numcc = label(binaryccmap)
+                        # Convert min area to number of pixels
+                        min_npix = np.ceil(mcs_core_min_area / (pixel_radius ** 2)).astype(int)
+                        # Sort and renumber convective cores
+                        cc_number, cc_npix = sort_renumber(ccnumberlabelmap, min_npix)
+                        # Update convective core arrays after sorting and renumbering
+                        numcc = np.nanmax(cc_number)
+                        ccnumberlabelmap = cc_number
+
+                        if numcc > 0:
+                            ###################################################
+                            logger.debug("Convective core present, calculating statistics")
+
+                            # Call function to calculate individual PF statistics
+                            cc_stats_dict = calc_cc_stats(
+                                fillval, fillval_f,
+                                lat, lon, minx, miny, nmaxcore, numcc,
+                                cc_npix, ccnumberlabelmap, pixel_radius,
+                                subdimx, subdimy,
+                                sub_reflectivity_map,
+                                sub_echotop10_map,
+                                sub_echotop20_map,
+                                sub_echotop30_map,
+                                sub_echotop40_map,
+                                sub_echotop45_map,
+                                sub_echotop50_map,
+                            )
+
+                            # Save core feature statisitcs
+                            ncc_save = cc_stats_dict["ncc_save"]
+                            pf_ncore[imatchcloud] = np.copy(numcc)
+                            pf_corelon[imatchcloud, 0:ncc_save] = \
+                                cc_stats_dict["cclon"][0:ncc_save]
+                            pf_corelat[imatchcloud, 0:ncc_save] = \
+                                cc_stats_dict["cclat"][0:ncc_save]
+                            pf_corearea[imatchcloud, 0:ncc_save] = \
+                                cc_stats_dict["ccnpix"][0:ncc_save] * pixel_radius ** 2
+                            pf_corelon_centroid[imatchcloud, 0:ncc_save] = \
+                                cc_stats_dict["cclon_centroid"][0:ncc_save]
+                            pf_corelat_centroid[imatchcloud, 0:ncc_save] = \
+                                cc_stats_dict["cclat_centroid"][0:ncc_save]
+                            pf_corelon_weightedcentroid[imatchcloud, 0:ncc_save] = \
+                                cc_stats_dict["cclon_weightedcentroid"][0:ncc_save]
+                            pf_corelat_weightedcentroid[imatchcloud, 0:ncc_save] = \
+                                cc_stats_dict["cclat_weightedcentroid"][0:ncc_save]
+                            pf_coremajoraxis[imatchcloud, 0:ncc_save] = \
+                                cc_stats_dict["ccmajoraxis"][0:ncc_save]
+                            pf_coreminoraxis[imatchcloud, 0:ncc_save] = \
+                                cc_stats_dict["ccminoraxis"][0:ncc_save]
+                            pf_coreaspectratio[imatchcloud, 0:ncc_save] = \
+                                cc_stats_dict["ccaspectratio"][0:ncc_save]
+                            pf_coreorientation[imatchcloud, 0:ncc_save] = \
+                                cc_stats_dict["ccorientation"][0:ncc_save]
+                            pf_coreperimeter[imatchcloud, 0:ncc_save] = \
+                                cc_stats_dict["ccperimeter"][0:ncc_save]
+                            pf_coreeccentricity[imatchcloud, 0:ncc_save] = \
+                                cc_stats_dict["cceccentricity"][0:ncc_save]
+                            pf_coremaxechotop10[imatchcloud, 0:ncc_save] = \
+                                cc_stats_dict["ccmaxechotop10"][0:ncc_save]
+                            pf_coremaxechotop20[imatchcloud, 0:ncc_save] = \
+                                cc_stats_dict["ccmaxechotop20"][0:ncc_save]
+                            pf_coremaxechotop30[imatchcloud, 0:ncc_save] = \
+                                cc_stats_dict["ccmaxechotop30"][0:ncc_save]
+                            pf_coremaxechotop40[imatchcloud, 0:ncc_save] = \
+                                cc_stats_dict["ccmaxechotop40"][0:ncc_save]
+                            pf_coremaxechotop45[imatchcloud, 0:ncc_save] = \
+                                cc_stats_dict["ccmaxechotop45"][0:ncc_save]
+                            pf_coremaxechotop50[imatchcloud, 0:ncc_save] = \
+                                cc_stats_dict["ccmaxechotop50"][0:ncc_save]
+
 
                     ######################################################
                     # Derive individual PF statistics
@@ -307,7 +441,7 @@ def matchtbpf_singlefile(
                             # Call function to calculate individual PF statistics
                             pf_stats_dict = calc_pf_stats(
                                 fillval, fillval_f, heavy_rainrate_thresh,
-                                lat, logger, lon, minx, miny, nmaxpf, numpf,
+                                lat, lon, minx, miny, nmaxpf, numpf,
                                 pf_npix, pfnumberlabelmap, pixel_radius,
                                 subdimx, subdimy, sub_rainrate_map,
                                 sub_sl3d_map,
@@ -356,7 +490,6 @@ def matchtbpf_singlefile(
                                 pf_stats_dict["pfaccumrain"][0:npf_save]
                             pf_accumrainheavy[imatchcloud, 0:npf_save] = \
                                 pf_stats_dict["pfaccumrainheavy"][0:npf_save]
-
                             pf_perimeter[imatchcloud, 0:npf_save] = \
                                 pf_stats_dict["pfperimeter"][0:npf_save]
                             pf_lon_maxrainrate[imatchcloud, 0:npf_save] = \
@@ -399,8 +532,6 @@ def matchtbpf_singlefile(
 
             # Group outputs in dictionaries
             out_dict = {
-                # "nmatchcloud": nmatchcloud,
-                # "matchindices": matchindices,
                 "pf_npf": pf_npf,
                 "pf_lon": pf_lon,
                 "pf_lat": pf_lat,
@@ -417,6 +548,8 @@ def matchtbpf_singlefile(
                 "pf_lat_centroid": pf_lat_centroid,
                 "pf_lon_weightedcentroid": pf_lon_weightedcentroid,
                 "pf_lat_weightedcentroid": pf_lat_weightedcentroid,
+                "pf_lon_maxrainrate": pf_lon_maxrainrate,
+                "pf_lat_maxrainrate": pf_lat_maxrainrate,
                 "pf_maxrainrate": pf_maxrainrate,
                 "pf_accumrain": pf_accumrain,
                 "pf_accumrainheavy": pf_accumrainheavy,
@@ -424,11 +557,9 @@ def matchtbpf_singlefile(
                 "total_rain": total_rain,
                 "total_heavyrain": total_heavyrain,
                 "rainrate_heavyrain": rainrate_heavyrain,
-                # Radar variables
+                # Radar PF variables
                 "conv_rain": conv_rain,
                 "strat_rain": strat_rain,
-                "pf_lon_maxrainrate": pf_lon_maxrainrate,
-                "pf_lat_maxrainrate": pf_lat_maxrainrate,
                 "pf_ccarea": pf_ccarea,
                 "pf_sfarea": pf_sfarea,
                 "pf_ccrainrate": pf_ccrainrate,
@@ -444,6 +575,27 @@ def matchtbpf_singlefile(
                 "pf_cc40area": pf_ccechotop40area,
                 "pf_cc45area": pf_ccechotop45area,
                 "pf_cc50area": pf_ccechotop50area,
+                # Radar convective core variables
+                "pf_ncore": pf_ncore,
+                "pf_corearea": pf_corearea,
+                "pf_corelon": pf_corelon,
+                "pf_corelat": pf_corelon,
+                "pf_corelon_centroid": pf_corelon_centroid,
+                "pf_corelat_centroid": pf_corelat_centroid,
+                "pf_corelon_weightedcentroid": pf_corelon_weightedcentroid,
+                "pf_corelat_weightedcentroid": pf_corelat_weightedcentroid,
+                "pf_coremajoraxis": pf_coremajoraxis,
+                "pf_coreminoraxis": pf_coreminoraxis,
+                "pf_coreaspectratio": pf_coreaspectratio,
+                "pf_coreorientation": pf_coreorientation,
+                "pf_coreperimeter": pf_coreperimeter,
+                "pf_coreeccentricity": pf_coreeccentricity,
+                "pf_coremaxechotop10": pf_coremaxechotop10,
+                "pf_coremaxechotop20": pf_coremaxechotop20,
+                "pf_coremaxechotop30": pf_coremaxechotop30,
+                "pf_coremaxechotop40": pf_coremaxechotop40,
+                "pf_coremaxechotop45": pf_coremaxechotop45,
+                "pf_coremaxechotop50": pf_coremaxechotop50,
             }
             out_dict_attrs = {
                 "pf_npf": {
@@ -564,6 +716,16 @@ def matchtbpf_singlefile(
                     "_FillValue": fillval_f,
                     "heavy_rainrate_threshold": heavy_rainrate_thresh,
                 },
+                "pf_lon_maxrainrate": {
+                    "long_name": "Longitude with max rain rate",
+                    "units": "degree",
+                    "_FillValue": fillval_f,
+                },
+                "pf_lat_maxrainrate": {
+                    "long_name": "Latitude with max rain rate",
+                    "units": "degree",
+                    "_FillValue": fillval_f,
+                },
 
                 # Radar variables
                 "conv_rain": {
@@ -574,16 +736,6 @@ def matchtbpf_singlefile(
                 "strat_rain": {
                     "long_name": "Stratiform rain amount",
                     "units": "mm/h",
-                    "_FillValue": fillval_f,
-                },
-                "pf_lon_maxrainrate": {
-                    "long_name": "Longitude with max rain rate",
-                    "units": "degree",
-                    "_FillValue": fillval_f,
-                },
-                "pf_lat_maxrainrate": {
-                    "long_name": "Latitude with max rain rate",
-                    "units": "degree",
                     "_FillValue": fillval_f,
                 },
                 "pf_ccarea": {
@@ -617,32 +769,32 @@ def matchtbpf_singlefile(
                     "_FillValue": fillval_f,
                 },
                 "pf_ccmaxechotop10": {
-                    "long_name": "PF convective 10 dBZ echo top height",
+                    "long_name": "PF convective 10 dBZ max echo top height",
                     "units": "km",
                     "_FillValue": fillval_f,
                 },
                 "pf_ccmaxechotop20": {
-                    "long_name": "PF convective 20 dBZ echo top height",
+                    "long_name": "PF convective 20 dBZ max echo top height",
                     "units": "km",
                     "_FillValue": fillval_f,
                 },
                 "pf_ccmaxechotop30": {
-                    "long_name": "PF convective 30 dBZ echo top height",
+                    "long_name": "PF convective 30 dBZ max echo top height",
                     "units": "km",
                     "_FillValue": fillval_f,
                 },
                 "pf_ccmaxechotop40": {
-                    "long_name": "PF convective 40 dBZ echo top height",
+                    "long_name": "PF convective 40 dBZ max echo top height",
                     "units": "km",
                     "_FillValue": fillval_f,
                 },
                 "pf_ccmaxechotop45": {
-                    "long_name": "PF convective 45 dBZ echo top height",
+                    "long_name": "PF convective 45 dBZ max echo top height",
                     "units": "km",
                     "_FillValue": fillval_f,
                 },
                 "pf_ccmaxechotop50": {
-                    "long_name": "PF convective 50 dBZ echo top height",
+                    "long_name": "PF convective 50 dBZ max echo top height",
                     "units": "km",
                     "_FillValue": fillval_f,
                 },
@@ -661,6 +813,108 @@ def matchtbpf_singlefile(
                     "units": "km^2",
                     "_FillValue": fillval_f,
                 },
+
+                # Radar convective core variables
+                "pf_ncore": {
+                    "long_name": "Number of convective cores in the cloud",
+                    "units": "unitless",
+                    "_FillValue": fillval,
+                },
+                "pf_corearea": {
+                    "long_name": "Convective area",
+                    "units": "km^2",
+                    "_FillValue": fillval_f,
+                },
+                "pf_corelon": {
+                    "long_name": "Mean longitude of convective core",
+                    "units": "degrees",
+                    "_FillValue": fillval_f,
+                },
+                "pf_corelat": {
+                    "long_name": "Mean latitude of convective core",
+                    "units": "degrees",
+                    "_FillValue": fillval_f,
+                },
+                "pf_corelon_centroid": {
+                    "long_name": "Centroid longitude of convective core",
+                    "units": "degrees",
+                    "_FillValue": fillval_f,
+                },
+                "pf_corelat_centroid": {
+                    "long_name": "Centroid latitude of convective core",
+                    "units": "degrees",
+                    "_FillValue": fillval_f,
+                },
+                "pf_corelon_weightedcentroid": {
+                    "long_name": "Weighted centroid longitude of convective core",
+                    "units": "degrees",
+                    "_FillValue": fillval_f,
+                },
+                "pf_corelat_weightedcentroid": {
+                    "long_name": "Weighted centroid latitude of convective core",
+                    "units": "degrees",
+                    "_FillValue": fillval_f,
+                },
+                "pf_coremajoraxis": {
+                    "long_name": "Major axis length of convective core",
+                    "units": "km",
+                    "_FillValue": fillval_f,
+                },
+                "pf_coreminoraxis": {
+                    "long_name": "Minor axis length of convective core",
+                    "units": "km",
+                    "_FillValue": fillval_f,
+                },
+                "pf_coreaspectratio": {
+                    "long_name": "Aspect ratio of convective core",
+                    "units": "unitless",
+                    "_FillValue": fillval_f,
+                },
+                "pf_coreorientation": {
+                    "long_name": "Orientation of major axis of convective core",
+                    "units": "degree",
+                    "_FillValue": fillval_f,
+                },
+                "pf_coreperimeter": {
+                    "long_name": "Perimeter of convective core",
+                    "units": "km",
+                    "_FillValue": fillval_f,
+                },
+                "pf_coreeccentricity": {
+                    "long_name": "Eccentricity of convective core",
+                    "units": "unitless",
+                    "_FillValue": fillval_f,
+                },
+                "pf_coremaxechotop10": {
+                    "long_name": "Convective core 10 dBZ max echo top height",
+                    "units": "km",
+                    "_FillValue": fillval_f,
+                },
+                "pf_coremaxechotop20": {
+                    "long_name": "Convective core 20 dBZ max echo top height",
+                    "units": "km",
+                    "_FillValue": fillval_f,
+                },
+                "pf_coremaxechotop30": {
+                    "long_name": "Convective core 30 dBZ max echo top height",
+                    "units": "km",
+                    "_FillValue": fillval_f,
+                },
+                "pf_coremaxechotop40": {
+                    "long_name": "Convective core 40 dBZ max echo top height",
+                    "units": "km",
+                    "_FillValue": fillval_f,
+                },
+                "pf_coremaxechotop45": {
+                    "long_name": "Convective core 45 dBZ max echo top height",
+                    "units": "km",
+                    "_FillValue": fillval_f,
+                },
+                "pf_coremaxechotop50": {
+                    "long_name": "Convective core 50 dBZ max echo top height",
+                    "units": "km",
+                    "_FillValue": fillval_f,
+                },
             }
 
             return out_dict, out_dict_attrs,
@@ -675,8 +929,185 @@ def matchtbpf_singlefile(
 
 ##########################################################################
 # Custom functions
+
+def calc_cc_stats(
+        fillval, fillval_f,
+        lat, lon, minx, miny, nmaxcore, numcc,
+        cc_npix, ccnumberlabelmap, pixel_radius,
+        subdimx, subdimy,
+        sub_reflectivity_map,
+        sub_echotop10_map,
+        sub_echotop20_map,
+        sub_echotop30_map,
+        sub_echotop40_map,
+        sub_echotop45_map,
+        sub_echotop50_map,
+):
+    """
+    Calculate individual convective core statistics.
+
+    Args:
+        fillval:
+        fillval_f:
+        lat:
+        lon:
+        minx:
+        miny:
+        nmaxcore:
+        numcc:
+        cc_npix:
+        ccnumberlabelmap:
+        pixel_radius:
+        subdimx:
+        subdimy:
+        sub_reflectivity_map:
+        sub_echotop10_map:
+        sub_echotop20_map:
+        sub_echotop30_map:
+        sub_echotop40_map:
+        sub_echotop45_map:
+        sub_echotop50_map:
+
+    Returns:
+        cc_stats_dict: dictionary
+            Dictionary containing core statistics variables.
+    """
+    logger = logging.getLogger(__name__)
+    # Initialize arrays
+    ncc_save = np.nanmin([nmaxcore, numcc])
+    ccnpix = np.zeros(ncc_save, dtype=float)
+    ccid = np.full(ncc_save, fillval, dtype=int)
+    cclon = np.full(ncc_save, fillval_f, dtype=float)
+    cclat = np.full(ncc_save, fillval_f, dtype=float)
+    cclon_centroid = np.full(ncc_save, fillval_f, dtype=float)
+    cclat_centroid = np.full(ncc_save, fillval_f, dtype=float)
+    cclon_weightedcentroid = np.full(ncc_save, fillval_f, dtype=float)
+    cclat_weightedcentroid = np.full(ncc_save, fillval_f, dtype=float)
+    ccmajoraxis = np.full(ncc_save, fillval_f, dtype=float)
+    ccminoraxis = np.full(ncc_save, fillval_f, dtype=float)
+    ccaspectratio = np.full(ncc_save, fillval_f, dtype=float)
+    ccorientation = np.full(ncc_save, fillval_f, dtype=float)
+    ccperimeter = np.full(ncc_save, fillval_f, dtype=float)
+    cceccentricity = np.full(ncc_save, fillval_f, dtype=float)
+    ccmaxechotop10 = np.full(ncc_save, fillval_f, dtype=float)
+    ccmaxechotop20 = np.full(ncc_save, fillval_f, dtype=float)
+    ccmaxechotop30 = np.full(ncc_save, fillval_f, dtype=float)
+    ccmaxechotop40 = np.full(ncc_save, fillval_f, dtype=float)
+    ccmaxechotop45 = np.full(ncc_save, fillval_f, dtype=float)
+    ccmaxechotop50 = np.full(ncc_save, fillval_f, dtype=float)
+
+    logger.debug(
+        "Looping through each core to calculate statistics"
+    )
+    logger.debug(("Number of cores " + str(numcc)))
+
+    # Get the shape of the full data array
+    ny, nx = lon.shape
+
+    ###############################################
+    # Loop through each PF
+    for icc in range(1, ncc_save + 1):
+        #######################################
+        # Find indices of the core
+        iiccy, iiccx = np.where(ccnumberlabelmap == icc)
+        iiccnpix = len(iiccy)
+
+        # Double check to make sure PF pixel count is the same
+        if iiccnpix == cc_npix[icc - 1]:
+            ##########################################
+            # Compute core statistics
+
+            # Basic statistics
+            ccnpix[icc - 1] = np.copy(iiccnpix)
+            ccid[icc - 1] = np.copy(int(icc))
+            cclon[icc - 1] = np.nanmean(lon[iiccy[:] + miny, iiccx[:] + minx])
+            cclat[icc - 1] = np.nanmean(lat[iiccy[:] + miny, iiccx[:] + minx])
+
+            # Convective echotop height statistics
+            if iiccnpix > 0:
+                with warnings.catch_warnings():
+                    warnings.simplefilter("ignore", category=RuntimeWarning)
+                    ccmaxechotop10[icc - 1] = np.nanmax(sub_echotop10_map[iiccy, iiccx])
+                    ccmaxechotop20[icc - 1] = np.nanmax(sub_echotop20_map[iiccy, iiccx])
+                    ccmaxechotop30[icc - 1] = np.nanmax(sub_echotop30_map[iiccy, iiccx])
+                    ccmaxechotop40[icc - 1] = np.nanmax(sub_echotop40_map[iiccy, iiccx])
+                    ccmaxechotop45[icc - 1] = np.nanmax(sub_echotop45_map[iiccy, iiccx])
+                    ccmaxechotop50[icc - 1] = np.nanmax(sub_echotop50_map[iiccy, iiccx])
+
+            # Generate a binary map of core
+            iiccflagmap = np.zeros((subdimy, subdimx), dtype=int)
+            iiccflagmap[iiccy, iiccx] = 1
+
+            # Geometric statistics
+            _sub_reflectivity_map = np.copy(sub_reflectivity_map)
+            _sub_reflectivity_map[np.isnan(_sub_reflectivity_map)] = -9999
+            # _sub_reflectivity_map = np.full((subdimy, subdimx), -9999, dtype=float)
+            # _sub_reflectivity_map[iiccy, iiccx] = sub_reflectivity_map[iiccy, iiccx]
+            ccproperties = regionprops(
+                iiccflagmap,
+                intensity_image=_sub_reflectivity_map,
+            )
+
+            cceccentricity[icc - 1] = ccproperties[0].eccentricity
+            ccmajoraxis[icc - 1] = ccproperties[0].major_axis_length * pixel_radius
+
+            # Need to treat minor axis length with an error except
+            # since the python algorithm occasionally throws an error.
+            try:
+                ccminoraxis[icc - 1] = (ccproperties[0].minor_axis_length * pixel_radius)
+            except ValueError:
+                pass
+            if ~np.isnan(ccminoraxis[icc - 1]) or ~np.isnan(ccmajoraxis[icc - 1]):
+                ccaspectratio[icc - 1] = np.divide(ccmajoraxis[icc - 1], ccminoraxis[icc - 1])
+            ccorientation[icc - 1] = (ccproperties[0].orientation) * (180 / float(pi))
+            ccperimeter[icc - 1] = (ccproperties[0].perimeter * pixel_radius)
+            [ycentroid, xcentroid] = ccproperties[0].centroid
+            [yweightedcentroid, xweightedcentroid] = ccproperties[0].weighted_centroid
+
+            # Shift the centroids by minx/miny
+            # since the core is a subset from the full image
+            # Round the centroid values as indices
+            ycentroid = int(np.round(ycentroid + miny))
+            xcentroid = int(np.round(xcentroid + minx))
+            yweightedcentroid = int(np.round(yweightedcentroid + miny))
+            xweightedcentroid = int(np.round(xweightedcentroid + minx))
+
+            # Apply the indices to get centroid lat/lon
+            if (0 < (ycentroid) < ny) & (0 < (xcentroid) < nx):
+                cclon_centroid[icc - 1] = lon[ycentroid, xcentroid]
+                cclat_centroid[icc - 1] = lat[ycentroid, xcentroid]
+            if (0 < (yweightedcentroid) < ny) & (0 < (xweightedcentroid) < nx):
+                cclon_weightedcentroid[icc - 1] = lon[yweightedcentroid, xweightedcentroid]
+                cclat_weightedcentroid[icc - 1] = lat[yweightedcentroid, xweightedcentroid]
+
+    # Put all variables in dictionary for output
+    cc_stats_dict = {
+        "ncc_save": ncc_save,
+        "ccnpix": ccnpix,
+        "ccid": ccid,
+        "cclon": cclon,
+        "cclat": cclat,
+        "cclon_centroid": cclon_centroid,
+        "cclat_centroid": cclat_centroid,
+        "cclon_weightedcentroid": cclon_weightedcentroid,
+        "cclat_weightedcentroid": cclat_weightedcentroid,
+        "ccmajoraxis": ccmajoraxis,
+        "ccminoraxis": ccminoraxis,
+        "ccaspectratio": ccaspectratio,
+        "ccorientation": ccorientation,
+        "ccperimeter": ccperimeter,
+        "cceccentricity": cceccentricity,
+        "ccmaxechotop10": ccmaxechotop10,
+        "ccmaxechotop20": ccmaxechotop20,
+        "ccmaxechotop30": ccmaxechotop30,
+        "ccmaxechotop40": ccmaxechotop40,
+        "ccmaxechotop45": ccmaxechotop45,
+        "ccmaxechotop50": ccmaxechotop50,
+    }
+    return cc_stats_dict
+
 def calc_pf_stats(
-        fillval, fillval_f, heavy_rainrate_thresh, lat, logger, lon, minx, miny, nmaxpf, numpf, pf_npix,
+        fillval, fillval_f, heavy_rainrate_thresh, lat, lon, minx, miny, nmaxpf, numpf, pf_npix,
         pfnumberlabelmap, pixel_radius, subdimx, subdimy, sub_rainrate_map,
         sub_sl3d_map,
         sub_echotop10_map,
@@ -694,7 +1125,6 @@ def calc_pf_stats(
         fillval_f:
         heavy_rainrate_thresh:
         lat:
-        logger:
         lon:
         minx:
         miny:
@@ -718,7 +1148,7 @@ def calc_pf_stats(
         pf_stats_dict: dictionary
             Dictionary containing PF statistics variables.
     """
-    ##############################################
+    logger = logging.getLogger(__name__)
     # Initialize arrays
     npf_save = np.nanmin([nmaxpf, numpf])
     pfnpix = np.zeros(npf_save, dtype=float)
@@ -763,6 +1193,10 @@ def calc_pf_stats(
         "Looping through each feature to calculate statistics"
     )
     logger.debug(("Number of PFs " + str(numpf)))
+
+    # Get the shape of the full data array
+    ny, nx = lon.shape
+
     ###############################################
     # Loop through each PF
     for ipf in range(1, npf_save + 1):
@@ -808,80 +1242,48 @@ def calc_pf_stats(
             # Basic statistics
             pfnpix[ipf - 1] = np.copy(iipfnpix)
             pfid[ipf - 1] = np.copy(int(ipf))
-            pflon[ipf - 1] = np.nanmean(
-                lon[iipfy[:] + miny, iipfx[:] + minx]
-            )
-            pflat[ipf - 1] = np.nanmean(
-                lat[iipfy[:] + miny, iipfx[:] + minx]
-            )
+            pflon[ipf - 1] = np.nanmean(lon[iipfy[:] + miny, iipfx[:] + minx])
+            pflat[ipf - 1] = np.nanmean(lat[iipfy[:] + miny, iipfx[:] + minx])
 
-            pfrainrate[ipf - 1] = np.nanmean(
-                sub_rainrate_map[iipfy[:], iipfx[:]]
-            )
-            pfmaxrainrate[ipf - 1] = np.nanmax(
-                sub_rainrate_map[iipfy[:], iipfx[:]]
-            )
-            pfskewness[ipf - 1] = skew(
-                sub_rainrate_map[iipfy[:], iipfx[:]]
-            )
-            pfaccumrain[ipf - 1] = np.nansum(
-                sub_rainrate_map[iipfy[:], iipfx[:]]
-            )
+            pfrainrate[ipf - 1] = np.nanmean(sub_rainrate_map[iipfy[:], iipfx[:]])
+            pfmaxrainrate[ipf - 1] = np.nanmax(sub_rainrate_map[iipfy[:], iipfx[:]])
+            pfskewness[ipf - 1] = skew(sub_rainrate_map[iipfy[:], iipfx[:]])
+            pfaccumrain[ipf - 1] = np.nansum(sub_rainrate_map[iipfy[:], iipfx[:]])
             if iipfnpix_heavy > 0:
                 pfaccumrainheavy[ipf - 1] = np.nansum(
-                    sub_rainrate_map[
-                        iipfy_heavy[:], iipfx_heavy[:]
-                    ]
+                    sub_rainrate_map[iipfy_heavy[:], iipfx_heavy[:]]
                 )
 
             # Convective/stratiform rain statistics
             pfccnpix[ipf - 1] = np.copy(len(iipfy_cc))
             pfsfnpix[ipf - 1] = np.copy(len(iipfy_sf))
             if iipfnpix_cc > 0:
-                pfccrainrate[ipf - 1] = np.nanmean(
-                    sub_rainrate_map[iipfy_cc, iipfx_cc]
-                )
-                pfccrainamount[ipf - 1] = np.nansum(
-                    sub_rainrate_map[iipfy_cc, iipfx_cc]
-                )
+                pfccrainrate[ipf - 1] = np.nanmean(sub_rainrate_map[iipfy_cc, iipfx_cc])
+                pfccrainamount[ipf - 1] = np.nansum(sub_rainrate_map[iipfy_cc, iipfx_cc])
             if iipfnpix_sf > 0:
-                pfsfrainrate[ipf - 1] = np.nanmean(
-                    sub_rainrate_map[iipfy_sf, iipfx_sf]
-                )
-                pfsfrainamount[ipf - 1] = np.nansum(
-                    sub_rainrate_map[iipfy_sf, iipfx_sf]
-                )
+                pfsfrainrate[ipf - 1] = np.nanmean(sub_rainrate_map[iipfy_sf, iipfx_sf])
+                pfsfrainamount[ipf - 1] = np.nansum(sub_rainrate_map[iipfy_sf, iipfx_sf])
 
             # Convective echotop height statistics
             if iipfnpix_cc > 0:
-                pfccmaxechotop10[ipf - 1] = np.nanmax(
-                    sub_echotop10_map[iipfy_cc, iipfx_cc]
-                )
-                pfccmaxechotop20[ipf - 1] = np.nanmax(
-                    sub_echotop20_map[iipfy_cc, iipfx_cc]
-                )
-                pfccmaxechotop30[ipf - 1] = np.nanmax(
-                    sub_echotop30_map[iipfy_cc, iipfx_cc]
-                )
-                pfccmaxechotop40[ipf - 1] = np.nanmax(
-                    sub_echotop40_map[iipfy_cc, iipfx_cc]
-                )
-                pfccmaxechotop45[ipf - 1] = np.nanmax(
-                    sub_echotop45_map[iipfy_cc, iipfx_cc]
-                )
-                pfccmaxechotop50[ipf - 1] = np.nanmax(
-                    sub_echotop50_map[iipfy_cc, iipfx_cc]
-                )
-                # Area containing convective echo top > X dBZ
-                pfccechotop40npix[ipf - 1] = np.count_nonzero(
-                    sub_echotop40_map[iipfy_cc, iipfx_cc] > 0
-                )
-                pfccechotop45npix[ipf - 1] = np.count_nonzero(
-                    sub_echotop45_map[iipfy_cc, iipfx_cc] > 0
-                )
-                pfccechotop50npix[ipf - 1] = np.count_nonzero(
-                    sub_echotop50_map[iipfy_cc, iipfx_cc] > 0
-                )
+                with warnings.catch_warnings():
+                    warnings.simplefilter("ignore", category=RuntimeWarning)
+                    pfccmaxechotop10[ipf - 1] = np.nanmax(sub_echotop10_map[iipfy_cc, iipfx_cc])
+                    pfccmaxechotop20[ipf - 1] = np.nanmax(sub_echotop20_map[iipfy_cc, iipfx_cc])
+                    pfccmaxechotop30[ipf - 1] = np.nanmax(sub_echotop30_map[iipfy_cc, iipfx_cc])
+                    pfccmaxechotop40[ipf - 1] = np.nanmax(sub_echotop40_map[iipfy_cc, iipfx_cc])
+                    pfccmaxechotop45[ipf - 1] = np.nanmax(sub_echotop45_map[iipfy_cc, iipfx_cc])
+                    pfccmaxechotop50[ipf - 1] = np.nanmax(sub_echotop50_map[iipfy_cc, iipfx_cc])
+                    # Area containing convective echo top > X dBZ
+                    pfccechotop40npix[ipf - 1] = np.count_nonzero(
+                        sub_echotop40_map[iipfy_cc, iipfx_cc] > 0
+                    )
+                    pfccechotop45npix[ipf - 1] = np.count_nonzero(
+                        sub_echotop45_map[iipfy_cc, iipfx_cc] > 0
+                    )
+                    pfccechotop50npix[ipf - 1] = np.count_nonzero(
+                        sub_echotop50_map[iipfy_cc, iipfx_cc] > 0
+                    )
 
             # Generate a binary map of PF
             iipfflagmap = np.zeros((subdimy, subdimx), dtype=int)
@@ -889,9 +1291,7 @@ def calc_pf_stats(
 
             # Geometric statistics
             _sub_rainrate_map = np.copy(sub_rainrate_map)
-            _sub_rainrate_map[
-                np.isnan(_sub_rainrate_map)
-            ] = -9999
+            _sub_rainrate_map[np.isnan(_sub_rainrate_map)] = -9999
             pfproperties = regionprops(
                 iipfflagmap,
                 intensity_image=_sub_rainrate_map,
@@ -939,10 +1339,12 @@ def calc_pf_stats(
             xweightedcentroid = int(np.round(xweightedcentroid + minx))
 
             # Apply the indices to get centroid lat/lon
-            pflon_centroid[ipf-1] = lon[ycentroid, xcentroid]
-            pflat_centroid[ipf-1] = lat[ycentroid, xcentroid]
-            pflon_weightedcentroid[ipf-1] = lon[yweightedcentroid, xweightedcentroid]
-            pflat_weightedcentroid[ipf-1] = lat[yweightedcentroid, xweightedcentroid]
+            if (0 < (ycentroid) < ny) & (0 < (xcentroid) < nx):
+                pflon_centroid[ipf-1] = lon[ycentroid, xcentroid]
+                pflat_centroid[ipf-1] = lat[ycentroid, xcentroid]
+            if (0 < (yweightedcentroid) < ny) & (0 < (xweightedcentroid) < nx):
+                pflon_weightedcentroid[ipf-1] = lon[yweightedcentroid, xweightedcentroid]
+                pflat_weightedcentroid[ipf-1] = lat[yweightedcentroid, xweightedcentroid]
 
             # Shift the x, y indices by minx/miny
             pflon_maxrainrate[ipf - 1] = lon[iipfy_max + miny, iipfx_max + minx]
@@ -1014,32 +1416,33 @@ def get_cloud_boundary(icloudlocationx, icloudlocationy, xdim, ydim):
         minx: int
         miny: int
     """
+    # buffer = 10
+    buffer = 0
     miny = np.nanmin(icloudlocationy)
     if miny <= 10:
         miny = 0
     else:
-        miny = miny - 10
+        miny = miny - buffer
     maxy = np.nanmax(icloudlocationy)
     if maxy >= ydim - 10:
         maxy = ydim
     else:
-        maxy = maxy + 11
+        maxy = maxy + buffer + 1
     minx = np.nanmin(icloudlocationx)
     if minx <= 10:
         minx = 0
     else:
-        minx = minx - 10
+        minx = minx - buffer
     maxx = np.nanmax(icloudlocationx)
     if maxx >= xdim - 10:
         maxx = xdim
     else:
-        maxx = maxx + 11
+        maxx = maxx + buffer + 1
     return maxx, maxy, minx, miny
 
 
 def add_merge_split_cloud_locations(
         cloudnumbermap,
-        # icloudlocationt,
         icloudlocationx,
         icloudlocationy,
         ittmergecloudnumber,
@@ -1073,7 +1476,6 @@ def add_merge_split_cloud_locations(
         for imc in idmergecloudnumber:
             # Find location of the merging cloud
             (
-                # imergelocationt,
                 imergelocationy,
                 imergelocationx,
             ) = np.array(
@@ -1083,9 +1485,6 @@ def add_merge_split_cloud_locations(
 
             # Add merge pixes to mcs pixels
             if nmergepix > 0:
-                # icloudlocationt = np.hstack(
-                #     (icloudlocationt, imergelocationt)
-                # )
                 icloudlocationy = np.hstack(
                     (icloudlocationy, imergelocationy)
                 )
@@ -1102,7 +1501,6 @@ def add_merge_split_cloud_locations(
         for imc in idsplitcloudnumber:
             # Find location of the merging cloud
             (
-                # isplitlocationt,
                 isplitlocationy,
                 isplitlocationx,
             ) = np.array(
@@ -1112,9 +1510,6 @@ def add_merge_split_cloud_locations(
 
             # Add split pixels to mcs pixels
             if nsplitpix > 0:
-                # icloudlocationt = np.hstack(
-                #     (icloudlocationt, isplitlocationt)
-                # )
                 icloudlocationy = np.hstack(
                     (icloudlocationy, isplitlocationy)
                 )

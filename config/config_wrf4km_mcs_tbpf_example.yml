@@ -44,9 +44,14 @@ tracking_path_name: 'tracking'
 stats_path_name: 'stats'
 pixel_path_name: 'mcstracking'
 
-# Land mask file
+# Land mask file (optional, leave it an empty string if not available)
+# Can use any standard wrfout file that contains LANDMAS
 landmask_filename: 'INPUT_DIR/wrf_landmask.nc'
 landmask_varname: 'LANDMASK'
+landmask_x_dimname: 'west_east'
+landmask_y_dimname: 'south_north'
+landmask_x_coordname: 'XLONG'
+landmask_y_coordname: 'XLAT'
 
 # Input dataset structure
 pixel_radius:  4.0  # [km] Spatial resolution of the input data

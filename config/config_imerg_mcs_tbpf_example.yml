@@ -41,9 +41,13 @@ tracking_path_name: 'tracking'
 stats_path_name: 'stats'
 pixel_path_name: 'mcstracking'
 
-# Land mask file (optional)
+# Land mask file (optional, leave it an empty string if not available)
 landmask_filename: 'INPUT_DIR/IMERG_landmask_saag.nc'
 landmask_varname: 'landseamask'
+landmask_x_dimname: 'lon'
+landmask_y_dimname: 'lat'
+landmask_x_coordname: 'lon'
+landmask_y_coordname: 'lat'
 
 # Specific to GPM Tb+IMERG combined dataset
 pixel_radius:  10.0  # [km] Spatial resolution of the input data

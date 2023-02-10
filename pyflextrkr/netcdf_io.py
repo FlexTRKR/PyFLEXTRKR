@@ -74,7 +74,7 @@ def write_cloudid_tb(
             dim3d,
             kwargs["cloudnumber_orig"],
         )
-    if "sl3d_dict" in kwargs:
+    if kwargs["sl3d_dict"] is not None:
         # Loop over each SL3D dictionary item and add them to the output dictionary
         for ivar in kwargs['sl3d_dict'].keys():
             var_dict[ivar] = (
