@@ -6,6 +6,7 @@ import xarray as xr
 from datetime import datetime
 from scipy.signal import medfilt2d
 from scipy.ndimage import label, filters
+from astropy.convolution import Box2DKernel, convolve
 from pyflextrkr import netcdf_io as net
 from pyflextrkr.ftfunctions import olr_to_tb
 from pyflextrkr.futyan3 import futyan3
@@ -76,8 +77,8 @@ def idclouds_tbpf(
     cloudid_filebase = config['cloudid_filebase']
 
     tcoord_name = config.get('tcoord_name', 'time')
-    xcoord_name = config['xcoord_name']
-    ycoord_name = config['ycoord_name']
+    x_coordname = config['x_coordname']
+    y_coordname = config['y_coordname']
     time_dimname = config.get('time_dimname', 'time')
     x_dimname = config.get('x_dimname', 'lon')
     y_dimname = config.get('y_dimname', 'lat')
@@ -127,8 +128,8 @@ def idclouds_tbpf(
         original_ir = rawdata[tb_varname].data
     rawdata.close()
 
-    lat = rawdata[ycoord_name].data
-    lon = rawdata[xcoord_name].data
+    lat = rawdata[y_coordname].data
+    lon = rawdata[x_coordname].data
     time_decode = rawdata[tcoord_name]
 
     # Check coordinate dimensions
@@ -140,8 +141,8 @@ def idclouds_tbpf(
         in_lat = lat
     else:
         logger.critical("ERROR: Unexpected input data x, y coordinate dimensions.")
-        logger.critical(f"{xcoord_name} dimension: {lon.ndim}")
-        logger.critical(f"{ycoord_name} dimension: {lat.ndim}")
+        logger.critical(f"{x_coordname} dimension: {lon.ndim}")
+        logger.critical(f"{y_coordname} dimension: {lat.ndim}")
         logger.critical("Tracking will now exit.")
         sys.exit()
 
@@ -277,14 +278,22 @@ def idclouds_tbpf(
                                 pcp_linkpf = sl3d_dict[linkpf_varname]
                             else:
                                 # Use precipitation as linkpf variable
-                                pcp_linkpf = pcp
+                                pcp_linkpf = pcp                          
 
-                            # Smooth PF variable, then label PF exceeding threshold
-                            pcp_s = filters.uniform_filter(
-                                np.squeeze(pcp_linkpf),
-                                size=pf_smooth_window,
-                                mode="nearest",
+                            # Replace values <=0 with 0 before smoothing
+                            pcp_linkpf[pcp_linkpf <= 0] = 0
+                            # Smooth pcp_linkpf using convolve filter (handles NaN)
+                            kernel = Box2DKernel(pf_smooth_window)
+                            pcp_s = convolve(
+                                np.squeeze(pcp_linkpf), kernel, 
+                                boundary="extend", nan_treatment="interpolate", preserve_nan=True,
                             )
+                            # Smooth PF variable, then label PF exceeding threshold
+                            # pcp_s = filters.uniform_filter(
+                            #     np.squeeze(pcp_linkpf),
+                            #     size=pf_smooth_window,
+                            #     mode="nearest",
+                            # )
                             pf_number, npf = label(pcp_s >= pf_dbz_thresh)
 
                             # Convert PF area threshold to number of pixels
