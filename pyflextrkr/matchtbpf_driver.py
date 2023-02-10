@@ -180,6 +180,7 @@ def match_tbpf_tracks(config):
         "rainrate_heavyrain",
         "conv_rain",
         "strat_rain",
+        "pf_ncore",
     ]
     for ivar in var_names_2d:
         pf_dict[ivar] = np.full((numtracks, maxtracklength), np.nan, dtype=np.float32)

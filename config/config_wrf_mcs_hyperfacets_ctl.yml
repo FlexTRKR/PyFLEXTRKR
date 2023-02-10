@@ -4,15 +4,15 @@
 
 # Processing steps:
 run_preprocess: False
-run_idfeature : False
-run_tracksingle : False
-run_gettracks : False
-run_trackstats : False
-run_identifymcs : False
+run_idfeature : True
+run_tracksingle : True
+run_gettracks : True
+run_trackstats : True
+run_identifymcs : True
 run_matchpf : True
-run_robustmcs : False
-run_mapfeature : False
-run_speed : False
+run_robustmcs : True
+run_mapfeature : True
+run_speed : True
 
 # Parallel processing set up
 # run_parallel: 1 (local cluster), 2 (Dask MPI)
@@ -24,7 +24,7 @@ timeout: 360  # [seconds] Dask timeout limit
 # Start/end date and time
 #startdate: '20150503.0000'
 #enddate: '20150601.0000'
-startdate: '20150509.0000'
+startdate: '20150506.0000'
 enddate: '20150510.0000'
 
 # Specify tracking input data date/time string format
@@ -53,6 +53,10 @@ pixel_path_name: 'mcstracking'
 # Land mask file
 landmask_filename: '/Users/feng045/data/demo/mcs_tbpfradar3d/input/wrf_landmask.nc'
 landmask_varname: 'LANDMASK'
+landmask_x_dimname: 'west_east'
+landmask_y_dimname: 'south_north'
+landmask_x_coordname: 'XLONG'
+landmask_y_coordname: 'XLAT'
 
 # Input dataset structure
 pixel_radius:  3.0  # [km] Spatial resolution of the input data
@@ -148,52 +152,27 @@ trackstats_dense_netcdf: 1
 match_pixel_dt_thresh: 60.0  # seconds
 
 # MCS Tb parameters
-mcs_tb_area_thresh: 40000  # [km^2] Tb area threshold
-mcs_tb_duration_thresh:  4  # [hour] Tb minimum length of a mcs
+mcs_tb_area_thresh: 60000  # [km^2] Tb area threshold
+mcs_tb_duration_thresh:  6  # [hour] Tb minimum length of a mcs
 mcs_tb_split_duration:  12  # [hour] Tb tracks smaller or equal to this length will be included with the MCS splits from
 mcs_tb_merge_duration:  12  # [hour] Tb tracks smaller or equal to this length will be included with the MCS merges into
 mcs_tb_gap: 1  # [unitless] Allowable temporal gap in Tb data for MCS area threshold
 # MCS PF parameters
 mcs_pf_majoraxis_thresh:  100  # [km] MCS PF major axis length lower limit
 max_pf_majoraxis_thresh:  1800  # [km] MCS PF major axis length upper limit
-mcs_pf_durationthresh:  4  # [hour] PF minimum length of mcs
+mcs_pf_durationthresh:  5  # [hour] PF minimum length of mcs
 mcs_pf_majoraxis_for_lifetime:  20  # [km] Minimum PF size to count PF lifetime
 mcs_pf_gap:  1  # [unitless] Allowable temporal gap in PF data for MCS characteristics
 landfrac_thresh: 90  # [%] Define threshold for PF land fraction
-
 # Specify rain rate parameters
-pf_rr_thres:  2.0  # Rain rate threshold [mm/hr]
-nmaxpf: 3  # Maximum number of precipitation features that can be within a cloud feature
-nmaxcore: 20  # Maximum number of convective cores that can be within a cloud feature
-pcp_thresh:  1.0  # Pixels with hourly precipitation larger than this will be labeled with track number
+pf_rr_thres:  2.0  # [mm/hr] Rain rate threshold to define a precipitation feature
+pcp_thresh:  1.0  # [mm/hr] Rain rate threshold to label pixels with track number
 heavy_rainrate_thresh:  10.0  # Heavy rain rate threshold [mm/hr]
-
-# MCS PF parameter coefficients [intercept, slope]
-# These parameters are derived with pf_rr_thres:  2 mm/h
-# coefs_pf_area:  [1962.11, -14.598]      # 1%
-# coefs_pf_area:  [1962.11, 0]           # 1% [changed slope to 0: independent of lifetime]
-# coefs_pf_area:  [2119.02, 61.143]      # 3%
-coefs_pf_area:  [2874.05, 89.825]  # 5% [recommended]
-# coefs_pf_area:  [4160.82, 93.077]      # 7%
-# coefs_pf_area:  [4988.15, 138.172]      # 10%
-
-# coefs_pf_rr:  [2.72873, 0.0008317]      # 1%
-# coefs_pf_rr:  [2.81982, 0.0135463]      # 3%
-coefs_pf_rr:  [3.01657, 0.0144461]  # 5% [recommended]
-# coefs_pf_rr:  [3.14895, 0.0150174]      # 7%
-# coefs_pf_rr:  [3.34859, 0.0172043]      # 10%
-
-# coefs_pf_skew:  [0.036384, 0.0022199]      # 1%
-# coefs_pf_skew:  [0.072809, 0.0104444]      # 3%
-coefs_pf_skew:  [0.194462, 0.0100072]  # 5% [recommended]
-# coefs_pf_skew:  [0.256639, 0.0106527]      # 7%
-# coefs_pf_skew:  [0.376142, 0.0095545]      # 10%
-
-# coefs_pf_heavyratio:  [0.750260, 0.4133300]  # 5%
-coefs_pf_heavyratio:  [3.419024, 0.4387090]  # 10% [recommended]
-# coefs_pf_heavyratio:  [4.753215, 0.4886454]  # 15%
-# coefs_pf_heavyratio:  [4.592209, 0.6107371]  # 20%
-# coefs_pf_heavyratio:  [8.389616, 0.5079337]  # 25%
+nmaxpf: 5  # Maximum number of precipitation features to save their statistics within a cloud feature
+#nmaxcore: 5  # Maximum number of convective cores to save their statistics within a cloud feature
+mcs_core_min_area: 180  # [km^2] Min area to calculate convective core statistics
+dbz_thresh: 10  # [dBZ] Reflectivity threshold to label pixels with track number
+mcs_lifecycle_thresh: 8  # MCS Tb duration [hour]
 
 # Define tracked feature variable names
 feature_varname: 'feature_number'
@@ -214,7 +193,7 @@ mcsfinal_filebase: 'mcs_tracks_final_'
 
 # Feature movement speed parameters
 lag_for_speed: 1  # [unitless] lag intervals between tracked features to calculate movement
-track_number_for_speed: "pcptracknumber"
-track_field_for_speed: 'precipitation'
+track_number_for_speed: "dbztracknumber"
+track_field_for_speed: 'reflectivity_comp'
 min_size_thresh_for_speed: 20 # [km] Min PF major axis length to calculate movement
 max_speed_thresh: 50  # [m/s] Speeds larger than this will be replaced by temporal filter

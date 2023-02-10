@@ -238,6 +238,73 @@ def subset_files_timerange(
         files_timestring,
     )
 
+def subset_ds_geolimit(
+        ds_in,
+        config,
+        xcoord_name=None,
+        ycoord_name=None,
+        x_dimname=None,
+        y_dimname=None,
+):
+    """
+    Subset Xarray DataSet by lat/lon boundary.
+
+    Args:
+        ds_in: Xarray DataSet
+            Input Xarray DataSet.
+        config: dictionary
+            Dictionary containing config parameters.
+
+    Returns:
+        ds_out: Xarray DataSet
+            Subsetted Xarray DataSset.
+    """
+    logger = logging.getLogger(__name__)
+    # Get coordinate, dimension names from config if not supplied
+    if xcoord_name is None: xcoord_name = config.get('xcoord_name')
+    if ycoord_name is None: ycoord_name = config.get('ycoord_name')
+    if x_dimname is None: x_dimname = config.get('x_dimname')
+    if y_dimname is None: y_dimname = config.get('y_dimname')
+    geolimits = config.get('geolimits')
+
+    # Get coordinate variables
+    lat = ds_in[ycoord_name].data.squeeze()
+    lon = ds_in[xcoord_name].data.squeeze()
+    # Check coordinate dimensions
+    if (lat.ndim == 1) | (lon.ndim == 1):
+        # Mesh 1D coordinate into 2D
+        in_lon, in_lat = np.meshgrid(lon, lat)
+    elif (lat.ndim == 2) | (lon.ndim == 2):
+        in_lon = lon
+        in_lat = lat
+    else:
+        logger.critical("ERROR in subset_ds_geolimit func: Unexpected input data x, y coordinate dimensions.")
+        logger.critical(f"{xcoord_name} dimension: {lon.ndim}")
+        logger.critical(f"{ycoord_name} dimension: {lat.ndim}")
+        logger.critical("Tracking will now exit.")
+        sys.exit()
+
+    # Subset input dataset within geolimits
+    # Find indices within lat/lon range set by geolimits
+    indicesy, indicesx = np.array(
+        np.where(
+            (in_lat >= geolimits[0])
+            & (in_lat <= geolimits[2])
+            & (in_lon >= geolimits[1])
+            & (in_lon <= geolimits[3])
+        )
+    )
+    ymin, ymax = np.nanmin(indicesy), np.nanmax(indicesy) + 1
+    xmin, xmax = np.nanmin(indicesx), np.nanmax(indicesx) + 1
+    # Create a dictionary for dataset subset
+    subset_dict = {
+        y_dimname: slice(ymin, ymax),
+        x_dimname: slice(xmin, xmax),
+    }
+    # Subset dataset
+    ds_out = ds_in[subset_dict]
+    return ds_out
+
 def match_drift_times(
     cloudidfiles_datestring,
     cloudidfiles_timestring,

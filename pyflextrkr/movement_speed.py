@@ -73,7 +73,7 @@ def movement_speed(
         pixeltracking_filebase = config["pixeltracking_filebase"]
 
     # Stats file name
-    if feature_type == 'tb_pf':
+    if 'tb_pf' in feature_type:
         # Robust MCS track stats filename
         statistics_file = f"{stats_outpath}{trackstats_filebase}{startdate}_{enddate}.nc"
         # Output MCS track stats filename
