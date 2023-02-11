@@ -106,7 +106,7 @@ dbz_lowlevel_asl: 2.0
 # Cloud identification parameters
 mincoldcorepix:  4  # Minimum number of pixels for the cold core
 smoothwindowdimensions:  30  # Dimension of the Box2DKernel filter on Tb.
-medfiltsize: 5      # Window size to perform medfilt2d to fill missing Tb pixels, must be an odd number
+medfiltsize: 9      # Window size to perform medfilt2d to fill missing Tb pixels, must be an odd number
 geolimits: [-90, -360, 90, 360] # 4-element array to subset domain boundaries [lat_min, lon_min, lat_max, lon_max]
 area_thresh:  36  # [km^2] Minimum area to define a cloud
 miss_thresh:  0.35  # Missing data fraction threshold. If missing data exceeds this, the time frame will be omitted.
