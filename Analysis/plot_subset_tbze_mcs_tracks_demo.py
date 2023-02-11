@@ -337,7 +337,7 @@ def plot_map_2panels(pixel_dict, plot_info, map_info, track_dict):
     # Reflectivity
     cmap = plt.get_cmap(cmaps['dbz_cmap'])
     norm = mpl.colors.BoundaryNorm(levels['dbz_levels'], ncolors=cmap.N, clip=True)
-    dbz_masked = np.ma.masked_where(((dbz < min(levels['dbz_levels']))), dbz)
+    dbz_masked = np.ma.masked_where(((dbz <= min(levels['dbz_levels']))), dbz)
     cf2 = ax2.pcolormesh(lon, lat, dbz_masked, norm=norm, cmap=cmap, transform=data_proj, zorder=2)
     # Colorbar
     cax2 = plt.subplot(gs[1,1])
@@ -567,7 +567,7 @@ if __name__ == "__main__":
     titles = {'tb_title': '(a) IR Brightness Temperature', 'pcp_title': '(b) Reflectivity (Tracked MCSs Shaded)'}
     plot_info = {
         'tb_varname': 'tb',
-        'dbz_varname': 'reflectivity_lowlevel',
+        'dbz_varname': 'reflectivity_comp',
         'levels': levels,
         'cmaps': cmaps,
         'titles': titles,

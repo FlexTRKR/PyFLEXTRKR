@@ -362,8 +362,12 @@ def gridrad_sl3d(data, config, **kwargs):
     peak_thresh[smallindex] = 4.0
 
     # Compute column-mean peakedness fraction > peak_thresh
-    tmp = data['Z_H']['values'][0:k9km+1,:,:]
-    mean_peak = np.sum((~np.isnan(peak_thresh)) & (peak > peak_thresh), axis=0) / np.sum(np.isfinite(tmp), axis=0)
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", category=RuntimeWarning)
+        tmp = data['Z_H']['values'][0:k9km+1,:,:]
+        mean_peak = np.sum((~np.isnan(peak_thresh)) &
+                           (peak > peak_thresh), axis=0) / \
+                    np.sum(np.isfinite(tmp), axis=0)
 
     # Find convective points 
     # those with at least x% of column exceeding peakedness or 
