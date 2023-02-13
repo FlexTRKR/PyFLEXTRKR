@@ -143,19 +143,30 @@ def get_track_stats(trackstats_file, start_datetime, end_datetime, dt_thres):
     ntracks = len(idx)
     print(f'Number of tracks within input period: {ntracks}')
 
+    # Check if PF variables exist in the stats dataset
+    if 'pf_lon' in list(dss.data_vars):
+        # 'track_pf_lon': dss['pf_lon'].isel(tracks=idx, nmaxpf=0),
+        # 'track_pf_lat': dss['pf_lat'].isel(tracks=idx, nmaxpf=0),
+        track_pf_lon = dss['pf_lon_centroid'].isel(tracks=idx, nmaxpf=0)
+        track_pf_lat = dss['pf_lat_centroid'].isel(tracks=idx, nmaxpf=0)
+        track_pf_diam = 2 * np.sqrt(dss['pf_area'].isel(tracks=idx, nmaxpf=0) / np.pi)
+    else:
+        # If PF variables do not exist, use CCS variables
+        track_pf_lon = dss['meanlon'].isel(tracks=idx)
+        track_pf_lat = dss['meanlat'].isel(tracks=idx)
+        # Replace all valid values as NaN (PF diameter circles will not be plotted)
+        track_pf_diam = track_pf_lon.where(np.isnan(track_pf_lon), other=np.NAN)
+
     # Subset these tracks and put in a dictionary    
     track_dict = {
         'ntracks': ntracks,
-        # 'lifetime': dss['length'].isel(tracks=idx) * time_res,
         'lifetime': dss['track_duration'].isel(tracks=idx) * time_res,
         'track_bt': dss['base_time'].isel(tracks=idx),
         'track_ccs_lon': dss['meanlon'].isel(tracks=idx),
         'track_ccs_lat': dss['meanlat'].isel(tracks=idx),
-        # 'track_pf_lon': dss['pf_lon'].isel(tracks=idx, nmaxpf=0),
-        # 'track_pf_lat': dss['pf_lat'].isel(tracks=idx, nmaxpf=0),
-        'track_pf_lon': dss['pf_lon_centroid'].isel(tracks=idx, nmaxpf=0),
-        'track_pf_lat': dss['pf_lat_centroid'].isel(tracks=idx, nmaxpf=0),
-        'track_pf_diam': 2 * np.sqrt(dss['pf_area'].isel(tracks=idx, nmaxpf=0) / np.pi),
+        'track_pf_lon': track_pf_lon,
+        'track_pf_lat': track_pf_lat,
+        'track_pf_diam': track_pf_diam,
         'dt_thres': dt_thres,
         'time_res': time_res,
     }

@@ -87,10 +87,10 @@ if __name__ == '__main__':
     if config['run_mapfeature']:
         # Map robust MCS track numbers to pixel files (default)
         mapfeature_driver(config, trackstats_filebase=mcsrobust_filebase)
-        # Map Tb-only MCS track numbers to pixel files (provide outpath_basename keyword)
+        # # Map Tb-only MCS track numbers to pixel files (provide outpath_basename keyword)
         # mapfeature_driver(config, trackstats_filebase=mcstbstats_filebase, outpath_basename=mcstbmap_outpath)
-        # Map all Tb track numbers to pixel level files (provide outpath_basename keyword)
-        # mapfeature_driver(config, trackstats_filebase, outpath_basename=alltrackmap_outpath)
+        # # Map all Tb track numbers to pixel level files (provide outpath_basename keyword)
+        # mapfeature_driver(config, trackstats_filebase=trackstats_filebase, outpath_basename=alltrackmap_outpath)
 
     # Step 9 - Movement speed calculation
     if config['run_speed']:
