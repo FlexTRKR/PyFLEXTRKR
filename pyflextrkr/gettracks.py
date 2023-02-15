@@ -61,14 +61,15 @@ def gettracknumbers(config):
     logger.info(f"Total number of files to process: {nfiles}")
 
     fillval_f = np.nan
-    tracknumber = np.full((1, nfiles, maxnclouds), fillval, dtype=int)
-    referencetrackstatus = np.full((nfiles, maxnclouds), fillval_f, dtype=float)
-    newtrackstatus = np.full((nfiles, maxnclouds), fillval_f, dtype=float)
-    trackstatus = np.full((1, nfiles, maxnclouds), fillval, dtype=int)
-    trackmergenumber = np.full((1, nfiles, maxnclouds), fillval, dtype=int)
-    tracksplitnumber = np.full((1, nfiles, maxnclouds), fillval, dtype=int)
-    basetime = np.empty(nfiles, dtype="datetime64[s]")
-    trackreset = np.full((1, nfiles, maxnclouds), fillval, dtype=int)
+    missingfrac = 0.3
+    tracknumber = np.full((1, int(nfiles*(1.+missingfrac)), maxnclouds), fillval, dtype=int)
+    referencetrackstatus = np.full((int(nfiles*(1.+missingfrac)), maxnclouds), fillval_f, dtype=float)
+    newtrackstatus = np.full((int(nfiles*(1.+missingfrac)), maxnclouds), fillval_f, dtype=float)
+    trackstatus = np.full((1, int(nfiles*(1.+missingfrac)), maxnclouds), fillval, dtype=int)
+    trackmergenumber = np.full((1, int(nfiles*(1.+missingfrac)), maxnclouds), fillval, dtype=int)
+    tracksplitnumber = np.full((1, int(nfiles*(1.+missingfrac)), maxnclouds), fillval, dtype=int)
+    basetime = np.empty(int(nfiles*(1.+missingfrac)), dtype="datetime64[s]")
+    trackreset = np.full((1, int(nfiles*(1.+missingfrac)), maxnclouds), fillval, dtype=int)
 
     ############################################################################
     # Load first file
@@ -98,7 +99,7 @@ def gettracknumbers(config):
 
     temp_referencefile = os.path.basename(ref_file)
     strlength = len(temp_referencefile)
-    cloudidfiles = np.chararray((nfiles, int(strlength)))
+    cloudidfiles = np.chararray((int(nfiles*(1.+missingfrac)), int(strlength)))
     cloudidfiles[0, :] = list(os.path.basename(ref_file))
 
     # Initate track numbers
@@ -532,10 +533,11 @@ def gettracknumbers(config):
 
         #############################################################################
         # Flag the last file in the dataset
-        if ifile == nfiles - 2:
+        if ifile == nfiles - 1:
             logger.debug("WE ARE AT THE LAST FILE")
             for ncn in range(1, int(nclouds_new) + 1):
                 trackreset[0, ifill + 1, :] = 2
+            ifill = ifill + 1
             break
 
         ##############################################################################
@@ -548,6 +550,8 @@ def gettracknumbers(config):
     trackstatus[np.isnan(trackstatus)] = -9999
 
     logger.debug("Tracking Done")
+
+    nfiles = ifill + 1
 
     # #################################################################
     # # Create histograms of the values in tracknumber.
@@ -611,13 +615,13 @@ def gettracknumbers(config):
     output_data = xr.Dataset(
         {
             "ntracks": (["time"], np.array([itrack])),
-            "basetimes": (["nfiles"], basetime),
-            "cloudid_files": (["nfiles", "ncharacters"], cloudidfiles),
-            "track_numbers": (["time", "nfiles", "nclouds"], tracknumber),
-            "track_status": (["time", "nfiles", "nclouds"], trackstatus.astype(int)),
-            "track_mergenumbers": (["time", "nfiles", "nclouds"], trackmergenumber),
-            "track_splitnumbers": (["time", "nfiles", "nclouds"], tracksplitnumber),
-            "track_reset": (["time", "nfiles", "nclouds"], trackreset),
+            "basetimes": (["nfiles"], basetime[:nfiles]),
+            "cloudid_files": (["nfiles", "ncharacters"], cloudidfiles[:nfiles,:]),
+            "track_numbers": (["time", "nfiles", "nclouds"], tracknumber[:,:nfiles,:]),
+            "track_status": (["time", "nfiles", "nclouds"], trackstatus[:,:nfiles,:].astype(int)),
+            "track_mergenumbers": (["time", "nfiles", "nclouds"], trackmergenumber[:,:nfiles,:]),
+            "track_splitnumbers": (["time", "nfiles", "nclouds"], tracksplitnumber[:,:nfiles,:]),
+            "track_reset": (["time", "nfiles", "nclouds"], trackreset[:,:nfiles,:]),
         },
         coords={
             "time": (["time"], np.arange(0, 1)),
