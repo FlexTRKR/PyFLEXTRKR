@@ -40,8 +40,8 @@ rm -fv ${dir_input}gridrad_tbradar.tar.gz
 dir_input1=$(echo ${dir_input} | sed 's_/_\\/_g')
 dir_demo1=$(echo ${dir_demo} | sed 's_/_\\/_g')
 # Replace input directory names in example config file
-sed 's/INPUT_DIR/'${dir_input1}'/g;s/TRACK_DIR/'${dir_demo1}'/g' config_gridrad_mcs_example.yml > ${config_demo}
-echo 'Created new config file: '${config_demo}
+#sed 's/INPUT_DIR/'${dir_input1}'/g;s/TRACK_DIR/'${dir_demo1}'/g' config_gridrad_mcs_example.yml > ${config_demo}
+#echo 'Created new config file: '${config_demo}
 
 # Activate PyFLEXTRKR conda environment
 echo 'Activating PyFLEXTRKR environment ...'
