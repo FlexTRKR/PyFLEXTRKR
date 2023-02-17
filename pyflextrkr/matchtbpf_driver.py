@@ -162,6 +162,7 @@ def match_tbpf_tracks(config):
             var_names = list(final_result[counter][0].keys())
             # Get variable attributes
             var_attrs = final_result[counter][1]
+            var_names_2d = final_result[counter][2]
             break
         counter += 1
 
@@ -171,23 +172,6 @@ def match_tbpf_tracks(config):
     for ivar in var_names:
         pf_dict[ivar] = np.full((numtracks, maxtracklength, nmaxpf), np.nan, dtype=np.float32)
         pf_dict_attrs[ivar] = var_attrs[ivar]
-    # Update 2D variables
-    var_names_2d = [
-        "pf_npf",
-        "pf_landfrac",
-        "total_rain",
-        "total_heavyrain",
-        "rainrate_heavyrain",
-    ]
-    # Add extra 2D variables for radar3d feature_type
-    if "radar3d" in feature_type:
-        var_names_2d.extend(
-            [
-                "conv_rain",
-                "strat_rain",
-                "pf_ncore",
-           ]
-        )
     for ivar in var_names_2d:
         pf_dict[ivar] = np.full((numtracks, maxtracklength), np.nan, dtype=np.float32)
 

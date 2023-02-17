@@ -61,7 +61,7 @@ meltlevel_varname: 'ERAI_0C'
 clouddatasource: 'gpmir'
 radardatasource: 'gridrad'
 pfdatasource:  'wrf'  # flag for landmask convention to calculate PF land fraction
-t_dimname: 'time'
+time_dimname: 'time'
 x_dimname: 'lon'
 y_dimname: 'lat'
 z_dimname: 'height'

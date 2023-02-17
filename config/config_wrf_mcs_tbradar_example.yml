@@ -67,7 +67,7 @@ meltlevel_varname: 'meltinglevelheight'
 clouddatasource: 'model'
 radardatasource: 'wrf'
 pfdatasource:  'wrf'  # flag for landmask convention to calculate PF land fraction
-t_dimname: 'time'
+time_dimname: 'time'
 x_dimname: 'lon'
 y_dimname: 'lat'
 z_dimname: 'level'

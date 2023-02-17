@@ -77,6 +77,8 @@ def matchtbpf_singlefile(
 
     # Read cloudid file
     if os.path.isfile(cloudid_filename):
+        logger.info(cloudid_filename)
+
         # Load cloudid data
         logger.debug("Loading cloudid data")
         logger.debug(cloudid_filename)
@@ -99,6 +101,14 @@ def matchtbpf_singlefile(
         nmatchcloud = len(ir_cloudnumber)
 
         if nmatchcloud > 0:
+            # Define a list of 2D variables [tracks, times]
+            var_names_2d = [
+                "pf_npf",
+                "pf_landfrac",
+                "total_rain",
+                "total_heavyrain",
+                "rainrate_heavyrain",
+            ]
             pf_npf = np.full(nmatchcloud, fillval, dtype=np.int16)
             pf_landfrac = np.full(nmatchcloud, fillval_f, dtype=float)
             total_rain = np.full(nmatchcloud, fillval_f, dtype=float)
@@ -460,7 +470,7 @@ def matchtbpf_singlefile(
                 },
             }
 
-            return out_dict, out_dict_attrs,
+            return out_dict, out_dict_attrs, var_names_2d
 
         else:
             logger.info("No matching cloud found in cloudid: " + cloudid_filename)

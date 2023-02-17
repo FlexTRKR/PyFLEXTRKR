@@ -19,7 +19,6 @@ def run_sl3d(ds, config):
             Dictionary containing output variables
     """
 
-    t_dimname = config['t_dimname']
     x_dimname = config['x_dimname']
     y_dimname = config['y_dimname']
     z_dimname = config['z_dimname']

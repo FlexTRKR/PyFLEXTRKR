@@ -17,7 +17,7 @@ run_speed: True
 # Parallel processing set up
 # run_parallel: 1 (local cluster), 2 (Dask MPI)
 run_parallel: 1
-nprocesses : 4  # Number of processors to use if run_parallel=1
+nprocesses : 8  # Number of processors to use if run_parallel=1
 dask_tmp_dir: '/tmp'  # Dask temporary directory if run_parallel=1
 timeout: 360  # [seconds] Dask timeout limit
 
@@ -57,8 +57,11 @@ tb_varname:  'Tb'
 pcp_varname: 'precipitationCal'
 clouddatasource:  'gpmirimerg'
 pfdatasource:  'imerg'
-xcoord_name: 'lon'
-ycoord_name: 'lat'
+time_dimname: 'time'
+x_dimname: 'lon'
+y_dimname: 'lat'
+x_coordname: 'lon'
+y_coordname: 'lat'
 idclouds_hourly: 1  # 0:  No, 1:  Yes
 idclouds_minute: 30  # 0 or 30 min, which minute mark to use the Tb data
 idclouds_dt_thresh: 5  # [minute], time difference allowed between actual data and idclouds_minute

@@ -82,7 +82,7 @@ def idclouds_tbpf(
     time_dimname = config.get('time_dimname', 'time')
     x_dimname = config.get('x_dimname', 'lon')
     y_dimname = config.get('y_dimname', 'lat')
-    z_dimname = config.get('z_dimname', 'level')
+    z_dimname = config.get('z_dimname', None)
 
     cloudid_outfile = None
     logger.debug(filename)
@@ -93,31 +93,24 @@ def idclouds_tbpf(
 
     # Read in Tb data using xarray
     rawdata = xr.open_dataset(filename)
-    # Get number of dimensions
-    ndims = len(rawdata.dims)
-    if ndims == 2:
-        # Reorder dimensions: [y, x]
-        rawdata = rawdata.transpose(y_dimname, x_dimname)
-    elif ndims == 3:
-        # Reorder dimensions: [time, y, x]
-        rawdata = rawdata.transpose(time_dimname, y_dimname, x_dimname)
-    elif ndims == 4:
-        # Reorder dimensions: [time, z, y, x]
-        rawdata = rawdata.transpose(time_dimname, z_dimname, y_dimname, x_dimname)
-    elif ndims >= 5:
-        # Get dimension names from the file
-        dims_file = []
-        for key in rawdata.dims: dims_file.append(key)
-        # Find extra dimensions beyond [time, z, y, x]
-        dims_keep = [time_dimname, z_dimname, y_dimname, x_dimname]
-        dims_drop = list(set(dims_file) - set(dims_keep))
+
+    # Get dimension names from the file
+    dims_file = []
+    for key in rawdata.dims: dims_file.append(key)
+    # Find extra dimensions beyond [time, z, y, x]
+    dims_keep = [time_dimname, z_dimname, y_dimname, x_dimname]
+    dims_drop = list(set(dims_file) - set(dims_keep))
+    # Reorder Dataset dimensions
+    if z_dimname is not None:
         # Drop extra dimensions, reorder to [time, z, y, x]
-        rawdata = rawdata.drop_dims(dims_drop).transpose(time_dimname, z_dimname, y_dimname, x_dimname)
+        rawdata = rawdata.drop_dims(dims_drop).transpose(
+            time_dimname, z_dimname, y_dimname, x_dimname, missing_dims='ignore'
+        )
     else:
-        logger.error(f"ERROR: Unexpected input data dimensions: {rawdata.dims}")
-        logger.error("Must add codes to handle reading.")
-        logger.error("Tracking will now exit.")
-        sys.exit()
+        # Drop extra dimensions, reorder to [time, y, x]
+        rawdata = rawdata.drop_dims(dims_drop).transpose(
+            time_dimname, y_dimname, x_dimname, missing_dims='ignore'
+        )
 
     # Convert OLR to Tb if olr2tb flag is set
     if olr2tb is True:
