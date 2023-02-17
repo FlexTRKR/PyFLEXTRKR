@@ -268,11 +268,15 @@ def define_robust_mcs_radar(config):
                 iccline = np.arange(iccline[0], iccline[-1] + 1)
             nccline = len(iccline)
 
-            # Find times with convective major axis length greater than 100 km and stratiform area greater than the median amount of stratiform
+            # Find times with convective major axis length greater than 100 km
+            # and stratiform area greater than the median amount of stratiform
             # ilm_meansfarea[ilm_meansfarea == fillvalue] = np.nan
-            print(ilm_maxpfccmajoraxis.shape)
-            print(ilm_meansfarea.shape)
-            isfarea = np.array(np.where((ilm_maxpfccmajoraxis > 100) & (ilm_meansfarea > np.nanmean(ilm_meansfarea))))[0, :]
+            # print(ilm_maxpfccmajoraxis.shape)
+            # print(ilm_meansfarea.shape)
+            isfarea = np.array(
+                np.where((ilm_maxpfccmajoraxis > 100) &
+                         (ilm_meansfarea > np.nanmean(ilm_meansfarea)))
+            )[0, :]
             isfarea_groups = np.split(isfarea, np.where(np.diff(isfarea) > 2)[0] + 1)
             if len(isfarea) > 0 and len(isfarea_groups) > 1:
                 grouplength = np.empty(len(isfarea_groups))
@@ -308,39 +312,50 @@ def define_robust_mcs_radar(config):
 
             # Cloud only stage
             if nccarea > 0:
-                # If first convective time is after the first cloud time, label all hours before the convective core appearance time as preconvective
+                # If first convective time is after the first cloud time,
+                # label all hours before the convective core appearance time as pre-convective
                 if iccarea[0] > 0 and iccarea[0] < ilm_irtracklength - 1:
-                    ilm_index[0] = 0  # Start of cloud only
-                    ilm_cycle[0 : iccarea[0]] = 1  # Time period of cloud only
-
-                ilm_index[1] = iccarea[0]  # Start of unorganized convective cells
+                    # Start of cloud only
+                    ilm_index[0] = 0
+                    # Time period of cloud only
+                    ilm_cycle[0 : iccarea[0]] = 1
+                # Start of unorganized convective cells
+                ilm_index[1] = iccarea[0]
 
             # If convective line exists
             if nccline > 1:
-                # If the convective line occurs after the first storm time (use second index since convective line must be around for one hour prior to classifying as genesis)
+                # If the convective line occurs after the first storm time
+                # (use second index since convective line must be around for one hour prior to classifying as genesis)
                 # Label when convective cores first appear, but are not organized into a line
                 if iccline[1] > iccarea[0]:
-                    ilm_index[2] = iccline[1]  # Start of organized convection
-                    ilm_cycle[iccarea[0] : iccline[1]] = 2  # Time period of unorganzied convective cells
+                    # Start of organized convection
+                    ilm_index[2] = iccline[1]
+                    # Time period of unorganzied convective cells
+                    ilm_cycle[iccarea[0] : iccline[1]] = 2
                 else:
                     sys.exit(
                             "Check convective line in track " + str(int(ilongmcs[ilm]))
                     )
 
                 if nsfarea > 0:
-                    # Label MCS genesis. Test if stratiform area time is two timesteps after the convective line and two time steps before the last time of the cloud track
+                    # Label MCS genesis.
+                    # Test if stratiform area time is two time steps after the convective line
+                    # and two time steps before the last time of the cloud track
                     if isfarea[0] > iccline[1] + 2:
-                        ilm_index[3] = isfarea[0]  # Start of mature MCS
-                        ilm_cycle[iccline[1] : isfarea[0]] = 3  # Time period of organized cells before maturation
-
-                        ilm_cycle[isfarea[0] : isfarea[-1] + 1] = 4  # Time period of mature mcs
+                        # Start of mature MCS
+                        ilm_index[3] = isfarea[0]
+                        # Time period of organized cells before mature
+                        ilm_cycle[iccline[1] : isfarea[0]] = 3
+                        # Time period of mature MCS
+                        ilm_cycle[isfarea[0] : isfarea[-1] + 1] = 4
                     else:
                         matureindex = isfarea[np.array(np.where(isfarea == iccline[1] + 2))[0, :]]
                         if len(matureindex) > 0:
                             ilm_index[3] = np.copy(matureindex[0])
-                            ilm_cycle[iccline[1] : matureindex[0]] = 3  # Time period of organized cells before maturation
-
-                            ilm_cycle[matureindex[0] : isfarea[-1] + 1] = 4  # Time period of mature mcs
+                            # Time period of organized cells before mature
+                            ilm_cycle[iccline[1] : matureindex[0]] = 3
+                            # Time period of mature MCS
+                            ilm_cycle[matureindex[0] : isfarea[-1] + 1] = 4
 
                             # if isfarea[0] > iccline[1] + 2
                             #    ilm_index[3] = isfarea[0] # Start of mature MCS
@@ -353,8 +368,10 @@ def define_robust_mcs_radar(config):
                             #        ilm_cycle[isfarea[3]:isfarea[-1]+1] = 4 # Time period of mature MCS
                             # Label dissipating times. Buy default this is all times after the mature stage
                     if isfarea[-1] < ilm_irtracklength - 1:
-                        ilm_index[4] = isfarea[-1] + 1    #as long as nsfarea > 0, the dissipation stage can be defined
-                        ilm_cycle[isfarea[-1] + 1 : ilm_irtracklength] = 5  # Time period of dissipation
+                        # If nsfarea > 0, the dissipation stage can be defined
+                        ilm_index[4] = isfarea[-1] + 1
+                        # Time period of dissipation
+                        ilm_cycle[isfarea[-1] + 1 : ilm_irtracklength] = 5
 
             ############################################################
             # Final life cycle processing
@@ -439,7 +456,7 @@ def define_robust_mcs_radar(config):
             }
     )
 
-    print("OK ljf")
+    # print("OK ljf")
 
     # Add new variables to dataset
     dsout["pf_lifetime"] = pf_lifetime

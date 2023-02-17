@@ -58,6 +58,7 @@ def trackclouds(
     ########################################################
     # Isolate new and reference file and base times
     new_file = secondcloudidfilename
+    new_file_basename = os.path.basename(new_file)
     new_datestring = seconddatestring
     new_timestring = secondtimestring
     new_basetime = secondbasetime
@@ -65,6 +66,7 @@ def trackclouds(
     new_filedatetime = str(new_datestring) + "_" + str(new_timestring)
 
     reference_file = firstcloudidfilename
+    reference_file_basename = os.path.basename(reference_file)
     reference_datestring = firstdatestring
     reference_timestring = firsttimestring
     reference_basetime = firstbasetime
@@ -257,70 +259,54 @@ def trackclouds(
         #########################################################
         # Save forward and backward indices and linked sizes in netcdf file
 
-        # create filename
-        # track_outfile = dataoutpath + outfilebase + new_filedatetime + ".nc"
-
         # Check if file already exists. If exists, delete
         if os.path.isfile(track_outfile):
             os.remove(track_outfile)
 
         logger.debug("Writing single tracks")
 
-        # Define output variables dictionary
-        varlist = {
-            "basetime_new": (
-                ["time"],
-                np.array(
+        bt_new = np.array(
                     [pd.to_datetime(new_data["base_time"].data, unit="s")],
                     dtype="datetime64[s]",
-                )[0],
-            ),
-            "basetime_ref": (
-                ["time"],
-                np.array(
+                )[0]
+        bt_ref = np.array(
                     [pd.to_datetime(reference_data["base_time"].data, unit="s")],
                     dtype="datetime64[s]",
-                )[0],
-            ),
-            "newcloud_backward_index": (
-                ["time", "nclouds_new", "nlinks"],
-                new_backward_index,
-            ),
-            "newcloud_backward_size": (
-                ["time", "nclouds_new", "nlinks"],
-                new_backward_size,
-            ),
-            "refcloud_forward_index": (
-                ["time", "nclouds_ref", "nlinks"],
-                reference_forward_index,
-            ),
-            "refcloud_forward_size": (
-                ["time", "nclouds_ref", "nlinks"],
-                reference_forward_size,
-            ),
+                )[0]
+
+        # Define output variables dictionary
+        dim_new = ["time", "nclouds_new", "nlinks"]
+        dim_ref = ["time", "nclouds_ref", "nlinks"]
+        var_dict = {
+            "basetime_new": (["time"], bt_new,),
+            "basetime_ref": (["time"], bt_ref,),
+            "newcloud_backward_index": (dim_new, new_backward_index,),
+            "newcloud_backward_size": (dim_new, new_backward_size,),
+            "refcloud_forward_index": (dim_ref, reference_forward_index,),
+            "refcloud_forward_size": (dim_ref, reference_forward_size,),
         }
-        coordlist = {
+        coord_dict = {
             "time": (["time"], np.arange(0, 1)),
             "nclouds_new": (["nclouds_new"], np.arange(0, nnew)),
             "nclouds_ref": (["nclouds_ref"], np.arange(0, nreference)),
             "nlinks": (["nlinks"], np.arange(0, nmaxlinks)),
         }
-        gattrlist = {
-            "title": "Indices linking clouds in two consecutive files forward and backward in time and the size of the linked cloud",
-            "Conventions": "CF-1.6",
-            "Institution": "Pacific Northwest National Laboratoy",
+        gattr_dict = {
+            "title": "Indices linking clouds in two consecutive files " + \
+                     "forward and backward in time and the size of the linked cloud",
+            # "Conventions": "CF-1.6",
+            "Institution": "Pacific Northwest National Laboratory",
             "Contact": "Zhe Feng, zhe.feng@pnnl.gov",
             "Created_on": time.ctime(time.time()),
             "new_date": new_filedatetime,
             "ref_date": reference_filedatetime,
-            "new_file": new_file,
-            "ref_file": reference_file,
-            # "tracking_version_number": track_version,
+            "new_file": new_file_basename,
+            "ref_file": reference_file_basename,
             "overlap_threshold": str(int(othresh * 100)) + "%",
             "maximum_gap_allowed": str(timegap) + " hr",
         }
         # Define xarray dataset
-        output_data = xr.Dataset(varlist, coords=coordlist, attrs=gattrlist)
+        output_data = xr.Dataset(var_dict, coords=coord_dict, attrs=gattr_dict)
 
         # Specify variable attributes
         output_data.nclouds_new.attrs["long_name"] = "number of cloud in new file"
@@ -347,7 +333,8 @@ def trackclouds(
         output_data.newcloud_backward_index.attrs["long_name"] = "reference cloud index"
         output_data.newcloud_backward_index.attrs[
             "usage"
-        ] = "each row represents a cloud in the new file and the numbers in that row provide all reference cloud indices linked to that new cloud"
+        ] = "each row represents a cloud in the new file and " + \
+            "the numbers in that row provide all reference cloud indices linked to that new cloud"
         output_data.newcloud_backward_index.attrs["units"] = "unitless"
         output_data.newcloud_backward_index.attrs["valid_min"] = 1
         output_data.newcloud_backward_index.attrs["valid_max"] = nreference
@@ -355,7 +342,8 @@ def trackclouds(
         output_data.refcloud_forward_index.attrs["long_name"] = "new cloud index"
         output_data.refcloud_forward_index.attrs[
             "usage"
-        ] = "each row represents a cloud in the reference file and the numbers provide all new cloud indices linked to that reference cloud"
+        ] = "each row represents a cloud in the reference file and " + \
+            "the numbers provide all new cloud indices linked to that reference cloud"
         output_data.refcloud_forward_index.attrs["units"] = "unitless"
         output_data.refcloud_forward_index.attrs["valid_min"] = 1
         output_data.refcloud_forward_index.attrs["valid_max"] = nnew
@@ -363,13 +351,15 @@ def trackclouds(
         output_data.newcloud_backward_size.attrs["long_name"] = "reference cloud area"
         output_data.newcloud_backward_size.attrs[
             "usage"
-        ] = "each row represents a cloud in the new file and the numbers provide the area of all reference clouds linked to that new cloud"
+        ] = "each row represents a cloud in the new file and " + \
+            "the numbers provide the area of all reference clouds linked to that new cloud"
         output_data.newcloud_backward_size.attrs["units"] = "km^2"
 
         output_data.refcloud_forward_size.attrs["long_name"] = "new cloud area"
         output_data.refcloud_forward_size.attrs[
             "usage"
-        ] = "each row represents a cloud in the reference file and the numbers provide the area of all new clouds linked to that reference cloud"
+        ] = "each row represents a cloud in the reference file and " + \
+            "the numbers provide the area of all new clouds linked to that reference cloud"
         output_data.refcloud_forward_size.attrs["units"] = "km^2"
 
         # Write netcdf files

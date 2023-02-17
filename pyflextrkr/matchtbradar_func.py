@@ -1067,10 +1067,12 @@ def calc_cc_stats(
             # Shift the centroids by minx/miny
             # since the core is a subset from the full image
             # Round the centroid values as indices
-            ycentroid = int(np.round(ycentroid + miny))
-            xcentroid = int(np.round(xcentroid + minx))
-            yweightedcentroid = int(np.round(yweightedcentroid + miny))
-            xweightedcentroid = int(np.round(xweightedcentroid + minx))
+            if (~np.isnan(ycentroid)) & (~np.isnan(xcentroid)):
+                ycentroid = int(np.round(ycentroid + miny))
+                xcentroid = int(np.round(xcentroid + minx))
+            if (~np.isnan(yweightedcentroid)) & (~np.isnan(xweightedcentroid)):
+                yweightedcentroid = int(np.round(yweightedcentroid + miny))
+                xweightedcentroid = int(np.round(xweightedcentroid + minx))
 
             # Apply the indices to get centroid lat/lon
             if (0 < (ycentroid) < ny) & (0 < (xcentroid) < nx):
