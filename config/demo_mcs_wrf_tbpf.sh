@@ -3,7 +3,7 @@
 # This script demonstrates running MCS tracking on WRF Tb + precipitation data
 # To run this demo script:
 # 1. Modify the dir_demo to a directory on your computer to download the sample data
-# 2. Run the script: bash demo_mcs_wrf.sh
+# 2. Run the script: bash demo_mcs_wrf_tbpf.sh
 # 
 # By default the demo config uses 4 processors for parallel processing, 
 #    assuming most computers have at least 4 CPU cores. 
