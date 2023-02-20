@@ -4,7 +4,7 @@ import logging
 import dask
 from dask.distributed import Client, LocalCluster
 from pyflextrkr.ft_utilities import load_config, setup_logging
-# from pyflextrkr.preprocess_wrf_tb_rainrate_reflectivity import preprocess_wrf_tb_rainrate_reflectivity
+from pyflextrkr.preprocess_wrf_tb_rainrate_reflectivity import preprocess_wrf
 from pyflextrkr.idfeature_driver import idfeature_driver
 from pyflextrkr.tracksingle_driver import tracksingle_driver
 from pyflextrkr.gettracks import gettracknumbers
@@ -34,8 +34,8 @@ if __name__ == '__main__':
     alltrackmap_outpath = 'ccstracking'     # Output directory for all Tb tracks
 
     # Step 0 - Preprocess wrfout files to get Tb, rainrate, reflectivity
-    # if config['run_preprocess']:
-    #     preprocess_wrf_tb_rainrate_reflectivity(config)
+    if config['run_preprocess']:
+        preprocess_wrf(config)
 
     ################################################################################################
     # Parallel processing options

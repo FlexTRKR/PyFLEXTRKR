@@ -333,9 +333,7 @@ def define_robust_mcs_radar(config):
                     # Time period of unorganzied convective cells
                     ilm_cycle[iccarea[0] : iccline[1]] = 2
                 else:
-                    sys.exit(
-                            "Check convective line in track " + str(int(ilongmcs[ilm]))
-                    )
+                    logger.warning(f"Lifecycle cannot be properly defined for track: {int(ilongmcs[ilm])}")
 
                 if nsfarea > 0:
                     # Label MCS genesis.
