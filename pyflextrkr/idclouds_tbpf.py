@@ -197,9 +197,9 @@ def idclouds_tbpf(
             out_ir[missmask] = ir_filt[missmask]
 
             #####################################################
-            # mask brightness temperatures outside of normal range
-            in_ir[in_ir < mintb_thresh] = np.nan
-            in_ir[in_ir > maxtb_thresh] = np.nan
+            # Mask brightness temperatures outside of normal range
+            out_ir[out_ir < mintb_thresh] = np.nan
+            out_ir[out_ir > maxtb_thresh] = np.nan
 
             # proceed if file covers the geographic region in interest
             if (len(indicesx) > 0) and (len(indicesy) > 0):
