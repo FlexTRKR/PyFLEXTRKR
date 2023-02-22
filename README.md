@@ -5,14 +5,17 @@
 ---
 The Python FLEXible object TRacKeR (PyFLEXTRKR) is a flexible atmospheric feature tracking software package. The software can track any 2D objects and handle merging and splitting explicitly. PyFLEXTRKR has specific capabilities to track convective clouds from a variety of observations and model simulations, including: 1) individual convective cells, and 2) mesoscale convective systems (MCSs) using radar, satellite, and model data. The package has scalable parallelization options and has been optimized to work on large datasets including global high resolution data.
 
+## For a more detailed user guide, click [this link](https://github.com/FlexTRKR/PyFLEXTRKR/blob/main/UserGuide.md).
+
+
 # **2. Input Data Requirements**
 
 ---
 PyFLEXTRKR works with netCDF files using Xarray's capability to handle N-dimension arrays of gridded data. Currently, PyFLEXTRKR supports: 
 
 1. Tracking convective cells using radar reflectivity data [[Feng et al. (2022), MWR](https://doi.org/10.1175/MWR-D-21-0237.1)]; 
-2. Tracking MCSs using infrared brightness temperature (Tb) data from geostationary satellites, or outgoing longwave radiation (OLR) data from model simulations, with optional collocated precipitation data to identify robust MCSs [[Feng et al. (2021), JGR](https://doi.org/10.1029/2020JD034202)]; 
-3. Tracking generic 2D objects defined by simple threshold-based connectivity masks.
+2. Tracking MCSs using infrared brightness temperature (Tb) data from geostationary satellites, or outgoing longwave radiation (OLR) data from model simulations, with optional collocated precipitation data [[Feng et al. (2021), JGR](https://doi.org/10.1029/2020JD034202)] or 3D radar reflectivity data [[Feng et al. (2018) JAMES](https://doi.org/10.1029/2018MS001305); [Feng et al. (2019), JCLI](https://doi.org/10.1175/JCLI-D-19-0137.1)] to identify robust MCSs;
+3. Tracking generic 2D objects defined by customizable feature identification functions.
 
 The input data must contain at least 3 dimensions: *time, y, x*, with corresponding coordinates of *time, latitude, longitude*. The *latitude* and *longitude* coordinates can  be either 1D or 2D. But the data must be on a fixed 2D grid (any projection is fine) since PyFLEXTRKR only supports tracking data on 2D arrays. Irregular grids such as those in E3SM or MPAS model must first be regridded to a regular grid before tracking. Additional variable names and coordinate names are specified in the config file. See [user guide](https://github.com/FlexTRKR/PyFLEXTRKR/blob/main/UserGuide.md) for more details in preparing the input dataset.
 
@@ -72,11 +75,13 @@ Several scripts are provided to download example input data, run tracking, and p
 
 4. [MCS tracking from 4 km WRF Tb + precipitation data](https://github.com/FlexTRKR/PyFLEXTRKR/blob/main/config/demo_mcs_wrf.sh)
 
-5. [MCS tracking from 25 km model OLR + precipitation data](https://github.com/FlexTRKR/PyFLEXTRKR/blob/main/config/demo_mcs_model25km.sh)
+5. [MCS tracking from 4 km WRF Tb + 3D reflectivity data](https://github.com/FlexTRKR/PyFLEXTRKR/blob/main/config/demo_mcs_wrf_tbradar.sh)
+
+6. [MCS tracking from 25 km model OLR + precipitation data](https://github.com/FlexTRKR/PyFLEXTRKR/blob/main/config/demo_mcs_model25km.sh)
 
 ![](https://portal.nersc.gov/project/m1867/PyFLEXTRKR/figures/imerg_mcstracking_animation_small.gif)
 
-6. [Generic feature tracking (e.g., 500 hPa geopotential height anomaly)](https://github.com/FlexTRKR/PyFLEXTRKR/blob/main/config/demo_generic_tracking.sh)
+7. [Generic feature tracking (e.g., 500 hPa geopotential height anomaly)](https://github.com/FlexTRKR/PyFLEXTRKR/blob/main/config/demo_generic_tracking.sh)
 
 ![](https://portal.nersc.gov/project/m1867/PyFLEXTRKR/figures/z500_tracking_animation_small.gif)
 
@@ -129,4 +134,3 @@ Feng, Z., Leung, L. R., Liu, N., Wang, J., Houze, R. A., Li, J., et al. (2021). 
 
 ---
 
-## For a more detailed user guide, click [this link](https://github.com/FlexTRKR/PyFLEXTRKR/blob/main/UserGuide.md).
