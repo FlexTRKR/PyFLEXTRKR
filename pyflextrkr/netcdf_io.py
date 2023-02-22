@@ -36,6 +36,8 @@ def write_cloudid_tb(
             pf_smooth_window: int
             pf_dbz_thresh: float
             pf_link_area_thresh: float
+            sl3d_dict: dictionary
+            sl3d_attrs: dictionary
 
     """
     feature_varname = config.get("feature_varname", "feature_number")
@@ -43,34 +45,43 @@ def write_cloudid_tb(
     featuresize_varname = config.get("featuresize_varname", "npix_feature")
 
     # Define variables
+    dim3d = ["time", "lat", "lon"]
     var_dict = {
         "base_time": (["time"], file_basetime),
         "latitude": (["lat", "lon"], out_lat),
         "longitude": (["lat", "lon"], out_lon),
-        "tb": (["time", "lat", "lon"], np.expand_dims(out_ir, axis=0)),
-        "cloudtype": (["time", "lat", "lon"], cloudtype),
-        "cloudnumber": (["time", "lat", "lon"], cloudnumber),
-        feature_varname: (["time", "lat", "lon"], convcold_cloudnumber),
+        "tb": (dim3d, np.expand_dims(out_ir, axis=0)),
+        "cloudtype": (dim3d, cloudtype),
+        "cloudnumber": (dim3d, cloudnumber),
+        feature_varname: (dim3d, convcold_cloudnumber),
         nfeature_varname: (["time"], nclouds),
         featuresize_varname: (["features"], ncorecoldpix),
     }
     # Now check for optional arguments, add them to var_dict if provided
     if "precipitation" in kwargs:
-        var_dict["precipitation"] = (["time", "lat", "lon"], kwargs["precipitation"])
+        var_dict["precipitation"] = (dim3d, kwargs["precipitation"])
     if "reflectivity" in kwargs:
-        var_dict["reflectivity"] = (["time", "lat", "lon"], kwargs["reflectivity"])
+        var_dict["reflectivity"] = (dim3d, kwargs["reflectivity"])
     if "pf_number" in kwargs:
-        var_dict["pf_number"] = (["time", "lat", "lon"], kwargs["pf_number"])
+        var_dict["pf_number"] = (dim3d, kwargs["pf_number"])
     if "convcold_cloudnumber_orig" in kwargs:
         var_dict["convcold_cloudnumber_orig"] = (
-            ["time", "lat", "lon"],
+            dim3d,
             kwargs["convcold_cloudnumber_orig"],
         )
     if "cloudnumber_orig" in kwargs:
         var_dict["cloudnumber_orig"] = (
-            ["time", "lat", "lon"],
+            dim3d,
             kwargs["cloudnumber_orig"],
         )
+    if kwargs["sl3d_dict"] is not None:
+        # Loop over each SL3D dictionary item and add them to the output dictionary
+        for ivar in kwargs['sl3d_dict'].keys():
+            var_dict[ivar] = (
+                dim3d,
+                np.expand_dims(kwargs['sl3d_dict'][ivar], axis=0),
+                kwargs['sl3d_attrs'][ivar]
+            )
 
     # Define coordinates
     coord_dict = {
@@ -136,13 +147,13 @@ def write_cloudid_tb(
     ds_out["cloudtype"].attrs["values"] = "1=core, 2=cold anvil, 3=warm anvil, 4=other"
     ds_out["cloudtype"].attrs["units"] = "unitless"
     ds_out["cloudtype"].attrs["_FillValue"] = 5
-    ds_out[feature_varname].attrs["long_name"] = "Labeled feature number for tracking"
-    ds_out[feature_varname].attrs["units"] = "unitless"
-    ds_out[feature_varname].attrs["_FillValue"] = 0
     ds_out["cloudnumber"].attrs["long_name"] = "grid with each classified cloud given a number"
     ds_out["cloudnumber"].attrs["units"] = "unitless"
     ds_out["cloudnumber"].attrs["comment"] = "extend of each cloud defined using warm anvil threshold"
     ds_out["cloudnumber"].attrs["_FillValue"] = 0
+    ds_out[feature_varname].attrs["long_name"] = "Labeled feature number for tracking"
+    ds_out[feature_varname].attrs["units"] = "unitless"
+    ds_out[feature_varname].attrs["_FillValue"] = 0
     ds_out[nfeature_varname].attrs["long_name"] = "Number of features labeled"
     ds_out[nfeature_varname].attrs["units"] = "unitless"
     ds_out[featuresize_varname].attrs["long_name"] = "Number of pixels for each feature"
@@ -174,36 +185,13 @@ def write_cloudid_tb(
         ds_out["cloudnumber_orig"].attrs["units"] = "unitless"
         ds_out["cloudnumber_orig"].attrs["_FillValue"] = 0
 
-    # Specify encoding list
-    zlib = True
-    encode_dict = {
-        "lon": {"zlib": zlib, "dtype":"float32"},
-        "lat": {"zlib": zlib, "dtype":"float32"},
-        "features": {"zlib": zlib},
-        "longitude": {"zlib": zlib, "_FillValue": np.nan, "dtype":"float32"},
-        "latitude": {"zlib": zlib, "_FillValue": np.nan, "dtype":"float32"},
-        "tb": {"zlib": zlib, "_FillValue": np.nan},
-        "cloudtype": {"zlib": zlib},
-        "cloudnumber": {"dtype": "int", "zlib": zlib},
-        feature_varname: {"dtype": "int", "zlib": zlib},
-        nfeature_varname: {"dtype": "int", "zlib": zlib},
-        featuresize_varname: {"dtype":"int", "zlib":zlib, "_FillValue":-9999},
-    }
-    # Now check for optional arguments, add them to encode_dict if provided
-    if "precipitation" in kwargs:
-        encode_dict["precipitation"] = {"zlib": zlib}
-    if "reflectivity" in kwargs:
-        encode_dict["reflectivity"] = {"zlib": zlib}
-    if "pf_number" in kwargs:
-        encode_dict["pf_number"] = {"zlib": zlib}
-    if "convcold_cloudnumber_orig" in kwargs:
-        encode_dict["convcold_cloudnumber_orig"] = {"zlib": zlib}
-    if "cloudnumber_orig" in kwargs:
-        encode_dict["cloudnumber_orig"] = {"zlib": zlib}
+    # Set encoding/compression for all variables
+    comp = dict(zlib=True)
+    encoding = {var: comp for var in ds_out.data_vars}
 
     # Write netCDF file
     ds_out.to_netcdf(
-        path=cloudid_outfile, mode="w", format="NETCDF4", encoding=encode_dict
+        path=cloudid_outfile, mode="w", format="NETCDF4", encoding=encoding,
     )
     return cloudid_outfile
 
@@ -243,6 +231,7 @@ def write_radar_cellid(
     featuresize_varname = config.get("featuresize_varname", "npix_feature")
 
     # Define output variables
+    dim3d = ["time", "lat", "lon"]
     var_dict = {
         'radar_longitude': (radar_lon.data),
         'radar_latitude': (radar_lat.data),
@@ -251,18 +240,18 @@ def write_radar_cellid(
         'latitude': (['lat', 'lon'], out_lat.data),
         'x': (['lon'], x_coords),
         'y': (['lat'], y_coords),
-        'dbz_comp': (['time', 'lat', 'lon'], np.expand_dims(dbz_comp.data, axis=0)),
-        'dbz_lowlevel': (['time', 'lat', 'lon'], np.expand_dims(dbz_lowlevel.data, axis=0)),
-        'convsf': (['time', 'lat', 'lon'], np.expand_dims(convsf_steiner, axis=0)),
-        'conv_core': (['time', 'lat', 'lon'], np.expand_dims(core_steiner, axis=0)),
-        'conv_mask': (['time', 'lat', 'lon'], np.expand_dims(core_sorted, axis=0)),
-        'conv_mask_inflated': (['time', 'lat', 'lon'], np.expand_dims(core_expand, axis=0)),
-        'echotop10': (['time', 'lat', 'lon'], np.expand_dims(echotop10, axis=0)),
-        'echotop20': (['time', 'lat', 'lon'], np.expand_dims(echotop20, axis=0)),
-        'echotop30': (['time', 'lat', 'lon'], np.expand_dims(echotop30, axis=0)),
-        'echotop40': (['time', 'lat', 'lon'], np.expand_dims(echotop40, axis=0)),
-        'echotop50': (['time', 'lat', 'lon'], np.expand_dims(echotop50, axis=0)),
-        feature_varname: (["time", "lat", "lon"], np.expand_dims(feature_mask, axis=0)),
+        'dbz_comp': (dim3d, np.expand_dims(dbz_comp.data, axis=0)),
+        'dbz_lowlevel': (dim3d, np.expand_dims(dbz_lowlevel.data, axis=0)),
+        'convsf': (dim3d, np.expand_dims(convsf_steiner, axis=0)),
+        'conv_core': (dim3d, np.expand_dims(core_steiner, axis=0)),
+        'conv_mask': (dim3d, np.expand_dims(core_sorted, axis=0)),
+        'conv_mask_inflated': (dim3d, np.expand_dims(core_expand, axis=0)),
+        'echotop10': (dim3d, np.expand_dims(echotop10, axis=0)),
+        'echotop20': (dim3d, np.expand_dims(echotop20, axis=0)),
+        'echotop30': (dim3d, np.expand_dims(echotop30, axis=0)),
+        'echotop40': (dim3d, np.expand_dims(echotop40, axis=0)),
+        'echotop50': (dim3d, np.expand_dims(echotop50, axis=0)),
+        feature_varname: (dim3d, np.expand_dims(feature_mask, axis=0)),
         nfeature_varname: (["time"], nfeatures),
         featuresize_varname: (["features"], npix_feature),
     }
@@ -363,15 +352,15 @@ def write_radar_cellid(
 
     # Now check for optional arguments, add them to output dataset if provided
     if 'refl_bkg' in kwargs:
-        ds_out['refl_bkg'] = (['time', 'lat', 'lon'], np.expand_dims(kwargs['refl_bkg'], axis=0))
+        ds_out['refl_bkg'] = (dim3d, np.expand_dims(kwargs['refl_bkg'], axis=0))
         ds_out['refl_bkg'].attrs['long_name'] = 'Steiner background reflectivity'
         ds_out['refl_bkg'].attrs['unit'] = 'dBZ'
     if 'peakedness' in kwargs:
-        ds_out['peakedness'] = (['time', 'lat', 'lon'], np.expand_dims(kwargs['peakedness'], axis=0))
+        ds_out['peakedness'] = (dim3d, np.expand_dims(kwargs['peakedness'], axis=0))
         ds_out['peakedness'].attrs['long_name'] = 'Peakedness above background reflectivity'
         ds_out['peakedness'].attrs['unit'] = 'dB'
     if 'core_steiner_orig' in kwargs:
-        ds_out['core_steiner_orig'] = (['time', 'lat', 'lon'], np.expand_dims(kwargs['core_steiner_orig'], axis=0))
+        ds_out['core_steiner_orig'] = (dim3d, np.expand_dims(kwargs['core_steiner_orig'], axis=0))
         ds_out['core_steiner_orig'].attrs['long_name'] = 'Steiner convective core before core area filter'
         ds_out['core_steiner_orig'].attrs['unit'] = 'unitless'
 

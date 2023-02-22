@@ -183,10 +183,14 @@ def map_feature(
 
 
     # Handle special variables for specific feature_type
-    if feature_type == "tb_pf":
+    if "tb_pf" in feature_type:
         pcp_thresh = config["pcp_thresh"]
         precipitation = ds_in["precipitation"]
         pcptrackmap = (precipitation.data > pcp_thresh) * trackmap_include_ms
+    if "radar3d" in feature_type:
+        dbz_thresh = config["dbz_thresh"]
+        reflectivity = ds_in["reflectivity_comp"]
+        dbztrackmap = (reflectivity.data > dbz_thresh) * trackmap_include_ms
 
 
 
@@ -247,7 +251,7 @@ def map_feature(
     trackmap_include_ms = xr.DataArray(trackmap_include_ms, coords=coords, dims=dims_keep, attrs=trackmap_ms_attrs)
     trackmap_merge = xr.DataArray(trackmap_merge, coords=coords, dims=dims_keep, attrs=trackmap_m_attrs)
     trackmap_split = xr.DataArray(trackmap_split, coords=coords, dims=dims_keep, attrs=trackmap_s_attrs)
-    if feature_type == "tb_pf":
+    if "tb_pf" in feature_type:
         pcptrackmap_attrs = {
             "long_name": "Track number including merge/split for precipitation",
             "units": "unitless",
@@ -255,6 +259,14 @@ def map_feature(
             "precipitation_threshold": pcp_thresh,
         }
         pcptrackmap = xr.DataArray(pcptrackmap, coords=coords, dims=dims_keep, attrs=pcptrackmap_attrs)
+    if "radar3d" in feature_type:
+        dbztrackmap_attrs = {
+            "long_name": "Track number including merge/split for composite reflectivity",
+            "units": "unitless",
+            "_FillValue": 0,
+            "reflectivity_threshold": dbz_thresh,
+        }
+        dbztrackmap = xr.DataArray(dbztrackmap, coords=coords, dims=dims_keep, attrs=dbztrackmap_attrs)
 
     # Create a copy of the input dataset
     ds_out = ds_in.copy(deep=True)
@@ -267,9 +279,10 @@ def map_feature(
     ds_out = ds_out.assign(cloudtracknumber=trackmap_include_ms)
     ds_out = ds_out.assign(cloudmerge_tracknumber=trackmap_merge)
     ds_out = ds_out.assign(cloudsplit_tracknumber=trackmap_split)
-    if feature_type == "tb_pf":
+    if "tb_pf" in feature_type:
         ds_out = ds_out.assign(pcptracknumber=pcptrackmap)
-
+    if "radar3d" in feature_type:
+        ds_out = ds_out.assign(dbztracknumber=dbztrackmap)
     # Update global attributes
     ds_out.attrs["Title"] = "Pixel-level feature tracking data"
     ds_out.attrs["Created_on"] = time.ctime(time.time())

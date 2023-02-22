@@ -1,47 +1,175 @@
 import numpy as np
 import math
 from scipy import ndimage
+import warnings
+from pyflextrkr.echotop_func import echotop_height
 
-# #-----------------------------------------------------------------------------------------
-# def shift_fast(arr, yshift, xshift):
-#     """
-#     Shifts a 2D array by a number of grids
+def run_sl3d(ds, config):
+    """
+    Process 3D radar dataset to get SL3D variables
 
-#     Args:
-#         arr: np.array
-#             Input numpy array
-#         yshift: int
-#             Number of grids to shift in y-direction
-#         xshift: int
-#             Number of grids to shift in x-direction
+    Args:
+        ds: Xarray Dataset
+            Dataset object
+        config: dictionary
+            Dictionary containing config parameters
 
-#     Returns:
-#         arr_out: np.array
-#             Shifted numpy array
-#     """
+    Returns:
+        data_dict: dictionary
+            Dictionary containing output variables
+    """
 
-#     fill_value=np.nan
-#     arr_y = np.empty_like(arr)
-#     if yshift > 0:
-#         arr_y[:yshift,:] = fill_value
-#         arr_y[yshift:,:] = arr[:-yshift,:]
-#     elif yshift < 0:
-#         arr_y[yshift:,:] = fill_value
-#         arr_y[:yshift,:] = arr[-yshift:,:]
-#     else:
-#         arr_y[:,:] = arr
+    x_dimname = config['x_dimname']
+    y_dimname = config['y_dimname']
+    z_dimname = config['z_dimname']
+    x_coordname = config['x_coordname']
+    y_coordname = config['y_coordname']
+    z_coordname = config['z_coordname']
+    reflectivity_varname = config['reflectivity_varname']
+    meltlevel_varname = config['meltlevel_varname']
+    echotop_gap = config.get('echotop_gap', 0)
+    dbz_lowlevel_asl = config.get('dbz_lowlevel_asl', 2.0)
+    fillval = config.get('fillval', -9999)
 
-#     arr_out = np.empty_like(arr_y)
-#     if xshift > 0:
-#         arr_out[:,:xshift] = fill_value
-#         arr_out[:,xshift:] = arr_y[:,:-xshift]
-#     elif xshift < 0:
-#         arr_out[:,xshift:] = fill_value
-#         arr_out[:,:xshift] = arr_y[:,-xshift:]
-#     else:
-#         arr_out[:,:] = arr_y
+    # Get data dimensions
+    nx = ds.sizes[x_dimname]
+    ny = ds.sizes[y_dimname]
+    nz = ds.sizes[z_dimname]
+    # Get data coordinates
+    lon2d = ds[x_coordname].data
+    lat2d = ds[y_coordname].data
+    height = ds[z_coordname].data
+    # Get data time
+    Analysis_time = ds['time'].dt.strftime('%Y-%m-%dT%H:%M:%S').item()
+    Analysis_month = ds['time'].dt.strftime('%m').item()
+    # Get data variables
+    refl3d = ds[reflectivity_varname].squeeze()
+    reflArray = refl3d.data
+    meltinglevelheight = ds[meltlevel_varname].squeeze().data
+    # Make variables to mimic GridRad data
+    # Nradobs = np.full(reflArray.shape, 10, dtype=int)
+    # Nradecho = np.full(reflArray.shape, 10, dtype=int)
 
-#     return arr_out
+    # Replace NaN in melting level height with -2. (consistent with IDL version)
+    # TODO: check if this is necessary
+    meltinglevelheight[np.isnan(meltinglevelheight)] = -2.
+
+    # Get low-level reflectivity
+    idx_low = np.argmin(np.abs(height - dbz_lowlevel_asl))
+    dbz_lowlevel = reflArray[idx_low,:,:].data
+    # Get column-maximum reflectivity (composite)
+    dbz_comp = refl3d.max(dim=z_dimname).data
+
+    # Replace fillval with NaN
+    reflArray[reflArray == fillval] = np.NaN
+
+    x = {
+        'values': lon2d,
+        'n': nx,
+    }
+    y = {
+        'values': lat2d,
+        'n': ny,
+    }
+    z = {
+        'values': height,
+        'n': nz,
+    }
+    Z_H = {
+        'values': reflArray,
+        'missing': np.NaN,
+    }
+    data = {
+        'x': x,
+        'y': y,
+        'z': z,
+        # 'nobs': Nradobs,
+        # 'necho': Nradecho,
+        'Z_H': Z_H,
+        'Analysis_month': Analysis_month,
+    }
+
+    # Perform SL3D classification
+    sl3d = gridrad_sl3d(data, config, zmelt=meltinglevelheight)
+
+    # Calculate echo-top heights for various reflectivity thresholds
+    shape_2d = sl3d.shape
+    echotop10 = echotop_height(refl3d, height, z_dimname, shape_2d,
+                                dbz_thresh=10, gap=echotop_gap, min_thick=0)
+    echotop20 = echotop_height(refl3d, height, z_dimname, shape_2d,
+                                dbz_thresh=20, gap=echotop_gap, min_thick=0)
+    echotop30 = echotop_height(refl3d, height, z_dimname, shape_2d,
+                                dbz_thresh=30, gap=echotop_gap, min_thick=0)
+    echotop40 = echotop_height(refl3d, height, z_dimname, shape_2d,
+                                dbz_thresh=40, gap=echotop_gap, min_thick=0)
+    echotop45 = echotop_height(refl3d, height, z_dimname, shape_2d,
+                                dbz_thresh=45, gap=echotop_gap, min_thick=0)
+    echotop50 = echotop_height(refl3d, height, z_dimname, shape_2d,
+                                dbz_thresh=50, gap=echotop_gap, min_thick=0)
+
+    # Put variables in dictionary
+    data_dict= {
+        'reflectivity_lowlevel': dbz_lowlevel,
+        'reflectivity_comp': dbz_comp,
+        'sl3d': sl3d,
+        'echotop10': echotop10,
+        'echotop20': echotop20,
+        'echotop30': echotop30,
+        'echotop40': echotop40,
+        'echotop45': echotop45,
+        'echotop50': echotop50,
+    }
+    # Variable attributes
+    attrs_dict = {
+        'reflectivity_lowlevel': {
+            'long_name': f'Low-level reflectivity ({dbz_lowlevel_asl:.1f} km)',
+            'units': 'dBZ',
+            '_FillValue': np.NaN,
+        },
+        'reflectivity_comp': {
+            'long_name': 'Composite (column maximum) reflectivity',
+            'units': 'dBZ',
+            '_FillValue': np.NaN,
+        },
+        'sl3d': {
+            'long_name': 'SL3D classification category',
+            'units': 'unitless',
+            'comments': '0:NoEcho, 1:ConvectiveUpdraft, 2:Convection, ' + \
+                        '3:PrecipitatingStratiform, 4:Non-PrecipitatingStratiform, 5:Anvil',
+            '_FillValue': 0,
+        },
+        'echotop10': {
+            'long_name': '10 dBZ echo top height',
+            'units': 'km',
+            '_FillValue': np.NaN,
+        },
+        'echotop20': {
+            'long_name': '20 dBZ echo top height',
+            'units': 'km',
+            '_FillValue': np.NaN,
+        },
+        'echotop30': {
+            'long_name': '30 dBZ echo top height',
+            'units': 'km',
+            '_FillValue': np.NaN,
+        },
+        'echotop40': {
+            'long_name': '40 dBZ echo top height',
+            'units': 'km',
+            '_FillValue': np.NaN,
+        },
+        'echotop45': {
+            'long_name': '45 dBZ echo top height',
+            'units': 'km',
+            '_FillValue': np.NaN,
+        },
+        'echotop50': {
+            'long_name': '50 dBZ echo top height',
+            'units': 'km',
+            '_FillValue': np.NaN,
+        },
+    }
+    return data_dict, attrs_dict
 
 #-----------------------------------------------------------------------------------------
 def gridrad_sl3d(data, config, **kwargs):
@@ -68,7 +196,8 @@ def gridrad_sl3d(data, config, **kwargs):
 
     # Get thresholds from config
     # Default values (if not supplied in config) are from original SL3D code 
-    # provided by Cameron R. Homeyer (chomeyer@ou.edu)
+    # Origin SL3D codes are provided by Cameron R. Homeyer (chomeyer@ou.edu)
+    # Adaptation to Python was done by Jianfeng Li (jianfeng.li@pnnl.gov) and Zhe Feng (zhe.feng@pnnl.gov)
 
     # Radar data source
     radardatasource = config.get('radardatasource', None)
@@ -109,9 +238,12 @@ def gridrad_sl3d(data, config, **kwargs):
 
     if (radardatasource == 'gridrad'):
         # Get composite grid spacing (in degrees)
-        dx = (data['x']['values'])[1] - (data['x']['values'])[0]
+        # Assumes lat, lon coordinates (data['y'], data['x']) are 2D [y, x]
+        # For x dimension, take [0,:] to get 1D lon values
+        # For y dimension, take [:,0] to get 1D lat values
+        dx = (data['x']['values'][0,:])[1] - (data['x']['values'][0,:])[0]
         # Compute latitude mid-point of grid
-        ymid = 0.5 * (data['y']['values'])[ny-1] + 0.5 * (data['y']['values'])[0]
+        ymid = 0.5 * (data['y']['values'][:,0])[ny-1] + 0.5 * (data['y']['values'][:,0])[0]
         # Get approximate number of grid points equivalent to 12 km grid spacing
         ngrids = int(0.108 / (dx * math.cos(math.radians(ymid))))
 
@@ -119,6 +251,7 @@ def gridrad_sl3d(data, config, **kwargs):
     nsearch = 2 * ngrids + 1
 
     # Convert y, z to 3D arrays [z, y, x]
+    # yyy is only used if no melting level height is provided
     if data['y']['values'].ndim == 1:
         yyy = data['y']['values'].reshape(1, ny, 1).repeat(nz,axis=0).repeat(nx, axis=2)
     if data['y']['values'].ndim == 2:
@@ -150,7 +283,7 @@ def gridrad_sl3d(data, config, **kwargs):
     month = int(data['Analysis_month'])
 
     if ('zmelt' not in kwargs):
-        # If no melting level provided, comput expected melting level for domain based on climatology
+        # If no melting level provided, compute expected melting level for domain based on climatology
         zml = a[month-1] + b[month-1]*yyy
     else:
         zmelt = kwargs['zmelt']
@@ -193,15 +326,17 @@ def gridrad_sl3d(data, config, **kwargs):
     tmp = data['Z_H']['values'][k3km:,:,:]
     dzgt00dBZ = np.sum((~np.isnan(tmp)) & (tmp >=0.0), axis=0)
 
-    # Get 25.0 dBZ echo top
-    tmp = (data['Z_H'])['values']
-    etop25dBZ = np.nanmax(((~np.isnan(tmp)) & (tmp >=25.0)) * zzz, axis=0)
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", category=RuntimeWarning)
+        # Get 25.0 dBZ echo top
+        tmp = (data['Z_H'])['values']
+        etop25dBZ = np.nanmax(((~np.isnan(tmp)) & (tmp >=25.0)) * zzz, axis=0)
 
-    # Get column-maximum reflectivity
-    dbz_comp = np.nanmax(tmp, axis=0)
+        # Get column-maximum reflectivity
+        dbz_comp = np.nanmax(tmp, axis=0)
 
-    # Get column-maximum reflectivity for above melting level altitudes
-    dbz_aml = np.nanmax(tmp * (zzz > (zml + 1.0)), axis=0)
+        # Get column-maximum reflectivity for above melting level altitudes
+        dbz_aml = np.nanmax(tmp * (zzz > (zml + 1.0)), axis=0)
 
     # Create array to compute peakedness in lowest 9 km altitude layer
     peak = np.full((k9km+1,ny,nx), np.NaN, dtype=data['Z_H']['values'].dtype)
@@ -217,26 +352,6 @@ def gridrad_sl3d(data, config, **kwargs):
         # These values will be removed at the end of the code
         peak[k,:,:] = tmp - ndimage.median_filter(tmp, size=nsearch)
 
-        # # Instead, uses a custom function to compute median values
-        # # produce array for median calculation
-        # formedianarr = np.empty((ny,nx,nsearch*nsearch), dtype=tmp.dtype)
-        # for shiftsize_y in range(-ngrids, ngrids+1):
-        #     for shiftsize_x in range(-ngrids, ngrids+1):
-        #         formedianarr[:, :, (shiftsize_y + ngrids) * nsearch + shiftsize_x + ngrids] = \
-        #             shift_fast(tmp, shiftsize_y, shiftsize_x)
-
-        # # calculate median
-        # medianarr = np.nanmedian(formedianarr, axis=2)
-        # medianarr[0:ngrids, :] = tmp[0:ngrids, :]
-        # medianarr[-ngrids:, :] = tmp[-ngrids:, :]
-        # medianarr[:, 0:ngrids] = tmp[:, 0:ngrids]
-        # medianarr[:, -ngrids:] = tmp[:, -ngrids:]
-        # del formedianarr
-
-        # #Compute peakedness at each altitude level
-        # peak[k,:,:] = tmp - medianarr
-        # del tmp, medianarr
-
     # Compute peakedness threshold for reflectivity value
     tmp = 10.0 - ((data['Z_H']['values'][0:k9km+1,:,:])**2) / 337.5
     peak_thresh = np.full(peak.shape, np.NaN, dtype=peak.dtype)
@@ -246,8 +361,12 @@ def gridrad_sl3d(data, config, **kwargs):
     peak_thresh[smallindex] = 4.0
 
     # Compute column-mean peakedness fraction > peak_thresh
-    tmp = data['Z_H']['values'][0:k9km+1,:,:]
-    mean_peak = np.sum((~np.isnan(peak_thresh)) & (peak > peak_thresh), axis=0) / np.sum(np.isfinite(tmp), axis=0)
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", category=RuntimeWarning)
+        tmp = data['Z_H']['values'][0:k9km+1,:,:]
+        mean_peak = np.sum((~np.isnan(peak_thresh)) &
+                           (peak > peak_thresh), axis=0) / \
+                    np.sum(np.isfinite(tmp), axis=0)
 
     # Find convective points 
     # those with at least x% of column exceeding peakedness or 

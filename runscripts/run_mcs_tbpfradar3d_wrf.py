@@ -4,13 +4,14 @@ import logging
 import dask
 from dask.distributed import Client, LocalCluster
 from pyflextrkr.ft_utilities import load_config, setup_logging
+from pyflextrkr.preprocess_wrf_tb_rainrate_reflectivity import preprocess_wrf
 from pyflextrkr.idfeature_driver import idfeature_driver
 from pyflextrkr.tracksingle_driver import tracksingle_driver
 from pyflextrkr.gettracks import gettracknumbers
 from pyflextrkr.trackstats_driver import trackstats_driver
 from pyflextrkr.identifymcs import identifymcs_tb
 from pyflextrkr.matchtbpf_driver import match_tbpf_tracks
-from pyflextrkr.robustmcspf import define_robust_mcs_pf
+from pyflextrkr.robustmcs_radar import define_robust_mcs_radar
 from pyflextrkr.mapfeature_driver import mapfeature_driver
 from pyflextrkr.movement_speed import movement_speed
 
@@ -31,6 +32,10 @@ if __name__ == '__main__':
     mcsrobust_filebase = config['mcsrobust_filebase']   # MCS tracks defined by Tb+PF
     mcstbmap_outpath = 'mcstracking_tb'     # Output directory for Tb-only MCS
     alltrackmap_outpath = 'ccstracking'     # Output directory for all Tb tracks
+
+    # Step 0 - Preprocess wrfout files to get Tb, rainrate, reflectivity
+    if config['run_preprocess']:
+        preprocess_wrf(config)
 
     ################################################################################################
     # Parallel processing options
@@ -76,15 +81,15 @@ if __name__ == '__main__':
 
     # Step 7 - Identify robust MCS
     if config['run_robustmcs']:
-        robustmcsstats_filename = define_robust_mcs_pf(config)
+        robustmcsstats_filename = define_robust_mcs_radar(config)
 
     # Step 8 - Map tracking to pixel files
     if config['run_mapfeature']:
         # Map robust MCS track numbers to pixel files (default)
         mapfeature_driver(config, trackstats_filebase=mcsrobust_filebase)
-        # Map Tb-only MCS track numbers to pixel files (provide outpath_basename keyword)
+        # # Map Tb-only MCS track numbers to pixel files (provide outpath_basename keyword)
         # mapfeature_driver(config, trackstats_filebase=mcstbstats_filebase, outpath_basename=mcstbmap_outpath)
-        # Map all Tb track numbers to pixel level files (provide outpath_basename keyword)
+        # # Map all Tb track numbers to pixel level files (provide outpath_basename keyword)
         # mapfeature_driver(config, trackstats_filebase=trackstats_filebase, outpath_basename=alltrackmap_outpath)
 
     # Step 9 - Movement speed calculation

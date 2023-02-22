@@ -8,7 +8,6 @@ from dask.distributed import Client, LocalCluster, wait
 from pyflextrkr.sl3d_func import gridrad_sl3d
 from pyflextrkr.ft_utilities import load_config
 from pyflextrkr.echotop_func import echotop_height
-# import matplotlib.pyplot as plt
 
 #--------------------------------------------------------------------------------------------------------
 def write_output_file(out_file, data_dict, config):
@@ -20,6 +19,8 @@ def write_output_file(out_file, data_dict, config):
             Output file name
         data_dict: dictionary
             Dictionary containing output variables
+        config: dictionary
+            Dictionary containing config parameters
 
     Returns:
         out_file: string

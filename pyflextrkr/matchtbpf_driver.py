@@ -7,7 +7,7 @@ import logging
 import dask
 from dask.distributed import wait
 from pyflextrkr.ft_utilities import subset_files_timerange
-from pyflextrkr.matchtbpf_func import matchtbpf_singlefile
+# from pyflextrkr.matchtbpf_func import matchtbpf_singlefile
 
 def match_tbpf_tracks(config):
     """
@@ -22,6 +22,7 @@ def match_tbpf_tracks(config):
             MCS PF track statistics file name.
     """
 
+    feature_type = config["feature_type"]
     mcstbstats_filebase = config["mcstbstats_filebase"]
     mcspfstats_filebase = config["mcspfstats_filebase"]
     stats_path = config["stats_outpath"]
@@ -41,6 +42,14 @@ def match_tbpf_tracks(config):
     np.set_printoptions(threshold=np.inf)
     logger = logging.getLogger(__name__)
     logger.info("Matching Tb tracked MCS with precipitation to calculate PF statistics")
+
+    # Import function based on feature_type
+    if "radar3d" in feature_type:
+        # Tb + PF + radar3d
+        from pyflextrkr.matchtbradar_func import matchtbpf_singlefile
+    else:
+        # Tb + PF
+        from pyflextrkr.matchtbpf_func import matchtbpf_singlefile
 
     # Output stats file name
     statistics_outfile = f"{stats_path}{mcspfstats_filebase}{startdate}_{enddate}.nc"
@@ -153,6 +162,7 @@ def match_tbpf_tracks(config):
             var_names = list(final_result[counter][0].keys())
             # Get variable attributes
             var_attrs = final_result[counter][1]
+            var_names_2d = final_result[counter][2]
             break
         counter += 1
 
@@ -162,12 +172,6 @@ def match_tbpf_tracks(config):
     for ivar in var_names:
         pf_dict[ivar] = np.full((numtracks, maxtracklength, nmaxpf), np.nan, dtype=np.float32)
         pf_dict_attrs[ivar] = var_attrs[ivar]
-    # Update 2D variables
-    var_names_2d = ["pf_npf",
-                    "pf_landfrac",
-                    "total_rain",
-                    "total_heavyrain",
-                    "rainrate_heavyrain"]
     for ivar in var_names_2d:
         pf_dict[ivar] = np.full((numtracks, maxtracklength), np.nan, dtype=np.float32)
 

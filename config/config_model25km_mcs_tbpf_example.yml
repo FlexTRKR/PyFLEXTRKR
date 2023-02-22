@@ -16,7 +16,7 @@ run_speed : True
 # Parallel processing set up
 # run_parallel: 1 (local cluster), 2 (Dask MPI)
 run_parallel: 1
-nprocesses: 4  # Number of processors to use if run_parallel=1
+nprocesses: 8  # Number of processors to use if run_parallel=1
 dask_tmp_dir: '/tmp'  # Dask temporary directory if run_parallel=1
 timeout: 360  # [seconds] Dask timeout limit
 
@@ -40,7 +40,7 @@ tracking_path_name: 'tracking'
 stats_path_name: 'stats'
 pixel_path_name: 'mcstracking'
 
-# Land mask file
+# Land mask file (optional, leave it an empty string if not available)
 landmask_filename: ''
 landmask_varname: 'LANDMASK'
 
@@ -59,8 +59,8 @@ pfdatasource:  'wrf'
 x_dimname: 'lon'
 y_dimname: 'lat'
 time_dimname: 'time'
-xcoord_name: 'lon'
-ycoord_name: 'lat'
+x_coordname: 'lon'
+y_coordname: 'lat'
 # Minimum time difference threshold to match track stats with cloudid files
 match_pixel_dt_thresh: 60.0  # seconds
 

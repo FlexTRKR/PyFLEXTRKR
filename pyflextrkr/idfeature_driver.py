@@ -31,7 +31,7 @@ def idfeature_driver(config):
         from pyflextrkr.idfeature_generic import idfeature_generic as id_feature
     elif feature_type == "radar_cells":
         from pyflextrkr.idcells_reflectivity import idcells_reflectivity as id_feature
-    elif feature_type == "tb_pf":
+    elif "tb_pf" in feature_type:
         from pyflextrkr.idclouds_tbpf import idclouds_tbpf as id_feature
     else:
         logger.critical(f"ERROR: Unknown feature_type: {feature_type}")

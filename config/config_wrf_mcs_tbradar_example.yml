@@ -17,58 +17,63 @@ run_speed : True
 # Parallel processing set up
 # run_parallel: 1 (local cluster), 2 (Dask MPI)
 run_parallel: 1
-nprocesses : 128  # Number of processors to use if run_parallel=1
+nprocesses : 8  # Number of processors to use if run_parallel=1
 dask_tmp_dir: '/tmp'  # Dask temporary directory if run_parallel=1
 timeout: 360  # [seconds] Dask timeout limit
 
 # Start/end date and time
-startdate: 'STARTDATE'
-enddate: 'ENDDATE'
+startdate: '20150506.0000'
+enddate: '20150510.0000'
 
 # Specify tracking input data date/time string format
 # This is the preprocessed file that contains Tb & rainrate
 # E.g., databasename20181101.011503.nc --> yyyymodd.hhmmss
 # E.g., databasename2018-11-01_01:15:00 --> yyyy-mo-dd_hh:mm:ss
-time_format: 'yyyymoddThhmmss'
-# regrid_basename: 'wrfout_rainrate_tb_zh_mh_'  # Note: include all strings before the time (including "_", ".")
-databasename: 'obs_v3_1_'
-# databasename: 'obs_v4_2_'
+time_format: 'yyyy-mo-dd_hh:mm:ss'
+regrid_basename: 'wrfout_rainrate_tb_zh_mh_'  # Note: include all strings before the time (including "_", ".")
+databasename: 'wrfout_rainrate_tb_zh_mh_'
+# Specify vertical height levels to interpolate reflectivity (unit: km ASL)
+interp_levels: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 
+  11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25]
 
+# WRF raw data
+wrfout_path: '/global/cscratch1/sd/feng045/HyperFACETS/wrf_ext/ctl/wrfout/'
+wrfout_basename: 'wrfout_d01_'
 # Tracking input files directory
-clouddata_path: '/pscratch/sd/f/feng045/usa/gridrad_tb_combine/YEAR/'
+clouddata_path: 'INPUT_DIR/'
 # Working directory for the tracking data
-root_path: '/pscratch/sd/f/feng045/usa/gridrad_v3/YEAR/'
+root_path: 'TRACK_DIR/'
 # Working sub-directory names
 tracking_path_name: 'tracking'
 stats_path_name: 'stats'
 pixel_path_name: 'mcstracking'
 
 # Land mask file
-landmask_filename: '/pscratch/sd/f/feng045/usa/gridrad_v3/map_data/mergir4km_grid_terrain_landmask.nc'
+landmask_filename: 'INPUT_DIR/wrf_landmask.nc'
 landmask_varname: 'LANDMASK'
-landmask_x_dimname: 'lon'
-landmask_y_dimname: 'lat'
-landmask_x_coordname: 'lon'
-landmask_y_coordname: 'lat'
+landmask_x_dimname: 'west_east'
+landmask_y_dimname: 'south_north'
+landmask_x_coordname: 'XLONG'
+landmask_y_coordname: 'XLAT'
 
 # Input dataset structure
-pixel_radius:  4.0  # [km] Spatial resolution of the input data
+pixel_radius:  3.0  # [km] Spatial resolution of the input data
 datatimeresolution: 1.0  # [hour] Temporal resolution of the input data
 # Variable names in the input data
-tb_varname:  'Tb'
-pcp_varname: 'PCP_acc1h'
-reflectivity_varname: 'Reflectivity'
-meltlevel_varname: 'ERAI_0C'
-clouddatasource: 'gpmir'
-radardatasource: 'gridrad'
+tb_varname:  'tb'
+pcp_varname: 'rainrate'
+reflectivity_varname: 'reflectivity'
+meltlevel_varname: 'meltinglevelheight'
+clouddatasource: 'model'
+radardatasource: 'wrf'
 pfdatasource:  'wrf'  # flag for landmask convention to calculate PF land fraction
 time_dimname: 'time'
 x_dimname: 'lon'
 y_dimname: 'lat'
-z_dimname: 'height'
-x_coordname: 'longitude'
-y_coordname: 'latitude'
-z_coordname: 'height'
+z_dimname: 'level'
+x_coordname: 'lon2d'
+y_coordname: 'lat2d'
+z_coordname: 'level'
 
 # Specify types of feature being tracked
 # This adds additional feature-specific statistics to be computed
@@ -107,7 +112,7 @@ dbz_lowlevel_asl: 2.0
 # Cloud identification parameters
 mincoldcorepix:  4  # Minimum number of pixels for the cold core
 smoothwindowdimensions:  30  # Dimension of the Box2DKernel filter on Tb.
-medfiltsize: 9      # Window size to perform medfilt2d to fill missing Tb pixels, must be an odd number
+medfiltsize: 5      # Window size to perform medfilt2d to fill missing Tb pixels, must be an odd number
 geolimits: [-90, -360, 90, 360] # 4-element array to subset domain boundaries [lat_min, lon_min, lat_max, lon_max]
 area_thresh:  36  # [km^2] Minimum area to define a cloud
 miss_thresh:  0.35  # Missing data fraction threshold. If missing data exceeds this, the time frame will be omitted.
@@ -121,7 +126,7 @@ cloudidmethod: 'label_grow'
 # Specific parameters to link cloud objects using PF
 linkpf:  1  # Set to 1 to turn on linkpf option; default: 0
 linkpf_varname: 'reflectivity_comp'   # PF variable name to perform linkpf operation
-pf_smooth_window:  7  # Smoothing window for identifying PF
+pf_smooth_window:  10  # Smoothing window for identifying PF
 pf_dbz_thresh:  25  # [dBZ] for reflectivity, or [mm/h] for rainrate
 pf_link_area_thresh:  300.0  # [km^2]
 

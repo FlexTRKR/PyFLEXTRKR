@@ -1,120 +1,78 @@
-"""
-Preprocess WRF output to make infrared brightness temperature, rain rate,
-3D radar reflectivity regridded to constant altitude, melting level height
-for tracking deep convective clouds.
-"""
 import numpy as np
 import time
 import os, sys, glob
 import logging
-from netCDF4 import Dataset, chartostring
+from netCDF4 import Dataset
 import xarray as xr
 import pandas as pd
 from wrf import (getvar, vinterp, ALL_TIMES)
 from itertools import repeat
 from multiprocessing import Pool
-from pyflextrkr.ft_utilities import load_config
+from pyflextrkr.ftfunctions import olr_to_tb
 
-#---------------------------------------------------------------------------------
-def olr_to_tb(OLR):
+def preprocess_wrf(config):
     """
-    Convert OLR to IR brightness temperature.
+    Preprocess WRF output file to get Tb, rain rate, 
+    3D radar reflectivity regridded to constant altitude, melting level height.
 
     Args:
-        OLR: np.array
-            Outgoing longwave radiation
+        config: dictionary
+            Dictionary containing config parameters
     
     Returns:
-        tb: np.array
-            Brightness temperature
+        None.
     """
-    # Calculate brightness temperature
-    # (1984) as given in Yang and Slingo (2001)
-    # Tf = tb(a+b*Tb) where a = 1.228 and b = -1.106e-3 K^-1
-    # OLR = sigma*Tf^4 
-    # where sigma = Stefan-Boltzmann constant = 5.67x10^-8 W m^-2 K^-4
-    a = 1.228
-    b = -1.106e-3
-    sigma = 5.67e-8 # W m^-2 K^-4
-    tf = (OLR/sigma)**0.25
-    tb = (-a + np.sqrt(a**2 + 4*b*tf))/(2*b)
-    return tb
+
+    # Set the logging message level
+    logger = logging.getLogger(__name__)
+
+    # Get inputs from config
+    run_parallel = config['run_parallel']
+    n_workers = config['nprocesses']
+    indir = config['wrfout_path']
+    outdir = config['clouddata_path']
+    inbasename = config['wrfout_basename']
+    outbasename = config['regrid_basename']
+
+    # Create output directory
+    os.makedirs(outdir, exist_ok=True)
+
+    # Find all WRF files
+    filelist = sorted(glob.glob(f'{indir}/{inbasename}*'))
+    nfiles = len(filelist)
+    logger.info(f'Number of WRF files: {nfiles}')
+
+    # Create a list with a pair of WRF filenames that are adjacent in time
+    filepairlist = []
+    for ii in range(0, nfiles-1):
+        ipair = [filelist[ii], filelist[ii+1]]
+        filepairlist.append(ipair)
+    nfilepairs = len(filepairlist)
+
+    if run_parallel == 0:
+        # Serial version
+        for ifile in range(0, nfilepairs):
+            status = calc_rainrate_tb_ze(filepairlist[ifile], outdir, inbasename, outbasename, config)
+    elif run_parallel == 1:
+        # Parallel version
+        # Use starmap to unpack the iterables as arguments
+        # For arguments that are the same for each iterable, use itertools "repeat" to duplicate those
+        # Example follows this stackoverflow post
+        # https://stackoverflow.com/questions/5442910/python-multiprocessing-pool-map-for-multiple-arguments
+        # Refer to Pool.starmap:
+        # https://docs.python.org/dev/library/multiprocessing.html#multiprocessing.pool.Pool.starmap
+        pool = Pool(n_workers)
+        pool.starmap(calc_rainrate_tb_ze, 
+            zip(filepairlist, repeat(outdir), repeat(inbasename), repeat(outbasename), repeat(config)))
+        pool.close()
+    else:
+        sys.exit('Valid parallelization flag not set.')
+
+    return
+
 
 #---------------------------------------------------------------------------------
-def get_melting_height(height_asl, temperature_c, ntimes, nx, ny, nz):
-    """
-    Calculate melting level height
-
-    Args:
-        height_asl: np.array
-            Height above sea level
-        temperature_c: np.array
-            Temperature in Celcius
-        ntimes: int
-            Number of times
-        nx: int
-            Number of points in x-direction
-        ny: int
-            Number of points in y-direction
-        nz: int
-            Number of points in z-direction
-
-    Returns:
-        melting_height: np.array
-            Melting-level height.
-    """
-    # Multiply temperatures between adjacent vertical levels
-    temperature_c_adjacent = np.zeros((ntimes - 1, nz - 1, ny, nx), dtype=float)
-    temperature_c_adjacent[:, :, :, :] = temperature_c[:, 0:nz - 1, :, :] * temperature_c[:, 1:nz, :, :]
-    # Get temperature and height for adjacent levels
-    temperature_c_low = np.full((ntimes - 1, nz - 1, ny, nx), np.nan, dtype=float)
-    temperature_c_up = np.full((ntimes - 1, nz - 1, ny, nx), np.nan, dtype=float)
-    height_asl_low = np.full((ntimes - 1, nz - 1, ny, nx), np.nan, dtype=float)
-    height_asl_up = np.full((ntimes - 1, nz - 1, ny, nx), np.nan, dtype=float)
-    # Locate points where temperature changes to negative
-    # Adjacent layers where temperature are both positive or negative are excluded
-    loc = np.where(temperature_c_adjacent <= 0.)
-    # Save temperature and height above/below these locations
-    temperature_c_low[loc] = (temperature_c[:, 0:nz - 1, :, :])[loc]
-    temperature_c_up[loc] = (temperature_c[:, 1:nz, :, :])[loc]
-    height_asl_low[loc] = (height_asl[:, 0:nz - 1, :, :])[loc]
-    height_asl_up[loc] = (height_asl[:, 1:nz, :, :])[loc]
-    # del loc
-    # del temperature_c, height_asl
-    melting_height = np.full((ntimes - 1, ny, nx), np.nan, dtype=float)
-
-    # Loop over each vertical level
-    for zz in range(0, nz - 1):
-        if (np.any(~np.isnan(temperature_c_low[:, zz, :, :]))):
-            # Get the height and temperature at this vertical level
-            height_asl_up_tmp = height_asl_up[:, zz, :, :]
-            height_asl_low_tmp = height_asl_low[:, zz, :, :]
-            temperature_c_up_tmp = temperature_c_up[:, zz, :, :]
-            temperature_c_low_tmp = temperature_c_low[:, zz, :, :]
-            # Calculate the difference between levels (up - low)
-            tmph = height_asl_up_tmp - height_asl_low_tmp
-            tmpc = temperature_c_up_tmp - temperature_c_low_tmp
-            # Location where dT = 0
-            locconstant = np.where((~np.isnan(tmpc)) & (tmpc == 0.))
-            # Location where dT != 0
-            locvalid = np.where((~np.isnan(tmpc)) & (tmpc != 0.))
-            if (len(locconstant[0]) > 0):
-                # Use the height level above
-                melting_height[locconstant] = height_asl_up_tmp[locconstant]
-            if (len(locvalid[0]) > 0):
-                # Interpolate height using dT/dz
-                melting_height[locvalid] = height_asl_low_tmp[locvalid] + tmph[locvalid] / tmpc[locvalid] * (
-                            0. - temperature_c_low_tmp[locvalid])
-            del tmph, tmpc, locconstant, locvalid, height_asl_up_tmp, height_asl_low_tmp, \
-                temperature_c_up_tmp, temperature_c_low_tmp
-    del temperature_c_adjacent, height_asl_low, height_asl_up, temperature_c_low, temperature_c_up
-
-    #filter out those melting level too high and unrealistic, just in case melting level is in the stratosphere
-    #melting_height[np.where((~np.isnan(melting_height)) & (melting_height > 12.))]=np.nan
-    return melting_height
-
-#---------------------------------------------------------------------------------
-def process_files(filepairnames, outdir, inbasename, outbasename, config):
+def calc_rainrate_tb_ze(filepairnames, outdir, inbasename, outbasename, config):
     """
     Process a pair of WRF output files and write to netCDF
 
@@ -132,7 +90,7 @@ def process_files(filepairnames, outdir, inbasename, outbasename, config):
         fileout: string
             Output filename
     """
-
+    logger = logging.getLogger(__name__)
     start_time = time.time()
     
     # Get vertical interpolation levels
@@ -194,11 +152,14 @@ def process_files(filepairnames, outdir, inbasename, outbasename, config):
 
     # Read accumulated grid scale precipitation and OLR
     RAINNC = getvar(wrflist, 'RAINNC', timeidx=ALL_TIMES, method='cat')
+    RAINC = getvar(wrflist, 'RAINC', timeidx=ALL_TIMES, method='cat')
     OLR_orig = getvar(wrflist,'OLR', timeidx=ALL_TIMES, method='cat')
     REFL_10CM = getvar(wrflist, 'REFL_10CM', timeidx=ALL_TIMES, method='cat')
     # Get temperature in celsius, model height ASL for mass grid
     TC = getvar(wrflist, 'tc', timeidx=ALL_TIMES, method='cat')
     HASL = getvar(wrflist, 'height', timeidx=ALL_TIMES, method='cat', units="km")
+    # Add grid-scale and convective precipitation
+    RAINALL = RAINNC + RAINC
 
     # Create an array to store variables
     rainrate = np.zeros((ntimes-1,ny,nx), dtype=float)
@@ -211,7 +172,7 @@ def process_files(filepairnames, outdir, inbasename, outbasename, config):
     # Loop over all times-1
     for tt in range(0, ntimes-1):
         # Calculate rainrate, convert unit to [mm/h]
-        rainrate[tt,:,:] = 3600. * (RAINNC.isel(Time=tt+1).data - RAINNC.isel(Time=tt).data) / delta_times[tt]
+        rainrate[tt,:,:] = 3600. * (RAINALL.isel(Time=tt+1).data - RAINALL.isel(Time=tt).data) / delta_times[tt]
         OLR[tt,:,:] = OLR_orig.isel(Time=tt+1).data
 
         # reflectivity interpolation
@@ -225,15 +186,12 @@ def process_files(filepairnames, outdir, inbasename, outbasename, config):
         temperature_c[tt,:,:,:] = TC.isel(Time=tt+1).data
         height_asl[tt,:,:,:] = HASL.isel(Time=tt+1).data
 
-    # Set nan to -35, -35 is the default value of WRF, to use the csa code,
-    # set -35 and nan to the same value so that no need to do it again in the csa code
-    # Besides, I suggest not using the boundary with width of 1 grid cell,
-    # just in case there is a problem with the wrf output. If there is no problem, that's OK.
+    # Set nan to -35, which is the default value of WRF
     dbz_regrid[np.isnan(dbz_regrid)] = -35.
 
-    del TC, HASL, REFL_10CM, RAINNC, OLR_orig
+    del TC, HASL, REFL_10CM, RAINALL, OLR_orig
 
-    # find melting level heights (written by Jianfeng Li)
+    # find melting level heights
     melting_height = get_melting_height(height_asl, temperature_c, ntimes, nx, ny, nz)
     
     # Convert OLR to Tb
@@ -319,56 +277,77 @@ def process_files(filepairnames, outdir, inbasename, outbasename, config):
         return fileout
 
 
-if __name__ == "__main__":
-# def preprocess_wrf(config):
+#---------------------------------------------------------------------------------
+def get_melting_height(height_asl, temperature_c, ntimes, nx, ny, nz):
+    """
+    Calculate melting level height (written by Jianfeng Li)
 
-    # Set the logging message level
-    logging.basicConfig(format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO)
+    Args:
+        height_asl: np.array
+            Height above sea level
+        temperature_c: np.array
+            Temperature in Celcius
+        ntimes: int
+            Number of times
+        nx: int
+            Number of points in x-direction
+        ny: int
+            Number of points in y-direction
+        nz: int
+            Number of points in z-direction
+
+    Returns:
+        melting_height: np.array
+            Melting-level height.
+    """
     logger = logging.getLogger(__name__)
 
-    # Load configuration file
-    config_file = sys.argv[1]
-    config = load_config(config_file)
-    # Get inputs from config
-    run_parallel = config['run_parallel']
-    n_workers = config['nprocesses']
-    indir = config['wrfout_path']
-    outdir = config['clouddata_path']
-    inbasename = config['wrfout_basename']
-    outbasename = config['regrid_basename']
-    interp_levels = np.asarray(config['interp_levels'], dtype=float)
+    # Multiply temperatures between adjacent vertical levels
+    temperature_c_adjacent = np.zeros((ntimes - 1, nz - 1, ny, nx), dtype=float)
+    temperature_c_adjacent[:, :, :, :] = temperature_c[:, 0:nz - 1, :, :] * temperature_c[:, 1:nz, :, :]
+    # Get temperature and height for adjacent levels
+    temperature_c_low = np.full((ntimes - 1, nz - 1, ny, nx), np.nan, dtype=float)
+    temperature_c_up = np.full((ntimes - 1, nz - 1, ny, nx), np.nan, dtype=float)
+    height_asl_low = np.full((ntimes - 1, nz - 1, ny, nx), np.nan, dtype=float)
+    height_asl_up = np.full((ntimes - 1, nz - 1, ny, nx), np.nan, dtype=float)
+    # Locate points where temperature changes to negative
+    # Adjacent layers where temperature are both positive or negative are excluded
+    loc = np.where(temperature_c_adjacent <= 0.)
+    # Save temperature and height above/below these locations
+    temperature_c_low[loc] = (temperature_c[:, 0:nz - 1, :, :])[loc]
+    temperature_c_up[loc] = (temperature_c[:, 1:nz, :, :])[loc]
+    height_asl_low[loc] = (height_asl[:, 0:nz - 1, :, :])[loc]
+    height_asl_up[loc] = (height_asl[:, 1:nz, :, :])[loc]
+    # del loc
+    # del temperature_c, height_asl
+    melting_height = np.full((ntimes - 1, ny, nx), np.nan, dtype=float)
 
-    # Create output directory
-    os.makedirs(outdir, exist_ok=True)
+    # Loop over each vertical level
+    for zz in range(0, nz - 1):
+        if (np.any(~np.isnan(temperature_c_low[:, zz, :, :]))):
+            # Get the height and temperature at this vertical level
+            height_asl_up_tmp = height_asl_up[:, zz, :, :]
+            height_asl_low_tmp = height_asl_low[:, zz, :, :]
+            temperature_c_up_tmp = temperature_c_up[:, zz, :, :]
+            temperature_c_low_tmp = temperature_c_low[:, zz, :, :]
+            # Calculate the difference between levels (up - low)
+            tmph = height_asl_up_tmp - height_asl_low_tmp
+            tmpc = temperature_c_up_tmp - temperature_c_low_tmp
+            # Location where dT = 0
+            locconstant = np.where((~np.isnan(tmpc)) & (tmpc == 0.))
+            # Location where dT != 0
+            locvalid = np.where((~np.isnan(tmpc)) & (tmpc != 0.))
+            if (len(locconstant[0]) > 0):
+                # Use the height level above
+                melting_height[locconstant] = height_asl_up_tmp[locconstant]
+            if (len(locvalid[0]) > 0):
+                # Interpolate height using dT/dz
+                melting_height[locvalid] = height_asl_low_tmp[locvalid] + tmph[locvalid] / tmpc[locvalid] * (
+                            0. - temperature_c_low_tmp[locvalid])
+            del tmph, tmpc, locconstant, locvalid, height_asl_up_tmp, height_asl_low_tmp, \
+                temperature_c_up_tmp, temperature_c_low_tmp
+    del temperature_c_adjacent, height_asl_low, height_asl_up, temperature_c_low, temperature_c_up
 
-    # Find all WRF files
-    filelist = sorted(glob.glob(f'{indir}/{inbasename}*'))
-    nfiles = len(filelist)
-    logger.info(f'Number of WRF files: {nfiles}')
-
-    # Create a list with a pair of WRF filenames that are adjacent in time
-    filepairlist = []
-    for ii in range(0, nfiles-1):
-        ipair = [filelist[ii], filelist[ii+1]]
-        filepairlist.append(ipair)
-    nfilepairs = len(filepairlist)
-
-    # import pdb; pdb.set_trace()
-
-    if run_parallel == 0:
-        # Serial version
-        for ifile in range(0, nfilepairs):
-            status = process_files(filepairlist[ifile], outdir, inbasename, outbasename, config)
-
-    elif run_parallel == 1:
-        # Parallel version
-        # Use starmap to unpack the iterables as arguments
-        # For arguments that are the same for each iterable, use itertools "repeat" to duplicate those
-        # Example follows this stackoverflow post
-        # https://stackoverflow.com/questions/5442910/python-multiprocessing-pool-map-for-multiple-arguments
-        # Refer to Pool.starmap:
-        # https://docs.python.org/dev/library/multiprocessing.html#multiprocessing.pool.Pool.starmap
-        pool = Pool(n_workers)
-        pool.starmap(process_files, 
-            zip(filepairlist, repeat(outdir), repeat(inbasename), repeat(outbasename), repeat(config)))
-        pool.close()
+    #filter out those melting level too high and unrealistic, just in case melting level is in the stratosphere
+    #melting_height[np.where((~np.isnan(melting_height)) & (melting_height > 12.))]=np.nan
+    return melting_height

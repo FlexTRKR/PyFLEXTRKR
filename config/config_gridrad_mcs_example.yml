@@ -17,13 +17,13 @@ run_speed : True
 # Parallel processing set up
 # run_parallel: 1 (local cluster), 2 (Dask MPI)
 run_parallel: 1
-nprocesses : 128  # Number of processors to use if run_parallel=1
+nprocesses : 8  # Number of processors to use if run_parallel=1
 dask_tmp_dir: '/tmp'  # Dask temporary directory if run_parallel=1
 timeout: 360  # [seconds] Dask timeout limit
 
 # Start/end date and time
-startdate: 'STARTDATE'
-enddate: 'ENDDATE'
+startdate: '20200810.0000'
+enddate: '20200813.0000'
 
 # Specify tracking input data date/time string format
 # This is the preprocessed file that contains Tb & rainrate
@@ -31,20 +31,19 @@ enddate: 'ENDDATE'
 # E.g., databasename2018-11-01_01:15:00 --> yyyy-mo-dd_hh:mm:ss
 time_format: 'yyyymoddThhmmss'
 # regrid_basename: 'wrfout_rainrate_tb_zh_mh_'  # Note: include all strings before the time (including "_", ".")
-databasename: 'obs_v3_1_'
-# databasename: 'obs_v4_2_'
+databasename: 'obs_v4_2_'
 
 # Tracking input files directory
-clouddata_path: '/pscratch/sd/f/feng045/usa/gridrad_tb_combine/YEAR/'
+clouddata_path: 'INPUT_DIR/'
 # Working directory for the tracking data
-root_path: '/pscratch/sd/f/feng045/usa/gridrad_v3/YEAR/'
+root_path: 'TRACK_DIR/'
 # Working sub-directory names
 tracking_path_name: 'tracking'
 stats_path_name: 'stats'
 pixel_path_name: 'mcstracking'
 
 # Land mask file
-landmask_filename: '/pscratch/sd/f/feng045/usa/gridrad_v3/map_data/mergir4km_grid_terrain_landmask.nc'
+landmask_filename: 'INPUT_DIR/mergir4km_gridrad_landmask.nc'
 landmask_varname: 'LANDMASK'
 landmask_x_dimname: 'lon'
 landmask_y_dimname: 'lat'

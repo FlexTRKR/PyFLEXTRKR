@@ -4,6 +4,8 @@
 dask-worker-space/*
 .idea
 .ipynb_checkpoints
+*.egg-info
+pyflextrkr.egg-info/*
 
 # Datafiles
 ###########
