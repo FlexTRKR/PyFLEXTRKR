@@ -13,7 +13,7 @@ END=2021
 smonth=01
 emonth=12
 
-config_basename='/global/homes/f/feng045/program/pyflex_config/config/config_gridrad_mcs_'
+config_basename='/global/homes/f/feng045/program/PyFLEXTRKR-dev/config/config_gridrad_mcs_'
 # config='~/program/PyFLEXTRKR/config/config_wrf_mcs_saag.yml'
 # config='~/program/PyFLEXTRKR/config/config_gpm_mcs_saag.yml'
 
