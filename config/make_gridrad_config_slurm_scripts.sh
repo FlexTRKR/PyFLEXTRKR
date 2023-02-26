@@ -8,8 +8,8 @@ END_YEAR=2021
 submit_job=0
 
 # Directories
-config_dir="/global/homes/f/feng045/program/PyFLEXTRKR/config/"
-slurm_dir="/global/homes/f/feng045/program/PyFLEXTRKR/slurm/"
+config_dir="/global/homes/f/feng045/program/PyFLEXTRKR-dev/config/"
+slurm_dir="/global/homes/f/feng045/program/PyFLEXTRKR-dev/slurm/"
 
 # Config template
 config_template=${config_dir}"config_gridrad_mcs_template.yml"

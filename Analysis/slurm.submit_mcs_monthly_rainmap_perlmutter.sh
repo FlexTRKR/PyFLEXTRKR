@@ -5,7 +5,7 @@
 #SBATCH --nodes=8
 #SBATCH --ntasks-per-node=128
 #SBATCH -C cpu
-#SBATCH --time=00:10:00
+#SBATCH --time=00:15:00
 #SBATCH --exclusive
 #SBATCH --verbose
 #SBATCH --mail-user=zhe.feng@pnnl.gov
@@ -14,7 +14,7 @@
 date
 # export PATH=$PATH:/usr/common/tig/taskfarmer/1.5/bin:$(pwd)
 module load taskfarmer
-export THREADS=24
+export THREADS=32
 
 cd /global/homes/f/feng045/program/PyFLEXTRKR/Analysis
 runcommands.sh tasklist_mcs_monthly_rainmap_gridrad.txt

@@ -18,7 +18,7 @@ if __name__ == "__main__":
     config = load_config(config_file)
     pixel_dir = config['pixeltracking_outpath']
     output_monthly_dir = config['stats_outpath'] + 'monthly/'
-    pcpvarname = config['track_field_for_speed']
+    pcpvarname = 'precipitation'
 
     # Output file name
     output_filename = f'{output_monthly_dir}mcs_rainmap_{year}{month}.nc'
