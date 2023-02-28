@@ -11,8 +11,10 @@ if __name__ == "__main__":
     start_year = int(sys.argv[1])
     end_year = int(sys.argv[2])
     # Start/end months
-    start_month = 4
-    end_month = 8
+    # start_month = 4
+    # end_month = 8
+    start_month = 1
+    end_month = 12
 
     # Determine framerate
     framerate = 2
@@ -33,7 +35,8 @@ if __name__ == "__main__":
         for imon in range(start_month, end_month+1):
             idate = f'{iyear}{imon:02}'
             print(idate)
-            in_dir = f'{in_dir_root}/{iyear}0401_{iyear}0901/'
+            # in_dir = f'{in_dir_root}/{iyear}0401_{iyear}0901/'
+            in_dir = f'{in_dir_root}/{iyear}0101_{iyear}1231/'
             in_images = f'{in_dir}*{idate}*.png'
             out_filename = f'{out_dir}mcs_{idate}.mp4'
             # Make ffmpeg command

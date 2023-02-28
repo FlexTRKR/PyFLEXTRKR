@@ -17,7 +17,7 @@ module load python
 source activate /global/common/software/m1867/python/flextrkr
 
 # Run Python
-cd /global/homes/f/feng045/program/PyFLEXTRKR/runscripts
+cd /global/homes/f/feng045/program/PyFLEXTRKR-dev/runscripts
 python run_mcs_tbpfradar3d_wrf.py /global/homes/f/feng045/program/pyflex_config/config/config_gridrad_mcs_YEAR.yml
 
 date
