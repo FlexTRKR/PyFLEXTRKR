@@ -14,7 +14,6 @@ from pyflextrkr.matchtbpf_driver import match_tbpf_tracks
 from pyflextrkr.robustmcspf import define_robust_mcs_pf
 from pyflextrkr.mapfeature_driver import mapfeature_driver
 from pyflextrkr.movement_speed import movement_speed
-from pyflextrkr.preprocess_wrf_tb_rainrate import make_weight_file
 
 if __name__ == '__main__':
 

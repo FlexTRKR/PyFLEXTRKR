@@ -4,19 +4,19 @@
 
 # Processing steps:
 run_preprocess: True
-run_idfeature : True
-run_tracksingle : True
-run_gettracks : True
-run_trackstats : True
-run_identifymcs : True
-run_matchpf : True
-run_robustmcs : True
-run_mapfeature : True
-run_speed : True
+run_idfeature : False
+run_tracksingle : False
+run_gettracks : False
+run_trackstats : False
+run_identifymcs : False
+run_matchpf : False
+run_robustmcs : False
+run_mapfeature : False
+run_speed : False
 
 # Parallel processing set up
 # run_parallel: 1 (local cluster), 2 (Dask MPI)
-run_parallel: 1
+run_parallel: 0
 nprocesses : 24  # Number of processors to use if run_parallel=1
 dask_tmp_dir: '/tmp'  # Dask temporary directory if run_parallel=1
 timeout: 360  # [seconds] Dask timeout limit
@@ -33,15 +33,15 @@ time_format: 'yyyy-mo-dd_hh:mm:ss'
 databasename: 'wrfout_rainrate_tb_'  # Note: include all strings before the time (including "_", ".")
 
 # WRF raw data
-# wrfout_path: 'WRFOUT_DIR'
-wrfout_path: '/pscratch/sd/f/feng045/iclass/goamazon/HVMIXING/wrfout/'
+wrfout_path: 'INPUT_DIR/'
+#wrfout_path: '/pscratch/sd/f/feng045/iclass/goamazon/HVMIXING/wrfout/'
 wrfout_basename: 'wrfout_d01_'
 # Tracking input files directory
-# clouddata_path: 'INPUT_DIR/'
-clouddata_path: '/pscratch/sd/f/feng045/iclass/goamazon/HVMIXING/wrf_mcstracking/tb_rr/'
+clouddata_path: 'INPUT_DIR/tb_rr/'
+#clouddata_path: '/pscratch/sd/f/feng045/iclass/goamazon/HVMIXING/wrf_mcstracking/tb_rr/'
 # Working directory for the tracking data
-# root_path: 'TRACK_DIR/'
-root_path: '/pscratch/sd/f/feng045/iclass/goamazon/HVMIXING/wrf_mcstracking/'
+root_path: 'TRACK_DIR/'
+#root_path: '/pscratch/sd/f/feng045/iclass/goamazon/HVMIXING/wrf_mcstracking/'
 # Working sub-directory names
 tracking_path_name: 'tracking'
 stats_path_name: 'stats'
@@ -49,8 +49,8 @@ pixel_path_name: 'mcstracking'
 
 # Land mask file (optional, leave it an empty string if not available)
 # Can use any standard wrfout file that contains LANDMASK
-# landmask_filename: 'INPUT_DIR/wrf_landmask.nc'
-landmask_filename: '/pscratch/sd/f/feng045/iclass/goamazon/HVMIXING/map_data/wrf_landmask.nc'
+landmask_filename: 'INPUT_DIR/wrf_landmask.nc'
+#landmask_filename: '/pscratch/sd/f/feng045/iclass/goamazon/HVMIXING/map_data/wrf_landmask.nc'
 landmask_varname: 'LANDMASK'
 landmask_x_dimname: 'west_east'
 landmask_y_dimname: 'south_north'
@@ -60,9 +60,11 @@ landmask_y_coordname: 'XLAT'
 # Specify regrid input data options
 regrid_input: True
 # Destination grid file that contains lat/lon grid info
-gridfile_dst: '/pscratch/sd/f/feng045/iclass/goamazon/HVMIXING/map_data/merg_2014040100_4km-pixel.nc'
+gridfile_dst: 'INPUT_DIR/merg_2014040100_4km-pixel.nc'
+#gridfile_dst: '/pscratch/sd/f/feng045/iclass/goamazon/HVMIXING/map_data/merg_2014040100_4km-pixel.nc'
 # Regridder weight file for xESMF, will be generated if it does not exist
-weight_filename: '/pscratch/sd/f/feng045/iclass/goamazon/HVMIXING/map_data/weight_conservative_wrf2gpm.nc'
+weight_filename: 'INPUT_DIR/weight_conservative_wrf2gpm.nc'
+#weight_filename: '/pscratch/sd/f/feng045/iclass/goamazon/HVMIXING/map_data/weight_conservative_wrf2gpm.nc'
 # Source grid x/y coordinate variable names
 x_coordname_src: 'XLONG'
 y_coordname_src: 'XLAT'
