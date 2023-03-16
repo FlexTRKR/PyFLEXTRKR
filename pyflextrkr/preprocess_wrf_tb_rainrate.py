@@ -113,13 +113,13 @@ def calc_rainrate_tb(filepairnames, outdir, inbasename, outbasename, config):
     status = 0
 
     regrid_input = config.get('regrid_input', False)
-    time_dimname = config.get('time_dimname', 'time')
-    x_dimname = config.get('x_dimname', 'lon')
-    y_dimname = config.get('y_dimname', 'lat')
-    x_coordname = config.get('x_coordname', 'longitude')
-    y_coordname = config.get('y_coordname', 'latitude')
-    tb_varname = config.get('tb_varname', 'tb')
-    pcp_varname = config.get('pcp_varname', 'rainrate')
+    # time_dimname = config.get('time_dimname', 'time')
+    # x_dimname = config.get('x_dimname', 'lon')
+    # y_dimname = config.get('y_dimname', 'lat')
+    # x_coordname = config.get('x_coordname', 'longitude')
+    # y_coordname = config.get('y_coordname', 'latitude')
+    # tb_varname = config.get('tb_varname', 'tb')
+    # pcp_varname = config.get('pcp_varname', 'rainrate')
     
     # Filenames with full path
     filein_t1 = filepairnames[0]
@@ -217,61 +217,115 @@ def calc_rainrate_tb(filepairnames, outdir, inbasename, outbasename, config):
     for tt in range(0, ntimes-1):
 
         # Use the next time to be consitent with output filename
-        _bt = basetimes[tt+1]
+        _basetime = basetimes[tt+1]
         _TimeStr = Times_str[tt+1]
+        _tb = tb_out[tt,:,:]
+        _rainrate = rainrate_out[tt,:,:]
 
-        # Define xarray dataset
-        var_dict = {
-            # 'Times': ([time_dimname,'char'], times_char_t1),
-            x_coordname: ([y_dimname,x_dimname], x_coord_out),
-            y_coordname: ([y_dimname,x_dimname], y_coord_out),
-            tb_varname: ([time_dimname,y_dimname,x_dimname], np.expand_dims(tb_out[tt,:,:], axis=0)),
-            pcp_varname: ([time_dimname,y_dimname,x_dimname], np.expand_dims(rainrate_out[tt,:,:], axis=0)),
-        }
-        coord_dict = {
-            time_dimname: ([time_dimname], np.expand_dims(_bt, axis=0)),
-            # 'char': (['char'], np.arange(0, strlen_t1)),
-        }
-        gattr_dict = {
-            'Title': 'WRF calculated rainrate and brightness temperature',
-            'Contact': 'Zhe Feng: zhe.feng@pnnl.gov',
-            'Institution': 'Pacific Northwest National Laboratory',
-            'created on': time.ctime(time.time()),
-            'Original_File1': filein_t1,
-            'Original_File2': filein_t2,
-            # 'DX': DX,
-            # 'DY': DY,
-        }
-        dsout = xr.Dataset(var_dict, coords=coord_dict, attrs=gattr_dict)
-
-        # Specify attributes
-        dsout[time_dimname].attrs['long_name'] = 'Epoch time (seconds since 1970-01-01 00:00:00)'
-        dsout[time_dimname].attrs['units'] = 'seconds since 1970-01-01 00:00:00'
-        # dsout[time_dimname].attrs['_FillValue'] = np.NaN
-        dsout[time_dimname].attrs['tims_string'] = _TimeStr
-        # dsout['Times'].attrs['long_name'] = 'WRF-based time'
-        dsout[x_coordname].attrs['long_name'] = 'Longitude'
-        dsout[x_coordname].attrs['units'] = 'degrees_east'
-        dsout[y_coordname].attrs['long_name'] = 'Latitude'
-        dsout[y_coordname].attrs['units'] = 'degrees_north'
-        dsout[tb_varname].attrs['long_name'] = 'Brightness temperature'
-        dsout[tb_varname].attrs['units'] = 'K'
-        dsout[pcp_varname].attrs['long_name'] = 'Precipitation rate'
-        dsout[pcp_varname].attrs['units'] = 'mm hr-1'
-
-        # Write to netcdf file
-        encoding_dict = {
-            time_dimname:{'zlib':True, 'dtype':'float'},
-            # 'Times':{'zlib':True},
-            x_coordname:{'zlib':True, 'dtype':'float32'},
-            y_coordname:{'zlib':True, 'dtype':'float32'},
-            tb_varname:{'zlib':True, 'dtype':'float32'},
-            pcp_varname: {'zlib':True, 'dtype':'float32'},
-        }
-        dsout.to_netcdf(path=fileout, mode='w', format='NETCDF4', unlimited_dims=time_dimname, encoding=encoding_dict)
+        # Write output to file
+        write_netcdf(_TimeStr, _basetime, _rainrate, _tb,
+                     config, filein_t1, filein_t2, fileout, x_coord_out, y_coord_out)
         logger.info(f'{fileout}')
         status = 1
-        return (status)
+    return (status)
+
+
+def write_netcdf(
+        _TimeStr,
+        _basetime,
+        _rainrate,
+        _tb,
+        config,
+        filein_t1,
+        filein_t2,
+        fileout,
+        x_coord_out,
+        y_coord_out,
+):
+    """
+    Write output to netCDF file.
+
+    Args:
+        _TimeStr: string
+            Time string for output file.
+        _basetime: np.float
+            Base time value in Epoch.
+        _rainrate: np.array
+            Rain rate array.
+        _tb: np.array
+            Tb array.
+        config: dictionary
+            Dictionary containing config parameters
+        filein_t1: string
+            Input filename for time1.
+        filein_t2: string
+            Input filename for time2.
+        fileout: string
+            Output filename.
+        x_coord_out: np.array
+            X coordinate array.
+        y_coord_out: np.array
+            Y coordinate array.
+
+    Return:
+        None.
+    """
+    # Get parameters from config
+    time_dimname = config.get('time_dimname', 'time')
+    x_dimname = config.get('x_dimname', 'lon')
+    y_dimname = config.get('y_dimname', 'lat')
+    x_coordname = config.get('x_coordname', 'longitude')
+    y_coordname = config.get('y_coordname', 'latitude')
+    tb_varname = config.get('tb_varname', 'tb')
+    pcp_varname = config.get('pcp_varname', 'rainrate')
+    # Define xarray dataset
+    var_dict = {
+        # 'Times': ([time_dimname,'char'], times_char_t1),
+        x_coordname: ([y_dimname, x_dimname], x_coord_out),
+        y_coordname: ([y_dimname, x_dimname], y_coord_out),
+        tb_varname: ([time_dimname, y_dimname, x_dimname], np.expand_dims(_tb, axis=0)),
+        pcp_varname: ([time_dimname, y_dimname, x_dimname], np.expand_dims(_rainrate, axis=0)),
+    }
+    coord_dict = {
+        time_dimname: ([time_dimname], np.expand_dims(_basetime, axis=0)),
+        # 'char': (['char'], np.arange(0, strlen_t1)),
+    }
+    gattr_dict = {
+        'Title': 'WRF calculated rainrate and brightness temperature',
+        'Contact': 'Zhe Feng: zhe.feng@pnnl.gov',
+        'Institution': 'Pacific Northwest National Laboratory',
+        'created on': time.ctime(time.time()),
+        'Original_File1': filein_t1,
+        'Original_File2': filein_t2,
+        # 'DX': DX,
+        # 'DY': DY,
+    }
+    dsout = xr.Dataset(var_dict, coords=coord_dict, attrs=gattr_dict)
+    # Specify attributes
+    dsout[time_dimname].attrs['long_name'] = 'Epoch time (seconds since 1970-01-01 00:00:00)'
+    dsout[time_dimname].attrs['units'] = 'seconds since 1970-01-01 00:00:00'
+    # dsout[time_dimname].attrs['_FillValue'] = np.NaN
+    dsout[time_dimname].attrs['tims_string'] = _TimeStr
+    # dsout['Times'].attrs['long_name'] = 'WRF-based time'
+    dsout[x_coordname].attrs['long_name'] = 'Longitude'
+    dsout[x_coordname].attrs['units'] = 'degrees_east'
+    dsout[y_coordname].attrs['long_name'] = 'Latitude'
+    dsout[y_coordname].attrs['units'] = 'degrees_north'
+    dsout[tb_varname].attrs['long_name'] = 'Brightness temperature'
+    dsout[tb_varname].attrs['units'] = 'K'
+    dsout[pcp_varname].attrs['long_name'] = 'Precipitation rate'
+    dsout[pcp_varname].attrs['units'] = 'mm hr-1'
+    # Write to netcdf file
+    encoding_dict = {
+        time_dimname: {'zlib': True, 'dtype': 'float'},
+        # 'Times':{'zlib':True},
+        x_coordname: {'zlib': True, 'dtype': 'float32'},
+        y_coordname: {'zlib': True, 'dtype': 'float32'},
+        tb_varname: {'zlib': True, 'dtype': 'float32'},
+        pcp_varname: {'zlib': True, 'dtype': 'float32'},
+    }
+    dsout.to_netcdf(path=fileout, mode='w', format='NETCDF4', unlimited_dims=time_dimname, encoding=encoding_dict)
+    return
 
 
 
