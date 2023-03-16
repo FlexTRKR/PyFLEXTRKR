@@ -16,6 +16,7 @@ dependencies:
   - joblib>=0.14
   - ipython>7.0
   - basemap
+  - xesmf
   - pip
   - astropy
   - wrf-python

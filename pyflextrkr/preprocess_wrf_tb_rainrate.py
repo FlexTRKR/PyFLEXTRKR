@@ -4,10 +4,12 @@ import os, sys, glob
 import logging
 import xarray as xr
 import pandas as pd
-from netCDF4 import Dataset
-from wrf import getvar, ALL_TIMES
+import xesmf as xe
+# import dask
+# from dask.distributed import wait
 from itertools import repeat
 from multiprocessing import Pool
+from pyflextrkr.ft_regrid_func import make_weight_file, make_grid4regridder
 from pyflextrkr.ftfunctions import olr_to_tb
 
 def preprocess_wrf_tb_rainrate(config):
@@ -32,6 +34,7 @@ def preprocess_wrf_tb_rainrate(config):
     outdir = config['clouddata_path']
     inbasename = config['wrfout_basename']
     outbasename = config['databasename']
+    regrid_input = config.get('regrid_input', False)
 
     # Create output directory
     os.makedirs(outdir, exist_ok=True)
@@ -40,6 +43,11 @@ def preprocess_wrf_tb_rainrate(config):
     filelist = sorted(glob.glob(f'{indir}/{inbasename}*'))
     nfiles = len(filelist)
     logger.info(f'Number of WRF files: {nfiles}')
+
+    # Check regridding option
+    if regrid_input:
+        # logger.info('Regridding input is requested.')
+        weight_filename = make_weight_file(filelist[0], config)
 
     # Create a list with a pair of WRF filenames that are adjacent in time
     filepairlist = []
@@ -51,9 +59,17 @@ def preprocess_wrf_tb_rainrate(config):
     if run_parallel == 0:
         # Serial version
         for ifile in range(0, nfilepairs):
-            status = calc_rainrate_tb(filepairlist[ifile], outdir, inbasename, outbasename)
+            status = calc_rainrate_tb(filepairlist[ifile], outdir, inbasename, outbasename, config)
     elif run_parallel == 1:
         # Parallel version
+        # Dask
+        # results = []
+        # for ifile in range(0, nfilepairs):
+        #     result = dask.delayed(calc_rainrate_tb)(filepairlist[ifile], outdir, inbasename, outbasename, config)
+        #     results.append(result)
+        # final_result = dask.compute(*results)
+        # wait(final_result)
+
         # Use starmap to unpack the iterables as arguments
         # For arguments that are the same for each iterable, use itertools "repeat" to duplicate those
         # Example follows this stackoverflow post
@@ -61,7 +77,10 @@ def preprocess_wrf_tb_rainrate(config):
         # Refer to Pool.starmap:
         # https://docs.python.org/dev/library/multiprocessing.html#multiprocessing.pool.Pool.starmap
         pool = Pool(n_workers)
-        pool.starmap(calc_rainrate_tb, zip(filepairlist, repeat(outdir), repeat(inbasename), repeat(outbasename)) )
+        pool.starmap(
+            calc_rainrate_tb, 
+            zip(filepairlist, repeat(outdir), repeat(inbasename), repeat(outbasename), repeat(config)),
+        )
         pool.close()
     else:
         sys.exit('Valid parallelization flag not set.')
@@ -69,27 +88,38 @@ def preprocess_wrf_tb_rainrate(config):
     return
 
     
-def calc_rainrate_tb(filepairnames, outdir, inbasename, outbasename):
+def calc_rainrate_tb(filepairnames, outdir, inbasename, outbasename, config):
     """
     Calculates rain rates from a pair of WRF output files and write to netCDF
-    ----------
-    filepairnames: list
-        A list of filenames in pair
-    outdir: string
-        Output file directory.
-    inbasename: string
-        Input file basename.
-    outbasename: string
-        Output file basename.
 
-    Returns
-    ----------
-    status: 0 or 1
-        Returns status = 1 if success.
+    Args:
+        filepairnames: list
+            A list of filenames in pair
+        outdir: string
+            Output file directory.
+        inbasename: string
+            Input file basename.
+        outbasename: string
+            Output file basename.
+        config: dictionary
+            Dictionary containing config parameters
+
+    Returns:
+        status: 0 or 1
+            Returns status = 1 if success.
     """
 
     logger = logging.getLogger(__name__)
     status = 0
+
+    regrid_input = config.get('regrid_input', False)
+    time_dimname = config.get('time_dimname', 'time')
+    x_dimname = config.get('x_dimname', 'lon')
+    y_dimname = config.get('y_dimname', 'lat')
+    x_coordname = config.get('x_coordname', 'longitude')
+    y_coordname = config.get('y_coordname', 'latitude')
+    tb_varname = config.get('tb_varname', 'tb')
+    pcp_varname = config.get('pcp_varname', 'rainrate')
     
     # Filenames with full path
     filein_t1 = filepairnames[0]
@@ -105,49 +135,37 @@ def calc_rainrate_tb(filepairnames, outdir, inbasename, outbasename):
     # Get basename string position
     idx0 = fname_t1.find(inbasename)
     ftime_t2 = fname_t2[idx0+len(inbasename):]
-
+    # Output filename
     fileout = f'{outdir}/{outbasename}{ftime_t2}.nc'
 
-    # Read WRF files
-    ncfile_t1 = Dataset(filein_t1)
-    ncfile_t2 = Dataset(filein_t2)
-    # Read time as characters
-    times_char_t1 = ncfile_t1.variables['Times'][:]
-    times_char_t2 = ncfile_t2.variables['Times'][:]
-
-    # Read WRF lat/lon
-    DX = getattr(ncfile_t1, 'DX')
-    DY = getattr(ncfile_t1, 'DY')
-    XLONG = getvar(ncfile_t1, 'XLONG')
-    XLAT = getvar(ncfile_t1, 'XLAT')
+    # Read in WRF data files
+    ds_in = xr.open_mfdataset([filein_t1, filein_t2], concat_dim='Time', combine='nested')
+    Times = ds_in['Times'].load()
+    XLONG = ds_in['XLONG'][0,:,:].squeeze()
+    XLAT = ds_in['XLAT'][0,:,:].squeeze()
     ny, nx = np.shape(XLAT)
-
-    # Create a list with the file pairs
-    wrflist = [Dataset(filein_t1), Dataset(filein_t2)]
-
-    # Extract the 'Times' variable
-    wrftimes = getvar(wrflist, 'Times', timeidx=ALL_TIMES, method='cat')
-
-    # Convert datetime object to WRF string format
-    Times_str_t1 = pd.to_datetime(wrftimes[0].data).strftime('%Y-%m-%d_%H:%M:%S')
-    logger.info(Times_str_t1)
-    # Get the length of the string
-    strlen_t1 = len(Times_str_t1)
-
-    # Convert np.datetime64 to Epoch time in seconds since 1970-01-01T00:00:00 and put into a numpy array
-    ntimes = len(wrftimes)
+    DX = ds_in.attrs['DX']
+    DY = ds_in.attrs['DY']
+    
+    ntimes = len(Times)
+    Times_str = []
     basetimes = np.full(ntimes, np.NAN, dtype=float)
-    # Loop over each time
     for tt in range(0, ntimes):
-        basetimes[tt] = wrftimes[tt].values.tolist()/1e9
+        # Decode bytes to string with UTF-8 encoding, then replace "_" with "T"
+        # to make time string: YYYY-MO-DDTHH:MM:SS
+        tstring = Times[tt].item().decode("utf-8").replace("_", "T")
+        Times_str.append(tstring)
+        # Convert time string to Epoch time
+        basetimes[tt] = pd.to_datetime(tstring).timestamp()
+    # wrfdatetimes = pd.to_datetime(Times_str)
 
     # Calculate basetime difference in [seconds]
     delta_times = np.diff(basetimes)
 
     # Read accumulated precipitation and OLR
-    RAINNC = getvar(wrflist, 'RAINNC', timeidx=ALL_TIMES, method='cat')
-    RAINC = getvar(wrflist, 'RAINC', timeidx=ALL_TIMES, method='cat')
-    OLR_orig = getvar(wrflist, 'OLR', timeidx=ALL_TIMES, method='cat')
+    RAINNC = ds_in['RAINNC'].load()
+    RAINC = ds_in['RAINC'].load()
+    OLR_orig = ds_in['OLR'].load()
     # Add grid-scale and convective precipitation
     RAINALL = RAINNC + RAINC
 
@@ -161,26 +179,58 @@ def calc_rainrate_tb(filepairnames, outdir, inbasename, outbasename):
         rainrate[tt,:,:] = 3600. * (RAINALL.isel(Time=tt+1).data - RAINALL.isel(Time=tt).data) / delta_times[tt]
         OLR[tt,:,:] = OLR_orig.isel(Time=tt+1).data
 
-    ncfile_t1.close()
-    ncfile_t2.close()
+    # Check regridding option
+    if regrid_input:
+        logger.info('Regridding input is requested.')
+
+        weight_filename = config.get('weight_filename')
+        regrid_method = config.get('regrid_method', 'conservative')
+
+        # Make source & destination grid data for regridder
+        grid_src, grid_dst = make_grid4regridder(filein_t1, config)
+        # Retrieve Regridder
+        regridder = xe.Regridder(grid_src, grid_dst, method=regrid_method, weights=weight_filename)
+
+        # Make output coordinates
+        x_coord_dst = grid_dst['lon']
+        y_coord_dst = grid_dst['lat']
+        if (x_coord_dst.ndim == 1) & (y_coord_dst.ndim == 1):
+            x_coord_out, y_coord_out = np.meshgrid(x_coord_dst, y_coord_dst)
+        else:
+            x_coord_out = x_coord_dst
+            y_coord_out = y_coord_dst
+        # Regrid variables
+        OLR_out = regridder(OLR)
+        rainrate_out = regridder(rainrate)
+    else:
+        x_coord_out = XLONG.data
+        y_coord_out = XLAT.data
+        OLR_out = OLR
+        rainrate_out = rainrate
+
+    ds_in.close()
     
     # Convert OLR to IR brightness temperature
-    tb = olr_to_tb(OLR)
+    tb_out = olr_to_tb(OLR_out)
 
     # Write single time frame to netCDF output
     for tt in range(0, ntimes-1):
 
+        # Use the next time to be consitent with output filename
+        _bt = basetimes[tt+1]
+        _TimeStr = Times_str[tt+1]
+
         # Define xarray dataset
         var_dict = {
-            'Times': (['time','char'], times_char_t1),
-            'lon2d': (['lat','lon'], XLONG.data),
-            'lat2d': (['lat','lon'], XLAT.data),
-            'tb': (['time','lat','lon'], np.expand_dims(tb[tt,:,:], axis=0)),
-            'rainrate': (['time','lat','lon'], np.expand_dims(rainrate[tt,:,:], axis=0)),
+            # 'Times': ([time_dimname,'char'], times_char_t1),
+            x_coordname: ([y_dimname,x_dimname], x_coord_out),
+            y_coordname: ([y_dimname,x_dimname], y_coord_out),
+            tb_varname: ([time_dimname,y_dimname,x_dimname], np.expand_dims(tb_out[tt,:,:], axis=0)),
+            pcp_varname: ([time_dimname,y_dimname,x_dimname], np.expand_dims(rainrate_out[tt,:,:], axis=0)),
         }
         coord_dict = {
-            'time': (['time'], np.expand_dims(basetimes[tt], axis=0)),
-            'char': (['char'], np.arange(0, strlen_t1)),
+            time_dimname: ([time_dimname], np.expand_dims(_bt, axis=0)),
+            # 'char': (['char'], np.arange(0, strlen_t1)),
         }
         gattr_dict = {
             'Title': 'WRF calculated rainrate and brightness temperature',
@@ -189,36 +239,36 @@ def calc_rainrate_tb(filepairnames, outdir, inbasename, outbasename):
             'created on': time.ctime(time.time()),
             'Original_File1': filein_t1,
             'Original_File2': filein_t2,
-            'DX': DX,
-            'DY': DY,
+            # 'DX': DX,
+            # 'DY': DY,
         }
         dsout = xr.Dataset(var_dict, coords=coord_dict, attrs=gattr_dict)
 
         # Specify attributes
-        dsout['time'].attrs['long_name'] = 'Epoch time (seconds since 1970-01-01 00:00:00)'
-        dsout['time'].attrs['units'] = 'seconds since 1970-01-01 00:00:00'
-        dsout['time'].attrs['_FillValue'] = np.NaN
-        dsout['Times'].attrs['long_name'] = 'WRF-based time'
-        dsout['lon2d'].attrs['long_name'] = 'Longitude'
-        dsout['lon2d'].attrs['units'] = 'degrees_east'
-        dsout['lat2d'].attrs['long_name'] = 'Latitude'
-        dsout['lat2d'].attrs['units'] = 'degrees_north'
-        dsout['tb'].attrs['long_name'] = 'Brightness temperature'
-        dsout['tb'].attrs['units'] = 'K'
-        dsout['rainrate'].attrs['long_name'] = 'rainrate'
-        dsout['rainrate'].attrs['units'] = 'mm hr-1'
+        dsout[time_dimname].attrs['long_name'] = 'Epoch time (seconds since 1970-01-01 00:00:00)'
+        dsout[time_dimname].attrs['units'] = 'seconds since 1970-01-01 00:00:00'
+        # dsout[time_dimname].attrs['_FillValue'] = np.NaN
+        dsout[time_dimname].attrs['tims_string'] = _TimeStr
+        # dsout['Times'].attrs['long_name'] = 'WRF-based time'
+        dsout[x_coordname].attrs['long_name'] = 'Longitude'
+        dsout[x_coordname].attrs['units'] = 'degrees_east'
+        dsout[y_coordname].attrs['long_name'] = 'Latitude'
+        dsout[y_coordname].attrs['units'] = 'degrees_north'
+        dsout[tb_varname].attrs['long_name'] = 'Brightness temperature'
+        dsout[tb_varname].attrs['units'] = 'K'
+        dsout[pcp_varname].attrs['long_name'] = 'Precipitation rate'
+        dsout[pcp_varname].attrs['units'] = 'mm hr-1'
 
         # Write to netcdf file
         encoding_dict = {
-            # 'base_time': {'zlib':True, 'dtype':'int64'},
-            'time':{'zlib':True, 'dtype':'float'},
-            'Times':{'zlib':True},
-            'lon2d':{'zlib':True, 'dtype':'float32'},
-            'lat2d':{'zlib':True, 'dtype':'float32'},
-            'tb':{'zlib':True, 'dtype':'float32'},
-            'rainrate': {'zlib':True, 'dtype':'float32'},
+            time_dimname:{'zlib':True, 'dtype':'float'},
+            # 'Times':{'zlib':True},
+            x_coordname:{'zlib':True, 'dtype':'float32'},
+            y_coordname:{'zlib':True, 'dtype':'float32'},
+            tb_varname:{'zlib':True, 'dtype':'float32'},
+            pcp_varname: {'zlib':True, 'dtype':'float32'},
         }
-        dsout.to_netcdf(path=fileout, mode='w', format='NETCDF4', unlimited_dims='time', encoding=encoding_dict)
+        dsout.to_netcdf(path=fileout, mode='w', format='NETCDF4', unlimited_dims=time_dimname, encoding=encoding_dict)
         logger.info(f'{fileout}')
         status = 1
         return (status)
