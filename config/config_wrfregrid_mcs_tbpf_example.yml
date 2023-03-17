@@ -13,6 +13,7 @@ run_matchpf : True
 run_robustmcs : True
 run_mapfeature : True
 run_speed : True
+run_regrid_mask: False
 
 # Parallel processing set up
 # run_parallel: 1 (local cluster), 2 (Dask MPI)
@@ -36,6 +37,7 @@ root_path: 'TRACK_DIR/'
 tracking_path_name: 'tracking'
 stats_path_name: 'stats'
 pixel_path_name: 'mcstracking'
+regrid_pixel_path_name: 'mcstracking_native'
 
 # Land mask file (optional, leave it an empty string if not available)
 # Can use any standard wrfout file that contains LANDMASK
@@ -59,6 +61,7 @@ regrid_input: True
 gridfile_dst: 'INPUT_DIR/merg_2014040100_4km-pixel.nc'
 # Regridder weight file for xESMF, will be generated if it does not exist
 weight_filename: 'INPUT_DIR/weight_conservative_wrf2gpm.nc'
+weight_filename_rev: 'INPUT_DIR/weight_nearest_s2d_gpm2wrf.nc'
 # Source grid x/y coordinate variable names
 x_coordname_src: 'XLONG'
 y_coordname_src: 'XLAT'
@@ -67,6 +70,9 @@ x_coordname_dst: 'lon'
 y_coordname_dst: 'lat'
 # Regridding method
 regrid_method: 'conservative'
+regrid_method_rev: 'nearest_s2d'
+# Flag to write native resolution tb/rainrate
+write_native: False
 
 # Input dataset structure
 pixel_radius:  10.0  # [km] Spatial resolution of the input data

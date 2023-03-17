@@ -12,6 +12,7 @@ from multiprocessing import Pool
 from pyflextrkr.ft_regrid_func import make_weight_file, make_grid4regridder
 from pyflextrkr.ftfunctions import olr_to_tb
 
+#-------------------------------------------------------------------------------------
 def preprocess_wrf_tb_rainrate(config):
     """
     Preprocess WRF output file to get Tb and rain rate.
@@ -46,7 +47,7 @@ def preprocess_wrf_tb_rainrate(config):
 
     # Check regridding option
     if regrid_input:
-        # logger.info('Regridding input is requested.')
+        # Build Regridder
         weight_filename = make_weight_file(filelist[0], config)
 
     # Create a list with a pair of WRF filenames that are adjacent in time
@@ -87,7 +88,8 @@ def preprocess_wrf_tb_rainrate(config):
         
     return
 
-    
+
+#-------------------------------------------------------------------------------------
 def calc_rainrate_tb(filepairnames, outdir, inbasename, outbasename, config):
     """
     Calculates rain rates from a pair of WRF output files and write to netCDF
@@ -113,13 +115,7 @@ def calc_rainrate_tb(filepairnames, outdir, inbasename, outbasename, config):
     status = 0
 
     regrid_input = config.get('regrid_input', False)
-    # time_dimname = config.get('time_dimname', 'time')
-    # x_dimname = config.get('x_dimname', 'lon')
-    # y_dimname = config.get('y_dimname', 'lat')
-    # x_coordname = config.get('x_coordname', 'longitude')
-    # y_coordname = config.get('y_coordname', 'latitude')
-    # tb_varname = config.get('tb_varname', 'tb')
-    # pcp_varname = config.get('pcp_varname', 'rainrate')
+    write_native = config.get('write_native', False)
     
     # Filenames with full path
     filein_t1 = filepairnames[0]
@@ -137,6 +133,12 @@ def calc_rainrate_tb(filepairnames, outdir, inbasename, outbasename, config):
     ftime_t2 = fname_t2[idx0+len(inbasename):]
     # Output filename
     fileout = f'{outdir}/{outbasename}{ftime_t2}.nc'
+    # Output for native resolution
+    if (regrid_input) & (write_native):
+        outdir_native = f'{outdir}/native/'
+        fileout_native = f'{outdir_native}/{outbasename}{ftime_t2}.nc'
+        # Create output directory
+        os.makedirs(outdir_native, exist_ok=True)
 
     # Read in WRF data files
     ds_in = xr.open_mfdataset([filein_t1, filein_t2], concat_dim='Time', combine='nested')
@@ -203,6 +205,7 @@ def calc_rainrate_tb(filepairnames, outdir, inbasename, outbasename, config):
         OLR_out = regridder(OLR)
         rainrate_out = regridder(rainrate)
     else:
+        # Native resolution variables
         x_coord_out = XLONG.data
         y_coord_out = XLAT.data
         OLR_out = OLR
@@ -211,6 +214,7 @@ def calc_rainrate_tb(filepairnames, outdir, inbasename, outbasename, config):
     ds_in.close()
     
     # Convert OLR to IR brightness temperature
+    tb = olr_to_tb(OLR)
     tb_out = olr_to_tb(OLR_out)
 
     # Write single time frame to netCDF output
@@ -226,10 +230,22 @@ def calc_rainrate_tb(filepairnames, outdir, inbasename, outbasename, config):
         write_netcdf(_TimeStr, _basetime, _rainrate, _tb,
                      config, filein_t1, filein_t2, fileout, x_coord_out, y_coord_out)
         logger.info(f'{fileout}')
+
+        # Write to native resolution file if regrid is requested
+        if (regrid_input) & (write_native):
+            __tb = tb[tt,:,:]
+            __rainrate = rainrate[tt,:,:]
+
+            # Write output to file
+            write_netcdf(_TimeStr, _basetime, __rainrate, __tb,
+                        config, filein_t1, filein_t2, fileout_native, XLONG.data, XLAT.data)
+            logger.info(f'{fileout_native}')
+
         status = 1
     return (status)
 
 
+#-------------------------------------------------------------------------------------
 def write_netcdf(
         _TimeStr,
         _basetime,
