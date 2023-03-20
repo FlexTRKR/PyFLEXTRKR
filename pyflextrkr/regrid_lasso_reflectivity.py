@@ -129,7 +129,7 @@ def regrid_file(in_filename, in_basename, out_dir, out_basename):
     ds = xr.open_dataset(in_filename)
     in_time = ds['Time']
     REFL_10CM = ds['REFL_10CM'].squeeze()
-    REFL_10CM_MAX = ds['REFL_10CM_MAX'].squeeze()
+    # REFL_10CM_MAX = ds['REFL_10CM_MAX'].squeeze()
     XLONG = ds['XLONG']
     XLAT = ds['XLAT']
 
@@ -143,11 +143,11 @@ def regrid_file(in_filename, in_basename, out_dir, out_basename):
     kernel3d = kernel[None,:,:]
     # Call convlution function
     REFL_10CM_conv = convolve_reflectivity(REFL_10CM.data, kernel3d)
-    REFL_10CM_MAX_conv = convolve_reflectivity(REFL_10CM_MAX.data, kernel)
+    # REFL_10CM_MAX_conv = convolve_reflectivity(REFL_10CM_MAX.data, kernel)
 
     # Subsample every X grid points
     REFL_10CM_reg = REFL_10CM_conv[:,start_idx::ratio,start_idx::ratio]
-    REFL_10CM_MAX_reg = REFL_10CM_MAX_conv[start_idx::ratio,start_idx::ratio]
+    # REFL_10CM_MAX_reg = REFL_10CM_MAX_conv[start_idx::ratio,start_idx::ratio]
     XLONG_reg = XLONG.data[start_idx::ratio,start_idx::ratio]
     XLAT_reg = XLAT.data[start_idx::ratio,start_idx::ratio]
 
@@ -174,7 +174,7 @@ def regrid_file(in_filename, in_basename, out_dir, out_basename):
         'XLONG': (['south_north', 'west_east'], XLONG_reg, XLONG.attrs),
         'XLAT': (['south_north', 'west_east'], XLAT_reg, XLAT.attrs),
         'REFL_10CM': (['Time', 'HAMSL', 'south_north', 'west_east'], np.expand_dims(REFL_10CM_reg, axis=0), REFL_10CM.attrs),
-        'REFL_10CM_MAX': (['Time', 'south_north', 'west_east'], np.expand_dims(REFL_10CM_MAX_reg, axis=0), REFL_10CM_MAX.attrs),
+        # 'REFL_10CM_MAX': (['Time', 'south_north', 'west_east'], np.expand_dims(REFL_10CM_MAX_reg, axis=0), REFL_10CM_MAX.attrs),
     }
     # Output coordinates
     coord_dict = {

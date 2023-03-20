@@ -100,14 +100,15 @@ def regrid_file(in_filename, in_basename, out_dir, out_basename):
 
     # Get variables for regridding
     tracknumber = ds['tracknumber']
-    tracknumber_cmask = ds['tracknumber_cmask']
+    # tracknumber_cmask = ds['tracknumber_cmask']
     track_status = ds['track_status']
-    cloudnumber = ds['cloudnumber']
+    feature_number = ds['feature_number']
     merge_tracknumber = ds['merge_tracknumber']
     split_tracknumber = ds['split_tracknumber']
     conv_core = ds['conv_core']
     conv_mask = ds['conv_mask']
-    comp_ref = ds['comp_ref']
+    # comp_ref = ds['comp_ref']
+    dbz_comp = ds['dbz_comp']
     dbz_lowlevel = ds['dbz_lowlevel']
     echotop10 = ds['echotop10']
 
@@ -117,15 +118,15 @@ def regrid_file(in_filename, in_basename, out_dir, out_basename):
         lon=xcoord_out, lat=ycoord_out, method='nearest', 
         assume_sorted=True, kwargs={"fill_value": "extrapolate"},
     ).data.astype(int)
-    tracknumber_cmask_out = tracknumber_cmask.interp(
-        lon=xcoord_out, lat=ycoord_out, method='nearest', 
-        assume_sorted=True, kwargs={"fill_value": "extrapolate"},
-    ).data.astype(int)
+    # tracknumber_cmask_out = tracknumber_cmask.interp(
+    #     lon=xcoord_out, lat=ycoord_out, method='nearest', 
+    #     assume_sorted=True, kwargs={"fill_value": "extrapolate"},
+    # ).data.astype(int)
     track_status_out = track_status.interp(
         lon=xcoord_out, lat=ycoord_out, method='nearest', 
         assume_sorted=True, kwargs={"fill_value": "extrapolate"},
     ).data.astype(int)
-    cloudnumber_out = cloudnumber.interp(
+    feature_number_out = feature_number.interp(
         lon=xcoord_out, lat=ycoord_out, method='nearest', 
         assume_sorted=True, kwargs={"fill_value": "extrapolate"},
     ).data.astype(int)
@@ -146,7 +147,7 @@ def regrid_file(in_filename, in_basename, out_dir, out_basename):
         assume_sorted=True, kwargs={"fill_value": "extrapolate"},
     ).data.astype(int)
     # Radar variables
-    comp_ref_out = comp_ref.interp(
+    dbz_comp_out = dbz_comp.interp(
         lon=xcoord_out, lat=ycoord_out, method='nearest', 
         assume_sorted=True, kwargs={"fill_value": "extrapolate"},
     ).data
@@ -170,15 +171,15 @@ def regrid_file(in_filename, in_basename, out_dir, out_basename):
         "base_time": (["time"], time_coord.data, time_coord.attrs),
         # "longitude": (["lat", "lon"], longitude),
         # "latitude": (["lat", "lon"], latitude),
-        "nclouds": (["time"], ds['nclouds'].data, ds['nclouds'].attrs),
-        "comp_ref": (["time", "lat", "lon"], comp_ref_out, comp_ref.attrs),
+        # "nclouds": (["time"], ds['nclouds'].data, ds['nclouds'].attrs),
+        "dbz_comp": (["time", "lat", "lon"], dbz_comp_out, dbz_comp.attrs),
         "dbz_lowlevel": (["time", "lat", "lon"], dbz_lowlevel_out, dbz_lowlevel.attrs),
         "conv_core": (["time", "lat", "lon"], conv_core_out, conv_core.attrs),
         "conv_mask": (["time", "lat", "lon"], conv_mask_out, conv_mask.attrs),
         "tracknumber": (["time", "lat", "lon"], tracknumber_out, tracknumber.attrs),
-        "tracknumber_cmask": (["time", "lat", "lon"], tracknumber_cmask_out, tracknumber_cmask.attrs),
+        # "tracknumber_cmask": (["time", "lat", "lon"], tracknumber_cmask_out, tracknumber_cmask.attrs),
         "track_status": (["time", "lat", "lon"], track_status_out, track_status.attrs),
-        "cloudnumber": (["time", "lat", "lon"], cloudnumber_out, cloudnumber.attrs),
+        "feature_number": (["time", "lat", "lon"], feature_number_out, feature_number.attrs),
         "merge_tracknumber": (["time", "lat", "lon"], merge_tracknumber_out, merge_tracknumber.attrs),
         "split_tracknumber": (["time", "lat", "lon"], split_tracknumber_out, split_tracknumber.attrs),
         "echotop10": (["time", "lat", "lon"], echotop10_out, echotop10.attrs),
