@@ -1,9 +1,9 @@
 ---
-# Global GPM based MCS tracking configuration file
-# Tracking uses collocated Tb + Precipitation
+# WRF MCS tracking configuration file
+# Tracking uses collocated Tb + Precipitation regridded to GPM IMERG resolution
 
 # Processing steps:
-# Maybe worth nesting these in sets of dictionaries
+run_preprocess: True
 run_idfeature : True
 run_tracksingle : True
 run_gettracks : True
@@ -12,59 +12,81 @@ run_identifymcs : True
 run_matchpf : True
 run_robustmcs : True
 run_mapfeature : True
-run_speed: True
+run_speed : True
+run_regrid_mask: False
 
 # Parallel processing set up
 # run_parallel: 1 (local cluster), 2 (Dask MPI)
 run_parallel: 1
-nprocesses : 8  # Number of processors to use if run_parallel=1
+nprocesses : 4  # Number of processors to use if run_parallel=1
 dask_tmp_dir: '/tmp'  # Dask temporary directory if run_parallel=1
 timeout: 360  # [seconds] Dask timeout limit
 
 # Start/end date and time
-startdate: '20190125.0000'
-enddate: '20190127.0000'
+startdate: '20140402.0000'
+enddate: '20140404.0000'
 
-# Specify tracking input data date/time string format
-# This is the preprocessed file that contains Tb & rainrate
-# E.g., databasename20181101.011503.nc --> yyyymodd.hhmmss
-# E.g., databasename2018-11-01_01:15:00 --> yyyy-mo-dd_hh:mm:ss
-time_format: 'yyyymoddhh'
-databasename:  'merg_'  # Note: include all strings before the time (including "_", ".")
-
-# Input files directory
-clouddata_path: 'INPUT_DIR/'
+# WRF raw data
+wrfout_path: 'INPUT_DIR/'
+wrfout_basename: 'wrfout_d01_'
+# Tracking input files directory
+clouddata_path: 'INPUT_DIR/tb_rr/'
 # Working directory for the tracking data
 root_path: 'TRACK_DIR/'
 # Working sub-directory names
 tracking_path_name: 'tracking'
 stats_path_name: 'stats'
 pixel_path_name: 'mcstracking'
+regrid_pixel_path_name: 'mcstracking_native'
 
 # Land mask file (optional, leave it an empty string if not available)
-landmask_filename: 'INPUT_DIR/IMERG_landmask_saag.nc'
-landmask_varname: 'landseamask'
-landmask_x_dimname: 'lon'
-landmask_y_dimname: 'lat'
-landmask_x_coordname: 'lon'
-landmask_y_coordname: 'lat'
+# Can use any standard wrfout file that contains LANDMASK
+landmask_filename: 'INPUT_DIR/wrf_landmask.nc'
+landmask_varname: 'LANDMASK'
+landmask_x_dimname: 'west_east'
+landmask_y_dimname: 'south_north'
+landmask_x_coordname: 'XLONG'
+landmask_y_coordname: 'XLAT'
 
-# Specific to GPM Tb+IMERG combined dataset
+# Specify tracking input data date/time string format
+# This is the preprocessed file that contains Tb & rainrate
+# E.g., databasename20181101.011503.nc --> yyyymodd.hhmmss
+# E.g., databasename2018-11-01_01:15:00 --> yyyy-mo-dd_hh:mm:ss
+time_format: 'yyyy-mo-dd_hh:mm:ss'
+databasename: 'wrfout_rainrate_tb_'  # Note: include all strings before the time (including "_", ".")
+
+# Specify regrid input data options
+regrid_input: True
+# Destination grid file that contains lat/lon grid info
+gridfile_dst: 'INPUT_DIR/merg_2014040100_4km-pixel.nc'
+# Regridder weight file for xESMF, will be generated if it does not exist
+weight_filename: 'INPUT_DIR/weight_conservative_wrf2gpm.nc'
+weight_filename_rev: 'INPUT_DIR/weight_nearest_s2d_gpm2wrf.nc'
+# Source grid x/y coordinate variable names
+x_coordname_src: 'XLONG'
+y_coordname_src: 'XLAT'
+# Destination grid x/y coordinate variable names
+x_coordname_dst: 'lon'
+y_coordname_dst: 'lat'
+# Regridding method
+regrid_method: 'conservative'
+regrid_method_rev: 'nearest_s2d'
+# Flag to write native resolution tb/rainrate
+write_native: False
+
+# Input dataset structure
 pixel_radius:  10.0  # [km] Spatial resolution of the input data
 datatimeresolution: 1.0  # [hour] Temporal resolution of the input data
 # Variable names in the input data
-tb_varname:  'Tb'
-pcp_varname: 'precipitationCal'
-clouddatasource:  'gpmirimerg'
-pfdatasource:  'imerg'
+tb_varname:  'tb'
+pcp_varname: 'rainrate'
+clouddatasource: 'model'
+pfdatasource:  'wrf'
 time_dimname: 'time'
 x_dimname: 'lon'
 y_dimname: 'lat'
-x_coordname: 'lon'
-y_coordname: 'lat'
-idclouds_hourly: 1  # 0:  No, 1:  Yes
-idclouds_minute: 30  # 0 or 30 min, which minute mark to use the Tb data
-idclouds_dt_thresh: 5  # [minute], time difference allowed between actual data and idclouds_minute
+x_coordname: 'longitude'
+y_coordname: 'latitude'
 
 # Specify types of feature being tracked
 # This adds additional feature-specific statistics to be computed
@@ -74,9 +96,9 @@ feature_type: 'tb_pf'
 mincoldcorepix:  4  # Minimum number of pixels for the cold core
 smoothwindowdimensions:  10  # Dimension of the Box2DKernel filter on Tb.
 medfiltsize: 5      # Window size to perform medfilt2d to fill missing Tb pixels, must be an odd number
-geolimits: [-60, -360, 60, 360] # 4-element array to subset domain boundaries [lat_min, lon_min, lat_max, lon_max]
+geolimits: [-90, -360, 90, 360] # 4-element array to subset domain boundaries [lat_min, lon_min, lat_max, lon_max]
 area_thresh:  800  # [km^2] Minimum area to define a cloud
-miss_thresh:  0.4  # Missing data fraction threshold. If missing data exceeds this, the time frame will be omitted.
+miss_thresh:  0.35  # Missing data fraction threshold. If missing data exceeds this, the time frame will be omitted.
 cloudtb_core:  225.0  # [K]
 cloudtb_cold:  241.0  # [K]
 cloudtb_warm:  261.0  # [K]
@@ -129,23 +151,27 @@ heavy_rainrate_thresh:  10.0  # Heavy rain rate threshold [mm/hr]
 # MCS PF parameter coefficients [intercept, slope]
 # These parameters are derived with pf_rr_thres:  2 mm/h
 # coefs_pf_area:  [1962, 0]           # 1% [changed slope to 0: independent of lifetime]
+# coefs_pf_area:  [1962.11, -14.598]      # 1%
 # coefs_pf_area:  [2119.02, 61.143]      # 3%
 coefs_pf_area:  [2874.05, 89.825]  # 5% [recommended]
 # coefs_pf_area:  [4160.82, 93.077]      # 7%
 # coefs_pf_area:  [4988.15, 138.172]      # 10%
 
+# coefs_pf_rr:  [2.72873, 0.0]
 # coefs_pf_rr:  [2.72873, 0.0008317]      # 1%
 # coefs_pf_rr:  [2.81982, 0.0135463]      # 3%
 coefs_pf_rr:  [3.01657, 0.0144461]  # 5% [recommended]
 # coefs_pf_rr:  [3.14895, 0.0150174]      # 7%
 # coefs_pf_rr:  [3.34859, 0.0172043]      # 10%
 
+# coefs_pf_skew:  [0.036384, 0]
 # coefs_pf_skew:  [0.036384, 0.0022199]      # 1%
 # coefs_pf_skew:  [0.072809, 0.0104444]      # 3%
 coefs_pf_skew:  [0.194462, 0.0100072]  # 5% [recommended]
 # coefs_pf_skew:  [0.256639, 0.0106527]      # 7%
 # coefs_pf_skew:  [0.376142, 0.0095545]      # 10%
 
+# coefs_pf_heavyratio:  [0.750260, 0]       
 # coefs_pf_heavyratio:  [0.750260, 0.4133300]  # 5%
 coefs_pf_heavyratio:  [3.419024, 0.4387090]  # 10% [recommended]
 # coefs_pf_heavyratio:  [4.753215, 0.4886454]  # 15%
@@ -166,7 +192,6 @@ fillval: -9999
 mcstbstats_filebase: 'mcs_tracks_'
 mcspfstats_filebase: 'mcs_tracks_pf_'
 mcsrobust_filebase: 'mcs_tracks_robust_'
-# mcsrobust_filebase: 'mcs_tracks_final_extc_'
 pixeltracking_filebase: 'mcstrack_'
 mcsfinal_filebase: 'mcs_tracks_final_'
 
