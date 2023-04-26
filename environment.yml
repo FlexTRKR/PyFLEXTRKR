@@ -21,6 +21,8 @@ dependencies:
   - astropy
   - wrf-python
   - colorcet
+  - colormath
   - seaborn
   - scikit-learn
   - ffmpeg
+  - xesmf
