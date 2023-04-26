@@ -473,8 +473,8 @@ def work_for_time_loop(datafile, track_dict, map_info, plot_info):
         lon_tn, lat_tn, xx_tn, yy_tn, tnconv_unique = calc_cell_center(tnconv, lon_sub, lat_sub, xx_sub, yy_sub)
 
         # titles = [timestr]
-        timestr = ds['time'].squeeze().dt.strftime("%Y-%m-%d %H:%M UTC").data
-        fignametimestr = ds['time'].squeeze().dt.strftime("%Y%m%d_%H%M").data.item()
+        timestr = ds['time'].squeeze().dt.strftime("%Y-%m-%d %H:%M:%S UTC").data
+        fignametimestr = ds['time'].squeeze().dt.strftime("%Y%m%d_%H%M%S").data.item()
         figname = f'{figdir}{figbasename}{fignametimestr}.png'
 
         # Put variables in dictionaries
@@ -594,7 +594,7 @@ if __name__ == "__main__":
         pixeltracking_filebase,
         start_basetime,
         end_basetime,
-        time_format="yyyymodd_hhmm",
+        time_format="yyyymodd_hhmmss",
     )
     print(f'Number of pixel files: {len(datafiles)}')
 
