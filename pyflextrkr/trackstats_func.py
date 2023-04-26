@@ -189,6 +189,13 @@ def calc_stats_singlefile(
         for itrack in range(numtracks):
             # Map the tracknumbers in this frame to cloudnumbers
             cloudnumber_map = np.where(tracknumbers == uniquetracknumbers[itrack])[0] + 1
+            # Handle edge case where more than 1 cloudnumber is returned
+            if len(cloudnumber_map) > 1:
+                logger.warning(f'Cloudid file: {cloudid_file}')
+                logger.warning(f'More than 1 {feature_varname} found for tracknumber: {uniquetracknumbers[itrack]}')
+                logger.warning(f'{feature_varname}: {cloudnumber_map}')
+                logger.warning(f'Only use {feature_varname}: {cloudnumber_map[0]}')
+                cloudnumber_map = cloudnumber_map[0]
             cloudindex = cloudnumber_map - 1
 
             # # Get the cloudmask for the current track (this is the slow method!)
