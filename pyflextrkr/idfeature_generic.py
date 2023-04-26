@@ -131,7 +131,7 @@ def idfeature_generic(
         # Get date/time and make output filename
         file_basetime = np.array([(np.datetime64(iTime).item() - datetime(1970, 1, 1, 0, 0, 0)).total_seconds()])
         file_datestring = time_decode[tt].dt.strftime("%Y%m%d").item()
-        file_timestring = time_decode[tt].dt.strftime("%H%M").item()
+        file_timestring = time_decode[tt].dt.strftime("%H%M%S").item()
         cloudid_outfile = (
             config["tracking_outpath"] +
             config["cloudid_filebase"] +

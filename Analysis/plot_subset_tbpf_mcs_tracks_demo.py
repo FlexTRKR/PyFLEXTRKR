@@ -491,8 +491,8 @@ def work_for_time_loop(datafile, track_dict, map_info, plot_info, config):
         tn_perim = label_perimeter(tracknumber_sub.data, dilationstructure)
         
         # Plotting variables
-        fdatetime = pd.to_datetime(ds['time'].data.item()).strftime('%Y%m%d_%H%M')
-        timestr = pd.to_datetime(ds['time'].data.item()).strftime('%Y-%m-%d %H:%M UTC')
+        fdatetime = pd.to_datetime(ds['time'].data.item()).strftime('%Y%m%d_%H%M%S')
+        timestr = pd.to_datetime(ds['time'].data.item()).strftime('%Y-%m-%d %H:%M:%S UTC')
         figname = f'{figdir}{figbasename}{fdatetime}.png'
 
         # Put pixel data in a dictionary
@@ -631,7 +631,7 @@ if __name__ == "__main__":
         pixeltracking_filebase,
         start_basetime,
         end_basetime,
-        time_format="yyyymodd_hhmm",
+        time_format="yyyymodd_hhmmss",
     )
     print(f'Number of pixel files: {len(datafiles)}')
 

@@ -74,7 +74,7 @@ def map_datetime2pixelfile(pixel_dir, mcs_pixelfilebase):
         # Get the filename without path and suffix [.stem], 
         # remove mcs_pixelfilebase and keep the time strings only [len(mcs_pixelfilebase):],
         # then convert it to Pandas datetime as key, and the file name as value
-        pd.to_datetime(p.stem[len(mcs_pixelfilebase):], format="%Y%m%d_%H%M"): p
+        pd.to_datetime(p.stem[len(mcs_pixelfilebase):], format="%Y%m%d_%H%M%S"): p
         for p in pixel_files
     }    
     return pixel_files, date_path_map
