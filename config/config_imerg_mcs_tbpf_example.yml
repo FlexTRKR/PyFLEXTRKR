@@ -62,7 +62,7 @@ x_dimname: 'lon'
 y_dimname: 'lat'
 x_coordname: 'lon'
 y_coordname: 'lat'
-idclouds_hourly: 1  # 0:  No, 1:  Yes
+idclouds_hourly: 1  # 0: No (use all available time frames in input files), 1: Yes (only use hourly time frame)
 idclouds_minute: 30  # 0 or 30 min, which minute mark to use the Tb data
 idclouds_dt_thresh: 5  # [minute], time difference allowed between actual data and idclouds_minute
 
