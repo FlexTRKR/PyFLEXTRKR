@@ -393,9 +393,9 @@ def work_for_time_loop(datafile, track_dict, map_info, plot_info, config):
     lon_tn, lat_tn, tn_unique = calc_track_center(tracknumber_sub.data, lon_sub, lat_sub)
 
     # Plotting variables
-    timestr = ds['time'].squeeze().dt.strftime("%Y-%m-%d %H:%M UTC").data
+    timestr = ds['time'].squeeze().dt.strftime("%Y-%m-%d %H:%M:%S UTC").data
     # titles = [timestr]
-    fignametimestr = ds['time'].squeeze().dt.strftime("%Y%m%d_%H%M").data.item()
+    fignametimestr = ds['time'].squeeze().dt.strftime("%Y%m%d_%H%M%S").data.item()
     figname = f'{figdir}{figbasename}{fignametimestr}.png'
 
     # Put variables in dictionaries
@@ -502,6 +502,10 @@ if __name__ == "__main__":
     # Convert datetime string to Epoch time (base time)
     start_basetime = pd.to_datetime(start_datetime).timestamp()
     end_basetime = pd.to_datetime(end_datetime).timestamp()
+    # Subtract start_datetime by TimeDelta to include tracks
+    # that start before the start_datetime but may not have ended yet
+    TimeDelta = pd.Timedelta(days=4)
+    start_datetime_4stats = (pd.to_datetime(start_datetime) - TimeDelta).strftime('%Y-%m-%dT%H:%M:%S')
 
     # Find all pixel-level files that match the input datetime
     datafiles, \
@@ -512,12 +516,12 @@ if __name__ == "__main__":
         pixeltracking_filebase,
         start_basetime,
         end_basetime,
-        time_format="yyyymodd_hhmm",
+        time_format="yyyymodd_hhmmss",
     )
     print(f'Number of pixel files: {len(datafiles)}')
 
     # Get track stats data
-    track_dict = get_track_stats(trackstats_file, start_datetime, end_datetime, dt_thres)
+    track_dict = get_track_stats(trackstats_file, start_datetime_4stats, end_datetime, dt_thres)
 
     # Serial option
     if run_parallel == 0:

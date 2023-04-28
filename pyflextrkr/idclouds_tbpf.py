@@ -169,7 +169,7 @@ def idclouds_tbpf(
         file_basetime = np.array([(np.datetime64(iTime).item() - datetime(1970,1,1,0,0,0)).total_seconds()])
         # Convert to strings
         file_datestring = iTime.strftime("%Y%m%d")
-        file_timestring = iTime.strftime("%H%M")
+        file_timestring = iTime.strftime("%H%M%S")
         iminute = iTime.minute
 
         # If idclouds_hourly is set to 1, then check if iminutes is
