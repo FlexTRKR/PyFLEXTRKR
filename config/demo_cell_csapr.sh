@@ -12,7 +12,7 @@
 ###############################################################################################
 
 # Specify directory for the demo data
-dir_demo='/global/cscratch1/sd/feng045/pyflextrkr_test/cell_radar/csapr/'
+dir_demo='/Users/feng045/data/demo/cell_radar/csapr/'
 
 # Example config file name
 config_demo='config_cell_demo.yml'

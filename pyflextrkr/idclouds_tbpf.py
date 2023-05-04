@@ -3,7 +3,7 @@ import sys
 import logging
 import numpy as np
 import xarray as xr
-from datetime import datetime
+import pandas as pd
 from scipy.signal import medfilt2d
 from scipy.ndimage import label, filters
 from astropy.convolution import Box2DKernel, convolve
@@ -13,6 +13,7 @@ from pyflextrkr.futyan3 import futyan3
 from pyflextrkr.label_and_grow_cold_clouds import label_and_grow_cold_clouds
 from pyflextrkr.ftfunctions import sort_renumber, sort_renumber2vars, link_pf_tb
 from pyflextrkr.sl3d_func import run_sl3d
+from pyflextrkr.ft_utilities import get_timestamp_from_filename_single
 
 def idclouds_tbpf(
     filename,
@@ -35,6 +36,8 @@ def idclouds_tbpf(
     logger = logging.getLogger(__name__)
     logger.debug(f"Processing {filename}.")
 
+    databasename = config["databasename"]
+    time_format = config["time_format"]
     # Flag to handle a special case for 'gpmirimerg'
     clouddatasource = config['clouddatasource']
     # Set medfilt2d kernel_size, this determines the filter window dimension
@@ -76,7 +79,7 @@ def idclouds_tbpf(
     tracking_outpath = config['tracking_outpath']
     cloudid_filebase = config['cloudid_filebase']
 
-    tcoord_name = config.get('tcoord_name', 'time')
+    time_coordname = config.get('time_coordname', 'time')
     x_coordname = config['x_coordname']
     y_coordname = config['y_coordname']
     time_dimname = config.get('time_dimname', 'time')
@@ -112,6 +115,20 @@ def idclouds_tbpf(
             time_dimname, y_dimname, x_dimname, missing_dims='ignore'
         )
 
+    # Handle no time coordinate in Dataset
+    if time_coordname not in rawdata:
+        logger.warning(f'No time coordinate: {time_coordname} found in input data')
+        logger.warning(f'Will estimate time from filename based on time_format in config: {time_format}')
+        # Get Timestamp from filename
+        file_timestamp = get_timestamp_from_filename_single(
+            filename, databasename, time_format=time_format,
+        )
+        # Add Timestamp coordinate to the Dataset
+        rawdata = rawdata.assign_coords({time_coordname:file_timestamp})
+        # Add time dimension to all variables in the Dataset
+        rawdata = xr.concat([rawdata], dim=time_dimname)
+        logger.debug(f'Added Timestamp: {file_timestamp} calculated from filename to the input data')
+
     # Convert OLR to Tb if olr2tb flag is set
     if olr2tb is True:
         olr = rawdata[olr_varname].data
@@ -123,7 +140,7 @@ def idclouds_tbpf(
 
     lat = rawdata[y_coordname].data
     lon = rawdata[x_coordname].data
-    time_decode = rawdata[tcoord_name]
+    time_decode = rawdata[time_coordname]
 
     # Check coordinate dimensions
     if (lat.ndim == 1) | (lon.ndim == 1):
@@ -164,13 +181,13 @@ def idclouds_tbpf(
     # Loop over each time
     for tt in range(0, len(time_decode)):
         # Process time variable
-        iTime = rawdata.indexes['time'][tt]
+        iTime = time_decode[tt]
         # Convert to basetime (i.e., Epoch time)
-        file_basetime = np.array([(np.datetime64(iTime).item() - datetime(1970,1,1,0,0,0)).total_seconds()])
+        file_basetime = np.array([(pd.to_datetime(iTime.data) - pd.Timestamp('1970-01-01T00:00:00')).total_seconds()])
         # Convert to strings
-        file_datestring = iTime.strftime("%Y%m%d")
-        file_timestring = iTime.strftime("%H%M%S")
-        iminute = iTime.minute
+        file_datestring = iTime.dt.strftime("%Y%m%d").item()
+        file_timestring = iTime.dt.strftime("%H%M%S").item()
+        iminute = iTime.dt.minute.item()
 
         # If idclouds_hourly is set to 1, then check if iminutes is
         # within the allowed difference from idclouds_dt_thresh
@@ -185,7 +202,15 @@ def idclouds_tbpf(
 
         # Proceed to idclodus if flag is 1
         if idclouds_proceed == 1:
-            in_ir = original_ir[tt, :, :]
+            # Check IR data array dimensions
+            if original_ir.ndim == 3:
+                in_ir = original_ir[tt, :, :]
+            elif original_ir.ndim == 2:
+                in_ir = original_ir[:, :]
+            else:
+                logger.error(f'Unexpected number of dimensions (2 or 3) in {tb_varname}: {original_ir.ndim}')
+                logger.error(f'Tracking will exit now.')
+                sys.exit()
 
             # Use median filter to fill in missing values
             ir_filt = medfilt2d(in_ir, kernel_size=medfiltsize)

@@ -60,6 +60,7 @@ pfdatasource:  'imerg'
 time_dimname: 'time'
 x_dimname: 'lon'
 y_dimname: 'lat'
+time_coordname: 'time'
 x_coordname: 'lon'
 y_coordname: 'lat'
 idclouds_hourly: 1  # 0: No (use all available time frames in input files), 1: Yes (only use hourly time frame)
