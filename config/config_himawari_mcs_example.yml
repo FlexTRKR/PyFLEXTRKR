@@ -1,0 +1,124 @@
+---
+# Himawari MCS tracking configuration file
+# Tracking uses Tb only
+
+# Processing steps:
+run_idfeature : True
+run_tracksingle : True
+run_gettracks : True
+run_trackstats : True
+run_identifymcs : True
+run_mapfeature : True
+
+# Parallel processing set up
+# run_parallel: 1 (local cluster), 2 (Dask MPI)
+run_parallel: 1
+nprocesses: 24  # Number of processors to use if run_parallel=1
+dask_tmp_dir: '/tmp'  # Dask temporary directory if run_parallel=1
+timeout: 360  # [seconds] Dask timeout limit
+
+# Start/end date and time
+startdate: '20211024.0000'
+enddate: '20211025.0000'
+
+# Specify tracking input data date/time string format
+# This is the preprocessed file that contains Tb & rainrate
+# E.g., databasename20181101.011503.nc --> yyyymodd.hhmmss
+# E.g., databasename2018-11-01_01:15:00 --> yyyy-mo-dd_hh:mm:ss
+time_format: 'yyyymodd_hhmm'
+databasename:  'NC_H08_'  # Note: include all strings before the time (including "_", ".")
+
+# Input files directory
+clouddata_path: 'INPUT_DIR/'
+# Working directory for the tracking data
+root_path: 'TRACK_DIR/'
+# Working sub-directory names
+tracking_path_name: 'tracking'
+stats_path_name: 'stats'
+pixel_path_name: 'mcstracking'
+
+# Land mask file (optional, leave it an empty string if not available)
+landmask_filename: ''
+landmask_varname: 'landseamask'
+landmask_x_dimname: 'lon'
+landmask_y_dimname: 'lat'
+landmask_x_coordname: 'lon'
+landmask_y_coordname: 'lat'
+
+# Specific to GPM Tb+IMERG combined dataset
+pixel_radius:  5.0  # [km] Spatial resolution of the input data
+datatimeresolution: 1.0  # [hour] Temporal resolution of the input data
+# Variable names in the input data
+tb_varname:  'tbb_11'
+pcp_varname: 'precipitationCal'
+clouddatasource:  'himawari'
+time_dimname: 'time'
+x_dimname: 'longitude'
+y_dimname: 'latitude'
+time_coordname: 'start_time'
+x_coordname: 'longitude'
+y_coordname: 'latitude'
+idclouds_dt_thresh: 5  # [minute], time difference allowed between actual data and idclouds_minute
+
+# Specify types of feature being tracked
+# This adds additional feature-specific statistics to be computed
+feature_type: 'tb_pf'
+
+# Cloud identification parameters
+mincoldcorepix: 4  # Minimum number of pixels for the cold core
+smoothwindowdimensions:  20  # Dimension of the Box2DKernel filter on Tb.
+medfiltsize: 5      # Window size to perform medfilt2d to fill missing Tb pixels, must be an odd number
+geolimits: [-30, 90, 30, 150] # 4-element array to subset domain boundaries [lat_min, lon_min, lat_max, lon_max]
+area_thresh:  100  # [km^2] Minimum area to define a cloud
+miss_thresh:  0.4  # Missing data fraction threshold. If missing data exceeds this, the time frame will be omitted.
+cloudtb_core:  225.0  # [K]
+cloudtb_cold:  241.0  # [K]
+cloudtb_warm:  261.0  # [K]
+cloudtb_cloud:  261.0  # [K]
+absolutetb_threshs: [160, 330]  # K [min, max] absolute Tb range allowed.
+warmanvilexpansion:  0  # Not working yet, set this to 0 for now
+cloudidmethod: 'label_grow'
+# Specific parameters to link cloud objects using PF
+linkpf:  0  # Set to 1 to turn on linkpf option; default: 0
+
+# Tracking parameters
+othresh: 0.5  # overlap fraction threshold. Clouds that overlap more than this between times are tracked.
+timegap: 3.1  # [hour] If missing data duration longer than this, tracking restarts
+nmaxlinks: 50  # Maximum number of clouds that any single cloud can be linked to
+maxnclouds: 3000  # Maximum number of clouds in one snapshot
+duration_range: [2, 600] # A vector [minlength,maxlength] to specify the duration range for the tracks
+# Flag to remove short-lived tracks [< min(duration_range)] that are not mergers/splits with other tracks
+# 0:keep all tracks; 1:remove short tracks
+remove_shorttracks: 1
+# Set this flag to 1 to write a dense (2D) trackstats netCDF file
+# Note that for datasets with lots of tracks, the memory consumption could be large
+trackstats_dense_netcdf: 1
+# Minimum time difference threshold to match track stats with cloudid files
+match_pixel_dt_thresh: 60.0  # seconds
+
+# MCS Tb parameters
+mcs_tb_area_thresh: 40000  # [km^2] Tb area threshold
+mcs_tb_duration_thresh:  4  # [hour] Tb minimum length of a mcs
+mcs_tb_split_duration:  12  # [hour] Tb tracks smaller or equal to this length will be included with the MCS splits from
+mcs_tb_merge_duration:  12  # [hour] Tb tracks smaller or equal to this length will be included with the MCS merges into
+mcs_tb_gap: 1  # [unitless] Allowable temporal gap in Tb data for MCS area threshold
+
+# Specify rain rate parameters
+pcp_thresh:  1.0  # Pixels with hourly precipitation larger than this will be labeled with track number
+
+# Define tracked feature variable names
+feature_varname: 'feature_number'
+nfeature_varname: 'nfeatures'
+featuresize_varname: 'npix_feature'
+
+# Track statistics output file dimension names
+tracks_dimname: 'tracks'
+times_dimname: 'times'
+pf_dimname: 'nmaxpf'
+fillval: -9999
+# MCS track stats file base names
+mcstbstats_filebase: 'mcs_tracks_'
+mcspfstats_filebase: 'mcs_tracks_pf_'
+mcsrobust_filebase: 'mcs_tracks_robust_'
+pixeltracking_filebase: 'mcstrack_'
+mcsfinal_filebase: 'mcs_tracks_final_'

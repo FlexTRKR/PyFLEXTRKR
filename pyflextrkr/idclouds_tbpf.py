@@ -129,15 +129,7 @@ def idclouds_tbpf(
         rawdata = xr.concat([rawdata], dim=time_dimname)
         logger.debug(f'Added Timestamp: {file_timestamp} calculated from filename to the input data')
 
-    # Convert OLR to Tb if olr2tb flag is set
-    if olr2tb is True:
-        olr = rawdata[olr_varname].data
-        original_ir = olr_to_tb(olr)
-    else:
-        # Read Tb from data
-        original_ir = rawdata[tb_varname].data
-    rawdata.close()
-
+    # Get data coordinates
     lat = rawdata[y_coordname].data
     lon = rawdata[x_coordname].data
     time_decode = rawdata[time_coordname]
@@ -176,7 +168,27 @@ def idclouds_tbpf(
     }
     # Subset dataset
     rawdata = rawdata[subset_dict]
+    # Get lat/lon coordinates again
+    lat = rawdata[y_coordname].data
+    lon = rawdata[x_coordname].data
+    # Check coordinate dimensions
+    if (lat.ndim == 1) | (lon.ndim == 1):
+        # Mesh 1D coordinate into 2D
+        in_lon, in_lat = np.meshgrid(lon, lat)
+    elif (lat.ndim == 2) | (lon.ndim == 2):
+        in_lon = lon
+        in_lat = lat
     ##############################################################################
+
+    # Convert OLR to Tb if olr2tb flag is set
+    if olr2tb is True:
+        olr = rawdata[olr_varname].data
+        original_ir = olr_to_tb(olr)
+    else:
+        # Read Tb from data
+        original_ir = rawdata[tb_varname].data
+    rawdata.close()
+
 
     # Loop over each time
     for tt in range(0, len(time_decode)):
