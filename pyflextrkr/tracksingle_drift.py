@@ -267,11 +267,11 @@ def trackclouds(
 
         bt_new = np.array(
                     [pd.to_datetime(new_data["base_time"].data, unit="s")],
-                    dtype="datetime64[s]",
+                    dtype="datetime64[ns]",
                 )[0]
         bt_ref = np.array(
                     [pd.to_datetime(reference_data["base_time"].data, unit="s")],
-                    dtype="datetime64[s]",
+                    dtype="datetime64[ns]",
                 )[0]
 
         # Define output variables dictionary
@@ -380,6 +380,7 @@ def trackclouds(
                     "dtype": "int64",
                     "zlib": zlib,
                     "units": "seconds since 1970-01-01",
+                    # "_FillValue": np.iinfo(np.int64).min, #candice added
                 },
                 "newcloud_backward_index": {
                     "dtype": "int",
