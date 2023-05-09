@@ -105,7 +105,7 @@ def get_basetime_from_string(datestring):
 def get_basetime_from_filename(
     data_path,
     data_basename,
-    time_format="yyyymodd_hhmm",
+    time_format="yyyymodd_hhmmss",
 ):
     """
     Calculate base time (Epoch time) from filenames.
@@ -115,7 +115,7 @@ def get_basetime_from_filename(
             Data directory name.
         data_basename: string
             Data base name.
-        time_format: string (optional, default="yyyymodd_hhmm")
+        time_format: string (optional, default="yyyymodd_hhmmss")
             Specify file time format to extract date/time.
     Returns:
         data_filenames: list
@@ -175,7 +175,7 @@ def get_basetime_from_filename(
             logger.warning(f'File has invalid date/time, will not be included in processing: {ifile}')
             pass
         files_datestring[ii] = year + month + day
-        files_timestring[ii] = hour + minute
+        files_timestring[ii] = hour + minute + second
         data_filenames[ii] = data_path + ifile
     return (
         data_filenames,
@@ -189,7 +189,7 @@ def subset_files_timerange(
     data_basename,
     start_basetime,
     end_basetime,
-    time_format="yyyymodd_hhmm",
+    time_format="yyyymodd_hhmmss",
 ):
     """
     Subset files within given start and end time.
@@ -203,7 +203,7 @@ def subset_files_timerange(
             Start base time (Epoch time).
         end_basetime: int
             End base time (Epoch time).
-        time_format: string (optional, default="yyyymodd_hhmm")
+        time_format: string (optional, default="yyyymodd_hhmmss")
             Specify file time format to extract date/time.
 
     Returns:
@@ -334,7 +334,7 @@ def match_drift_times(
     # Create drift variables that match number of reference cloudid files
     # Number of reference cloudid files (1 less than total cloudid files)
     ncloudidfiles = len(cloudidfiles_timestring) - 1
-    datetime_drift_match = np.empty(ncloudidfiles, dtype='<U13')
+    datetime_drift_match = np.empty(ncloudidfiles, dtype='<U15')
     xdrifts_match = np.zeros(ncloudidfiles, dtype=int)
     ydrifts_match = np.zeros(ncloudidfiles, dtype=int)
     # Test if driftfile is defined
@@ -352,7 +352,7 @@ def match_drift_times(
         ydrifts = ds_drift['y'].values.squeeze()
 
         # Convert dateime64 objects to string array
-        datetime_drift = bt_drift.dt.strftime("%Y%m%d_%H%M").values
+        datetime_drift = bt_drift.dt.strftime("%Y%m%d_%H%M%S").values
 
         # Loop over each cloudid file time to find matching drfit data
         for itime in range(0, len(cloudidfiles_timestring) - 1):

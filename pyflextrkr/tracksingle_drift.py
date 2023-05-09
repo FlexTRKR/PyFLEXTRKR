@@ -37,9 +37,9 @@ def trackclouds(
     firstcloudidfilename, secondcloudidfilename = cloudid_filepairs[0], cloudid_filepairs[1]
     firstbasetime, secondbasetime = cloudid_basetimepairs[0], cloudid_basetimepairs[1]
     firstdatestring = pd.to_datetime(firstbasetime, unit="s").strftime("%Y%m%d")
-    firsttimestring = pd.to_datetime(firstbasetime, unit="s").strftime("%H%M")
+    firsttimestring = pd.to_datetime(firstbasetime, unit="s").strftime("%H%M%S")
     seconddatestring = pd.to_datetime(secondbasetime, unit="s").strftime("%Y%m%d")
-    secondtimestring = pd.to_datetime(secondbasetime, unit="s").strftime("%H%M")
+    secondtimestring = pd.to_datetime(secondbasetime, unit="s").strftime("%H%M%S")
     dataoutpath = config["tracking_outpath"]
     feature_varname = config.get("feature_varname", "feature_number")
     nfeature_varname = config.get("nfeature_varname", "nfeatures")

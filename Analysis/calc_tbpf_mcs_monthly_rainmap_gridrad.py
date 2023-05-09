@@ -28,7 +28,7 @@ if __name__ == "__main__":
     output_filename = f'{output_monthly_dir}mcs_rainmap_{year}{month}.nc'
 
     # Find all pixel files in a month
-    mcsfiles = sorted(glob.glob(f'{pixel_dir}/mcstrack_{year}{month}??_????.nc'))
+    mcsfiles = sorted(glob.glob(f'{pixel_dir}/mcstrack_{year}{month}*_*.nc'))
     print(pixel_dir)
     print(year, month)
     print('Number of files: ', len(mcsfiles))

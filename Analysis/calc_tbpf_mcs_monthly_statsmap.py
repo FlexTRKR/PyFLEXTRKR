@@ -1,15 +1,13 @@
 """
 Map Tb+PF robust MCS tracking statistics back to native pixel-level grid and save monthly mean data to a netCDF file.
 """
-import datetime as dt
 from pathlib import Path
 import numpy as np
 import pandas as pd
 import xarray as xr
 from netCDF4 import Dataset
-import sys, glob, os
+import sys, os
 import time, datetime, calendar, pytz
-from pytz import utc
 from pyflextrkr.ft_utilities import load_config
 
 # The times have a small offset from the exact times -- e.g. 34500 ns off. Correct this.
@@ -24,21 +22,6 @@ def round_times_to_nearest_second(dstracks, fields):
         dstracks[field].values[tmask] = remove_time_incaccuracy(
             dstracks[field].values[tmask]
         )
-
-# def make_base_time(filename):
-#     """
-#     Create basetime from a filename.
-#     This is a much faster way, if basetime in the file is exactly the same as filename.
-#     """
-#     timestr = os.path.basename(filename)[-16:-3]
-#     year = int(timestr[0:4])
-#     month = int(timestr[4:6])
-#     day = int(timestr[6:8])
-#     hour = int(timestr[9:11])
-#     minute = int(timestr[11:13])
-#     second = 0
-#     bt = calendar.timegm(datetime.datetime(year, month, day, hour, minute, second, tzinfo=utc).timetuple())
-#     return bt, filename
 
 def datetime_to_timestamp(dtime):
     """
@@ -74,7 +57,7 @@ def map_datetime2pixelfile(pixel_dir, mcs_pixelfilebase):
         # Get the filename without path and suffix [.stem], 
         # remove mcs_pixelfilebase and keep the time strings only [len(mcs_pixelfilebase):],
         # then convert it to Pandas datetime as key, and the file name as value
-        pd.to_datetime(p.stem[len(mcs_pixelfilebase):], format="%Y%m%d_%H%M"): p
+        pd.to_datetime(p.stem[len(mcs_pixelfilebase):], format="%Y%m%d_%H%M%S"): p
         for p in pixel_files
     }    
     return pixel_files, date_path_map
@@ -123,10 +106,6 @@ if __name__ == "__main__":
     lon = dspix.lon
     lat = dspix.lat
 
-    # Set up a dictionary that keyed by base_time, valued by filename.
-    # This is a way to move between time and pixel files
-    # time_to_pixfilename = {key:value for key, value in map(make_base_time, pixel_files)}
-
     # Get initial time for each track
     inittime = stats['base_time'].isel(times=0)
     # Get the month
@@ -173,9 +152,6 @@ if __name__ == "__main__":
     base_times = np.array([datetime_to_timestamp(t) for t in base_time.data.ravel()])
     base_times = np.reshape(base_times, base_time.shape)
 
-    # Double check if datetime matches the filename keyed from the dictionary
-    #base_times.data[5,1], time_to_pixfilename[base_times[5,1]]
-
     # Create variables for maps
     nt_uniq = len(np.unique(base_times))
     map_lifetime_all = np.zeros((nmcs, ny, nx))*np.NAN
@@ -204,6 +180,7 @@ if __name__ == "__main__":
     for imcs in range(nmcs):
         # Track numbers are offset by 1
         itrack = tracks.values[imcs] + 1
+        iduration = stats['track_duration'].data[imcs]
         ilifetime = lifetime.values[imcs]
         istartstatus = start_status.values[imcs]
         istart_splitcloudnumber = start_split_cloudnumber[imcs]
@@ -213,8 +190,8 @@ if __name__ == "__main__":
         temp_nmcs_ccs = np.zeros((ny, nx))
         temp_nmcs_pf = np.zeros((ny, nx))
         
-        # Loop over each time
-        for it in range(ntimes):
+        # Loop over each time up to the track duration
+        for it in range(iduration):
             imcsstatus = mcs_status.values[imcs,it]
             ibasetime = base_time.data[imcs, it]
 
@@ -226,11 +203,9 @@ if __name__ == "__main__":
             else:
                 pixfname = date_path_map.get(iTimestamp, None)
 
-            # itrack_date = pd.Timestamp(ibasetime).to_pydatetime()
-            # import pdb; pdb.set_trace()
             # Check to make sure the basetime key exist in the dictionary before proceeding
             if (pixfname is not None):
-    #             print(pixfname)
+                # print(pixfname)
                 
                 # Read pixel data
                 ds = Dataset(pixfname)
@@ -338,8 +313,7 @@ if __name__ == "__main__":
                 ds.close()
             else:
                 print(f'No pixel-file found: {base_times[imcs, it]}')
-                # import pdb; pdb.set_trace()
-        
+
         # Set the entire track map to a single value
         # This is suitable for mapping single value variables such as lifetime
         temp_track[np.where(temp_track == itrack)] = ilifetime

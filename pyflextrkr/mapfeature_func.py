@@ -66,7 +66,7 @@ def map_feature(
 
     #########################################################################
     # Get cloudid file associated with this time
-    file_datetime = time.strftime("%Y%m%d_%H%M", time.gmtime(np.copy(filebasetime)))
+    file_datetime = time.strftime("%Y%m%d_%H%M%S", time.gmtime(np.copy(filebasetime)))
     # Load cloudid data
     ds_in = xr.open_dataset(
         cloudid_filename,

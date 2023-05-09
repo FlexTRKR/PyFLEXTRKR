@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# Concatenantes MCS pixel-level masks from a continuous tracking period to a single netCDF file
-# Follows the SAAG common data format propocal
+# Concatenante MCS pixel-level masks from a continuous tracking period to a single netCDF file
+# Follow the SAAG common data format protocol
 # Output filename: feng_WY2019_GPM_SAAG-MCS-mask-file.nc
 
 module load nco

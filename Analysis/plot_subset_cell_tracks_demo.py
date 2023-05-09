@@ -5,6 +5,8 @@ Demonstrates ploting cell tracks on radar reflectivity snapshots for a single ra
 Optional arguments:
 -p 0 (serial), 1 (parallel)
 --extent lonmin lonmax latmin latmax (subset domain boundary)
+--subset 0 (no), 1 (yes) (subset data before plotting)
+--figbasename figure base name (output figure base name)
 --figsize width height (figure size in inches)
 --output output_directory (output figure directory)
 """
@@ -48,6 +50,8 @@ def parse_cmd_args():
     parser.add_argument("--radar_lat", help="radar latitude", type=float, required=True)
     parser.add_argument("--radar_lon", help="radar longitude", type=float, required=True)
     parser.add_argument("--extent", nargs='+', help="map extent (lonmin, lonmax, latmin, latmax)", type=float, default=None)
+    parser.add_argument("--subset", help="flag to subset data (0:no, 1:yes)", type=int, default=0)
+    parser.add_argument("--figbasename", help="output figure base name", default="")
     parser.add_argument("--figsize", nargs='+', help="figure size (width, height) in inches", type=float, default=[8,7])
     parser.add_argument("--output", help="ouput directory", default=None)
     args = parser.parse_args()
@@ -61,6 +65,8 @@ def parse_cmd_args():
         'radar_lat': args.radar_lat,
         'radar_lon': args.radar_lon,
         'extent': args.extent,
+        'subset': args.subset,
+        'figbasename': args.figbasename,
         'figsize': args.figsize,
         'out_dir': args.output,
     }
@@ -234,7 +240,7 @@ def plot_map(pixel_dict, plot_info, map_info, track_dict):
     pixel_bt = pixel_dict['pixel_bt']
     xx = pixel_dict['longitude']
     yy = pixel_dict['latitude']
-    comp_ref = pixel_dict['comp_ref']
+    dbz_comp = pixel_dict['dbz_comp']
     conv_mask = pixel_dict['conv_mask']
     tn_perim = pixel_dict['tn_perim']
     lon_tn = pixel_dict['lon_tn']
@@ -246,42 +252,46 @@ def plot_map(pixel_dict, plot_info, map_info, track_dict):
     cell_bt = track_dict['cell_bt']
     cell_lon = track_dict['cell_lon']
     cell_lat = track_dict['cell_lat']
+    dt_thres = track_dict['dt_thres']
+    time_res = track_dict['time_res']
     # Get plot info from dictionary
     levels = plot_info['levels']
     cmaps = plot_info['cmaps']
     # titles = plot_info['titles']
     cblabels = plot_info['cblabels']
     cbticks = plot_info['cbticks']
+    fontsize = plot_info['fontsize']
     timestr = plot_info['timestr']
     figname = plot_info['figname']
     figsize = plot_info['figsize']
-    dt_thres = track_dict['dt_thres']
-    time_res = track_dict['time_res']
+
+    marker_size = plot_info['marker_size']
+    lw_centroid = plot_info['lw_centroid']
+    cmap_tracks = plot_info['cmap_tracks']
+    cblabel_tracks = plot_info['cblabel_tracks']
+    cbticks_tracks = plot_info['cbticks_tracks']
+    lev_lifetime = plot_info['lev_lifetime']
+    radii = plot_info['radii']
+    azimuths = plot_info['azimuths']
+    radar_lon = plot_info['radar_lon']
+    radar_lat = plot_info['radar_lat']
+
     # Map domain, lat/lon ticks, background map features
     map_extent = map_info['map_extent']
     lonv = map_info['lonv']
     latv = map_info['latv']
-    radar_lon = map_info['radar_lon'] 
-    radar_lat = map_info['radar_lat']
 
     # Set up track lifetime colors
-    size_centroid = [30,30,30]
-    lw_centroid = [3,3,3]
-    cmap_tracks = 'Spectral_r'
-    cblabel_tracks = 'Lifetime (hour)'
-    cbticks_tracks = [1,2,3,4]
-    lev_lifetime = np.arange(0.5, 4.01, 0.5)
     cmap_lifetime = plt.get_cmap(cmap_tracks)
     norm_lifetime = mpl.colors.BoundaryNorm(lev_lifetime, ncolors=cmap_lifetime.N, clip=True)
     
-    radii = np.arange(20,101,20)  # radii for the range rings [km]
-    azimuths = np.arange(0,361,90)   # azimuth angles for HSRHI scans [degree]
+    # Set up map projection
     proj = ccrs.PlateCarree()
 
     # Set up figure
-    mpl.rcParams['font.size'] = 13
+    mpl.rcParams['font.size'] = fontsize
     mpl.rcParams['font.family'] = 'Helvetica'
-    fig = plt.figure(figsize=figsize, dpi=300)
+    fig = plt.figure(figsize=figsize, dpi=300, facecolor='w')
     gs = gridspec.GridSpec(1,2, height_ratios=[1], width_ratios=[1,0.03])
     gs.update(wspace=0.05, hspace=0.05, left=0.1, right=0.9, top=0.92, bottom=0.08)
     ax1 = plt.subplot(gs[0], projection=proj)
@@ -303,8 +313,8 @@ def plot_map(pixel_dict, plot_info, map_info, track_dict):
     # Plot reflectivity
     cmap = plt.get_cmap(cmaps)
     norm_ref = mpl.colors.BoundaryNorm(levels, ncolors=cmap.N, clip=True)
-    comp_ref = np.ma.masked_where(comp_ref < min(levels), comp_ref)
-    cf1 = ax1.pcolormesh(xx, yy, comp_ref, norm=norm_ref, cmap=cmap, transform=proj, zorder=2)
+    dbz_comp = np.ma.masked_where(dbz_comp < min(levels), dbz_comp)
+    cf1 = ax1.pcolormesh(xx, yy, dbz_comp, norm=norm_ref, cmap=cmap, transform=proj, zorder=2)
     # Overplot cell tracknumber perimeters
     Tn = np.ma.masked_where(tn_perim == 0, tn_perim)
     Tn[Tn > 0] = 10
@@ -334,15 +344,15 @@ def plot_map(pixel_dict, plot_info, map_info, track_dict):
                 # Change centroid marker, linewidth based on track lifetime [hour]
                 if (ilifetime < 1):
                     lw_c = lw_centroid[0]
-                    size_c = size_centroid[0]
+                    size_c = marker_size[0]
                     marker_style = marker_style_s
                 elif ((ilifetime >= 1) & (ilifetime < 2)):
                     lw_c = lw_centroid[1]
-                    size_c = size_centroid[1]
+                    size_c = marker_size[1]
                     marker_style = marker_style_m
                 elif (ilifetime >= 2):
                     lw_c = lw_centroid[2]
-                    size_c = size_centroid[2]
+                    size_c = marker_size[2]
                     marker_style = marker_style_l
                 else:
                     lw_c = 0
@@ -354,8 +364,10 @@ def plot_map(pixel_dict, plot_info, map_info, track_dict):
                                  norm=norm_lifetime, cmap=cmap_lifetime, transform=proj, zorder=4, **marker_style)
     # Overplot cell tracknumbers at current frame
     for ii in range(0, len(lon_tn)):
-        ax1.text(lon_tn[ii]+0.02, lat_tn[ii]+0.02, f'{tracknumbers[ii]:.0f}', color='k', size=10, 
-                 weight='bold', ha='left', va='center', transform=proj, zorder=4)
+        if (lon_tn[ii] > map_extent[0]) & (lon_tn[ii] < map_extent[1]) & \
+            (lat_tn[ii] > map_extent[2]) & (lat_tn[ii] < map_extent[3]):
+            ax1.text(lon_tn[ii]+0.02, lat_tn[ii]+0.02, f'{tracknumbers[ii]:.0f}', color='k', size=fontsize*0.8, 
+                    weight='bold', ha='left', va='center', transform=proj, zorder=4)
     
     # Plot colorbar for tracks
     cax = inset_axes(ax1, width="100%", height="100%", bbox_to_anchor=(.04, .97, .3, .03), bbox_transform=ax1.transAxes)
@@ -381,7 +393,7 @@ def plot_map(pixel_dict, plot_info, map_info, track_dict):
     return fig
 
 #-----------------------------------------------------------------------
-def work_for_time_loop(datafile, track_dict, map_info, figdir):
+def work_for_time_loop(datafile, track_dict, map_info, plot_info):
     """
     Process data for a single frame and make the plot.
 
@@ -392,14 +404,16 @@ def work_for_time_loop(datafile, track_dict, map_info, figdir):
             Dictionary containing tracking variables
         map_info: dictionary
             Dictionary containing mapping variables
-        figdir: string
-            Directory name for saving the plot
+        plot_info: dictionary
+            Dictionary containing plotting variables
 
     Returns:
         1.
     """
     
     map_extent = map_info.get('map_extent', None)
+    figdir = plot_info.get('figdir')
+    figbasename = plot_info.get('figbasename')
 
     # Read pixel-level data
     ds = xr.open_dataset(datafile)
@@ -426,22 +440,28 @@ def work_for_time_loop(datafile, track_dict, map_info, figdir):
     # Only plot if there is cell in the frame
     if (np.nanmax(tn) > 0):
         # Subset pixel data within the map domain
-        map_extent = map_info['map_extent']
-        buffer = 0.05  # buffer area for subset
-        lonmin, lonmax = map_extent[0]-buffer, map_extent[1]+buffer
-        latmin, latmax = map_extent[2]-buffer, map_extent[3]+buffer
-        mask = (ds['longitude'] >= lonmin) & (ds['longitude'] <= lonmax) & (ds['latitude'] >= latmin) & (ds['latitude'] <= latmax)
-        xx_sub = mask.where(mask == True, drop=True).lon.data
-        yy_sub = mask.where(mask == True, drop=True).lat.data
-        xmin = mask.where(mask == True, drop=True).lon.min().item()
-        xmax = mask.where(mask == True, drop=True).lon.max().item()
-        ymin = mask.where(mask == True, drop=True).lat.min().item()
-        ymax = mask.where(mask == True, drop=True).lat.max().item()
-        lon_sub = ds['longitude'].isel(lon=slice(xmin,xmax), lat=slice(ymin,ymax)).data
-        lat_sub = ds['latitude'].isel(lon=slice(xmin,xmax), lat=slice(ymin,ymax)).data
-        comp_ref = ds['comp_ref'].isel(lon=slice(xmin,xmax), lat=slice(ymin,ymax)).squeeze()
-        convmask_sub = ds['conv_mask'].isel(lon=slice(xmin,xmax), lat=slice(ymin,ymax)).squeeze()
-        tracknumber_sub = ds['tracknumber'].isel(lon=slice(xmin,xmax), lat=slice(ymin,ymax)).squeeze()
+        if subset == 1:
+            map_extent = map_info['map_extent']
+            buffer = 0.05  # buffer area for subset
+            lonmin, lonmax = map_extent[0]-buffer, map_extent[1]+buffer
+            latmin, latmax = map_extent[2]-buffer, map_extent[3]+buffer
+            mask = (ds['longitude'] >= lonmin) & (ds['longitude'] <= lonmax) & \
+                    (ds['latitude'] >= latmin) & (ds['latitude'] <= latmax)
+            xx_sub = mask.where(mask == True, drop=True).lon.data
+            yy_sub = mask.where(mask == True, drop=True).lat.data
+            lon_sub = ds['longitude'].where(mask == True, drop=True).squeeze()
+            lat_sub = ds['latitude'].where(mask == True, drop=True).squeeze()
+            dbz_comp = ds['dbz_comp'].where(mask == True, drop=True).squeeze()
+            convmask_sub = ds['conv_mask'].where(mask == True, drop=True).squeeze()
+            tracknumber_sub = ds['tracknumber'].where(mask == True, drop=True).squeeze()
+        else:
+            xx_sub = ds['lon'].data
+            yy_sub = ds['lat'].data
+            lon_sub = ds['longitude'].data.squeeze()
+            lat_sub = ds['latitude'].data.squeeze()
+            dbz_comp = ds['dbz_comp'].squeeze()
+            convmask_sub = ds['conv_mask'].squeeze()
+            tracknumber_sub = ds['tracknumber'].squeeze()
 
         # Get object perimeters
         tn_perim = label_perimeter(tracknumber_sub.data, dilationstructure)
@@ -452,22 +472,17 @@ def work_for_time_loop(datafile, track_dict, map_info, figdir):
         # Calculates cell center locations
         lon_tn, lat_tn, xx_tn, yy_tn, tnconv_unique = calc_cell_center(tnconv, lon_sub, lat_sub, xx_sub, yy_sub)
 
-        # Plotting variables
-        cmaps = 'gist_ncar'
-        levels = np.arange(-10, 60.1, 5)
-        cbticks = np.arange(-10, 60.1, 5)
-        timestr = ds['time'].squeeze().dt.strftime("%Y-%m-%d %H:%M UTC").data
         # titles = [timestr]
-        cblabels = 'Composite Reflectivity (dBZ)'
-        fignametimestr = ds['time'].squeeze().dt.strftime("%Y%m%d_%H%M").data.item()
-        figname = f'{figdir}{fignametimestr}.png'
+        timestr = ds['time'].squeeze().dt.strftime("%Y-%m-%d %H:%M:%S UTC").data
+        fignametimestr = ds['time'].squeeze().dt.strftime("%Y%m%d_%H%M%S").data.item()
+        figname = f'{figdir}{figbasename}{fignametimestr}.png'
 
         # Put variables in dictionaries
         pixel_dict = {
             'pixel_bt': pixel_bt,
             'longitude': lon_sub, 
             'latitude': lat_sub, 
-            'comp_ref': comp_ref, 
+            'dbz_comp': dbz_comp, 
             'tn': tracknumber_sub,
             'conv_mask': convmask_sub,
             'tn_perim': tn_perim, 
@@ -475,16 +490,9 @@ def work_for_time_loop(datafile, track_dict, map_info, figdir):
             'lat_tn': lat_tn, 
             'tracknumber_unique': tnconv_unique,
         }
-        plot_info = {
-            'levels': levels, 
-            'cmaps': cmaps, 
-            # 'titles': titles, 
-            'cblabels': cblabels, 
-            'cbticks': cbticks, 
-            'timestr': timestr, 
-            'figname': figname,
-            'figsize': map_info['figsize'],
-        }
+        plot_info['timestr'] = timestr
+        plot_info['figname'] = figname
+
         # Call plotting function
         fig = plot_map(pixel_dict, plot_info, map_info, track_dict)
         plt.close(fig)
@@ -506,8 +514,43 @@ if __name__ == "__main__":
     radar_lat = args_dict.get('radar_lat')
     radar_lon = args_dict.get('radar_lon')
     map_extent = args_dict.get('extent')
+    subset = args_dict.get('subset')
+    figbasename = args_dict.get('figbasename')
     figsize = args_dict.get('figsize')
     out_dir = args_dict.get('out_dir')
+
+    # Specify plotting info
+    # Reflectivity color levels
+    levels = np.arange(-10, 60.1, 5)
+    lev_lifetime = np.arange(0.5, 4.01, 0.5)
+    # Colorbar ticks & labels
+    cbticks = np.arange(-10, 60.1, 5)
+    cblabels = 'Composite Reflectivity (dBZ)'
+    cblabel_tracks = 'Lifetime (hour)'
+    cbticks_tracks = [1,2,3,4]
+    # Colormaps
+    cmaps = 'gist_ncar'     # Reflectivity
+    cmap_tracks = 'Spectral_r'  # Lifetime
+    
+    plot_info = {
+        'levels': levels,
+        'lev_lifetime': lev_lifetime,
+        'cbticks': cbticks,
+        'cbticks_tracks': cbticks_tracks,
+        'cblabels': cblabels,
+        'cblabel_tracks': cblabel_tracks,
+        'fontsize': 13,
+        'cmaps': cmaps,
+        'cmap_tracks': cmap_tracks,
+        'marker_size': [30,30,30],    # track centroid marker size (short, medium, long lived)
+        'lw_centroid': [3,3,3],         # track path line width
+        'radii': np.arange(20,101,20),  # radii for the radar range rings [km]
+        'azimuths': np.arange(0,361,90),   # azimuth angles for HSRHI scans [degree]
+        'figbasename': figbasename,
+        'figsize': figsize,
+        'radar_lon': radar_lon,
+        'radar_lat': radar_lat,
+    }
 
     # Customize lat/lon labels
     lonv = None
@@ -515,11 +558,9 @@ if __name__ == "__main__":
     # Put map info in a dictionary
     map_info = {
         'map_extent': map_extent,
+        'subset': subset,
         'lonv': lonv,
         'latv': latv,
-        'figsize': figsize,
-        'radar_lon': radar_lon,
-        'radar_lat': radar_lat,
     }
 
     # Tracks that end longer than this threshold from the current pixel-level frame are not plotted
@@ -553,7 +594,7 @@ if __name__ == "__main__":
         pixeltracking_filebase,
         start_basetime,
         end_basetime,
-        time_format="yyyymodd_hhmm",
+        time_format="yyyymodd_hhmmss",
     )
     print(f'Number of pixel files: {len(datafiles)}')
 
@@ -563,6 +604,8 @@ if __name__ == "__main__":
     else:
         figdir = out_dir
     os.makedirs(figdir, exist_ok=True)
+    # Add to plot_info dictionary
+    plot_info['figdir'] = figdir
 
     # Get track stats data
     track_dict = get_track_stats(trackstats_file, start_datetime, end_datetime, dt_thres)
@@ -571,7 +614,7 @@ if __name__ == "__main__":
     if run_parallel == 0:
         for ifile in range(len(datafiles)):
             print(datafiles[ifile])
-            result = work_for_time_loop(datafiles[ifile], track_dict, map_info, figdir)
+            result = work_for_time_loop(datafiles[ifile], track_dict, map_info, plot_info)
 
     # Parallel option
     elif run_parallel == 1:
@@ -584,7 +627,7 @@ if __name__ == "__main__":
         results = []
         for ifile in range(len(datafiles)):
             print(datafiles[ifile])
-            result = dask.delayed(work_for_time_loop)(datafiles[ifile], track_dict, map_info, figdir)
+            result = dask.delayed(work_for_time_loop)(datafiles[ifile], track_dict, map_info, plot_info)
             results.append(result)
 
         # Trigger dask computation

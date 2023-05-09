@@ -1,5 +1,5 @@
 ---
-# Global GPM based MCS tracking configuration file
+# MCS tracking configuration file for SAAG WRF regridded to GPM IMERG
 # Tracking uses collocated Tb + Precipitation
 
 # Processing steps:
@@ -22,15 +22,15 @@ dask_tmp_dir: '/tmp'  # Dask temporary directory if run_parallel=1
 timeout: 360  # [seconds] Dask timeout limit
 
 # Start/end date and time
-startdate: '20190125.0000'
-enddate: '20190127.0000'
+startdate: '20200101.0000'
+enddate: '20200102.0000'
 
 # Specify tracking input data date/time string format
 # This is the preprocessed file that contains Tb & rainrate
 # E.g., databasename20181101.011503.nc --> yyyymodd.hhmmss
 # E.g., databasename2018-11-01_01:15:00 --> yyyy-mo-dd_hh:mm:ss
-time_format: 'yyyymoddhh'
-databasename:  'merg_'  # Note: include all strings before the time (including "_", ".")
+time_format: 'yyyymodd'
+databasename: 'BASENAME'  # Note: include all strings before the time (including "_", ".")
 
 # Input files directory
 clouddata_path: 'INPUT_DIR/'
@@ -41,30 +41,23 @@ tracking_path_name: 'tracking'
 stats_path_name: 'stats'
 pixel_path_name: 'mcstracking'
 
-# Land mask file (optional, leave it an empty string if not available)
-landmask_filename: 'INPUT_DIR/IMERG_landmask_saag.nc'
+# Land mask file (optional)
+landmask_filename: ''
 landmask_varname: 'landseamask'
-landmask_x_dimname: 'lon'
-landmask_y_dimname: 'lat'
-landmask_x_coordname: 'lon'
-landmask_y_coordname: 'lat'
 
 # Specific to GPM Tb+IMERG combined dataset
 pixel_radius:  10.0  # [km] Spatial resolution of the input data
 datatimeresolution: 1.0  # [hour] Temporal resolution of the input data
 # Variable names in the input data
-tb_varname:  'Tb'
-pcp_varname: 'precipitationCal'
-clouddatasource:  'gpmirimerg'
-pfdatasource:  'imerg'
+tb_varname: 'Tb'
+pcp_varname: 'PR'
+clouddatasource: 'model'
+pfdatasource: 'imerg'  # (this is for pf_landfrac)
 time_dimname: 'time'
-x_dimname: 'lon'
-y_dimname: 'lat'
+x_dimname: 'xc'
+y_dimname: 'yc'
 x_coordname: 'lon'
 y_coordname: 'lat'
-idclouds_hourly: 1  # 0: No (use all available time frames in input files), 1: Yes (only use hourly time frame)
-idclouds_minute: 30  # 0 or 30 min, which minute mark to use the Tb data
-idclouds_dt_thresh: 5  # [minute], time difference allowed between actual data and idclouds_minute
 
 # Specify types of feature being tracked
 # This adds additional feature-specific statistics to be computed
@@ -72,7 +65,7 @@ feature_type: 'tb_pf'
 
 # Cloud identification parameters
 mincoldcorepix:  4  # Minimum number of pixels for the cold core
-smoothwindowdimensions:  10  # Dimension of the Box2DKernel filter on Tb.
+smoothwindowdimensions:  5  # Dimension of the Box2DKernel filter on Tb.
 medfiltsize: 5      # Window size to perform medfilt2d to fill missing Tb pixels, must be an odd number
 geolimits: [-60, -360, 60, 360] # 4-element array to subset domain boundaries [lat_min, lon_min, lat_max, lon_max]
 area_thresh:  800  # [km^2] Minimum area to define a cloud
@@ -112,23 +105,26 @@ mcs_tb_split_duration:  12  # [hour] Tb tracks smaller or equal to this length w
 mcs_tb_merge_duration:  12  # [hour] Tb tracks smaller or equal to this length will be included with the MCS merges into
 mcs_tb_gap: 1  # [unitless] Allowable temporal gap in Tb data for MCS area threshold
 # MCS PF parameters
-mcs_pf_majoraxis_thresh:  100  # [km] MCS PF major axis length lower limit
-max_pf_majoraxis_thresh:  1800  # [km] MCS PF major axis length upper limit
+mcs_pf_majoraxis_thresh:  0  # [km] MCS PF major axis length lower limit
+max_pf_majoraxis_thresh:  100000  # [km] MCS PF major axis length upper limit
 mcs_pf_durationthresh:  4  # [hour] PF minimum length of mcs
 mcs_pf_majoraxis_for_lifetime:  20  # [km] Minimum PF size to count PF lifetime
 mcs_pf_gap:  1  # [unitless] Allowable temporal gap in PF data for MCS characteristics
 landfrac_thresh: 90  # [%] Define threshold for PF land fraction
 
 # Specify rain rate parameters
-pf_rr_thres:  2.0  # Rain rate threshold [mm/hr]
+pf_rr_thres:  2.0  # [mm/hr] Rain rate threshold
 nmaxpf: 3  # Maximum number of precipitation features that can be within a cloud feature
 nmaxcore: 20  # Maximum number of convective cores that can be within a cloud feature
 pcp_thresh:  1.0  # Pixels with hourly precipitation larger than this will be labeled with track number
-heavy_rainrate_thresh:  10.0  # Heavy rain rate threshold [mm/hr]
+heavy_rainrate_thresh:  10.0  # [mm/hr] Heavy rain rate threshold
+mcs_min_rainvol_thresh: 20000   #  [km^2 mm/h] Min rain volumne threshold
+mcs_volrain_durationthresh: 1.0   # [hour] Min volume rain threshold
 
 # MCS PF parameter coefficients [intercept, slope]
 # These parameters are derived with pf_rr_thres:  2 mm/h
-# coefs_pf_area:  [1962, 0]           # 1% [changed slope to 0: independent of lifetime]
+# coefs_pf_area:  [1962.11, -14.598]      # 1%
+# coefs_pf_area:  [1962.11, 0]           # 1% [changed slope to 0: independent of lifetime]
 # coefs_pf_area:  [2119.02, 61.143]      # 3%
 coefs_pf_area:  [2874.05, 89.825]  # 5% [recommended]
 # coefs_pf_area:  [4160.82, 93.077]      # 7%
@@ -166,7 +162,6 @@ fillval: -9999
 mcstbstats_filebase: 'mcs_tracks_'
 mcspfstats_filebase: 'mcs_tracks_pf_'
 mcsrobust_filebase: 'mcs_tracks_robust_'
-# mcsrobust_filebase: 'mcs_tracks_final_extc_'
 pixeltracking_filebase: 'mcstrack_'
 mcsfinal_filebase: 'mcs_tracks_final_'
 

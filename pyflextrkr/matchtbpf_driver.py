@@ -77,7 +77,7 @@ def match_tbpf_tracks(config):
         cloudid_filebase,
         config["start_basetime"],
         config["end_basetime"],
-        time_format="yyyymodd_hhmm",
+        # time_format="yyyymodd_hhmmss",
     )
     cloudidfile_list = infiles_info[0]
     cloudidfile_basetime = infiles_info[1]

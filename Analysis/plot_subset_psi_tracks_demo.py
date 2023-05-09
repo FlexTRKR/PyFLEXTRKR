@@ -505,7 +505,7 @@ if __name__ == "__main__":
     # Subtract start_datetime by TimeDelta to include tracks 
     # that start before the start_datetime but may not have ended yet
     TimeDelta = pd.Timedelta(days=4)
-    start_datetime_4stats = (pd.to_datetime(start_datetime) - TimeDelta).strftime('%Y-%m-%dT%H')
+    start_datetime_4stats = (pd.to_datetime(start_datetime) - TimeDelta).strftime('%Y-%m-%dT%H:%M:%S')
 
     # Find all pixel-level files that match the input datetime
     datafiles, \
@@ -516,7 +516,7 @@ if __name__ == "__main__":
         pixeltracking_filebase,
         start_basetime,
         end_basetime,
-        time_format="yyyymodd_hhmm",
+        time_format="yyyymodd_hhmmss",
     )
     print(f'Number of pixel files: {len(datafiles)}')
 

@@ -320,10 +320,14 @@ def plot_map_2panels(pixel_dict, plot_info, map_info, track_dict):
 
     # MCS track number mask
     cmap = plt.get_cmap(cmaps['tn_cmap'])
+    # If only 1 track, add a number to make at least 2 color levels
+    if len(levels['tn_levels']) == 1:
+        levels['tn_levels'] = np.append(levels['tn_levels'], levels['tn_levels']+1)
     norm = mpl.colors.BoundaryNorm(levels['tn_levels'], ncolors=cmap.N, clip=True)
-    # norm = mpl.colors.BoundaryNorm(levels['tn_levels'], ncolors=cmap.N, clip=False)
     tracknumber_masked = np.ma.masked_invalid(tracknumber)
-    cm1 = ax2.pcolormesh(lon, lat, tracknumber_masked, norm=norm, cmap=cmap, transform=data_proj, zorder=2, alpha=0.7)
+    # cm1 = ax2.pcolormesh(lon, lat, tracknumber_masked, norm=norm, cmap=cmap, transform=data_proj, zorder=2, alpha=0.7)
+    cm1 = ax2.pcolormesh(lon, lat, tracknumber_masked, vmin=min(levels['tn_levels']), vmax=max(levels['tn_levels']),
+                         cmap=cmap, transform=data_proj, zorder=2, alpha=0.7)
     
     # Precipitation
     cmap = plt.get_cmap(cmaps['pcp_cmap'])
@@ -491,8 +495,8 @@ def work_for_time_loop(datafile, track_dict, map_info, plot_info, config):
         tn_perim = label_perimeter(tracknumber_sub.data, dilationstructure)
         
         # Plotting variables
-        fdatetime = pd.to_datetime(ds['time'].data.item()).strftime('%Y%m%d_%H%M')
-        timestr = pd.to_datetime(ds['time'].data.item()).strftime('%Y-%m-%d %H:%M UTC')
+        fdatetime = pd.to_datetime(ds['time'].data.item()).strftime('%Y%m%d_%H%M%S')
+        timestr = pd.to_datetime(ds['time'].data.item()).strftime('%Y-%m-%d %H:%M:%S UTC')
         figname = f'{figdir}{figbasename}{fdatetime}.png'
 
         # Put pixel data in a dictionary
@@ -549,6 +553,7 @@ if __name__ == "__main__":
     tb_cmap = truncate_colormap(plt.get_cmap('jet'), minval=0.05, maxval=0.95)
     pcp_cmap = truncate_colormap(plt.get_cmap('viridis'), minval=0.2, maxval=1.0)
     tn_cmap = cc.cm["glasbey_light"]
+    # tn_cmap = cc.cm["glasbey"]
     cmaps = {'tb_cmap': tb_cmap, 'pcp_cmap': pcp_cmap, 'tn_cmap': tn_cmap}
     titles = {'tb_title': '(a) IR Brightness Temperature', 'pcp_title': '(b) Precipitation (Tracked MCSs Shaded)'}
     plot_info = {
@@ -631,7 +636,7 @@ if __name__ == "__main__":
         pixeltracking_filebase,
         start_basetime,
         end_basetime,
-        time_format="yyyymodd_hhmm",
+        time_format="yyyymodd_hhmmss",
     )
     print(f'Number of pixel files: {len(datafiles)}')
 

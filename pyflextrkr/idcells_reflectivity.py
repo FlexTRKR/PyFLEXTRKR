@@ -234,13 +234,13 @@ def idcells_reflectivity(
     timestamp = time_coords[0]
     # Convert to basetime (i.e., Epoch time)
     # This is a more flexible way that can handle non-standard 360 day calendar
-    # file_basetime = np.array([(np.datetime64(timestamp).item() - datetime(1970,1,1,0,0,0)).total_seconds()])
-    file_basetime = time_coords[0].values.tolist() / 1e9
+    # Get date/time as Timestamp
+    iTime = time_coords.indexes['time'][0]
+    file_basetime = np.array([(np.datetime64(iTime).item() - datetime(1970,1,1,0,0,0)).total_seconds()])
+
     # Convert to strings
     file_datestring = timestamp.dt.strftime("%Y%m%d").item()
-    file_timestring = timestamp.dt.strftime("%H%M").item()
-    # file_datestring = timestamp.strftime("%Y%m%d")
-    # file_timestring = timestamp.strftime("%H%M")
+    file_timestring = timestamp.dt.strftime("%H%M%S").item()
     cloudid_outfile = (
         config["tracking_outpath"] +
         config["cloudid_filebase"] +
