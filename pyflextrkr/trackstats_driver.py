@@ -52,7 +52,9 @@ def trackstats_driver(config):
     # Load track data
     logger.debug("Loading tracknumbers data")
     cloudtrack_file = f"{stats_path}{tracknumbers_filebase}{startdate}_{enddate}.nc"
+    # VFD: netcdf4 OSError , h5netcdf
     ds = xr.open_dataset(cloudtrack_file,
+                         engine='h5netcdf',
                          mask_and_scale=False,
                          decode_times=False,
                          concat_characters=True)

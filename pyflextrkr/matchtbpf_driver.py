@@ -61,6 +61,7 @@ def match_tbpf_tracks(config):
 
     mcsirstats_file = f"{stats_path}{mcstbstats_filebase}{startdate}_{enddate}.nc"
     ds = xr.open_dataset(mcsirstats_file,
+                         engine='h5netcdf',
                          mask_and_scale=False,
                          decode_times=False)
     ir_ntracks = ds.dims[tracks_dimname]

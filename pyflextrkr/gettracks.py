@@ -64,7 +64,7 @@ def gettracknumbers(config):
     trackstatus = np.full((1, nfiles_m, maxnclouds), fillval, dtype=int)
     trackmergenumber = np.full((1, nfiles_m, maxnclouds), fillval, dtype=int)
     tracksplitnumber = np.full((1, nfiles_m, maxnclouds), fillval, dtype=int)
-    basetime = np.empty(nfiles_m, dtype="datetime64[s]")
+    basetime = np.empty(nfiles_m, dtype="datetime64[ns]")
     trackreset = np.full((1, nfiles_m, maxnclouds), fillval, dtype=int)
 
     ############################################################################
@@ -73,7 +73,7 @@ def gettracknumbers(config):
     logger.debug(f"tracking_outpath: {tracking_outpath}")
     logger.debug(f"files[0]: {files[0]}")
     # singletracking_data = Dataset(tracking_outpath + files[0], "r")
-    singletracking_data = Dataset(files[0], "r")
+    singletracking_data = Dataset(files[0], "r", format="NETCDF4")
 
     # Number of clouds in reference file
     nclouds_reference = int(np.nanmax(singletracking_data["nclouds_ref"][:]) + 1)
@@ -120,7 +120,7 @@ def gettracknumbers(config):
         # logger.debug('Load track data')
         # logger.debug((time.ctime()))
         # singletracking_data = Dataset(tracking_outpath + files[ifile], "r")
-        singletracking_data = Dataset(files[ifile], "r")
+        singletracking_data = Dataset(files[ifile], "r", format="NETCDF4")
         # Number of clouds in reference file
         nclouds_reference = int(np.nanmax(singletracking_data["nclouds_ref"][:]) + 1)
         nclouds_new = int(np.nanmax(singletracking_data["nclouds_new"][:]) + 1)

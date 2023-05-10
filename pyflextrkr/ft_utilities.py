@@ -346,7 +346,7 @@ def match_drift_times(
         logger.info(f"Drift file used: {driftfile}")
 
         # Read the drift file
-        ds_drift = xr.open_dataset(driftfile)
+        ds_drift = xr.open_dataset(driftfile, engine='netcdf4') # netcdf4 h5netcdf
         bt_drift = ds_drift['time']
         xdrifts = ds_drift['x'].values.squeeze()
         ydrifts = ds_drift['y'].values.squeeze()
@@ -395,7 +395,9 @@ def load_sparse_trackstats(
             Dictionary containing sparse array variables.
     """
     # xr.set_options(keep_attrs=True)
+    # netcdf4 h5netcdf
     ds_all = xr.open_dataset(statistics_file,
+                             engine='h5netcdf',
                              mask_and_scale=False,
                              decode_times=False)
     # Get sparse array info
