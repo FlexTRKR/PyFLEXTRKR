@@ -4,6 +4,7 @@ import datetime, calendar, time
 from pytz import utc
 import yaml
 import xarray as xr
+import pandas as pd
 import logging
 from scipy.sparse import csr_matrix
 
@@ -237,6 +238,62 @@ def subset_files_timerange(
         files_datestring,
         files_timestring,
     )
+
+def get_timestamp_from_filename_single(
+    filename,
+    data_basename,
+    time_format="yyyymodd_hhmmss",
+):
+    """
+    Calculate Timestamp from a filename.
+
+    Args:
+        filename: string
+            File name.
+        data_basename: string
+            Data base name.
+        time_format: string (optional, default="yyyymodd_hhmmss")
+            Specify file time format to extract date/time.
+    Returns:
+        file_timestamp: Pandas Timestamp
+            Timestamp of the file.
+    """
+    logger = logging.getLogger(__name__)
+    nleadingchar = len(data_basename)
+
+    yyyy_idx = time_format.find("yyyy")
+    mo_idx = time_format.find("mo")
+    dd_idx = time_format.find("dd")
+    hh_idx = time_format.find("hh")
+    mm_idx = time_format.find("mm")
+    ss_idx = time_format.find("ss")
+
+    # Add basetime character counts to get the actual date/time string positions
+    yyyy_idx = nleadingchar + yyyy_idx
+    mo_idx = nleadingchar + mo_idx
+    dd_idx = nleadingchar + dd_idx
+    hh_idx = nleadingchar + hh_idx if (hh_idx != -1) else None
+    mm_idx = nleadingchar + mm_idx if (mm_idx != -1) else None
+    ss_idx = nleadingchar + ss_idx if (ss_idx != -1) else None
+
+    # Remove path from filename
+    ifile = os.path.basename(filename)
+    year = ifile[yyyy_idx:yyyy_idx + 4]
+    month = ifile[mo_idx:mo_idx + 2]
+    day = ifile[dd_idx:dd_idx + 2]
+    # If hour, minute, second is not in time_format, assume 0
+    hour = ifile[hh_idx:hh_idx + 2] if (hh_idx is not None) else '00'
+    minute = ifile[mm_idx:mm_idx + 2] if (mm_idx is not None) else '00'
+    second = ifile[ss_idx:ss_idx + 2] if (ss_idx is not None) else '00'
+
+    # Check month, day, hour, minute, second valid values
+    if (0 <= int(month) <= 12) & (0 <= int(day) <= 31) & \
+            (0 <= int(hour) <= 23) & (0 <= int(minute) <= 59) & (0 <= int(second) <= 59):
+        file_timestamp = pd.Timestamp(f"{year}-{month}-{day}T{hour}:{minute}:{second}")
+    else:
+        logger.warning(f'File has invalid date/time, will return timestampe as NaN: {filename}')
+        file_timestamp = np.NaN
+    return file_timestamp
 
 def subset_ds_geolimit(
         ds_in,

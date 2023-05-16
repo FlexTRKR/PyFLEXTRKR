@@ -1,8 +1,8 @@
 import sys
 import numpy as np
 import xarray as xr
+import pandas as pd
 import logging
-from datetime import datetime
 from pyflextrkr.steiner_func import make_dilation_step_func
 from pyflextrkr.steiner_func import mod_steiner_classification
 from pyflextrkr.steiner_func import expand_conv_core
@@ -234,10 +234,7 @@ def idcells_reflectivity(
     timestamp = time_coords[0]
     # Convert to basetime (i.e., Epoch time)
     # This is a more flexible way that can handle non-standard 360 day calendar
-    # Get date/time as Timestamp
-    iTime = time_coords.indexes['time'][0]
-    file_basetime = np.array([(np.datetime64(iTime).item() - datetime(1970,1,1,0,0,0)).total_seconds()])
-
+    file_basetime = np.array([(pd.to_datetime(timestamp.data) - pd.Timestamp('1970-01-01T00:00:00')).total_seconds()])
     # Convert to strings
     file_datestring = timestamp.dt.strftime("%Y%m%d").item()
     file_timestring = timestamp.dt.strftime("%H%M%S").item()
@@ -704,6 +701,7 @@ def get_composite_reflectivity_radar(input_filename, config):
     sfc_dz_min = config['sfc_dz_min']
     sfc_dz_max = config['sfc_dz_max']
     radar_sensitivity = config['radar_sensitivity']
+    time_coordname = config.get('time_coordname', 'time')
     time_dimname = config.get('time', 'time')
     x_dimname = config.get('x_dimname', 'x')
     y_dimname = config.get('y_dimname', 'y')
@@ -730,8 +728,7 @@ def get_composite_reflectivity_radar(input_filename, config):
     # Drop extra dimensions, reorder to [time, z, y, x]
     ds = ds.drop_dims(dims_drop).transpose(time_dimname, z_dimname, y_dimname, x_dimname) 
     # Create time_coords
-    # time_coords = ds.indexes['time']
-    time_coords = ds[time_dimname]
+    time_coords = ds[time_coordname]
     # Get data coordinates and dimensions
     height = ds[z_dimname].squeeze().data
     y_coords = ds[y_varname].data
@@ -826,6 +823,7 @@ def get_composite_reflectivity_csapr_cacti(input_filename, config):
     sfc_dz_min = config['sfc_dz_min']
     sfc_dz_max = config['sfc_dz_max']
     radar_sensitivity = config['radar_sensitivity']
+    time_coordname = config.get('time_coordname', 'time')
     time_dimname = config.get('time', 'time')
     x_dimname = config.get('x_dimname', 'x')
     y_dimname = config.get('y_dimname', 'y')
@@ -846,7 +844,7 @@ def get_composite_reflectivity_csapr_cacti(input_filename, config):
     # Reorder the dimensions using dimension names to [time, z, y, x]
     ds = ds.transpose(time_dimname, z_dimname, y_dimname, x_dimname)
     # Create time_coords
-    time_coords = ds[time_dimname]
+    time_coords = ds[time_coordname]
     # Get data coordinates and dimensions
     height = ds[z_dimname].squeeze().data
     y_coords = ds[y_varname].data
