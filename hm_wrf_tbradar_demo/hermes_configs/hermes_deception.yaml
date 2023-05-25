@@ -1,0 +1,174 @@
+# Example Hermes configuration file
+
+# TODO(chogan): Allow specifying capacity values in bytes, KiB, or GiB.
+
+# The number of buffering tiers available. For example, RAM, NVMe, burst
+# buffer, and parallel file system would be 4 tiers.
+num_devices: 2
+# For now this should be the same as num_devices.
+num_targets: 2
+
+# The maximum buffering capacity in MiB of each device. Here we say that all 4
+# devices get 50 MiB of buffering capacity.
+# capacities_mb: [1000, 5000]
+capacities_gb: [20, 4]
+
+# The size of the smallest available buffer in KiB. In general this should be
+# the page size of your system for byte addressable storage, and the block size
+# of the storage device for block addressable storage.
+block_sizes_kb: [4, 4] #[4, 4] [16, 16]
+# block_sizes_mb: [1, 1]
+# The nummber of size categories for each device. Here we say that each of our 4
+# devices should have 4 different sizes of buffers.
+num_slabs: [4, 4] #[1,1] #[4, 4]
+
+# The number of blocks (the size of which is chosen in block_sizes_kb) that each
+# device should contain for each slab (controlled by num_slabs). This allows for
+# precise control of the distibution of buffer sizes.
+slab_unit_sizes: [
+  [1, 4, 16, 32],
+  [1, 4, 16, 32],
+]
+
+# The percentage of buffering capacity per device to allocate for each slab.
+# Each row should add up to 1. In this example, we have 4 devices, each with 4
+# slabs, and each slab is allotted 25% of the device's total buffering capacity.
+desired_slab_percentages: [
+  [0.25, 0.25, 0.25, 0.25],
+  [0.25, 0.25, 0.25, 0.25],
+]
+
+# The maximum theoretical bandwidth (as advertised by the manufacturer) in
+# MiB/sec. of each device.
+bandwidths_mbps: [6000, 1000]
+# The latency in microseconds of each device (as advertised by the manufacturer).
+latencies_us: [15, 250000]
+
+# Hermes memory management. The following 4 values should add up to 1.
+# The percentage of Hermes memory to reserve for RAM buffers.
+buffer_pool_arena_percentage: 0.80
+# The percentage of Hermes memory to reserve for metadata.
+metadata_arena_percentage: 0.11
+# The percentage of Hermes memory to reserve for short term storage.
+transient_arena_percentage: 0.09
+
+# The maxiumum number of buckets(=files) that can be created.
+max_buckets_per_node: 256
+# The maxiumum number of virtual buckets that can be created.
+max_vbuckets_per_node: 128
+# The interval in milliseconds at which to update the global system view.
+system_view_state_update_interval_ms: 1000
+
+# The mount point of each device. RAM should be the empty string. For block
+# devices, this is the directory where Hermes will create buffering files. For
+# object storage or cloud targets, this will be a url.
+# "/scratch/tang584/hermes_slabs", 
+# mount_points: ["", "/rcfs/projects/chess/tang584/hermes_slabs"] # PFS
+mount_points: ["", "/scratch/tang584/hermes_slabs"] # local SSD
+
+# For each device, indicate '1' if it is shared among nodes (e.g., burst
+# buffers), or '0' if it is per node (e.g., local NVMe).
+is_shared_device: [0,0]
+# The mount point of a PFS or object store for swap space, in the event that
+# Hermes buffers become full.
+# swap_mount: "/qfs/projects/oddite/tang584/hermes_swaps" # the NFS at Deception
+swap_mount: "/rcfs/projects/chess/tang584/hermes_slabs" # the PFS at Deception
+# The number of times the buffer organizer will attempt to place a blob from
+# swap space into the hierarchy before giving up.
+num_buffer_organizer_retries: 10
+
+# A path to a file containing a list of server names, 1 per line. If your
+# servers are named according to a pattern (e.g., server-1, server-2, etc.),
+# prefer the `rpc_server_base_name` and `rpc_host_number_range` options. If this
+# option is not empty, it will override anything in `rpc_server_base_name`.
+# rpc_server_host_file: ""
+rpc_server_host_file: "/qfs/people/tang584/scripts/PyFLEXTRKR/hm_wrf_tbradar_demo/host_ip"
+
+# Base hostname for the RPC servers.
+rpc_server_base_name: "" #"localhost"
+# RPC server name suffix. This is appended to the the base name plus host
+# number.
+rpc_server_suffix: "" #.ibnet
+# The RPC protocol. This must come from the documentation of the specific RPC
+# library in use.
+rpc_protocol: "ucx+tcp" #"ofi+sockets" #"ucx+rc #"ucx+ud" #"ucx+dc"
+# RPC domain name for verbs transport. Blank for tcp.
+rpc_domain: "" #mlx5_0:1 #mlx5_2:1
+# Desired RPC port number.
+rpc_port: 48080 #8080
+# Desired RPC port number for buffer organizer.
+buffer_organizer_port: 48081
+# A list of host numbers. Host names are constructed as "rpc_server_base_name +
+# host_number + rpc_server_suffix." Each entry in the rpc_host_number_range_list
+# can be either a single number, or a range, which is 2 numbers separated by a
+# hyphen (-). For example the list [1, 3-5, 7, 8-10] will be expanded to
+# [1, 3, 4, 5, 7, 8, 9, 10].
+rpc_host_number_range: [2]
+# The number of handler threads for each RPC server.
+rpc_num_threads: 1
+# The number of threads used in the background organization of internal Hermes buffers.
+buffer_organizer_num_threads: 4
+# The shared memory prefix for the hermes shared memory segment. A user name
+# will be automatically appended.
+buffer_pool_shmem_name: "/hermes_buffer_pool_"
+
+# Choose Random, RoundRobin, or MinimizeIoTime
+default_placement_policy: "MinimizeIoTime"
+
+# If true (1) the RoundRobin placement policy algorithm will split each Blob
+# into a random number of smaller Blobs.
+default_rr_split: 0
+
+# For each device, the minimum and maximum percent capacity threshold at which
+# the BufferOrganizer will trigger. Decreasing the maximum thresholds will cause
+# the BufferOrganizer to move data to lower devices, making more room in faster
+# devices (ideal for write-heavy workloads). Conversely, increasing the minimum
+# threshold will cause data to be moved from slower devices into faster devices
+# (ideal for read-heavy workloads). For example, a maximum capacity threshold of
+# 0.8 would have the effect of always keeping 20% of the device's space free for
+# incoming writes. Conversely, a minimum capacity threshold of 0.3 would ensure
+# that the device is always at least 30% occupied.
+bo_capacity_thresholds: [
+  [0.0, 1.0],
+  [0.0, 1.0],
+]
+
+#Paths which are ignored when buffering data
+path_exclusions: [
+    "/bin/", "/boot/", "/dev/",  "/etc/",
+    "/opt/",  "/proc/", "/sbin/",
+    "/sys/", "/var/",  "/run/",
+    "pipe", "socket:", "anon_inode:",
+    "/usr/",  "/lib/", 
+    "/spack/", "/__pycache__/",
+    "/dec_spack/", "/zen2_dec/",
+    "/System/",
+    "/.mpiexec", "/tmp/dep-", "/scratch/tang584/dep-","/ompi.", "/open_mpi","/open_mpi.",
+    "/src/mpi4py", #"/tmp/",
+    # "/dev/shm/open_mpi.",
+    "/.local/",
+    "/.conda/", "/home/conda/",
+    "/.cache/",
+    # "/scripts/",
+    "/qfs/people/tang584/scripts/local-co-scheduling",
+    # "/dev/shm",
+    # "/molecules.egg-info/",
+    "/qfs/people/tang584/scripts/deepdrivemd/",
+    "/model_selection_runs/", 
+    # "/molecules/",
+    "/git/",
+    # "/scratch/tang584/",
+    # "/qfs/projects/oddite/tang584/ddmd_runs/hermes_test_100ps_i1_0/inference_runs",
+]
+
+path_inclusions: [
+  # "/qfs/projects/oddite/tang584/ddmd_runs/hermes_test_10ps_i1_0/molecular_dynamics_runs/stage0000/task0000/stage0000_task0000.h5",
+  # "/qfs/projects/oddite/tang584/ddmd_runs/hermes_test_10ps_i1_0/molecular_dynamics_runs/stage0000/task0000/aggregated.h5",
+  # "stage0000_task0000.h5","aggregated.h5",
+
+  # ".h5",".dcd",
+  #".pdb",
+#   $INTERCEPT_PATHS
+# ]
+
+]

@@ -1,0 +1,63 @@
+
+devices:
+  ram:
+    mount_point: ""
+    capacity: 20GB
+    block_size: 512
+    # slab_sizes: [ 4KB, 16KB, 64KB, 1MB ]
+    slab_sizes: [ 512, 1KB, 2KB, 4KB ]
+    bandwidth: 6000MBps
+    latency: 15us
+    is_shared_device: false
+    borg_capacity_thresh: [0.0, 1.0]
+
+  ssd:
+    mount_point: "/scratch/tang584/hermes_slabs" 
+    capacity: 10GB
+    block_size: 512
+    # slab_sizes: [ 4KB, 16KB, 64KB, 1MB ]
+    slab_sizes: [ 512, 1KB, 2KB, 4KB ]
+    bandwidth: 1000MBps
+    latency: 1200us
+    is_shared_device: false
+    borg_capacity_thresh: [ 0.0, 1.0 ]
+
+  pfs:
+    mount_point: "/rcfs/projects/chess/tang584/hermes_slabs" #deception PFS (BeeGFS)
+    capacity: 10GB
+    block_size: 512 
+    # slab_sizes: [ 4KB, 16KB, 64KB, 1MB ]
+    slab_sizes: [ 512, 1KB, 2KB, 4KB ]
+    bandwidth: 100MBps 
+    latency: 200ms
+    is_shared_device: true
+    borg_capacity_thresh: [ 0.0, 1.0 ]
+
+rpc:
+  host_file: "/people/tang584/scripts/PyFLEXTRKR/hm_wrf_tbradar_demo/host_ip"
+  host_names: []
+  protocol: "ucx+rc_verbs"
+  domain: ""
+  port: 8080
+  num_threads: 4
+
+# rpc:
+#   host_file: "/qfs/people/tang584/scripts/local-co-scheduling/host_ip" # myhost host_ip
+#   base_name: "dl"
+#   host_number_range: [10]
+#   suffix: #".ibnet"
+#   protocol: "ucx+rc_verbs" #"ofi+sockets" #"ucx+ud" #"ucx+rc_verbs"
+#   domain: "mlx5_2:1" #mlx5_2:1 #mlx5_0:1
+#   port: 8080
+#   num_threads: 4
+
+buffer_organizer:
+  num_threads: 1
+  port: 8081
+
+dpe:
+  default_placement_policy: "MinimizeIoTime"
+  default_rr_split: 0
+
+shmem_name: "/hermes_shm_"
+system_view_state_update_interval_ms: 1000

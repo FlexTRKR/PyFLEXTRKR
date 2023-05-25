@@ -1,0 +1,13 @@
+stop_daemon: false
+path_inclusions: [
+  "/qfs/projects/oddite/tang584/flextrkr_runs",
+]
+path_exclusions: ["/",
+]
+file_page_size: 8192 # 4096KB 1MB 512KB
+base_adapter_mode: kDefault # kDefault kScratch
+
+# file_adapter_configs:
+#   - path: "/"
+#     page_size: 1MB
+#     mode: kDefault

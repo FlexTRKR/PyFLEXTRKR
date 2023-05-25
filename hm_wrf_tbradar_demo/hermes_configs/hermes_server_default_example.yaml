@@ -1,0 +1,125 @@
+# Example Hermes configuration file
+
+### Define properties of the storage devices
+devices:
+  # The name of the device.
+  # It can be whatever the user wants, there are no special names
+  ram:
+    # The mount point of each device. RAM should be the empty string. For block
+    # devices, this is the directory where Hermes will create buffering files. For
+    # object storage or cloud targets, this will be a url.
+    mount_point: ""
+
+    # The maximum buffering capacity in MiB of each device. Here we say that all 4
+    # devices get 50 MiB of buffering capacity.
+    capacity: 5000MB
+
+    # The size of the smallest available buffer in KiB. In general this should be
+    # the page size of your system for byte addressable storage, and the block size
+    # of the storage device for block addressable storage.
+    block_size: 4KB
+
+    # The number of blocks (the size of which is chosen in block_sizes_kb) that each
+    # device should contain for each slab (controlled by num_slabs). This allows for
+    # precise control of the distibution of buffer sizes.
+    slab_sizes: [ 4KB, 16KB, 64KB, 1MB ]
+
+    # The maximum theoretical bandwidth (as advertised by the manufacturer) in
+    # Possible units: KBps, MBps, GBps
+    bandwidth: 6000MBps
+
+    # The latency of each device (as advertised by the manufacturer).
+    # Possible units: ns, us, ms, s
+    latency: 15us
+
+    # For each device, indicate '1' if it is shared among nodes (e.g., burst
+    # buffers), or '0' if it is per node (e.g., local NVMe).
+    is_shared_device: false
+
+    # For each device, the minimum and maximum percent capacity threshold at which
+    # the BufferOrganizer will trigger. Decreasing the maximum thresholds will cause
+    # the BufferOrganizer to move data to lower devices, making more room in faster
+    # devices (ideal for write-heavy workloads). Conversely, increasing the minimum
+    # threshold will cause data to be moved from slower devices into faster devices
+    # (ideal for read-heavy workloads). For example, a maximum capacity threshold of
+    # 0.8 would have the effect of always keeping 20% of the device's space free for
+    # incoming writes. Conversely, a minimum capacity threshold of 0.3 would ensure
+    # that the device is always at least 30% occupied.
+    borg_capacity_thresh: [0.0, 1.0]
+
+  ssd:
+    # mount_point: "/state/partition1/tang584/hermes_slabs" # bluesky B
+    mount_point: "/scratch/tang584/hermes_slabs" # deception NVMe
+    capacity: 50GB #512GB
+    block_size: 4KB
+    slab_sizes: [ 4KB, 16KB, 64KB, 1MB ]
+    bandwidth: 1000MBps
+    latency: 1200us
+    is_shared_device: true
+    borg_capacity_thresh: [ 0.0, 1.0 ]
+
+  pfs:
+    # mount_point: "/files0/oddite/tang584/hermes_swaps" # bluesky PFS
+    mount_point: "/rcfs/projects/chess/tang584/hermes_swaps" #deception PFS (BeeGFS)
+    capacity: 50GB
+    block_size: 64KB # The stripe size of PFS 
+    slab_sizes: [ 4KB, 16KB, 64KB, 1MB ]
+    bandwidth: 100MBps # Per-device bandwidth
+    latency: 200ms
+    is_shared_device: true
+    borg_capacity_thresh: [ 0.0, 1.0 ]
+
+### Define properties of RPCs
+rpc:
+  # A path to a file containing a list of server names, 1 per line. If your
+  # servers are named according to a pattern (e.g., server-1, server-2, etc.),
+  # prefer the `rpc_server_base_name` and `rpc_host_number_range` options. If this
+  # option is not empty, it will override anything in `rpc_server_base_name`.
+  # host_file: ""
+  host_file: "/qfs/people/tang584/scripts/local-co-scheduling/host_ip"
+
+  # Host names are constructed as "base_name +
+  # host_number + rpc_server_suffix." Each entry in the rpc_host_number_range_list
+  # can be either a single number, or a range, which is 2 numbers separated by a
+  # hyphen (-). For example the list {01, 03-05, 07, 08-10} will be expanded to
+  # {01, 03, 04, 05, 07, 08, 09, 10}.
+  base_name: $HOST_BASE_NAME
+  host_number_range: $HOST_NUMBER_RANGE
+  suffix: ".ibnet"
+
+  # The RPC protocol. This must come from the documentation of the specific RPC
+  # library in use.
+  protocol: "ucx+tcp" #"ofi+sockets" #"ucx+ud" #"ucx+rc_verbs"
+
+  # RPC domain name for verbs transport. Blank for tcp.
+  domain: "" #mlx5_2:1 #mlx5_0:1
+
+  # Desired RPC port number.
+  port: 8080
+
+  # The number of handler threads for each RPC server.
+  num_threads: 4
+
+### Define properties of the BORG
+buffer_organizer:
+  # The number of threads used in the background organization of internal Hermes buffers.
+  num_threads: 4
+
+  # Desired RPC port number for buffer organizer.
+  port: 8081
+
+### Define the default data placement policy
+dpe:
+  # Choose Random, RoundRobin, or MinimizeIoTime
+  default_placement_policy: "MinimizeIoTime"
+
+  # If true (1) the RoundRobin placement policy algorithm will split each Blob
+  # into a random number of smaller Blobs.
+  default_rr_split: 0
+
+# The shared memory prefix for the hermes shared memory segment. A user name
+# will be automatically appended.
+shmem_name: "/hermes_shm_"
+
+# The interval in milliseconds at which to update the global system view.
+system_view_state_update_interval_ms: 1000
