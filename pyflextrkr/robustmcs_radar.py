@@ -48,7 +48,7 @@ def define_robust_mcs_radar(config):
     logger.debug(("mcspfstats_file: ", mcspfstats_file))
 
     ds_pf = xr.open_dataset(mcspfstats_file,
-                            # engine="h5netcdf", # https://github.com/h5netcdf/h5netcdf/issues/204
+                            # engine="netcdf4", # https://github.com/h5netcdf/h5netcdf/issues/204
                             mask_and_scale=False,
                             decode_times=False,)
     ntracks = ds_pf.dims[tracks_dimname]
