@@ -11,7 +11,7 @@ module load openmpi/4.1.3
 . $HOME/zen2_dec/dec_spack/share/spack/setup-env.sh
 
 # spack load --only dependencies hermes
-
+HDF5_DIR="`which h5cc |sed 's/.\{9\}$//'`"
 HDF5_BIN="$HDF5_DIR/bin"
 HDF5_LIB="$HDF5_DIR/lib"
 HDF5_INCLUDE="$HDF5_DIR/include"
