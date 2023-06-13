@@ -1,6 +1,6 @@
 #!/bin/bash
 #SBATCH --job-name=dl_demo_cell_nerxrad_0
-#SBATCH --partition=short
+#SBATCH --partition=slurm
 #SBATCH --time=00:30:00
 #SBATCH -N 1
 #SBATCH -n 2
@@ -74,55 +74,20 @@ RUN_TRACKING () {
     # Run tracking
     echo 'Running PyFLEXTRKR w/ VOL+VFD ...'
 
-
-    # LD_LIBRARY_PATH=$DLIFE_VOL_DIR:$LD_LIBRARY_PATH \
-    #     HDF5_VOL_CONNECTOR="${VOL_NAME} under_vol=0;under_info={};path=${SCRIPT_DIR}/vol-${task_id}_${FUNCNAME[0]}.log;level=2;format=" \
-    #     HDF5_DRIVER=hdf5_hermes_vfd \
-    #     HDF5_PLUGIN_PATH=$DLIFE_VOL_DIR:${HERMES_INSTALL_DIR}/lib \
-
-    # LD_LIBRARY_PATH=$DLIFE_VOL_DIR:$LD_LIBRARY_PATH \
-    #     HDF5_VOL_CONNECTOR="${VOL_NAME} under_vol=0;under_info={};path=./vol-${FUNCNAME[0]}.log;level=2;format=" \
-    #     HDF5_PLUGIN_PATH=$DLIFE_VOL_DIR \
-    #         srun -n1 -N1 --oversubscribe --mpi=pmi2 \
-
-    
-    # LD_LIBRARY_PATH=$DLIFE_VOL_DIR:$LD_LIBRARY_PATH \
-    #     HDF5_VOL_CONNECTOR="${VOL_NAME} under_vol=0;under_info={};path=./vol-overhead-${FUNCNAME[0]}.log;level=0;format=" \
-    #     HDF5_DRIVER=hdf5_hermes_vfd \
-    #     HDF5_PLUGIN_PATH=$DLIFE_VOL_DIR:${HERMES_INSTALL_DIR}/lib:$HDF5_PLUGIN_PATH \
-    #     HERMES_CONF=$HERMES_CONF \
-    #     HERMES_CLIENT_CONF=$HERMES_CLIENT_CONF \
-    #     python ../runscripts/run_mcs_tbpfradar3d_wrf.py ${config_demo} &> ${FUNCNAME[0]}.log
-
-    # LD_LIBRARY_PATH=$DLIFE_VOL_DIR:$LD_LIBRARY_PATH \
-    # HDF5_VOL_CONNECTOR="${VOL_NAME} under_vol=0;under_info={};path=${schema_file};level=2;format=" \
-    # HDF5_DRIVER=hermes \
-    # HDF5_PLUGIN_PATH=${HERMES_INSTALL_DIR}/lib:$DLIFE_VOL_DIR \
-    # HDF5_DRIVER_CONFIG="true ${HERMES_PAGESIZE}" HERMES_CONF=${HERMES_CONF} \
-    # LD_PRELOAD=${HERMES_INSTALL_DIR}/lib/libhdf5_hermes_vfd.so \
-
-
-    # LD_LIBRARY_PATH=$DLIFE_VOL_DIR:$LD_LIBRARY_PATH \
-    #     HDF5_VOL_CONNECTOR="${VOL_NAME} under_vol=0;under_info={};path=./${schema_file};level=2;format=" \
-    #     HDF5_DRIVER=hdf5_hermes_vfd \
-    #     HDF5_PLUGIN_PATH=$DLIFE_VOL_DIR:${HERMES_INSTALL_DIR}/lib:$HDF5_PLUGIN_PATH \
-    #     HDF5_DRIVER_CONFIG="true ${HERMES_PAGESIZE}" \
-    #     HERMES_CONF=$HERMES_CONF \
-    #     HERMES_CLIENT_CONF=$HERMES_CLIENT_CONF \
-
-
     schema_file=data-stat-dl.yaml
-    rm -rf ./$schema_file
+    rm -rf ./*$schema_file
     # touch $schema_file
-    rm -rf ./vfd-$schema_file
+    rm -rf ./*vfd-$schema_file
 
-    LD_LIBRARY_PATH=$DLIFE_VOL_DIR:$LD_LIBRARY_PATH \
+    # HDF5_PLUGIN_PATH=${HERMES_INSTALL_DIR}/lib:$TRACKER_VOL_DIR:$HDF5_PLUGIN_PATH \
+
+    LD_LIBRARY_PATH=$TRACKER_VOL_DIR:$LD_LIBRARY_PATH \
         HDF5_VOL_CONNECTOR="${VOL_NAME} under_vol=0;under_info={};path=${schema_file};level=2;format=" \
-        HDF5_PLUGIN_PATH=${HERMES_INSTALL_DIR}/lib:$DLIFE_VOL_DIR:$HDF5_PLUGIN_PATH \
+        HDF5_PLUGIN_PATH=${HERMES_INSTALL_DIR}/lib:$TRACKER_VOL_DIR:$HDF5_PLUGIN_PATH \
         HDF5_DRIVER=hdf5_hermes_vfd \
         HERMES_CONF=$HERMES_CONF \
         HERMES_CLIENT_CONF=$HERMES_CLIENT_CONF \
-        HDF5_DRIVER_CONFIG="true ${HERMES_PAGESIZE}" \
+        HDF5_DRIVER_CONFIG="true ${HERMES_PAGE_SIZE}" \
         python ../runscripts/run_mcs_tbpfradar3d_wrf.py ${config_demo} &> ${FUNCNAME[0]}-dl.log
     
     set +x 
@@ -227,7 +192,7 @@ source activate pyflextrkr_copy # flextrkr pyflextrkr
 
 
 # export PYTHONLOGLEVEL=ERROR
-
+srun -n1 -N1 killall hermes_daemon
 
 PREPARE_CONFIG
 

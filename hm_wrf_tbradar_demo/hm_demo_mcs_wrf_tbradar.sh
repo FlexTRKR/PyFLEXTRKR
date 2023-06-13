@@ -1,6 +1,7 @@
 #!/bin/bash
 #SBATCH --job-name=hm_demo_cell_nerxrad_0
-#SBATCH --partition=short
+#SBATCH --partition=slurm
+#SBATCH --exclude=dc[009-099,119]
 #SBATCH --time=01:30:00
 #SBATCH -N 1
 #SBATCH -n 10
@@ -55,7 +56,7 @@ config_example='config_wrf_mcs_tbradar_short.yml'
 config_demo='config_wrf_mcs_tbradar_demo.yml'
 cp ./$config_demo $dir_demo
 # Demo input data directory
-dir_input="/qfs/projects/oddite/tang584/flextrkr_runs/input_data/${TEST_NAME}"
+dir_input="/qfs/projects/oddite/tang584/flextrkr_runs/hm_input_data/${TEST_NAME}"
 
 
 PREPARE_CONFIG () {
@@ -69,27 +70,52 @@ PREPARE_CONFIG () {
 }
 
 RUN_TRACKING () {
+    # echo "Generate empty files"
+    # mkdir -p $dir_demo/tracking
+    # mkdir -p $dir_demo/stats
+    # mkdir -p $dir_demo/mcstracking/20150506.0000_20150506.0800
+    # for i in {0..8}; do
+    #     # Generate empty cloudid files
+    #     id_file="cloudid_20150506_0${i}0000.nc"
+    #     touch $dir_demo/tracking/$id_file
+    #     # Perform any desired operations with the generated number
+    # done
+    # for i in {1..8}; do
+    #     track_file="track_20150506_0${i}0000.nc"
+    #     touch $dir_demo/tracking/$track_file
+    # done
+    # echo "ls -l $dir_demo/tracking/*"
+    # ls -l $dir_demo/tracking/*
+
     # Run tracking
     echo 'Running PyFLEXTRKR w/ VFD ...'
 
-
-    # LD_LIBRARY_PATH=$DLIFE_VOL_DIR:$LD_LIBRARY_PATH \
-    #     HDF5_VOL_CONNECTOR="${VOL_NAME} under_vol=0;under_info={};path=${SCRIPT_DIR}/vol-${task_id}_${FUNCNAME[0]}.log;level=2;format=" \
-    #     HDF5_DRIVER=hdf5_hermes_vfd \
-    #     HDF5_PLUGIN_PATH=$DLIFE_VOL_DIR:${HERMES_INSTALL_DIR}/lib \
-
-    # LD_LIBRARY_PATH=$DLIFE_VOL_DIR:$LD_LIBRARY_PATH \
-    #     HDF5_VOL_CONNECTOR="${VOL_NAME} under_vol=0;under_info={};path=${SCRIPT_DIR}/vol-${task_id}_${FUNCNAME[0]}.log;level=2;format=" \
-    #     HDF5_PLUGIN_PATH=$DLIFE_VOL_DIR \
-    #         srun -n1 -N1 --oversubscribe --mpi=pmi2 \
-    
-    
     HDF5_DRIVER=hdf5_hermes_vfd \
         HDF5_PLUGIN_PATH=${HERMES_INSTALL_DIR}/lib:$HDF5_PLUGIN_PATH \
         HERMES_CONF=$HERMES_CONF \
         HERMES_CLIENT_CONF=$HERMES_CLIENT_CONF \
-        HDF5_DRIVER_CONFIG="true ${HERMES_PAGESIZE}" \
-        python ../runscripts/run_mcs_tbpfradar3d_wrf.py ${config_demo} &> ${FUNCNAME[0]}-hmvfd.log
+        python ../runscripts/run_mcs_tbpfradar3d_wrf.py ${config_demo} &> ${FUNCNAME[0]}-hm.log
+
+    # LD_LIBRARY_PATH=$TRACKER_VOL_DIR:$LD_LIBRARY_PATH \
+    #     HDF5_VOL_CONNECTOR="${VOL_NAME} under_vol=0;under_info={};path=${SCRIPT_DIR}/vol-${task_id}_${FUNCNAME[0]}.log;level=2;format=" \
+    #     HDF5_DRIVER=hdf5_hermes_vfd \
+    #     HDF5_PLUGIN_PATH=$TRACKER_VOL_DIR:${HERMES_INSTALL_DIR}/lib \
+
+    # LD_LIBRARY_PATH=$TRACKER_VOL_DIR:$LD_LIBRARY_PATH \
+    #     HDF5_VOL_CONNECTOR="${VOL_NAME} under_vol=0;under_info={};path=${SCRIPT_DIR}/vol-${task_id}_${FUNCNAME[0]}.log;level=2;format=" \
+    #     HDF5_PLUGIN_PATH=$TRACKER_VOL_DIR \
+    #         srun -n1 -N1 --oversubscribe --mpi=pmi2 \
+    
+    
+    # HDF5_DRIVER=hdf5_hermes_vfd \
+    #     HDF5_PLUGIN_PATH=${HERMES_INSTALL_DIR}/lib:$HDF5_PLUGIN_PATH \
+    #     HERMES_CONF=$HERMES_CONF \
+    #     HERMES_CLIENT_CONF=$HERMES_CLIENT_CONF \
+    #     HDF5_DRIVER_CONFIG="true ${HERMES_PAGESIZE}" \
+
+    #HERMES_ADAPTER_MODE=kScratch \
+    
+
     
     set +x 
 
@@ -119,7 +145,7 @@ HERMES_DIS_CONFIG () {
     echo "SLURM_JOB_NODELIST = $(echo $SLURM_JOB_NODELIST|scontrol show hostnames)"
     NODE_NAMES=$(echo $SLURM_JOB_NODELIST|scontrol show hostnames)
 
-    prefix="dc00" #dc dc00 a100-0
+    prefix="dc" #dc dc00 a100-0
     sed "s/\$HOST_BASE_NAME/\"${prefix}\"/" $HERMES_DEFAULT_CONF  > $HERMES_CONF
     mapfile -t node_range < <(echo "$NODE_NAMES" | sed "s/${prefix}//g")
     rpc_host_number_range="[$(printf "%s," "${node_range[@]}" | sed 's/,$//')]"
@@ -188,7 +214,7 @@ START_HERMES_DAEMON () {
     set +x
 }
 
-
+date
 
 source ./load_hermes_deps.sh
 source ./env_var.sh
@@ -200,6 +226,7 @@ source activate pyflextrkr_copy # flextrkr pyflextrkr
 # export PYTHONLOGLEVEL=ERROR
 # export PYTHONLOGLEVEL=INFO
 
+srun -n1 -N1 killall hermes_daemon
 
 PREPARE_CONFIG
 
@@ -210,11 +237,18 @@ HERMES_DIS_CONFIG
 START_HERMES_DAEMON
 
 start_time=$(($(date +%s%N)/1000000))
+# srun -n1 -N1 --oversubscribe --mpi=pmi2 $(RUN_TRACKING)
 RUN_TRACKING
 duration=$(( $(date +%s%N)/1000000 - $start_time))
 echo "RUN_TRACKING done... $duration milliseconds elapsed."
 
-echo 'Demo completed!'
+echo 'MCS_SRF_TBRADAR Demo completed!'
+date
 
-sacct -j $SLURM_JOB_ID -o jobid,submit,start,end,state
+
+# sacct -j $SLURM_JOB_ID -o jobid,submit,start,end,state
+sacct -j $SLURM_JOB_ID --format="JobID,JobName,Partition,CPUTime,AllocCPUS,State,ExitCode,MaxRSS,MaxVMSize"
 rm -rf $dir_demo/core.*
+
+echo ""
+ls -l $dir_demo/*/*

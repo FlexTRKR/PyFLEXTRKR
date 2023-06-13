@@ -86,7 +86,7 @@ JSONC_INCLUDE=$JSONC_PATH/include
 [[ ":$C_INCLUDE_PATH:" != *":${JSONC_INCLUDE}:"* ]] && C_INCLUDE_PATH="${JSONC_INCLUDE}:${C_INCLUDE_PATH}"
 
 
-spack load boost mochi-thallium@0.8.3 catch2@3.0.1 glpk glog yaml-cpp geos
+spack load boost cereal mochi-thallium@0.8.3 catch2@3.0.1 glpk glog yaml-cpp geos
 
 # HERMES_PATH="/qfs/people/tang584/install/dec_hermes"
 # HERMES_BIN="$HERMES_PATH/bin"

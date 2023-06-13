@@ -1,0 +1,22 @@
+numpy>=1.17
+matplotlib>=3
+xarray>=0.14
+pandas>=0.25
+scipy>=1.4
+pytz>=2019
+cartopy>=0.17
+dask>=2.9
+scikit-image>=0.16
+joblib>=0.14
+ipython>7.0
+basemap
+pip
+astropy
+wrf-python
+colorcet
+seaborn
+scikit-learn
+ffmpeg
+setuptools>=65.5.1
+PyYAML>=5.4
+# netcdf4>=1.5

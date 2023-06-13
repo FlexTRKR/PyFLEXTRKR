@@ -2,10 +2,13 @@
 devices:
   ram:
     mount_point: ""
-    capacity: 20GB
-    block_size: 512
-    # slab_sizes: [ 4KB, 16KB, 64KB, 1MB ]
-    slab_sizes: [ 512, 1KB, 2KB, 4KB ]
+    capacity: 40GB
+    block_size: 4KB
+    # slab_sizes: [ 1MB, 4MB, 16MB, 32MB ]
+    # slab_sizes: [ 8KB, 32KB, 128KB, 1MB ]
+    slab_sizes: [ 4KB, 16KB, 64KB, 1MB ]
+    # slab_sizes: [ 512, 1KB, 2KB, 4KB ]
+    # slab_sizes: [ 1KB, 2KB, 4KB, 8KB ]
     bandwidth: 6000MBps
     latency: 15us
     is_shared_device: false
@@ -13,10 +16,13 @@ devices:
 
   ssd:
     mount_point: "/scratch/tang584/hermes_slabs" 
-    capacity: 10GB
-    block_size: 512
-    # slab_sizes: [ 4KB, 16KB, 64KB, 1MB ]
-    slab_sizes: [ 512, 1KB, 2KB, 4KB ]
+    capacity: 40GB
+    block_size: 4KB
+    # slab_sizes: [ 1MB, 4MB, 16MB, 32MB ]
+    # slab_sizes: [ 8KB, 32KB, 128KB, 1MB ]
+    slab_sizes: [ 4KB, 16KB, 64KB, 1MB ]
+    # slab_sizes: [ 512, 1KB, 2KB, 4KB ]
+    # slab_sizes: [ 1KB, 2KB, 4KB, 8KB ]
     bandwidth: 1000MBps
     latency: 1200us
     is_shared_device: false
@@ -24,10 +30,13 @@ devices:
 
   pfs:
     mount_point: "/rcfs/projects/chess/tang584/hermes_slabs" #deception PFS (BeeGFS)
-    capacity: 10GB
-    block_size: 512 
-    # slab_sizes: [ 4KB, 16KB, 64KB, 1MB ]
-    slab_sizes: [ 512, 1KB, 2KB, 4KB ]
+    capacity: 40GB
+    block_size: 4KB 
+    # slab_sizes: [ 1MB, 4MB, 16MB, 32MB ]
+    # slab_sizes: [ 8KB, 32KB, 128KB, 1MB ]
+    slab_sizes: [ 4KB, 16KB, 64KB, 1MB ]
+    # slab_sizes: [ 512, 1KB, 2KB, 4KB ]
+    # slab_sizes: [ 1KB, 2KB, 4KB, 8KB ]
     bandwidth: 100MBps 
     latency: 200ms
     is_shared_device: true
@@ -54,6 +63,18 @@ rpc:
 buffer_organizer:
   num_threads: 1
   port: 8081
+  flush_period: 1000 #1024
+  blob_reorg_period: 5000 #1024
+  # recency_min: 0
+  # recency_max: 60
+  # freq_max: 15
+  # freq_min: 0
+
+# prefetch:
+#   enabled: false
+#   apriori_schema_path: ""
+#   epoch_ms: 50
+#   is_mpi: false
 
 dpe:
   default_placement_policy: "MinimizeIoTime"

@@ -1,7 +1,6 @@
 #!/bin/bash
-#!/bin/bash
 #SBATCH --job-name=demo_cell_nerxrad_0
-#SBATCH --partition=slurm
+#SBATCH --partition=short
 #SBATCH --time=01:30:00
 #SBATCH -N 1
 #SBATCH -n 10
@@ -35,7 +34,8 @@ dir_demo="/qfs/projects/oddite/tang584/flextrkr_runs/${TEST_NAME}" #NFS
 mkdir -p $dir_demo
 rm -rf $dir_demo/*
 # Example config file name
-config_example='config_wrf_mcs_tbradar_example.yml'
+# config_example='config_wrf_mcs_tbradar_example.yml'
+config_example='config_wrf_mcs_tbradar_short.yml'
 config_demo='config_wrf_mcs_tbradar_demo.yml'
 cp ./$config_demo $dir_demo
 # Demo input data directory
@@ -92,3 +92,6 @@ echo "RUN_TRACKING done... $duration milliseconds elapsed."
 
 
 echo 'Demo completed!'
+
+
+sacct -j $SLURM_JOB_ID --format="JobID,JobName,Partition,CPUTime,AllocCPUS,State,ExitCode,MaxRSS,MaxVMSize"

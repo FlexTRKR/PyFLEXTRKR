@@ -24,7 +24,7 @@ timeout: 360  # [seconds] Dask timeout limit
 
 # Start/end date and time
 startdate: '20150506.0000'
-enddate: '20150506.0800'
+enddate: '20150507.0000'
 
 # enddate: '20150506.0800'
 # enddate: '20150506.0800' # smallest possible to run all processing steps
