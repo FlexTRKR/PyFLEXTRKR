@@ -95,7 +95,7 @@ def idclouds_tbpf(
     sl3d_attrs = None
 
     # Read in Tb data using xarray
-    rawdata = xr.open_dataset(filename)
+    rawdata = xr.open_dataset(filename, engine='netcdf4') # netcdf4 h5netcdf
 
     # Get dimension names from the file
     dims_file = []

@@ -87,9 +87,9 @@ def trackclouds(
         # Load cloudid file from before, called reference file
         logger.debug(reference_filedatetime)
 
-        # Open file
+        # Open file # engine='h5netcdf', 'netcdf4'
         reference_data = xr.open_dataset(
-            reference_file, mask_and_scale=False, decode_times=False, chunks=-1,
+            reference_file, engine="netcdf4", mask_and_scale=False, decode_times=False, chunks=-1,
         )
         reference_convcold_cloudnumber = reference_data[feature_varname].load().data
         nreference = reference_data[nfeature_varname].load().data
