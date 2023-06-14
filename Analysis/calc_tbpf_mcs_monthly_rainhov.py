@@ -17,6 +17,7 @@ if __name__ == "__main__":
     endlat = float(sys.argv[5])
     startlon = float(sys.argv[6])
     endlon = float(sys.argv[7])
+    region = sys.argv[8]
 
     # Get inputs from configuration file
     config = load_config(config_file)
@@ -25,7 +26,7 @@ if __name__ == "__main__":
     pcpvarname = config['track_field_for_speed']
 
     # Output file name
-    output_filename = f'{output_monthly_dir}mcs_rainhov_{year}{month}.nc'
+    output_filename = f'{output_monthly_dir}mcs_rainhov_{region}_{year}{month}.nc'
 
     # Find all pixel files in a month
     mcsfiles = sorted(glob.glob(f'{pixel_dir}/mcstrack_{year}{month}*_*.nc'))
