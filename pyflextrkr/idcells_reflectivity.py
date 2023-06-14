@@ -434,7 +434,7 @@ def get_composite_reflectivity_wrf(input_filename, config):
     fillval = config['fillval']
 
     # Read WRF file
-    ds = xr.open_dataset(input_filename)
+    ds = xr.open_dataset(input_filename, engine='h5netcdf')
     # Drop XTIME dimension, and rename 'Time' dimension to 'time'
     ds = ds.reset_coords(names='XTIME', drop=False).rename({'Time': time_dimname})
     # Rounds up to second, some model converted datetimes do not contain round second
@@ -524,7 +524,7 @@ def get_composite_reflectivity_wrf_regrid(input_filename, config):
     fillval = config['fillval']
 
     # Read WRF file
-    ds = xr.open_dataset(input_filename)
+    ds = xr.open_dataset(input_filename,engine='h5netcdf')
     # Drop XTIME dimension, and rename 'Time' dimension to 'time'
     # ds = ds.reset_coords(names='XTIME', drop=False).rename({'Time': time_dimname})
     # Rounds up to second, some model converted datetimes do not contain round second
@@ -622,7 +622,7 @@ def get_composite_reflectivity_wrf_composite(input_filename, config):
     # fillval = config['fillval']
 
     # Read WRF file
-    ds = xr.open_dataset(input_filename)
+    ds = xr.open_dataset(input_filename, engine='h5netcdf')
     import pdb; pdb.set_trace()
     # Drop XTIME dimension, and rename 'Time' dimension to 'time'
     ds = ds.reset_coords(names='XTIME', drop=False).rename({'Time': time_dimname})
@@ -718,7 +718,7 @@ def get_composite_reflectivity_radar(input_filename, config):
     rangemask_varname = config.get('rangemask_varname', None)
 
     # Read radar file
-    ds = xr.open_dataset(input_filename)
+    ds = xr.open_dataset(input_filename, engine='h5netcdf')
     # Get dimension names from the file
     dims_file = []
     for key in ds.dims: dims_file.append(key)
@@ -747,7 +747,7 @@ def get_composite_reflectivity_radar(input_filename, config):
 
     if terrain_file is not None:
         # Read terrain file
-        dster = xr.open_dataset(terrain_file)
+        dster = xr.open_dataset(terrain_file, engine='h5netcdf')
         # Assign coordinate from radar file to the terrain file so they have the same coordinates
         dster = dster.assign_coords({y_dimname: (ds[y_varname]), x_dimname: (ds[x_varname])})
         sfc_elev = dster[elev_varname]
@@ -840,7 +840,7 @@ def get_composite_reflectivity_csapr_cacti(input_filename, config):
     rangemask_varname = config.get('rangemask_varname', None)
 
     # Read radar file
-    ds = xr.open_dataset(input_filename)
+    ds = xr.open_dataset(input_filename, engine='h5netcdf')
     # Reorder the dimensions using dimension names to [time, z, y, x]
     ds = ds.transpose(time_dimname, z_dimname, y_dimname, x_dimname)
     # Create time_coords
@@ -862,7 +862,7 @@ def get_composite_reflectivity_csapr_cacti(input_filename, config):
     ds[z_dimname] = z_agl
 
     # Read terrain file
-    dster = xr.open_dataset(terrain_file)
+    dster = xr.open_dataset(terrain_file, engine='h5netcdf')
     # Change terrain file dimension name to be consistent with radar file
     # dster = dster.rename({'latdim':y_dimname, 'londim':x_dimname})
     # Assign coordinate from radar file to the terrain file so they have the same coordinates

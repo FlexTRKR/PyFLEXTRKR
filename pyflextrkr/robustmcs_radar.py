@@ -485,7 +485,7 @@ def define_robust_mcs_radar(config):
     encoding = {var: comp for var in dsout.data_vars}
 
     # Write to netcdf file
-    dsout.to_netcdf(path=statistics_outfile, mode="w",
+    dsout.to_netcdf(path=statistics_outfile, mode="w", engine="netcdf4",
                     format="NETCDF4", unlimited_dims=tracks_dimname, encoding=encoding)
     logger.info(f"{statistics_outfile}")
 
