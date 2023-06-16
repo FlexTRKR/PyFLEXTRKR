@@ -2,7 +2,7 @@ name: flextrkr
 channels:
   - conda-forge
 dependencies:
-  - python>=3.8
+  - python=3.10
   - numpy>=1.17
   - matplotlib>=3
   - xarray>=0.14
@@ -15,8 +15,6 @@ dependencies:
   - scikit-image>=0.16
   - joblib>=0.14
   - ipython>7.0
-  - basemap
-  - xesmf
   - pip
   - astropy
   - wrf-python
