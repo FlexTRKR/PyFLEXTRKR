@@ -416,6 +416,7 @@ def write_trackstats_sparse(config, numtracks, out_dict_attrs, out_dict, row_out
     encoding = {var: comp for var in dsout.data_vars}
     # Write to netcdf file
     dsout.to_netcdf(path=trackstats_sparse_outfile,
+                    engine='h5netcdf',
                     mode='w',
                     format='NETCDF4',
                     unlimited_dims=tracks_dimname,
@@ -517,6 +518,7 @@ def write_trackstats_dense(config, fillval, fillval_f,
     encoding = {var: comp for var in dsout.data_vars}
     # Write to netcdf file
     dsout.to_netcdf(path=trackstats_outfile,
+                    engine='h5netcdf',
                     mode='w',
                     format='NETCDF4',
                     unlimited_dims=tracks_dimname,

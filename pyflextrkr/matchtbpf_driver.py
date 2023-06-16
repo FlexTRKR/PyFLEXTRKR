@@ -243,7 +243,7 @@ def match_tbpf_tracks(config):
     encoding = {var: comp for var in dsout.data_vars}
 
     # Write to netcdf file
-    dsout.to_netcdf(path=statistics_outfile, mode="w",
+    dsout.to_netcdf(path=statistics_outfile, mode="w", engine="h5netcdf",
                     format="NETCDF4", unlimited_dims=tracks_dimname, encoding=encoding)
     logger.info(f"{statistics_outfile}")
 

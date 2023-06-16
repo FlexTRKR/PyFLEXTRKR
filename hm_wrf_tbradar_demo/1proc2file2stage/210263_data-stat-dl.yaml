@@ -1,0 +1,2253 @@
+- file-1:
+    file_name: "wrfout_rainrate_tb_zh_mh_2015-05-06_00:00:00.nc"
+    datasets:
+    - dset:
+        dset_name: "base_time"
+        start_time: 1686082481056056
+        end_time: 1686082481060908
+        dt_class: "H5T_FLOAT"
+        ds_class: "H5S_SCALAR"
+        layout: "H5D_CHUNKED"
+        storage_size: 49
+        dset_n_elements: 1
+        dimension_cnt: 1
+        dimensions: [1, ]
+        dset_type_size: 8
+        dataset_read_cnt: 1
+        total_bytes_read: 49
+        dataset_write_cnt: 0
+        total_bytes_written: 0
+        dset_offset: -1
+        dset_select_type: "H5S_SEL_ALL"
+        dset_select_npoints: 1
+        data_file_pages: [0,0]
+        metadata_file_pages: [0, ]
+        access_orders: [12, ]
+- file-1:
+    file_name: "wrfout_rainrate_tb_zh_mh_2015-05-06_00:00:00.nc"
+    datasets:
+    - dset:
+        dset_name: "time"
+        start_time: 1686082481059832
+        end_time: 1686082481064588
+        dt_class: "H5T_FLOAT"
+        ds_class: "H5S_SCALAR"
+        layout: "H5D_CHUNKED"
+        storage_size: 16
+        dset_n_elements: 1
+        dimension_cnt: 1
+        dimensions: [1, ]
+        dset_type_size: 8
+        dataset_read_cnt: 26
+        total_bytes_read: 416
+        dataset_write_cnt: 0
+        total_bytes_written: 0
+        dset_offset: -1
+        dset_select_type: "H5S_SEL_ALL"
+        dset_select_npoints: 1
+        data_file_pages: [0,0]
+        metadata_file_pages: [0, ]
+        access_orders: [13, 21, 25, 30, 34, 37, ]
+- file-1:
+    file_name: "wrfout_rainrate_tb_zh_mh_2015-05-06_00:00:00.nc"
+    datasets:
+    - dset:
+        dset_name: "lon2d"
+        start_time: 1686082481056234
+        end_time: 1686082481061510
+        dt_class: "H5T_FLOAT"
+        ds_class: "H5S_SCALAR"
+        layout: "H5D_CHUNKED"
+        storage_size: 691270
+        dset_n_elements: 1000000
+        dimension_cnt: 2
+        dimensions: [1000, 1000, ]
+        dset_type_size: 4
+        dataset_read_cnt: 1
+        total_bytes_read: 691270
+        dataset_write_cnt: 0
+        total_bytes_written: 0
+        dset_offset: -1
+        dset_select_type: "H5S_SEL_ALL"
+        dset_select_npoints: 1000000
+        data_file_pages: [0,84]
+        metadata_file_pages: [1, ]
+        access_orders: [14, ]
+- file-1:
+    file_name: "wrfout_rainrate_tb_zh_mh_2015-05-06_00:00:00.nc"
+    datasets:
+    - dset:
+        dset_name: "lat"
+        start_time: 1686082481055260
+        end_time: 1686082481064353
+        dt_class: "H5T_FLOAT"
+        ds_class: "H5S_SCALAR"
+        layout: "H5D_CONTIGUOUS"
+        storage_size: 4000
+        dset_n_elements: 1000
+        dimension_cnt: 1
+        dimensions: [1000, ]
+        dset_type_size: 4
+        dataset_read_cnt: 27
+        total_bytes_read: 108000
+        dataset_write_cnt: 0
+        total_bytes_written: 0
+        dset_offset: -1
+        dset_select_type: "H5S_SEL_ALL"
+        dset_select_npoints: 1000
+        data_file_pages: [0,0]
+        metadata_file_pages: [0, ]
+        access_orders: [15, 18, 22, 27, 31, 35, ]
+- file-1:
+    file_name: "wrfout_rainrate_tb_zh_mh_2015-05-06_00:00:00.nc"
+    datasets:
+    - dset:
+        dset_name: "lon"
+        start_time: 1686082481055829
+        end_time: 1686082481064454
+        dt_class: "H5T_FLOAT"
+        ds_class: "H5S_SCALAR"
+        layout: "H5D_CONTIGUOUS"
+        storage_size: 4000
+        dset_n_elements: 1000
+        dimension_cnt: 1
+        dimensions: [1000, ]
+        dset_type_size: 4
+        dataset_read_cnt: 27
+        total_bytes_read: 108000
+        dataset_write_cnt: 0
+        total_bytes_written: 0
+        dset_offset: -1
+        dset_select_type: "H5S_SEL_ALL"
+        dset_select_npoints: 1000
+        data_file_pages: [0,0]
+        metadata_file_pages: [0, ]
+        access_orders: [16, 19, 23, 28, 32, 36, ]
+- file-1:
+    file_name: "wrfout_rainrate_tb_zh_mh_2015-05-06_00:00:00.nc"
+    datasets:
+    - dset:
+        dset_name: "lat2d"
+        start_time: 1686082481056373
+        end_time: 1686082481061948
+        dt_class: "H5T_FLOAT"
+        ds_class: "H5S_SCALAR"
+        layout: "H5D_CHUNKED"
+        storage_size: 1352763
+        dset_n_elements: 1000000
+        dimension_cnt: 2
+        dimensions: [1000, 1000, ]
+        dset_type_size: 4
+        dataset_read_cnt: 1
+        total_bytes_read: 1352763
+        dataset_write_cnt: 0
+        total_bytes_written: 0
+        dset_offset: -1
+        dset_select_type: "H5S_SEL_ALL"
+        dset_select_npoints: 1000000
+        data_file_pages: [0,165]
+        metadata_file_pages: [1, ]
+        access_orders: [17, ]
+- file-1:
+    file_name: "wrfout_rainrate_tb_zh_mh_2015-05-06_00:00:00.nc"
+    datasets:
+    - dset:
+        dset_name: "tb"
+        start_time: 1686082481057437
+        end_time: 1686082481062381
+        dt_class: "H5T_FLOAT"
+        ds_class: "H5S_SCALAR"
+        layout: "H5D_CHUNKED"
+        storage_size: 2459322
+        dset_n_elements: 1000000
+        dimension_cnt: 3
+        dimensions: [1, 1000, 1000, ]
+        dset_type_size: 4
+        dataset_read_cnt: 1
+        total_bytes_read: 2459322
+        dataset_write_cnt: 0
+        total_bytes_written: 0
+        dset_offset: -1
+        dset_select_type: "H5S_SEL_ALL"
+        dset_select_npoints: 1000000
+        data_file_pages: [0,300]
+        metadata_file_pages: [1, ]
+        access_orders: [20, ]
+- file-1:
+    file_name: "wrfout_rainrate_tb_zh_mh_2015-05-06_00:00:00.nc"
+    datasets:
+    - dset:
+        dset_name: "reflectivity"
+        start_time: 1686082481057884
+        end_time: 1686082481062895
+        dt_class: "H5T_FLOAT"
+        ds_class: "H5S_SCALAR"
+        layout: "H5D_CHUNKED"
+        storage_size: 9888879
+        dset_n_elements: 25000000
+        dimension_cnt: 4
+        dimensions: [1, 25, 1000, 1000, ]
+        dset_type_size: 4
+        dataset_read_cnt: 1
+        total_bytes_read: 9888879
+        dataset_write_cnt: 0
+        total_bytes_written: 0
+        dset_offset: -1
+        dset_select_type: "H5S_SEL_ALL"
+        dset_select_npoints: 25000000
+        data_file_pages: [0,1207]
+        metadata_file_pages: [2, ]
+        access_orders: [24, ]
+- file-1:
+    file_name: "wrfout_rainrate_tb_zh_mh_2015-05-06_00:00:00.nc"
+    datasets:
+    - dset:
+        dset_name: "level"
+        start_time: 1686082481060346
+        end_time: 1686082481064749
+        dt_class: "H5T_FLOAT"
+        ds_class: "H5S_SCALAR"
+        layout: "H5D_CONTIGUOUS"
+        storage_size: 200
+        dset_n_elements: 25
+        dimension_cnt: 1
+        dimensions: [25, ]
+        dset_type_size: 8
+        dataset_read_cnt: 4
+        total_bytes_read: 800
+        dataset_write_cnt: 0
+        total_bytes_written: 0
+        dset_offset: 17684763
+        dset_select_type: "H5S_SEL_ALL"
+        dset_select_npoints: 25
+        data_file_pages: [0,0]
+        metadata_file_pages: [0, ]
+        access_orders: [26, 38, ]
+- file-1:
+    file_name: "wrfout_rainrate_tb_zh_mh_2015-05-06_00:00:00.nc"
+    datasets:
+    - dset:
+        dset_name: "rainrate"
+        start_time: 1686082481058361
+        end_time: 1686082481063545
+        dt_class: "H5T_FLOAT"
+        ds_class: "H5S_SCALAR"
+        layout: "H5D_CHUNKED"
+        storage_size: 899380
+        dset_n_elements: 1000000
+        dimension_cnt: 3
+        dimensions: [1, 1000, 1000, ]
+        dset_type_size: 4
+        dataset_read_cnt: 1
+        total_bytes_read: 899380
+        dataset_write_cnt: 0
+        total_bytes_written: 0
+        dset_offset: -1
+        dset_select_type: "H5S_SEL_ALL"
+        dset_select_npoints: 1000000
+        data_file_pages: [0,109]
+        metadata_file_pages: [252, ]
+        access_orders: [29, ]
+- file-1:
+    file_name: "wrfout_rainrate_tb_zh_mh_2015-05-06_00:00:00.nc"
+    datasets:
+    - dset:
+        dset_name: "meltinglevelheight"
+        start_time: 1686082481059150
+        end_time: 1686082481064068
+        dt_class: "H5T_FLOAT"
+        ds_class: "H5S_SCALAR"
+        layout: "H5D_CHUNKED"
+        storage_size: 2351673
+        dset_n_elements: 1000000
+        dimension_cnt: 3
+        dimensions: [1, 1000, 1000, ]
+        dset_type_size: 4
+        dataset_read_cnt: 1
+        total_bytes_read: 2351673
+        dataset_write_cnt: 0
+        total_bytes_written: 0
+        dset_offset: -1
+        dset_select_type: "H5S_SEL_ALL"
+        dset_select_npoints: 1000000
+        data_file_pages: [0,287]
+        metadata_file_pages: [252, ]
+        access_orders: [33, ]
+- file-2:
+    file_name: "cloudid_20150506_000000.nc"
+    datasets:
+    - dset:
+        dset_name: "time"
+        start_time: 1686082505578958
+        end_time: 1686082509040889
+        dt_class: "H5T_FLOAT"
+        ds_class: "H5S_SCALAR"
+        layout: "H5D_CONTIGUOUS"
+        storage_size: 4
+        dset_n_elements: 1
+        dimension_cnt: 1
+        dimensions: [1, ]
+        dset_type_size: 4
+        dataset_read_cnt: 209
+        total_bytes_read: 836
+        dataset_write_cnt: 1
+        total_bytes_written: 4
+        dset_offset: -1
+        dset_select_type: "H5S_SEL_ALL"
+        dset_select_npoints: 1
+        data_file_pages: [0,0]
+        metadata_file_pages: [0, 941, ]
+        access_orders: [65, 67, 70, 74, 79, 85, 92, 100, 109, 119, 130, 140, 149, 157, 164, 170, 175, 179, 182, 184, ]
+- file-2:
+    file_name: "cloudid_20150506_000000.nc"
+    datasets:
+    - dset:
+        dset_name: "base_time"
+        start_time: 1686082505579593
+        end_time: 1686082509038368
+        dt_class: "H5T_FLOAT"
+        ds_class: "H5S_SCALAR"
+        layout: "H5D_CHUNKED"
+        storage_size: 16
+        dset_n_elements: 1
+        dimension_cnt: 1
+        dimensions: [1, ]
+        dset_type_size: 8
+        dataset_read_cnt: 2
+        total_bytes_read: 32
+        dataset_write_cnt: 2
+        total_bytes_written: 32
+        dset_offset: -1
+        dset_select_type: "H5S_SEL_ALL"
+        dset_select_npoints: 1
+        data_file_pages: [0,0]
+        metadata_file_pages: [0, ]
+        access_orders: [66, ]
+- file-2:
+    file_name: "cloudid_20150506_000000.nc"
+    datasets:
+    - dset:
+        dset_name: "echotop50"
+        start_time: 1686082506445801
+        end_time: 1686082509040780
+        dt_class: "H5T_FLOAT"
+        ds_class: "H5S_SCALAR"
+        layout: "H5D_CHUNKED"
+        storage_size: 7341
+        dset_n_elements: 1000000
+        dimension_cnt: 3
+        dimensions: [1, 1000, 1000, ]
+        dset_type_size: 4
+        dataset_read_cnt: 1430
+        total_bytes_read: 10497630
+        dataset_write_cnt: 53
+        total_bytes_written: 389073
+        dset_offset: -1
+        dset_select_type: "H5S_SEL_ALL"
+        dset_select_npoints: 1000000
+        data_file_pages: [0,0]
+        metadata_file_pages: [936, ]
+        access_orders: [68, 71, 75, 80, 86, 93, 101, 110, 120, 131, 141, 150, 158, 165, 171, 176, 180, 183, 190, 194, 199, 205, 212, 220, 229, 239, 250, 260, 269, 277, 284, 290, 295, 299, 302, 309, 313, 318, 324, 331, 339, 348, 358, 369, 379, 388, 396, 403, 409, 414, 418, 421, ]
+- file-2:
+    file_name: "cloudid_20150506_000000.nc"
+    datasets:
+    - dset:
+        dset_name: "tb"
+        start_time: 1686082505723490
+        end_time: 1686082509038647
+        dt_class: "H5T_FLOAT"
+        ds_class: "H5S_SCALAR"
+        layout: "H5D_CHUNKED"
+        storage_size: 2459322
+        dset_n_elements: 1000000
+        dimension_cnt: 3
+        dimensions: [1, 1000, 1000, ]
+        dset_type_size: 4
+        dataset_read_cnt: 9
+        total_bytes_read: 22133898
+        dataset_write_cnt: 4
+        total_bytes_written: 9837288
+        dset_offset: -1
+        dset_select_type: "H5S_SEL_ALL"
+        dset_select_npoints: 1000000
+        data_file_pages: [0,300]
+        metadata_file_pages: [251, ]
+        access_orders: [69, 192, 311, ]
+- file-2:
+    file_name: "cloudid_20150506_000000.nc"
+    datasets:
+    - dset:
+        dset_name: "echotop45"
+        start_time: 1686082506420194
+        end_time: 1686082509040668
+        dt_class: "H5T_FLOAT"
+        ds_class: "H5S_SCALAR"
+        layout: "H5D_CHUNKED"
+        storage_size: 11486
+        dset_n_elements: 1000000
+        dimension_cnt: 3
+        dimensions: [1, 1000, 1000, ]
+        dset_type_size: 4
+        dataset_read_cnt: 1224
+        total_bytes_read: 14058864
+        dataset_write_cnt: 49
+        total_bytes_written: 562814
+        dset_offset: -1
+        dset_select_type: "H5S_SEL_ALL"
+        dset_select_npoints: 1000000
+        data_file_pages: [0,1]
+        metadata_file_pages: [930, ]
+        access_orders: [72, 76, 81, 87, 94, 102, 111, 121, 132, 142, 151, 159, 166, 172, 177, 181, 191, 195, 200, 206, 213, 221, 230, 240, 251, 261, 270, 278, 285, 291, 296, 300, 310, 314, 319, 325, 332, 340, 349, 359, 370, 380, 389, 397, 404, 410, 415, 419, ]
+- file-2:
+    file_name: "cloudid_20150506_000000.nc"
+    datasets:
+    - dset:
+        dset_name: "cloudtype"
+        start_time: 1686082505816472
+        end_time: 1686082509038773
+        dt_class: "H5T_INTEGER"
+        ds_class: "H5S_SCALAR"
+        layout: "H5D_CHUNKED"
+        storage_size: 81520
+        dset_n_elements: 1000000
+        dimension_cnt: 3
+        dimensions: [1, 1000, 1000, ]
+        dset_type_size: 8
+        dataset_read_cnt: 9
+        total_bytes_read: 733680
+        dataset_write_cnt: 4
+        total_bytes_written: 326080
+        dset_offset: -1
+        dset_select_type: "H5S_SEL_ALL"
+        dset_select_npoints: 1000000
+        data_file_pages: [0,9]
+        metadata_file_pages: [552, ]
+        access_orders: [73, 197, 316, ]
+- file-2:
+    file_name: "cloudid_20150506_000000.nc"
+    datasets:
+    - dset:
+        dset_name: "echotop40"
+        start_time: 1686082506393980
+        end_time: 1686082509040558
+        dt_class: "H5T_FLOAT"
+        ds_class: "H5S_SCALAR"
+        layout: "H5D_CHUNKED"
+        storage_size: 18823
+        dset_n_elements: 1000000
+        dimension_cnt: 3
+        dimensions: [1, 1000, 1000, ]
+        dset_type_size: 4
+        dataset_read_cnt: 945
+        total_bytes_read: 17787735
+        dataset_write_cnt: 43
+        total_bytes_written: 809389
+        dset_offset: -1
+        dset_select_type: "H5S_SEL_ALL"
+        dset_select_npoints: 1000000
+        data_file_pages: [0,2]
+        metadata_file_pages: [907, ]
+        access_orders: [77, 82, 88, 95, 103, 112, 122, 133, 143, 152, 160, 167, 173, 178, 196, 201, 207, 214, 222, 231, 241, 252, 262, 271, 279, 286, 292, 297, 315, 320, 326, 333, 341, 350, 360, 371, 381, 390, 398, 405, 411, 416, ]
+- file-2:
+    file_name: "cloudid_20150506_000000.nc"
+    datasets:
+    - dset:
+        dset_name: "cloudnumber"
+        start_time: 1686082505872998
+        end_time: 1686082509038911
+        dt_class: "H5T_INTEGER"
+        ds_class: "H5S_SCALAR"
+        layout: "H5D_CHUNKED"
+        storage_size: 44270
+        dset_n_elements: 1000000
+        dimension_cnt: 3
+        dimensions: [1, 1000, 1000, ]
+        dset_type_size: 8
+        dataset_read_cnt: 9
+        total_bytes_read: 398430
+        dataset_write_cnt: 4
+        total_bytes_written: 177080
+        dset_offset: -1
+        dset_select_type: "H5S_SEL_ALL"
+        dset_select_npoints: 1000000
+        data_file_pages: [0,5]
+        metadata_file_pages: [563, ]
+        access_orders: [78, 203, 322, ]
+- file-2:
+    file_name: "cloudid_20150506_000000.nc"
+    datasets:
+    - dset:
+        dset_name: "echotop30"
+        start_time: 1686082506366749
+        end_time: 1686082509040458
+        dt_class: "H5T_FLOAT"
+        ds_class: "H5S_SCALAR"
+        layout: "H5D_CHUNKED"
+        storage_size: 43409
+        dset_n_elements: 1000000
+        dimension_cnt: 3
+        dimensions: [1, 1000, 1000, ]
+        dset_type_size: 4
+        dataset_read_cnt: 702
+        total_bytes_read: 30473118
+        dataset_write_cnt: 37
+        total_bytes_written: 1606133
+        dset_offset: -1
+        dset_select_type: "H5S_SEL_ALL"
+        dset_select_npoints: 1000000
+        data_file_pages: [0,5]
+        metadata_file_pages: [907, ]
+        access_orders: [83, 89, 96, 104, 113, 123, 134, 144, 153, 161, 168, 174, 202, 208, 215, 223, 232, 242, 253, 263, 272, 280, 287, 293, 321, 327, 334, 342, 351, 361, 372, 382, 391, 399, 406, 412, ]
+- file-2:
+    file_name: "cloudid_20150506_000000.nc"
+    datasets:
+    - dset:
+        dset_name: "feature_number"
+        start_time: 1686082505923342
+        end_time: 1686082509039053
+        dt_class: "H5T_INTEGER"
+        ds_class: "H5S_SCALAR"
+        layout: "H5D_CHUNKED"
+        storage_size: 44270
+        dset_n_elements: 1000000
+        dimension_cnt: 3
+        dimensions: [1, 1000, 1000, ]
+        dset_type_size: 8
+        dataset_read_cnt: 9
+        total_bytes_read: 398430
+        dataset_write_cnt: 4
+        total_bytes_written: 177080
+        dset_offset: -1
+        dset_select_type: "H5S_SEL_ALL"
+        dset_select_npoints: 1000000
+        data_file_pages: [0,5]
+        metadata_file_pages: [568, ]
+        access_orders: [84, 210, 329, ]
+- file-2:
+    file_name: "cloudid_20150506_000000.nc"
+    datasets:
+    - dset:
+        dset_name: "echotop20"
+        start_time: 1686082506336915
+        end_time: 1686082509040278
+        dt_class: "H5T_FLOAT"
+        ds_class: "H5S_SCALAR"
+        layout: "H5D_CHUNKED"
+        storage_size: 74914
+        dset_n_elements: 1000000
+        dimension_cnt: 3
+        dimensions: [1, 1000, 1000, ]
+        dset_type_size: 4
+        dataset_read_cnt: 495
+        total_bytes_read: 37082430
+        dataset_write_cnt: 31
+        total_bytes_written: 2322334
+        dset_offset: -1
+        dset_select_type: "H5S_SEL_ALL"
+        dset_select_npoints: 1000000
+        data_file_pages: [0,9]
+        metadata_file_pages: [799, ]
+        access_orders: [90, 97, 105, 114, 124, 135, 145, 154, 162, 169, 209, 216, 224, 233, 243, 254, 264, 273, 281, 288, 328, 335, 343, 352, 362, 373, 383, 392, 400, 407, ]
+- file-2:
+    file_name: "cloudid_20150506_000000.nc"
+    datasets:
+    - dset:
+        dset_name: "nfeatures"
+        start_time: 1686082505973317
+        end_time: 1686082509039176
+        dt_class: "H5T_INTEGER"
+        ds_class: "H5S_SCALAR"
+        layout: "H5D_CHUNKED"
+        storage_size: 12
+        dset_n_elements: 1
+        dimension_cnt: 1
+        dimensions: [1, ]
+        dset_type_size: 8
+        dataset_read_cnt: 2
+        total_bytes_read: 24
+        dataset_write_cnt: 2
+        total_bytes_written: 24
+        dset_offset: -1
+        dset_select_type: "H5S_SEL_ALL"
+        dset_select_npoints: 1
+        data_file_pages: [0,0]
+        metadata_file_pages: [574, ]
+        access_orders: [91, ]
+- file-2:
+    file_name: "cloudid_20150506_000000.nc"
+    datasets:
+    - dset:
+        dset_name: "echotop10"
+        start_time: 1686082506303698
+        end_time: 1686082509040165
+        dt_class: "H5T_FLOAT"
+        ds_class: "H5S_SCALAR"
+        layout: "H5D_CHUNKED"
+        storage_size: 111298
+        dset_n_elements: 1000000
+        dimension_cnt: 3
+        dimensions: [1, 1000, 1000, ]
+        dset_type_size: 4
+        dataset_read_cnt: 324
+        total_bytes_read: 36060552
+        dataset_write_cnt: 25
+        total_bytes_written: 2782450
+        dset_offset: -1
+        dset_select_type: "H5S_SEL_ALL"
+        dset_select_npoints: 1000000
+        data_file_pages: [0,13]
+        metadata_file_pages: [799, ]
+        access_orders: [98, 106, 115, 125, 136, 146, 155, 163, 217, 225, 234, 244, 255, 265, 274, 282, 336, 344, 353, 363, 374, 384, 393, 401, ]
+- file-2:
+    file_name: "cloudid_20150506_000000.nc"
+    datasets:
+    - dset:
+        dset_name: "precipitation"
+        start_time: 1686082505977886
+        end_time: 1686082509039210
+        dt_class: "H5T_FLOAT"
+        ds_class: "H5S_SCALAR"
+        layout: "H5D_CHUNKED"
+        storage_size: 899380
+        dset_n_elements: 1000000
+        dimension_cnt: 3
+        dimensions: [1, 1000, 1000, ]
+        dset_type_size: 4
+        dataset_read_cnt: 9
+        total_bytes_read: 8094420
+        dataset_write_cnt: 4
+        total_bytes_written: 3597520
+        dset_offset: -1
+        dset_select_type: "H5S_SEL_ALL"
+        dset_select_npoints: 1000000
+        data_file_pages: [0,109]
+        metadata_file_pages: [575, ]
+        access_orders: [99, 218, 337, ]
+- file-2:
+    file_name: "cloudid_20150506_000000.nc"
+    datasets:
+    - dset:
+        dset_name: "sl3d"
+        start_time: 1686082506284467
+        end_time: 1686082509040031
+        dt_class: "H5T_INTEGER"
+        ds_class: "H5S_SCALAR"
+        layout: "H5D_CHUNKED"
+        storage_size: 71430
+        dset_n_elements: 1000000
+        dimension_cnt: 3
+        dimensions: [1, 1000, 1000, ]
+        dset_type_size: 2
+        dataset_read_cnt: 189
+        total_bytes_read: 13500270
+        dataset_write_cnt: 19
+        total_bytes_written: 1357170
+        dset_offset: -1
+        dset_select_type: "H5S_SEL_ALL"
+        dset_select_npoints: 1000000
+        data_file_pages: [0,8]
+        metadata_file_pages: [575, ]
+        access_orders: [107, 116, 126, 137, 147, 156, 226, 235, 245, 256, 266, 275, 345, 354, 364, 375, 385, 394, ]
+- file-2:
+    file_name: "cloudid_20150506_000000.nc"
+    datasets:
+    - dset:
+        dset_name: "pf_number"
+        start_time: 1686082506035217
+        end_time: 1686082509039406
+        dt_class: "H5T_INTEGER"
+        ds_class: "H5S_SCALAR"
+        layout: "H5D_CHUNKED"
+        storage_size: 13366
+        dset_n_elements: 1000000
+        dimension_cnt: 3
+        dimensions: [1, 1000, 1000, ]
+        dset_type_size: 8
+        dataset_read_cnt: 9
+        total_bytes_read: 120294
+        dataset_write_cnt: 4
+        total_bytes_written: 53464
+        dset_offset: -1
+        dset_select_type: "H5S_SEL_ALL"
+        dset_select_npoints: 1000000
+        data_file_pages: [0,1]
+        metadata_file_pages: [685, ]
+        access_orders: [108, 227, 346, ]
+- file-2:
+    file_name: "cloudid_20150506_000000.nc"
+    datasets:
+    - dset:
+        dset_name: "reflectivity_comp"
+        start_time: 1686082506233729
+        end_time: 1686082509039910
+        dt_class: "H5T_FLOAT"
+        ds_class: "H5S_SCALAR"
+        layout: "H5D_CHUNKED"
+        storage_size: 799380
+        dset_n_elements: 1000000
+        dimension_cnt: 3
+        dimensions: [1, 1000, 1000, ]
+        dset_type_size: 4
+        dataset_read_cnt: 90
+        total_bytes_read: 71944200
+        dataset_write_cnt: 13
+        total_bytes_written: 10391940
+        dset_offset: -1
+        dset_select_type: "H5S_SEL_ALL"
+        dset_select_npoints: 1000000
+        data_file_pages: [0,97]
+        metadata_file_pages: [693, ]
+        access_orders: [117, 127, 138, 148, 236, 246, 257, 267, 355, 365, 376, 386, ]
+- file-2:
+    file_name: "cloudid_20150506_000000.nc"
+    datasets:
+    - dset:
+        dset_name: "convcold_cloudnumber_orig"
+        start_time: 1686082506082972
+        end_time: 1686082509039523
+        dt_class: "H5T_INTEGER"
+        ds_class: "H5S_SCALAR"
+        layout: "H5D_CHUNKED"
+        storage_size: 44732
+        dset_n_elements: 1000000
+        dimension_cnt: 3
+        dimensions: [1, 1000, 1000, ]
+        dset_type_size: 8
+        dataset_read_cnt: 9
+        total_bytes_read: 402588
+        dataset_write_cnt: 4
+        total_bytes_written: 178928
+        dset_offset: -1
+        dset_select_type: "H5S_SEL_ALL"
+        dset_select_npoints: 1000000
+        data_file_pages: [0,5]
+        metadata_file_pages: [687, ]
+        access_orders: [118, 237, 356, ]
+- file-2:
+    file_name: "cloudid_20150506_000000.nc"
+    datasets:
+    - dset:
+        dset_name: "reflectivity_lowlevel"
+        start_time: 1686082506182253
+        end_time: 1686082509039785
+        dt_class: "H5T_FLOAT"
+        ds_class: "H5S_SCALAR"
+        layout: "H5D_CHUNKED"
+        storage_size: 815701
+        dset_n_elements: 1000000
+        dimension_cnt: 3
+        dimensions: [1, 1000, 1000, ]
+        dset_type_size: 4
+        dataset_read_cnt: 27
+        total_bytes_read: 22023927
+        dataset_write_cnt: 7
+        total_bytes_written: 5709907
+        dset_offset: -1
+        dset_select_type: "H5S_SEL_ALL"
+        dset_select_npoints: 1000000
+        data_file_pages: [0,99]
+        metadata_file_pages: [688, ]
+        access_orders: [128, 139, 247, 258, 366, 377, ]
+- file-2:
+    file_name: "cloudid_20150506_000000.nc"
+    datasets:
+    - dset:
+        dset_name: "cloudnumber_orig"
+        start_time: 1686082506132924
+        end_time: 1686082509039653
+        dt_class: "H5T_INTEGER"
+        ds_class: "H5S_SCALAR"
+        layout: "H5D_CHUNKED"
+        storage_size: 44732
+        dset_n_elements: 1000000
+        dimension_cnt: 3
+        dimensions: [1, 1000, 1000, ]
+        dset_type_size: 8
+        dataset_read_cnt: 9
+        total_bytes_read: 402588
+        dataset_write_cnt: 4
+        total_bytes_written: 178928
+        dset_offset: -1
+        dset_select_type: "H5S_SEL_ALL"
+        dset_select_npoints: 1000000
+        data_file_pages: [0,5]
+        metadata_file_pages: [693, ]
+        access_orders: [129, 248, 367, ]
+- file-2:
+    file_name: "cloudid_20150506_000000.nc"
+    datasets:
+    - dset:
+        dset_name: "lat"
+        start_time: 1686082505579141
+        end_time: 1686082509040902
+        dt_class: "H5T_FLOAT"
+        ds_class: "H5S_SCALAR"
+        layout: "H5D_CONTIGUOUS"
+        storage_size: 4000
+        dset_n_elements: 1000
+        dimension_cnt: 1
+        dimensions: [1000, ]
+        dset_type_size: 4
+        dataset_read_cnt: 209
+        total_bytes_read: 836000
+        dataset_write_cnt: 1
+        total_bytes_written: 4000
+        dset_offset: -1
+        dset_select_type: "H5S_SEL_ALL"
+        dset_select_npoints: 1000
+        data_file_pages: [0,0]
+        metadata_file_pages: [0, ]
+        access_orders: [185, 187, 189, 193, 198, 204, 211, 219, 228, 238, 249, 259, 268, 276, 283, 289, 294, 298, 301, 303, ]
+- file-2:
+    file_name: "cloudid_20150506_000000.nc"
+    datasets:
+    - dset:
+        dset_name: "latitude"
+        start_time: 1686082505587860
+        end_time: 1686082509038398
+        dt_class: "H5T_FLOAT"
+        ds_class: "H5S_SCALAR"
+        layout: "H5D_CHUNKED"
+        storage_size: 1352763
+        dset_n_elements: 1000000
+        dimension_cnt: 2
+        dimensions: [1000, 1000, ]
+        dset_type_size: 4
+        dataset_read_cnt: 5
+        total_bytes_read: 6763815
+        dataset_write_cnt: 3
+        total_bytes_written: 4058289
+        dset_offset: -1
+        dset_select_type: "H5S_SEL_ALL"
+        dset_select_npoints: 1000000
+        data_file_pages: [0,165]
+        metadata_file_pages: [1, ]
+        access_orders: [186, 305, ]
+- file-2:
+    file_name: "cloudid_20150506_000000.nc"
+    datasets:
+    - dset:
+        dset_name: "longitude"
+        start_time: 1686082505663385
+        end_time: 1686082509038524
+        dt_class: "H5T_FLOAT"
+        ds_class: "H5S_SCALAR"
+        layout: "H5D_CHUNKED"
+        storage_size: 691270
+        dset_n_elements: 1000000
+        dimension_cnt: 2
+        dimensions: [1000, 1000, ]
+        dset_type_size: 4
+        dataset_read_cnt: 5
+        total_bytes_read: 3456350
+        dataset_write_cnt: 3
+        total_bytes_written: 2073810
+        dset_offset: -1
+        dset_select_type: "H5S_SEL_ALL"
+        dset_select_npoints: 1000000
+        data_file_pages: [0,84]
+        metadata_file_pages: [166, ]
+        access_orders: [188, 307, ]
+- file-2:
+    file_name: "cloudid_20150506_000000.nc"
+    datasets:
+    - dset:
+        dset_name: "lon"
+        start_time: 1686082505579276
+        end_time: 1686082509040913
+        dt_class: "H5T_FLOAT"
+        ds_class: "H5S_SCALAR"
+        layout: "H5D_CONTIGUOUS"
+        storage_size: 4000
+        dset_n_elements: 1000
+        dimension_cnt: 1
+        dimensions: [1000, ]
+        dset_type_size: 4
+        dataset_read_cnt: 209
+        total_bytes_read: 836000
+        dataset_write_cnt: 1
+        total_bytes_written: 4000
+        dset_offset: -1
+        dset_select_type: "H5S_SEL_ALL"
+        dset_select_npoints: 1000
+        data_file_pages: [0,0]
+        metadata_file_pages: [0, ]
+        access_orders: [304, 306, 308, 312, 317, 323, 330, 338, 347, 357, 368, 378, 387, 395, 402, 408, 413, 417, 420, 422, ]
+- file-2:
+    file_name: "cloudid_20150506_000000.nc"
+    datasets:
+    - dset:
+        dset_name: "features"
+        start_time: 1686082505579403
+        end_time: 1686082509040925
+        dt_class: "H5T_FLOAT"
+        ds_class: "H5S_SCALAR"
+        layout: "H5D_CONTIGUOUS"
+        storage_size: 1296
+        dset_n_elements: 324
+        dimension_cnt: 1
+        dimensions: [324, ]
+        dset_type_size: 4
+        dataset_read_cnt: 2
+        total_bytes_read: 2592
+        dataset_write_cnt: 1
+        total_bytes_written: 1296
+        dset_offset: -1
+        dset_select_type: "H5S_SEL_ALL"
+        dset_select_npoints: 324
+        data_file_pages: [0,0]
+        metadata_file_pages: [0, ]
+        access_orders: [423, 425, ]
+- file-2:
+    file_name: "cloudid_20150506_000000.nc"
+    datasets:
+    - dset:
+        dset_name: "npix_feature"
+        start_time: 1686082505975543
+        end_time: 1686082509039193
+        dt_class: "H5T_INTEGER"
+        ds_class: "H5S_SCALAR"
+        layout: "H5D_CHUNKED"
+        storage_size: 225
+        dset_n_elements: 324
+        dimension_cnt: 1
+        dimensions: [324, ]
+        dset_type_size: 8
+        dataset_read_cnt: 2
+        total_bytes_read: 450
+        dataset_write_cnt: 2
+        total_bytes_written: 450
+        dset_offset: -1
+        dset_select_type: "H5S_SEL_ALL"
+        dset_select_npoints: 324
+        data_file_pages: [0,0]
+        metadata_file_pages: [575, ]
+        access_orders: [424, ]
+- file-2:
+    file_name: "cloudid_20150506_000000.nc"
+    open_time: 1686082505575328
+    close_time: 1686082509042243
+    file_size: 7737570
+    header_size: 0
+    sieve_buf_size: 0
+    file_intent: ["H5F_ACC_RDWR"]
+    ds_created: 0
+    ds_accessed: 387
+    grp_created: 0
+    grp_accessed: 1
+    dtypes_created: 0
+    dtypes_accessed: 0
+Task:
+- task_id: 210263
+    VOL-Total-Overhead(ms): 836
+- file-1:
+    file_name: "wrfout_rainrate_tb_zh_mh_2015-05-06_00:00:00.nc"
+    open_time: 1686082481053843
+    close_time: 1686082509046385
+    file_size: 17684963
+    header_size: 0
+    sieve_buf_size: 0
+    file_intent: ["H5F_ACC_RDONLY"]
+    ds_created: 0
+    ds_accessed: 38
+    grp_created: 0
+    grp_accessed: 2
+    dtypes_created: 0
+    dtypes_accessed: 0
+Task:
+- task_id: 210263
+    VOL-Total-Overhead(ms): 837
+- file-3:
+    file_name: "wrfout_rainrate_tb_zh_mh_2015-05-06_01:00:00.nc"
+    datasets:
+    - dset:
+        dset_name: "base_time"
+        start_time: 1686082509203189
+        end_time: 1686082509206740
+        dt_class: "H5T_FLOAT"
+        ds_class: "H5S_SCALAR"
+        layout: "H5D_CHUNKED"
+        storage_size: 50
+        dset_n_elements: 1
+        dimension_cnt: 1
+        dimensions: [1, ]
+        dset_type_size: 8
+        dataset_read_cnt: 1
+        total_bytes_read: 50
+        dataset_write_cnt: 0
+        total_bytes_written: 0
+        dset_offset: -1
+        dset_select_type: "H5S_SEL_ALL"
+        dset_select_npoints: 1
+        data_file_pages: [0,0]
+        metadata_file_pages: [0, ]
+        access_orders: [437, ]
+- file-3:
+    file_name: "wrfout_rainrate_tb_zh_mh_2015-05-06_01:00:00.nc"
+    datasets:
+    - dset:
+        dset_name: "time"
+        start_time: 1686082509205510
+        end_time: 1686082509210252
+        dt_class: "H5T_FLOAT"
+        ds_class: "H5S_SCALAR"
+        layout: "H5D_CHUNKED"
+        storage_size: 16
+        dset_n_elements: 1
+        dimension_cnt: 1
+        dimensions: [1, ]
+        dset_type_size: 8
+        dataset_read_cnt: 26
+        total_bytes_read: 416
+        dataset_write_cnt: 0
+        total_bytes_written: 0
+        dset_offset: -1
+        dset_select_type: "H5S_SEL_ALL"
+        dset_select_npoints: 1
+        data_file_pages: [0,0]
+        metadata_file_pages: [0, ]
+        access_orders: [438, 446, 450, 455, 459, 462, ]
+- file-3:
+    file_name: "wrfout_rainrate_tb_zh_mh_2015-05-06_01:00:00.nc"
+    datasets:
+    - dset:
+        dset_name: "lon2d"
+        start_time: 1686082509203339
+        end_time: 1686082509207209
+        dt_class: "H5T_FLOAT"
+        ds_class: "H5S_SCALAR"
+        layout: "H5D_CHUNKED"
+        storage_size: 691270
+        dset_n_elements: 1000000
+        dimension_cnt: 2
+        dimensions: [1000, 1000, ]
+        dset_type_size: 4
+        dataset_read_cnt: 1
+        total_bytes_read: 691270
+        dataset_write_cnt: 0
+        total_bytes_written: 0
+        dset_offset: -1
+        dset_select_type: "H5S_SEL_ALL"
+        dset_select_npoints: 1000000
+        data_file_pages: [0,84]
+        metadata_file_pages: [1, ]
+        access_orders: [439, ]
+- file-3:
+    file_name: "wrfout_rainrate_tb_zh_mh_2015-05-06_01:00:00.nc"
+    datasets:
+    - dset:
+        dset_name: "lat"
+        start_time: 1686082509202731
+        end_time: 1686082509209970
+        dt_class: "H5T_FLOAT"
+        ds_class: "H5S_SCALAR"
+        layout: "H5D_CONTIGUOUS"
+        storage_size: 4000
+        dset_n_elements: 1000
+        dimension_cnt: 1
+        dimensions: [1000, ]
+        dset_type_size: 4
+        dataset_read_cnt: 27
+        total_bytes_read: 108000
+        dataset_write_cnt: 0
+        total_bytes_written: 0
+        dset_offset: -1
+        dset_select_type: "H5S_SEL_ALL"
+        dset_select_npoints: 1000
+        data_file_pages: [0,0]
+        metadata_file_pages: [0, ]
+        access_orders: [440, 443, 447, 452, 456, 460, ]
+- file-3:
+    file_name: "wrfout_rainrate_tb_zh_mh_2015-05-06_01:00:00.nc"
+    datasets:
+    - dset:
+        dset_name: "lon"
+        start_time: 1686082509202983
+        end_time: 1686082509210103
+        dt_class: "H5T_FLOAT"
+        ds_class: "H5S_SCALAR"
+        layout: "H5D_CONTIGUOUS"
+        storage_size: 4000
+        dset_n_elements: 1000
+        dimension_cnt: 1
+        dimensions: [1000, ]
+        dset_type_size: 4
+        dataset_read_cnt: 27
+        total_bytes_read: 108000
+        dataset_write_cnt: 0
+        total_bytes_written: 0
+        dset_offset: -1
+        dset_select_type: "H5S_SEL_ALL"
+        dset_select_npoints: 1000
+        data_file_pages: [0,0]
+        metadata_file_pages: [0, ]
+        access_orders: [441, 444, 448, 453, 457, 461, ]
+- file-3:
+    file_name: "wrfout_rainrate_tb_zh_mh_2015-05-06_01:00:00.nc"
+    datasets:
+    - dset:
+        dset_name: "lat2d"
+        start_time: 1686082509203475
+        end_time: 1686082509207626
+        dt_class: "H5T_FLOAT"
+        ds_class: "H5S_SCALAR"
+        layout: "H5D_CHUNKED"
+        storage_size: 1352763
+        dset_n_elements: 1000000
+        dimension_cnt: 2
+        dimensions: [1000, 1000, ]
+        dset_type_size: 4
+        dataset_read_cnt: 1
+        total_bytes_read: 1352763
+        dataset_write_cnt: 0
+        total_bytes_written: 0
+        dset_offset: -1
+        dset_select_type: "H5S_SEL_ALL"
+        dset_select_npoints: 1000000
+        data_file_pages: [0,165]
+        metadata_file_pages: [1, ]
+        access_orders: [442, ]
+- file-3:
+    file_name: "wrfout_rainrate_tb_zh_mh_2015-05-06_01:00:00.nc"
+    datasets:
+    - dset:
+        dset_name: "tb"
+        start_time: 1686082509203862
+        end_time: 1686082509208033
+        dt_class: "H5T_FLOAT"
+        ds_class: "H5S_SCALAR"
+        layout: "H5D_CHUNKED"
+        storage_size: 2446843
+        dset_n_elements: 1000000
+        dimension_cnt: 3
+        dimensions: [1, 1000, 1000, ]
+        dset_type_size: 4
+        dataset_read_cnt: 1
+        total_bytes_read: 2446843
+        dataset_write_cnt: 0
+        total_bytes_written: 0
+        dset_offset: -1
+        dset_select_type: "H5S_SEL_ALL"
+        dset_select_npoints: 1000000
+        data_file_pages: [0,298]
+        metadata_file_pages: [1, ]
+        access_orders: [445, ]
+- file-3:
+    file_name: "wrfout_rainrate_tb_zh_mh_2015-05-06_01:00:00.nc"
+    datasets:
+    - dset:
+        dset_name: "reflectivity"
+        start_time: 1686082509204281
+        end_time: 1686082509208553
+        dt_class: "H5T_FLOAT"
+        ds_class: "H5S_SCALAR"
+        layout: "H5D_CHUNKED"
+        storage_size: 9601745
+        dset_n_elements: 25000000
+        dimension_cnt: 4
+        dimensions: [1, 25, 1000, 1000, ]
+        dset_type_size: 4
+        dataset_read_cnt: 1
+        total_bytes_read: 9601745
+        dataset_write_cnt: 0
+        total_bytes_written: 0
+        dset_offset: -1
+        dset_select_type: "H5S_SEL_ALL"
+        dset_select_npoints: 25000000
+        data_file_pages: [0,1172]
+        metadata_file_pages: [2, ]
+        access_orders: [449, ]
+- file-3:
+    file_name: "wrfout_rainrate_tb_zh_mh_2015-05-06_01:00:00.nc"
+    datasets:
+    - dset:
+        dset_name: "level"
+        start_time: 1686082509206279
+        end_time: 1686082509210427
+        dt_class: "H5T_FLOAT"
+        ds_class: "H5S_SCALAR"
+        layout: "H5D_CONTIGUOUS"
+        storage_size: 200
+        dset_n_elements: 25
+        dimension_cnt: 1
+        dimensions: [25, ]
+        dset_type_size: 8
+        dataset_read_cnt: 4
+        total_bytes_read: 800
+        dataset_write_cnt: 0
+        total_bytes_written: 0
+        dset_offset: 17327418
+        dset_select_type: "H5S_SEL_ALL"
+        dset_select_npoints: 25
+        data_file_pages: [0,0]
+        metadata_file_pages: [0, ]
+        access_orders: [451, 463, ]
+- file-3:
+    file_name: "wrfout_rainrate_tb_zh_mh_2015-05-06_01:00:00.nc"
+    datasets:
+    - dset:
+        dset_name: "rainrate"
+        start_time: 1686082509204689
+        end_time: 1686082509209171
+        dt_class: "H5T_FLOAT"
+        ds_class: "H5S_SCALAR"
+        layout: "H5D_CHUNKED"
+        storage_size: 849548
+        dset_n_elements: 1000000
+        dimension_cnt: 3
+        dimensions: [1, 1000, 1000, ]
+        dset_type_size: 4
+        dataset_read_cnt: 1
+        total_bytes_read: 849548
+        dataset_write_cnt: 0
+        total_bytes_written: 0
+        dset_offset: -1
+        dset_select_type: "H5S_SEL_ALL"
+        dset_select_npoints: 1000000
+        data_file_pages: [0,103]
+        metadata_file_pages: [252, ]
+        access_orders: [454, ]
+- file-3:
+    file_name: "wrfout_rainrate_tb_zh_mh_2015-05-06_01:00:00.nc"
+    datasets:
+    - dset:
+        dset_name: "meltinglevelheight"
+        start_time: 1686082509205085
+        end_time: 1686082509209684
+        dt_class: "H5T_FLOAT"
+        ds_class: "H5S_SCALAR"
+        layout: "H5D_CHUNKED"
+        storage_size: 2343772
+        dset_n_elements: 1000000
+        dimension_cnt: 3
+        dimensions: [1, 1000, 1000, ]
+        dset_type_size: 4
+        dataset_read_cnt: 1
+        total_bytes_read: 2343772
+        dataset_write_cnt: 0
+        total_bytes_written: 0
+        dset_offset: -1
+        dset_select_type: "H5S_SEL_ALL"
+        dset_select_npoints: 1000000
+        data_file_pages: [0,286]
+        metadata_file_pages: [252, ]
+        access_orders: [458, ]
+- file-4:
+    file_name: "cloudid_20150506_010000.nc"
+    datasets:
+    - dset:
+        dset_name: "time"
+        start_time: 1686082530429555
+        end_time: 1686082532868204
+        dt_class: "H5T_FLOAT"
+        ds_class: "H5S_SCALAR"
+        layout: "H5D_CONTIGUOUS"
+        storage_size: 4
+        dset_n_elements: 1
+        dimension_cnt: 1
+        dimensions: [1, ]
+        dset_type_size: 4
+        dataset_read_cnt: 209
+        total_bytes_read: 836
+        dataset_write_cnt: 1
+        total_bytes_written: 4
+        dset_offset: -1
+        dset_select_type: "H5S_SEL_ALL"
+        dset_select_npoints: 1
+        data_file_pages: [0,0]
+        metadata_file_pages: [0, 920, ]
+        access_orders: [490, 492, 495, 499, 504, 510, 517, 525, 534, 544, 555, 565, 574, 582, 589, 595, 600, 604, 607, 609, ]
+- file-4:
+    file_name: "cloudid_20150506_010000.nc"
+    datasets:
+    - dset:
+        dset_name: "base_time"
+        start_time: 1686082530430150
+        end_time: 1686082532865869
+        dt_class: "H5T_FLOAT"
+        ds_class: "H5S_SCALAR"
+        layout: "H5D_CHUNKED"
+        storage_size: 16
+        dset_n_elements: 1
+        dimension_cnt: 1
+        dimensions: [1, ]
+        dset_type_size: 8
+        dataset_read_cnt: 2
+        total_bytes_read: 32
+        dataset_write_cnt: 2
+        total_bytes_written: 32
+        dset_offset: -1
+        dset_select_type: "H5S_SEL_ALL"
+        dset_select_npoints: 1
+        data_file_pages: [0,0]
+        metadata_file_pages: [0, ]
+        access_orders: [491, ]
+- file-4:
+    file_name: "cloudid_20150506_010000.nc"
+    datasets:
+    - dset:
+        dset_name: "echotop50"
+        start_time: 1686082532798346
+        end_time: 1686082532868093
+        dt_class: "H5T_FLOAT"
+        ds_class: "H5S_SCALAR"
+        layout: "H5D_CHUNKED"
+        storage_size: 6614
+        dset_n_elements: 1000000
+        dimension_cnt: 3
+        dimensions: [1, 1000, 1000, ]
+        dset_type_size: 4
+        dataset_read_cnt: 1430
+        total_bytes_read: 9458020
+        dataset_write_cnt: 53
+        total_bytes_written: 350542
+        dset_offset: -1
+        dset_select_type: "H5S_SEL_ALL"
+        dset_select_npoints: 1000000
+        data_file_pages: [0,0]
+        metadata_file_pages: [916, ]
+        access_orders: [493, 496, 500, 505, 511, 518, 526, 535, 545, 556, 566, 575, 583, 590, 596, 601, 605, 608, 615, 619, 624, 630, 637, 645, 654, 664, 675, 685, 694, 702, 709, 715, 720, 724, 727, 734, 738, 743, 749, 756, 764, 773, 783, 794, 804, 813, 821, 828, 834, 839, 843, 846, ]
+- file-4:
+    file_name: "cloudid_20150506_010000.nc"
+    datasets:
+    - dset:
+        dset_name: "tb"
+        start_time: 1686082530565533
+        end_time: 1686082532866156
+        dt_class: "H5T_FLOAT"
+        ds_class: "H5S_SCALAR"
+        layout: "H5D_CHUNKED"
+        storage_size: 2446843
+        dset_n_elements: 1000000
+        dimension_cnt: 3
+        dimensions: [1, 1000, 1000, ]
+        dset_type_size: 4
+        dataset_read_cnt: 9
+        total_bytes_read: 22021587
+        dataset_write_cnt: 4
+        total_bytes_written: 9787372
+        dset_offset: -1
+        dset_select_type: "H5S_SEL_ALL"
+        dset_select_npoints: 1000000
+        data_file_pages: [0,298]
+        metadata_file_pages: [251, ]
+        access_orders: [494, 617, 736, ]
+- file-4:
+    file_name: "cloudid_20150506_010000.nc"
+    datasets:
+    - dset:
+        dset_name: "echotop45"
+        start_time: 1686082532771943
+        end_time: 1686082532867972
+        dt_class: "H5T_FLOAT"
+        ds_class: "H5S_SCALAR"
+        layout: "H5D_CHUNKED"
+        storage_size: 10164
+        dset_n_elements: 1000000
+        dimension_cnt: 3
+        dimensions: [1, 1000, 1000, ]
+        dset_type_size: 4
+        dataset_read_cnt: 1224
+        total_bytes_read: 12440736
+        dataset_write_cnt: 49
+        total_bytes_written: 498036
+        dset_offset: -1
+        dset_select_type: "H5S_SEL_ALL"
+        dset_select_npoints: 1000000
+        data_file_pages: [0,1]
+        metadata_file_pages: [911, ]
+        access_orders: [497, 501, 506, 512, 519, 527, 536, 546, 557, 567, 576, 584, 591, 597, 602, 606, 616, 620, 625, 631, 638, 646, 655, 665, 676, 686, 695, 703, 710, 716, 721, 725, 735, 739, 744, 750, 757, 765, 774, 784, 795, 805, 814, 822, 829, 835, 840, 844, ]
+- file-4:
+    file_name: "cloudid_20150506_010000.nc"
+    datasets:
+    - dset:
+        dset_name: "cloudtype"
+        start_time: 1686082530656324
+        end_time: 1686082532866275
+        dt_class: "H5T_INTEGER"
+        ds_class: "H5S_SCALAR"
+        layout: "H5D_CHUNKED"
+        storage_size: 80536
+        dset_n_elements: 1000000
+        dimension_cnt: 3
+        dimensions: [1, 1000, 1000, ]
+        dset_type_size: 8
+        dataset_read_cnt: 9
+        total_bytes_read: 724824
+        dataset_write_cnt: 4
+        total_bytes_written: 322144
+        dset_offset: -1
+        dset_select_type: "H5S_SEL_ALL"
+        dset_select_npoints: 1000000
+        data_file_pages: [0,9]
+        metadata_file_pages: [550, ]
+        access_orders: [498, 622, 741, ]
+- file-4:
+    file_name: "cloudid_20150506_010000.nc"
+    datasets:
+    - dset:
+        dset_name: "echotop40"
+        start_time: 1686082532744746
+        end_time: 1686082532867855
+        dt_class: "H5T_FLOAT"
+        ds_class: "H5S_SCALAR"
+        layout: "H5D_CHUNKED"
+        storage_size: 16830
+        dset_n_elements: 1000000
+        dimension_cnt: 3
+        dimensions: [1, 1000, 1000, ]
+        dset_type_size: 4
+        dataset_read_cnt: 945
+        total_bytes_read: 15904350
+        dataset_write_cnt: 43
+        total_bytes_written: 723690
+        dset_offset: -1
+        dset_select_type: "H5S_SEL_ALL"
+        dset_select_npoints: 1000000
+        data_file_pages: [0,2]
+        metadata_file_pages: [889, ]
+        access_orders: [502, 507, 513, 520, 528, 537, 547, 558, 568, 577, 585, 592, 598, 603, 621, 626, 632, 639, 647, 656, 666, 677, 687, 696, 704, 711, 717, 722, 740, 745, 751, 758, 766, 775, 785, 796, 806, 815, 823, 830, 836, 841, ]
+- file-4:
+    file_name: "cloudid_20150506_010000.nc"
+    datasets:
+    - dset:
+        dset_name: "cloudnumber"
+        start_time: 1686082530709429
+        end_time: 1686082532866405
+        dt_class: "H5T_INTEGER"
+        ds_class: "H5S_SCALAR"
+        layout: "H5D_CHUNKED"
+        storage_size: 44807
+        dset_n_elements: 1000000
+        dimension_cnt: 3
+        dimensions: [1, 1000, 1000, ]
+        dset_type_size: 8
+        dataset_read_cnt: 9
+        total_bytes_read: 403263
+        dataset_write_cnt: 4
+        total_bytes_written: 179228
+        dset_offset: -1
+        dset_select_type: "H5S_SEL_ALL"
+        dset_select_npoints: 1000000
+        data_file_pages: [0,5]
+        metadata_file_pages: [561, ]
+        access_orders: [503, 628, 747, ]
+- file-4:
+    file_name: "cloudid_20150506_010000.nc"
+    datasets:
+    - dset:
+        dset_name: "echotop30"
+        start_time: 1686082532714837
+        end_time: 1686082532867727
+        dt_class: "H5T_FLOAT"
+        ds_class: "H5S_SCALAR"
+        layout: "H5D_CHUNKED"
+        storage_size: 39880
+        dset_n_elements: 1000000
+        dimension_cnt: 3
+        dimensions: [1, 1000, 1000, ]
+        dset_type_size: 4
+        dataset_read_cnt: 702
+        total_bytes_read: 27995760
+        dataset_write_cnt: 37
+        total_bytes_written: 1475560
+        dset_offset: -1
+        dset_select_type: "H5S_SEL_ALL"
+        dset_select_npoints: 1000000
+        data_file_pages: [0,4]
+        metadata_file_pages: [889, ]
+        access_orders: [508, 514, 521, 529, 538, 548, 559, 569, 578, 586, 593, 599, 627, 633, 640, 648, 657, 667, 678, 688, 697, 705, 712, 718, 746, 752, 759, 767, 776, 786, 797, 807, 816, 824, 831, 837, ]
+- file-4:
+    file_name: "cloudid_20150506_010000.nc"
+    datasets:
+    - dset:
+        dset_name: "feature_number"
+        start_time: 1686082530759073
+        end_time: 1686082532866526
+        dt_class: "H5T_INTEGER"
+        ds_class: "H5S_SCALAR"
+        layout: "H5D_CHUNKED"
+        storage_size: 44807
+        dset_n_elements: 1000000
+        dimension_cnt: 3
+        dimensions: [1, 1000, 1000, ]
+        dset_type_size: 8
+        dataset_read_cnt: 9
+        total_bytes_read: 403263
+        dataset_write_cnt: 4
+        total_bytes_written: 179228
+        dset_offset: -1
+        dset_select_type: "H5S_SEL_ALL"
+        dset_select_npoints: 1000000
+        data_file_pages: [0,5]
+        metadata_file_pages: [567, ]
+        access_orders: [509, 635, 754, ]
+- file-4:
+    file_name: "cloudid_20150506_010000.nc"
+    datasets:
+    - dset:
+        dset_name: "echotop20"
+        start_time: 1686082532685762
+        end_time: 1686082532867611
+        dt_class: "H5T_FLOAT"
+        ds_class: "H5S_SCALAR"
+        layout: "H5D_CHUNKED"
+        storage_size: 69165
+        dset_n_elements: 1000000
+        dimension_cnt: 3
+        dimensions: [1, 1000, 1000, ]
+        dset_type_size: 4
+        dataset_read_cnt: 495
+        total_bytes_read: 34236675
+        dataset_write_cnt: 31
+        total_bytes_written: 2144115
+        dset_offset: -1
+        dset_select_type: "H5S_SEL_ALL"
+        dset_select_npoints: 1000000
+        data_file_pages: [0,8]
+        metadata_file_pages: [787, ]
+        access_orders: [515, 522, 530, 539, 549, 560, 570, 579, 587, 594, 634, 641, 649, 658, 668, 679, 689, 698, 706, 713, 753, 760, 768, 777, 787, 798, 808, 817, 825, 832, ]
+- file-4:
+    file_name: "cloudid_20150506_010000.nc"
+    datasets:
+    - dset:
+        dset_name: "nfeatures"
+        start_time: 1686082530808699
+        end_time: 1686082532866644
+        dt_class: "H5T_INTEGER"
+        ds_class: "H5S_SCALAR"
+        layout: "H5D_CHUNKED"
+        storage_size: 12
+        dset_n_elements: 1
+        dimension_cnt: 1
+        dimensions: [1, ]
+        dset_type_size: 8
+        dataset_read_cnt: 2
+        total_bytes_read: 24
+        dataset_write_cnt: 2
+        total_bytes_written: 24
+        dset_offset: -1
+        dset_select_type: "H5S_SEL_ALL"
+        dset_select_npoints: 1
+        data_file_pages: [0,0]
+        metadata_file_pages: [573, ]
+        access_orders: [516, ]
+- file-4:
+    file_name: "cloudid_20150506_010000.nc"
+    datasets:
+    - dset:
+        dset_name: "echotop10"
+        start_time: 1686082532651876
+        end_time: 1686082532867498
+        dt_class: "H5T_FLOAT"
+        ds_class: "H5S_SCALAR"
+        layout: "H5D_CHUNKED"
+        storage_size: 104530
+        dset_n_elements: 1000000
+        dimension_cnt: 3
+        dimensions: [1, 1000, 1000, ]
+        dset_type_size: 4
+        dataset_read_cnt: 324
+        total_bytes_read: 33867720
+        dataset_write_cnt: 25
+        total_bytes_written: 2613250
+        dset_offset: -1
+        dset_select_type: "H5S_SEL_ALL"
+        dset_select_npoints: 1000000
+        data_file_pages: [0,12]
+        metadata_file_pages: [787, ]
+        access_orders: [523, 531, 540, 550, 561, 571, 580, 588, 642, 650, 659, 669, 680, 690, 699, 707, 761, 769, 778, 788, 799, 809, 818, 826, ]
+- file-4:
+    file_name: "cloudid_20150506_010000.nc"
+    datasets:
+    - dset:
+        dset_name: "precipitation"
+        start_time: 1686082530813164
+        end_time: 1686082532866677
+        dt_class: "H5T_FLOAT"
+        ds_class: "H5S_SCALAR"
+        layout: "H5D_CHUNKED"
+        storage_size: 849548
+        dset_n_elements: 1000000
+        dimension_cnt: 3
+        dimensions: [1, 1000, 1000, ]
+        dset_type_size: 4
+        dataset_read_cnt: 9
+        total_bytes_read: 7645932
+        dataset_write_cnt: 4
+        total_bytes_written: 3398192
+        dset_offset: -1
+        dset_select_type: "H5S_SEL_ALL"
+        dset_select_npoints: 1000000
+        data_file_pages: [0,103]
+        metadata_file_pages: [574, ]
+        access_orders: [524, 643, 762, ]
+- file-4:
+    file_name: "cloudid_20150506_010000.nc"
+    datasets:
+    - dset:
+        dset_name: "sl3d"
+        start_time: 1686082532633433
+        end_time: 1686082532867388
+        dt_class: "H5T_INTEGER"
+        ds_class: "H5S_SCALAR"
+        layout: "H5D_CHUNKED"
+        storage_size: 66846
+        dset_n_elements: 1000000
+        dimension_cnt: 3
+        dimensions: [1, 1000, 1000, ]
+        dset_type_size: 2
+        dataset_read_cnt: 189
+        total_bytes_read: 12633894
+        dataset_write_cnt: 19
+        total_bytes_written: 1270074
+        dset_offset: -1
+        dset_select_type: "H5S_SEL_ALL"
+        dset_select_npoints: 1000000
+        data_file_pages: [0,8]
+        metadata_file_pages: [574, ]
+        access_orders: [532, 541, 551, 562, 572, 581, 651, 660, 670, 681, 691, 700, 770, 779, 789, 800, 810, 819, ]
+- file-4:
+    file_name: "cloudid_20150506_010000.nc"
+    datasets:
+    - dset:
+        dset_name: "pf_number"
+        start_time: 1686082532379710
+        end_time: 1686082532866859
+        dt_class: "H5T_INTEGER"
+        ds_class: "H5S_SCALAR"
+        layout: "H5D_CHUNKED"
+        storage_size: 13101
+        dset_n_elements: 1000000
+        dimension_cnt: 3
+        dimensions: [1, 1000, 1000, ]
+        dset_type_size: 8
+        dataset_read_cnt: 9
+        total_bytes_read: 117909
+        dataset_write_cnt: 4
+        total_bytes_written: 52404
+        dset_offset: -1
+        dset_select_type: "H5S_SEL_ALL"
+        dset_select_npoints: 1000000
+        data_file_pages: [0,1]
+        metadata_file_pages: [678, ]
+        access_orders: [533, 652, 771, ]
+- file-4:
+    file_name: "cloudid_20150506_010000.nc"
+    datasets:
+    - dset:
+        dset_name: "reflectivity_comp"
+        start_time: 1686082532584672
+        end_time: 1686082532867280
+        dt_class: "H5T_FLOAT"
+        ds_class: "H5S_SCALAR"
+        layout: "H5D_CHUNKED"
+        storage_size: 757663
+        dset_n_elements: 1000000
+        dimension_cnt: 3
+        dimensions: [1, 1000, 1000, ]
+        dset_type_size: 4
+        dataset_read_cnt: 90
+        total_bytes_read: 68189670
+        dataset_write_cnt: 13
+        total_bytes_written: 9849619
+        dset_offset: -1
+        dset_select_type: "H5S_SEL_ALL"
+        dset_select_npoints: 1000000
+        data_file_pages: [0,92]
+        metadata_file_pages: [686, ]
+        access_orders: [542, 552, 563, 573, 661, 671, 682, 692, 780, 790, 801, 811, ]
+- file-4:
+    file_name: "cloudid_20150506_010000.nc"
+    datasets:
+    - dset:
+        dset_name: "convcold_cloudnumber_orig"
+        start_time: 1686082532432812
+        end_time: 1686082532866965
+        dt_class: "H5T_INTEGER"
+        ds_class: "H5S_SCALAR"
+        layout: "H5D_CHUNKED"
+        storage_size: 45003
+        dset_n_elements: 1000000
+        dimension_cnt: 3
+        dimensions: [1, 1000, 1000, ]
+        dset_type_size: 8
+        dataset_read_cnt: 9
+        total_bytes_read: 405027
+        dataset_write_cnt: 4
+        total_bytes_written: 180012
+        dset_offset: -1
+        dset_select_type: "H5S_SEL_ALL"
+        dset_select_npoints: 1000000
+        data_file_pages: [0,5]
+        metadata_file_pages: [680, ]
+        access_orders: [543, 662, 781, ]
+- file-4:
+    file_name: "cloudid_20150506_010000.nc"
+    datasets:
+    - dset:
+        dset_name: "reflectivity_lowlevel"
+        start_time: 1686082532535573
+        end_time: 1686082532867176
+        dt_class: "H5T_FLOAT"
+        ds_class: "H5S_SCALAR"
+        layout: "H5D_CHUNKED"
+        storage_size: 775962
+        dset_n_elements: 1000000
+        dimension_cnt: 3
+        dimensions: [1, 1000, 1000, ]
+        dset_type_size: 4
+        dataset_read_cnt: 27
+        total_bytes_read: 20950974
+        dataset_write_cnt: 7
+        total_bytes_written: 5431734
+        dset_offset: -1
+        dset_select_type: "H5S_SEL_ALL"
+        dset_select_npoints: 1000000
+        data_file_pages: [0,94]
+        metadata_file_pages: [680, ]
+        access_orders: [553, 564, 672, 683, 791, 802, ]
+- file-4:
+    file_name: "cloudid_20150506_010000.nc"
+    datasets:
+    - dset:
+        dset_name: "cloudnumber_orig"
+        start_time: 1686082532486276
+        end_time: 1686082532867073
+        dt_class: "H5T_INTEGER"
+        ds_class: "H5S_SCALAR"
+        layout: "H5D_CHUNKED"
+        storage_size: 45003
+        dset_n_elements: 1000000
+        dimension_cnt: 3
+        dimensions: [1, 1000, 1000, ]
+        dset_type_size: 8
+        dataset_read_cnt: 9
+        total_bytes_read: 405027
+        dataset_write_cnt: 4
+        total_bytes_written: 180012
+        dset_offset: -1
+        dset_select_type: "H5S_SEL_ALL"
+        dset_select_npoints: 1000000
+        data_file_pages: [0,5]
+        metadata_file_pages: [686, ]
+        access_orders: [554, 673, 792, ]
+- file-4:
+    file_name: "cloudid_20150506_010000.nc"
+    datasets:
+    - dset:
+        dset_name: "lat"
+        start_time: 1686082530429711
+        end_time: 1686082532868217
+        dt_class: "H5T_FLOAT"
+        ds_class: "H5S_SCALAR"
+        layout: "H5D_CONTIGUOUS"
+        storage_size: 4000
+        dset_n_elements: 1000
+        dimension_cnt: 1
+        dimensions: [1000, ]
+        dset_type_size: 4
+        dataset_read_cnt: 209
+        total_bytes_read: 836000
+        dataset_write_cnt: 1
+        total_bytes_written: 4000
+        dset_offset: -1
+        dset_select_type: "H5S_SEL_ALL"
+        dset_select_npoints: 1000
+        data_file_pages: [0,0]
+        metadata_file_pages: [0, ]
+        access_orders: [610, 612, 614, 618, 623, 629, 636, 644, 653, 663, 674, 684, 693, 701, 708, 714, 719, 723, 726, 728, ]
+- file-4:
+    file_name: "cloudid_20150506_010000.nc"
+    datasets:
+    - dset:
+        dset_name: "latitude"
+        start_time: 1686082530432388
+        end_time: 1686082532865898
+        dt_class: "H5T_FLOAT"
+        ds_class: "H5S_SCALAR"
+        layout: "H5D_CHUNKED"
+        storage_size: 1352763
+        dset_n_elements: 1000000
+        dimension_cnt: 2
+        dimensions: [1000, 1000, ]
+        dset_type_size: 4
+        dataset_read_cnt: 5
+        total_bytes_read: 6763815
+        dataset_write_cnt: 3
+        total_bytes_written: 4058289
+        dset_offset: -1
+        dset_select_type: "H5S_SEL_ALL"
+        dset_select_npoints: 1000000
+        data_file_pages: [0,165]
+        metadata_file_pages: [1, ]
+        access_orders: [611, 730, ]
+- file-4:
+    file_name: "cloudid_20150506_010000.nc"
+    datasets:
+    - dset:
+        dset_name: "longitude"
+        start_time: 1686082530506772
+        end_time: 1686082532866033
+        dt_class: "H5T_FLOAT"
+        ds_class: "H5S_SCALAR"
+        layout: "H5D_CHUNKED"
+        storage_size: 691270
+        dset_n_elements: 1000000
+        dimension_cnt: 2
+        dimensions: [1000, 1000, ]
+        dset_type_size: 4
+        dataset_read_cnt: 5
+        total_bytes_read: 3456350
+        dataset_write_cnt: 3
+        total_bytes_written: 2073810
+        dset_offset: -1
+        dset_select_type: "H5S_SEL_ALL"
+        dset_select_npoints: 1000000
+        data_file_pages: [0,84]
+        metadata_file_pages: [166, ]
+        access_orders: [613, 732, ]
+- file-4:
+    file_name: "cloudid_20150506_010000.nc"
+    datasets:
+    - dset:
+        dset_name: "lon"
+        start_time: 1686082530429842
+        end_time: 1686082532868229
+        dt_class: "H5T_FLOAT"
+        ds_class: "H5S_SCALAR"
+        layout: "H5D_CONTIGUOUS"
+        storage_size: 4000
+        dset_n_elements: 1000
+        dimension_cnt: 1
+        dimensions: [1000, ]
+        dset_type_size: 4
+        dataset_read_cnt: 209
+        total_bytes_read: 836000
+        dataset_write_cnt: 1
+        total_bytes_written: 4000
+        dset_offset: -1
+        dset_select_type: "H5S_SEL_ALL"
+        dset_select_npoints: 1000
+        data_file_pages: [0,0]
+        metadata_file_pages: [0, ]
+        access_orders: [729, 731, 733, 737, 742, 748, 755, 763, 772, 782, 793, 803, 812, 820, 827, 833, 838, 842, 845, 847, ]
+- file-4:
+    file_name: "cloudid_20150506_010000.nc"
+    datasets:
+    - dset:
+        dset_name: "features"
+        start_time: 1686082530429968
+        end_time: 1686082532868241
+        dt_class: "H5T_FLOAT"
+        ds_class: "H5S_SCALAR"
+        layout: "H5D_CONTIGUOUS"
+        storage_size: 1316
+        dset_n_elements: 329
+        dimension_cnt: 1
+        dimensions: [329, ]
+        dset_type_size: 4
+        dataset_read_cnt: 2
+        total_bytes_read: 2632
+        dataset_write_cnt: 1
+        total_bytes_written: 1316
+        dset_offset: -1
+        dset_select_type: "H5S_SEL_ALL"
+        dset_select_npoints: 329
+        data_file_pages: [0,0]
+        metadata_file_pages: [0, ]
+        access_orders: [848, 850, ]
+- file-4:
+    file_name: "cloudid_20150506_010000.nc"
+    datasets:
+    - dset:
+        dset_name: "npix_feature"
+        start_time: 1686082530810968
+        end_time: 1686082532866662
+        dt_class: "H5T_INTEGER"
+        ds_class: "H5S_SCALAR"
+        layout: "H5D_CHUNKED"
+        storage_size: 244
+        dset_n_elements: 329
+        dimension_cnt: 1
+        dimensions: [329, ]
+        dset_type_size: 8
+        dataset_read_cnt: 2
+        total_bytes_read: 488
+        dataset_write_cnt: 2
+        total_bytes_written: 488
+        dset_offset: -1
+        dset_select_type: "H5S_SEL_ALL"
+        dset_select_npoints: 329
+        data_file_pages: [0,0]
+        metadata_file_pages: [573, ]
+        access_orders: [849, ]
+- file-4:
+    file_name: "cloudid_20150506_010000.nc"
+    open_time: 1686082530425869
+    close_time: 1686082532868817
+    file_size: 7569557
+    header_size: 0
+    sieve_buf_size: 0
+    file_intent: ["H5F_ACC_RDWR"]
+    ds_created: 0
+    ds_accessed: 387
+    grp_created: 0
+    grp_accessed: 1
+    dtypes_created: 0
+    dtypes_accessed: 0
+Task:
+- task_id: 210263
+    VOL-Total-Overhead(ms): 3185
+- file-3:
+    file_name: "wrfout_rainrate_tb_zh_mh_2015-05-06_01:00:00.nc"
+    open_time: 1686082509201780
+    close_time: 1686082532872441
+    file_size: 17327618
+    header_size: 0
+    sieve_buf_size: 0
+    file_intent: ["H5F_ACC_RDONLY"]
+    ds_created: 0
+    ds_accessed: 38
+    grp_created: 0
+    grp_accessed: 2
+    dtypes_created: 0
+    dtypes_accessed: 0
+Task:
+- task_id: 210263
+    VOL-Total-Overhead(ms): 3185
+- file-5:
+    file_name: "cloudid_20150506_000000.nc"
+    open_time: 1686082532898229
+    close_time: 1686082533272230
+    file_size: 7737570
+    header_size: 0
+    sieve_buf_size: 0
+    file_intent: ["H5F_ACC_RDONLY"]
+    ds_created: 0
+    ds_accessed: 110
+    grp_created: 0
+    grp_accessed: 2
+    dtypes_created: 0
+    dtypes_accessed: 0
+Task:
+- task_id: 210263
+    VOL-Total-Overhead(ms): 3195
+- file-6:
+    file_name: "cloudid_20150506_010000.nc"
+    open_time: 1686082533278649
+    close_time: 1686082534720242
+    file_size: 7569557
+    header_size: 0
+    sieve_buf_size: 0
+    file_intent: ["H5F_ACC_RDONLY"]
+    ds_created: 0
+    ds_accessed: 110
+    grp_created: 0
+    grp_accessed: 2
+    dtypes_created: 0
+    dtypes_accessed: 0
+Task:
+- task_id: 210263
+    VOL-Total-Overhead(ms): 3205
+- file-9:
+    file_name: "track_20150506_010000.nc"
+    datasets:
+    - dset:
+        dset_name: "time"
+        start_time: 1686082537947322
+        end_time: 1686082537993681
+        dt_class: "H5T_FLOAT"
+        ds_class: "H5S_SCALAR"
+        layout: "H5D_CHUNKED"
+        storage_size: 0
+        dset_n_elements: 0
+        dimension_cnt: 1
+        dimensions: [0, ]
+        dset_type_size: 4
+        dataset_read_cnt: 27
+        total_bytes_read: 0
+        dataset_write_cnt: 1
+        total_bytes_written: 0
+        dset_offset: -1
+        dset_select_type: "H5S_SEL_ALL"
+        dset_select_npoints: -1
+        data_file_pages: [0,0]
+        metadata_file_pages: [0, 3, ]
+        access_orders: [1301, 1303, 1306, 1310, 1314, 1317, 1319, ]
+- file-9:
+    file_name: "track_20150506_010000.nc"
+    datasets:
+    - dset:
+        dset_name: "basetime_new"
+        start_time: 1686082537947887
+        end_time: 1686082537993472
+        dt_class: "H5T_INTEGER"
+        ds_class: "H5S_SCALAR"
+        layout: "H5D_CHUNKED"
+        storage_size: 45
+        dset_n_elements: 0
+        dimension_cnt: 1
+        dimensions: [0, ]
+        dset_type_size: 8
+        dataset_read_cnt: 2
+        total_bytes_read: 90
+        dataset_write_cnt: 2
+        total_bytes_written: 90
+        dset_offset: -1
+        dset_select_type: "H5S_SEL_ALL"
+        dset_select_npoints: -1
+        data_file_pages: [0,0]
+        metadata_file_pages: [0, ]
+        access_orders: [1302, ]
+- file-9:
+    file_name: "track_20150506_010000.nc"
+    datasets:
+    - dset:
+        dset_name: "refcloud_forward_size"
+        start_time: 1686082537972755
+        end_time: 1686082537993642
+        dt_class: "H5T_INTEGER"
+        ds_class: "H5S_SCALAR"
+        layout: "H5D_CHUNKED"
+        storage_size: 2030
+        dset_n_elements: 0
+        dimension_cnt: 3
+        dimensions: [0, 325, 200, ]
+        dset_type_size: 8
+        dataset_read_cnt: 54
+        total_bytes_read: 109620
+        dataset_write_cnt: 10
+        total_bytes_written: 20300
+        dset_offset: -1
+        dset_select_type: "H5S_SEL_ALL"
+        dset_select_npoints: -1
+        data_file_pages: [0,0]
+        metadata_file_pages: [4, ]
+        access_orders: [1304, 1307, 1311, 1315, 1318, 1328, 1333, 1336, 1339, ]
+- file-9:
+    file_name: "track_20150506_010000.nc"
+    datasets:
+    - dset:
+        dset_name: "basetime_ref"
+        start_time: 1686082537952469
+        end_time: 1686082537993498
+        dt_class: "H5T_INTEGER"
+        ds_class: "H5S_SCALAR"
+        layout: "H5D_CHUNKED"
+        storage_size: 43
+        dset_n_elements: 0
+        dimension_cnt: 1
+        dimensions: [0, ]
+        dset_type_size: 8
+        dataset_read_cnt: 2
+        total_bytes_read: 86
+        dataset_write_cnt: 2
+        total_bytes_written: 86
+        dset_offset: -1
+        dset_select_type: "H5S_SEL_ALL"
+        dset_select_npoints: -1
+        data_file_pages: [0,0]
+        metadata_file_pages: [1, ]
+        access_orders: [1305, ]
+- file-9:
+    file_name: "track_20150506_010000.nc"
+    datasets:
+    - dset:
+        dset_name: "refcloud_forward_index"
+        start_time: 1686082537966685
+        end_time: 1686082537993604
+        dt_class: "H5T_INTEGER"
+        ds_class: "H5S_SCALAR"
+        layout: "H5D_CHUNKED"
+        storage_size: 1969
+        dset_n_elements: 0
+        dimension_cnt: 3
+        dimensions: [0, 325, 200, ]
+        dset_type_size: 8
+        dataset_read_cnt: 20
+        total_bytes_read: 39380
+        dataset_write_cnt: 6
+        total_bytes_written: 11814
+        dset_offset: -1
+        dset_select_type: "H5S_SEL_ALL"
+        dset_select_npoints: -1
+        data_file_pages: [0,0]
+        metadata_file_pages: [3, ]
+        access_orders: [1308, 1312, 1316, 1326, 1337, ]
+- file-9:
+    file_name: "track_20150506_010000.nc"
+    datasets:
+    - dset:
+        dset_name: "newcloud_backward_index"
+        start_time: 1686082537954593
+        end_time: 1686082537993515
+        dt_class: "H5T_INTEGER"
+        ds_class: "H5S_SCALAR"
+        layout: "H5D_CHUNKED"
+        storage_size: 2547
+        dset_n_elements: 0
+        dimension_cnt: 3
+        dimensions: [0, 330, 200, ]
+        dset_type_size: 8
+        dataset_read_cnt: 9
+        total_bytes_read: 22923
+        dataset_write_cnt: 4
+        total_bytes_written: 10188
+        dset_offset: -1
+        dset_select_type: "H5S_SEL_ALL"
+        dset_select_npoints: -1
+        data_file_pages: [0,0]
+        metadata_file_pages: [1, ]
+        access_orders: [1309, 1321, 1331, ]
+- file-9:
+    file_name: "track_20150506_010000.nc"
+    datasets:
+    - dset:
+        dset_name: "newcloud_backward_size"
+        start_time: 1686082537960396
+        end_time: 1686082537993562
+        dt_class: "H5T_INTEGER"
+        ds_class: "H5S_SCALAR"
+        layout: "H5D_CHUNKED"
+        storage_size: 2677
+        dset_n_elements: 0
+        dimension_cnt: 3
+        dimensions: [0, 330, 200, ]
+        dset_type_size: 8
+        dataset_read_cnt: 9
+        total_bytes_read: 24093
+        dataset_write_cnt: 4
+        total_bytes_written: 10708
+        dset_offset: -1
+        dset_select_type: "H5S_SEL_ALL"
+        dset_select_npoints: -1
+        data_file_pages: [0,0]
+        metadata_file_pages: [2, ]
+        access_orders: [1313, 1323, 1334, ]
+- file-9:
+    file_name: "track_20150506_010000.nc"
+    datasets:
+    - dset:
+        dset_name: "nclouds_new"
+        start_time: 1686082537947484
+        end_time: 1686082537993694
+        dt_class: "H5T_FLOAT"
+        ds_class: "H5S_SCALAR"
+        layout: "H5D_CONTIGUOUS"
+        storage_size: 1320
+        dset_n_elements: 330
+        dimension_cnt: 1
+        dimensions: [330, ]
+        dset_type_size: 4
+        dataset_read_cnt: 5
+        total_bytes_read: 6600
+        dataset_write_cnt: 1
+        total_bytes_written: 1320
+        dset_offset: -1
+        dset_select_type: "H5S_SEL_ALL"
+        dset_select_npoints: 330
+        data_file_pages: [0,0]
+        metadata_file_pages: [0, ]
+        access_orders: [1320, 1322, 1324, ]
+- file-9:
+    file_name: "track_20150506_010000.nc"
+    datasets:
+    - dset:
+        dset_name: "nclouds_ref"
+        start_time: 1686082537947732
+        end_time: 1686082537993706
+        dt_class: "H5T_FLOAT"
+        ds_class: "H5S_SCALAR"
+        layout: "H5D_CONTIGUOUS"
+        storage_size: 1300
+        dset_n_elements: 325
+        dimension_cnt: 1
+        dimensions: [325, ]
+        dset_type_size: 4
+        dataset_read_cnt: 5
+        total_bytes_read: 6500
+        dataset_write_cnt: 1
+        total_bytes_written: 1300
+        dset_offset: -1
+        dset_select_type: "H5S_SEL_ALL"
+        dset_select_npoints: 325
+        data_file_pages: [0,0]
+        metadata_file_pages: [0, ]
+        access_orders: [1325, 1327, 1329, ]
+- file-9:
+    file_name: "track_20150506_010000.nc"
+    datasets:
+    - dset:
+        dset_name: "nlinks"
+        start_time: 1686082537947611
+        end_time: 1686082537993718
+        dt_class: "H5T_FLOAT"
+        ds_class: "H5S_SCALAR"
+        layout: "H5D_CONTIGUOUS"
+        storage_size: 800
+        dset_n_elements: 200
+        dimension_cnt: 1
+        dimensions: [200, ]
+        dset_type_size: 4
+        dataset_read_cnt: 14
+        total_bytes_read: 11200
+        dataset_write_cnt: 1
+        total_bytes_written: 800
+        dset_offset: -1
+        dset_select_type: "H5S_SEL_ALL"
+        dset_select_npoints: 200
+        data_file_pages: [0,0]
+        metadata_file_pages: [0, ]
+        access_orders: [1330, 1332, 1335, 1338, 1340, ]
+- file-9:
+    file_name: "track_20150506_010000.nc"
+    open_time: 1686082537940442
+    close_time: 1686082537993813
+    file_size: 55661
+    header_size: 0
+    sieve_buf_size: 0
+    file_intent: ["H5F_ACC_RDWR"]
+    ds_created: 0
+    ds_accessed: 50
+    grp_created: 0
+    grp_accessed: 1
+    dtypes_created: 0
+    dtypes_accessed: 0
+Task:
+- task_id: 210263
+    VOL-Total-Overhead(ms): 3246
+- file-8:
+    file_name: "cloudid_20150506_000000.nc"
+    open_time: 1686082537911962
+    close_time: 1686082537995622
+    file_size: 7737570
+    header_size: 0
+    sieve_buf_size: 0
+    file_intent: ["H5F_ACC_RDONLY"]
+    ds_created: 0
+    ds_accessed: 110
+    grp_created: 0
+    grp_accessed: 2
+    dtypes_created: 0
+    dtypes_accessed: 0
+Task:
+- task_id: 210263
+    VOL-Total-Overhead(ms): 3247
+- file-7:
+    file_name: "cloudid_20150506_010000.nc"
+    open_time: 1686082537799562
+    close_time: 1686082537997426
+    file_size: 7569557
+    header_size: 0
+    sieve_buf_size: 0
+    file_intent: ["H5F_ACC_RDONLY"]
+    ds_created: 0
+    ds_accessed: 110
+    grp_created: 0
+    grp_accessed: 2
+    dtypes_created: 0
+    dtypes_accessed: 0
+Task:
+- task_id: 210263
+    VOL-Total-Overhead(ms): 3247

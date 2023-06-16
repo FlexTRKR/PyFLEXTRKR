@@ -10,9 +10,8 @@ devices:
     # object storage or cloud targets, this will be a url.
     mount_point: ""
 
-    # The maximum buffering capacity in MiB of each device. Here we say that all 4
-    # devices get 50 MiB of buffering capacity.
-    capacity: 5000MB
+    # The maximum buffering capacity in MiB of each device.
+    capacity: 50MB
 
     # The size of the smallest available buffer in KiB. In general this should be
     # the page size of your system for byte addressable storage, and the block size
@@ -47,27 +46,41 @@ devices:
     # that the device is always at least 30% occupied.
     borg_capacity_thresh: [0.0, 1.0]
 
-  ssd:
-    # mount_point: "/state/partition1/tang584/hermes_slabs" # bluesky B
-    mount_point: "/scratch/tang584/hermes_slabs" # deception NVMe
-    capacity: 50GB #512GB
+  nvme:
+    mount_point: "./"
+    capacity: 100MB
     block_size: 4KB
     slab_sizes: [ 4KB, 16KB, 64KB, 1MB ]
-    bandwidth: 1000MBps
+    bandwidth: 1GBps
+    latency: 600us
+    is_shared_device: false
+    borg_capacity_thresh: [ 0.0, 1.0 ]
+
+  ssd:
+    mount_point: "./"
+    capacity: 100MB
+    block_size: 4KB
+    slab_sizes: [ 4KB, 16KB, 64KB, 1MB ]
+    bandwidth: 500MBps
     latency: 1200us
-    is_shared_device: true
+    is_shared_device: false
     borg_capacity_thresh: [ 0.0, 1.0 ]
 
   pfs:
-    # mount_point: "/files0/oddite/tang584/hermes_swaps" # bluesky PFS
-    mount_point: "/rcfs/projects/chess/tang584/hermes_swaps" #deception PFS (BeeGFS)
-    capacity: 50GB
-    block_size: 64KB # The stripe size of PFS 
+    mount_point: "./"
+    capacity: 100MB
+    block_size: 64KB # The stripe size of PFS
     slab_sizes: [ 4KB, 16KB, 64KB, 1MB ]
     bandwidth: 100MBps # Per-device bandwidth
     latency: 200ms
     is_shared_device: true
     borg_capacity_thresh: [ 0.0, 1.0 ]
+
+# Define the maximum amount of memory Hermes can use for non-buffering tasks.
+# This includes metadata management and memory allocations.
+# This memory will not be preallocated, so if you don't know, 0 indicates
+# any amount of memory
+max_memory: 0g
 
 ### Define properties of RPCs
 rpc:
@@ -75,24 +88,19 @@ rpc:
   # servers are named according to a pattern (e.g., server-1, server-2, etc.),
   # prefer the `rpc_server_base_name` and `rpc_host_number_range` options. If this
   # option is not empty, it will override anything in `rpc_server_base_name`.
-  # host_file: ""
-  host_file: "/qfs/people/tang584/scripts/local-co-scheduling/host_ip"
+  host_file: ""
 
-  # Host names are constructed as "base_name +
-  # host_number + rpc_server_suffix." Each entry in the rpc_host_number_range_list
-  # can be either a single number, or a range, which is 2 numbers separated by a
-  # hyphen (-). For example the list {01, 03-05, 07, 08-10} will be expanded to
-  # {01, 03, 04, 05, 07, 08, 09, 10}.
-  base_name: $HOST_BASE_NAME
-  host_number_range: $HOST_NUMBER_RANGE
-  suffix: ".ibnet"
+  # Host names can be defined using the following syntax:
+  # ares-comp-[0-9]-40g will convert to ares-comp-0-40g, ares-comp-1-40g, ...
+  # ares-comp[00-09] will convert to ares-comp-00, ares-comp-01, ...
+  host_names: ["localhost"]
 
   # The RPC protocol. This must come from the documentation of the specific RPC
   # library in use.
-  protocol: "ucx+tcp" #"ofi+sockets" #"ucx+ud" #"ucx+rc_verbs"
+  protocol: "ofi+sockets"
 
   # RPC domain name for verbs transport. Blank for tcp.
-  domain: "" #mlx5_2:1 #mlx5_0:1
+  domain: ""
 
   # Desired RPC port number.
   port: 8080
@@ -103,10 +111,25 @@ rpc:
 ### Define properties of the BORG
 buffer_organizer:
   # The number of threads used in the background organization of internal Hermes buffers.
-  num_threads: 4
+  num_threads: 1
 
-  # Desired RPC port number for buffer organizer.
-  port: 8081
+  # Interval (ms) where blobs are checked for flushing
+  flush_period: 1024
+
+  # Interval (ms) where blobs are checked for re-organization
+  blob_reorg_period: 1024
+
+  ## What does "recently accessed" mean?
+  # Time when score is equal to 1 (seconds)
+  recency_min: 0
+  # Time when score is equal to 0 (seconds)
+  recency_max: 60
+
+  ## What does "frequently accessed" mean?
+  # Number of accesses for score to be equal to 1 (count)
+  freq_max: 15
+  # Number of accesses for score to be equal to 0 (count)
+  freq_min: 0
 
 ### Define the default data placement policy
 dpe:
@@ -117,9 +140,38 @@ dpe:
   # into a random number of smaller Blobs.
   default_rr_split: 0
 
-# The shared memory prefix for the hermes shared memory segment. A user name
+### Define I/O tracing properties
+tracing:
+  enabled: false
+  output: ""
+
+### Define prefetcher properties
+prefetch:
+  enabled: false
+  io_trace_path: ""
+  apriori_schema_path: ""
+  epoch_ms: 50
+  is_mpi: false
+
+### Define mdm properties
+mdm:
+  # This represents the number of blobs and buckets before collisions start
+  # to happen in the unordered_map tables.
+  est_blob_count: 100000
+  est_bucket_count: 100000
+  est_num_traits: 256
+
+# The shared memory prefix for the hermes shared memory segment. A username
 # will be automatically appended.
 shmem_name: "/hermes_shm_"
 
 # The interval in milliseconds at which to update the global system view.
 system_view_state_update_interval_ms: 1000
+
+### Define the names of the traits to search LD_LIBRARY_PATH for
+traits:
+  - "hermes_posix_io_client"
+  - "hermes_stdio_io_client"
+  - "hermes_mpiio_io_client"
+  - "hermes_example_trait"
+  - "hermes_prefetcher_trait"

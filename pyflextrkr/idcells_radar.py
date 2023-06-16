@@ -34,7 +34,7 @@ def idcell_csapr(
     fillval = config["fillval"]
 
     # Read input data
-    ds = xr.open_dataset(input_filename, mask_and_scale=False)
+    ds = xr.open_dataset(input_filename, engine='h5netcdf',mask_and_scale=False)
     time_decode = ds["time"]
     feature_mask = ds["conv_mask_inflated"]
     ds.close()

@@ -1,0 +1,47 @@
++ HERMES_DIS_CONFIG
+++ echo dmi01
+++ scontrol show hostnames
++ echo 'SLURM_JOB_NODELIST = dmi01'
+++ echo dmi01
+++ scontrol show hostnames
++ NODE_NAMES=dmi01
++ prefix=dc00
++ sed 's/$HOST_BASE_NAME/"dc00"/' ./hermes_configs/hermes_server_default.yaml
++ mapfile -t node_range
+++ echo dmi01
+++ sed s/dc00//g
+++ printf %s, dmi01
+++ sed 's/,$//'
++ rpc_host_number_range='[dmi01]'
++ sed -i 's/$HOST_NUMBER_RANGE/[dmi01]/' ./hermes_configs/hermes_server.yaml
+++ pwd
++ hostfile_path=/people/tang584/scripts/PyFLEXTRKR/hm_wrf_tbradar_demo/host_ip
++ sed -i 's#$HOSTFILE_PATH#/people/tang584/scripts/PyFLEXTRKR/hm_wrf_tbradar_demo/host_ip#' ./hermes_configs/hermes_server.yaml
+++ ucx_info -d
+++ grep Device
+++ cut '-d ' -f11
+++ grep mlx5
+++ head -1
++ network_device=mlx5_0:1
++ sed -i 's/$NETWORK_DEVICE/mlx5_0:1/' ./hermes_configs/hermes_server.yaml
++ echo hostfile_path=/people/tang584/scripts/PyFLEXTRKR/hm_wrf_tbradar_demo/host_ip
++ echo node_range=dmi01
++ echo 'rpc_host_number_range=[dmi01]'
++ START_HERMES_DAEMON
+++ which ucx_info
++ echo /usr/bin/ucx_info
++ rm -rf /rcfs/projects/chess/tang584/hermes_slabs /scratch/tang584/hermes_slabs
++ mkdir -p /rcfs/projects/chess/tang584/hermes_slabs /scratch/tang584/hermes_slabs
++ echo 'Starting hermes_daemon...'
++ set -x
++ sleep 5
++ HERMES_CONF=./hermes_configs/hermes_server.yaml
++ srun -n1 -w dmi01, --oversubscribe --mpi=pmi2 /people/tang584/install/vfd_hermes/bin/hermes_daemon
++ echo 'Show hermes slabs : '
++ ls -l /scratch/tang584/hermes_slabs/slab_ssd
++ ls -l /rcfs/projects/chess/tang584/hermes_slabs/slab_pfs
++ set +x
++ set +x
++ HERMES_CONF=./hermes_configs/hermes_server.yaml
++ srun -n1 -N1 --oversubscribe --mpi=pmi2 /people/tang584/install/vfd_hermes/bin/finalize_hermes
+[warning] Could not convert self address to string

@@ -4,10 +4,90 @@ path_inclusions: [
 ]
 path_exclusions: ["/",
 ]
-file_page_size: 8192 # 4096KB 1MB 512KB
-base_adapter_mode: kDefault # kDefault kScratch
+file_page_size: 1MB # 4096KB 1MB 512KB
+base_adapter_mode: kDefault # kDefault kScratch kBypass
+flushing_mode: kAsync # kSync kAsync
 
 # file_adapter_configs:
-#   - path: "/"
+#   - path: "/qfs/projects/oddite/tang584/flextrkr_runs/hm_wrf_tbradar/tracking/cloudid_20150506_000000.nc"
 #     page_size: 1MB
 #     mode: kDefault
+#   - path: "/qfs/projects/oddite/tang584/flextrkr_runs/hm_wrf_tbradar/tracking/cloudid_20150506_010000.nc"
+#     page_size: 1MB
+#     mode: kDefault
+#   - path: "/qfs/projects/oddite/tang584/flextrkr_runs/hm_wrf_tbradar/tracking/cloudid_20150506_020000.nc"
+#     page_size: 1MB
+#     mode: kDefault
+#   - path: "/qfs/projects/oddite/tang584/flextrkr_runs/hm_wrf_tbradar/tracking/cloudid_20150506_030000.nc"
+#     page_size: 1MB
+#     mode: kDefault
+#   - path: "/qfs/projects/oddite/tang584/flextrkr_runs/hm_wrf_tbradar/tracking/cloudid_20150506_040000.nc"
+#     page_size: 1MB
+#     mode: kDefault
+#   - path: "/qfs/projects/oddite/tang584/flextrkr_runs/hm_wrf_tbradar/tracking/cloudid_20150506_050000.nc"
+#     page_size: 1MB
+#     mode: kDefault
+#   - path: "/qfs/projects/oddite/tang584/flextrkr_runs/hm_wrf_tbradar/tracking/cloudid_20150506_050000.nc"
+#     page_size: 1MB
+#     mode: kDefault
+#   - path: "/qfs/projects/oddite/tang584/flextrkr_runs/hm_wrf_tbradar/tracking/cloudid_20150506_070000.nc"
+#     page_size: 1MB
+#     mode: kDefault
+#   - path: "/qfs/projects/oddite/tang584/flextrkr_runs/hm_wrf_tbradar/tracking/cloudid_20150506_080000.nc"
+#     page_size: 1MB
+#     mode: kDefault
+#   - path: "/qfs/projects/oddite/tang584/flextrkr_runs/hm_wrf_tbradar/tracking/cloudid_20150506_090000.nc"
+#     page_size: 1MB
+#     mode: kDefault
+#   - path: "/qfs/projects/oddite/tang584/flextrkr_runs/hm_wrf_tbradar/tracking/cloudid_20150506_100000.nc"
+#     page_size: 1MB
+#     mode: kDefault
+#   - path: "/qfs/projects/oddite/tang584/flextrkr_runs/hm_wrf_tbradar/tracking/cloudid_20150506_110000.nc"
+#     page_size: 1MB
+#     mode: kDefault
+#   - path: "/qfs/projects/oddite/tang584/flextrkr_runs/hm_wrf_tbradar/tracking/track_20150506_000000.nc"
+#     page_size: 1MB
+#     mode: kDefault
+#   - path: "/qfs/projects/oddite/tang584/flextrkr_runs/hm_wrf_tbradar/tracking/track_20150506_010000.nc"
+#     page_size: 1MB
+#     mode: kDefault
+#   - path: "/qfs/projects/oddite/tang584/flextrkr_runs/hm_wrf_tbradar/tracking/track_20150506_020000.nc"
+#     page_size: 1MB
+#     mode: kDefault
+#   - path: "/qfs/projects/oddite/tang584/flextrkr_runs/hm_wrf_tbradar/tracking/track_20150506_030000.nc"
+#     page_size: 1MB
+#     mode: kDefault
+#   - path: "/qfs/projects/oddite/tang584/flextrkr_runs/hm_wrf_tbradar/tracking/track_20150506_040000.nc"
+#     page_size: 1MB
+#     mode: kDefault
+#   - path: "/qfs/projects/oddite/tang584/flextrkr_runs/hm_wrf_tbradar/tracking/track_20150506_050000.nc"
+#     page_size: 1MB
+#     mode: kDefault
+#   - path: "/qfs/projects/oddite/tang584/flextrkr_runs/hm_wrf_tbradar/tracking/track_20150506_060000.nc"
+#     page_size: 1MB
+#     mode: kDefault
+#   - path: "/qfs/projects/oddite/tang584/flextrkr_runs/hm_wrf_tbradar/tracking/track_20150506_070000.nc"
+#     page_size: 1MB
+#     mode: kDefault
+#   - path: "/qfs/projects/oddite/tang584/flextrkr_runs/hm_wrf_tbradar/tracking/track_20150506_080000.nc"
+#     page_size: 1MB
+#     mode: kDefault
+#   - path: "/qfs/projects/oddite/tang584/flextrkr_runs/hm_wrf_tbradar/tracking/track_20150506_090000.nc"
+#     page_size: 1MB
+#     mode: kDefault
+#   - path: "/qfs/projects/oddite/tang584/flextrkr_runs/hm_wrf_tbradar/tracking/track_20150506_100000.nc"
+#     page_size: 1MB
+#     mode: kDefault
+#   - path: "/qfs/projects/oddite/tang584/flextrkr_runs/hm_wrf_tbradar/tracking/track_20150506_110000.nc"
+#     page_size: 1MB
+#     mode: kDefault
+#   - path: "/qfs/projects/oddite/tang584/flextrkr_runs/hm_wrf_tbradar/stats/tracknumbers_20150506.0000_20150506.1100.nc"
+#     page_size: 1MB
+#     mode: kDefault
+#   - path: "/qfs/projects/oddite/tang584/flextrkr_runs/hm_wrf_tbradar/stats/mcs_tracks_robust_20150506.0000_20150506.1100.nc"
+#     page_size: 1MB
+#     mode: kDefault
+# file_adapter_configs:
+#   - path: "/qfs/projects/oddite/tang584/flextrkr_runs/hm_wrf_tbradar/mcstracking"
+#     page_size: 1MB
+#     mode: kScratch

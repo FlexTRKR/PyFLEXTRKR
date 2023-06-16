@@ -73,7 +73,7 @@ def gettracknumbers(config):
     logger.debug(f"tracking_outpath: {tracking_outpath}")
     logger.debug(f"files[0]: {files[0]}")
     # singletracking_data = Dataset(tracking_outpath + files[0], "r")
-    singletracking_data = Dataset(files[0], "r", format="NETCDF4")
+    singletracking_data = Dataset(files[0], "r", format="NETCDF4") #, disk_format="HDF5"
 
     # Number of clouds in reference file
     nclouds_reference = int(np.nanmax(singletracking_data["nclouds_ref"][:]) + 1)
@@ -120,7 +120,7 @@ def gettracknumbers(config):
         # logger.debug('Load track data')
         # logger.debug((time.ctime()))
         # singletracking_data = Dataset(tracking_outpath + files[ifile], "r")
-        singletracking_data = Dataset(files[ifile], "r", format="NETCDF4")
+        singletracking_data = Dataset(files[ifile], "r", format="NETCDF4") #, disk_format="HDF5"
         # Number of clouds in reference file
         nclouds_reference = int(np.nanmax(singletracking_data["nclouds_ref"][:]) + 1)
         nclouds_new = int(np.nanmax(singletracking_data["nclouds_new"][:]) + 1)
@@ -707,11 +707,13 @@ def gettracknumbers(config):
     ds_out.track_reset.attrs["valid_min"] = 0
     ds_out.track_reset.attrs["valid_max"] = 2
 
-    # Write netcdf file
+    # Write netcdf file # h5netcdf netcdf4
     ds_out.to_netcdf(
         path=tracknumbers_outfile,
         mode="w",
-        format="NETCDF4_CLASSIC",
+        engine="h5netcdf",
+        format="NETCDF4",
+        # format="NETCDF4_CLASSIC",
         # unlimited_dims="ntracks",
         encoding={
             "ntracks": {"dtype": "int", "zlib": True},

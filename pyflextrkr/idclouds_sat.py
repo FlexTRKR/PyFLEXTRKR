@@ -51,7 +51,7 @@ def idclouds_gpmmergir(
         logger.debug(filename)
 
         # Read in data using xarray
-        rawdata = xr.open_dataset(filename)
+        rawdata = xr.open_dataset(filename, engine='h5netcdf')
         lat = rawdata["lat"].values
         lon = rawdata["lon"].values
         time_decode = rawdata["time"]
@@ -192,7 +192,7 @@ def idclouds_gpmmergir(
                             # Proceed if there is at least 1 cloud
                             if final_nclouds > 0:
                                 # Read precipitation
-                                rawdata = xr.open_dataset(filename, mask_and_scale=False)
+                                rawdata = xr.open_dataset(filename, mask_and_scale=False, engine='h5netcdf')
                                 pcp = rawdata[config['pcp_varname']].values
                                 rawdata.close()
 

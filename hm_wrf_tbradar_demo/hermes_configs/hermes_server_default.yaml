@@ -2,10 +2,13 @@
 devices:
   ram:
     mount_point: ""
-    capacity: 20GB
-    block_size: 512
-    # slab_sizes: [ 4KB, 16KB, 64KB, 1MB ]
-    slab_sizes: [ 512, 1KB, 2KB, 4KB ]
+    capacity: 100GB
+    block_size: 4KB
+    # slab_sizes: [ 1MB, 4MB, 16MB, 32MB ]
+    # slab_sizes: [ 8KB, 32KB, 128KB, 1MB ]
+    slab_sizes: [ 4KB, 16KB, 64KB, 1MB ]
+    # slab_sizes: [ 512, 1KB, 2KB, 4KB ]
+    # slab_sizes: [ 1KB, 2KB, 4KB, 8KB ]
     bandwidth: 6000MBps
     latency: 15us
     is_shared_device: false
@@ -13,10 +16,13 @@ devices:
 
   ssd:
     mount_point: "/scratch/tang584/hermes_slabs" 
-    capacity: 10GB
-    block_size: 512
-    # slab_sizes: [ 4KB, 16KB, 64KB, 1MB ]
-    slab_sizes: [ 512, 1KB, 2KB, 4KB ]
+    capacity: 380GB
+    block_size: 4KB
+    # slab_sizes: [ 1MB, 4MB, 16MB, 32MB ]
+    # slab_sizes: [ 8KB, 32KB, 128KB, 1MB ]
+    slab_sizes: [ 4KB, 16KB, 64KB, 1MB ]
+    # slab_sizes: [ 512, 1KB, 2KB, 4KB ]
+    # slab_sizes: [ 1KB, 2KB, 4KB, 8KB ]
     bandwidth: 1000MBps
     latency: 1200us
     is_shared_device: false
@@ -24,10 +30,13 @@ devices:
 
   pfs:
     mount_point: "/rcfs/projects/chess/tang584/hermes_slabs" #deception PFS (BeeGFS)
-    capacity: 10GB
-    block_size: 512 
-    # slab_sizes: [ 4KB, 16KB, 64KB, 1MB ]
-    slab_sizes: [ 512, 1KB, 2KB, 4KB ]
+    capacity: 800GB
+    block_size: 4KB 
+    # slab_sizes: [ 1MB, 4MB, 16MB, 32MB ]
+    # slab_sizes: [ 8KB, 32KB, 128KB, 1MB ]
+    slab_sizes: [ 4KB, 16KB, 64KB, 1MB ]
+    # slab_sizes: [ 512, 1KB, 2KB, 4KB ]
+    # slab_sizes: [ 1KB, 2KB, 4KB, 8KB ]
     bandwidth: 100MBps 
     latency: 200ms
     is_shared_device: true
@@ -36,7 +45,7 @@ devices:
 rpc:
   host_file: "$HOSTFILE_PATH"
   host_names: []
-  protocol: "ucx+rc_verbs"
+  protocol: "$PROTOCOL"
   domain: "$NETWORK_DEVICE"
   port: 8080
   num_threads: 4
@@ -54,6 +63,26 @@ rpc:
 buffer_organizer:
   num_threads: 1
   port: 8081
+  flush_period: 1024 #1024 2048
+  # blob_reorg_period: 1024 #1024 2048
+  # recency_min: 0
+  # recency_max: 60
+  # freq_max: 15
+  # freq_min: 0
+
+### Define mdm properties
+mdm:
+  # This represents the number of blobs and buckets before collisions start
+  # to happen in the unordered_map tables.
+  est_blob_count: 100000
+  est_bucket_count: 100000
+  est_num_traits: 256
+  
+prefetch:
+  enabled: false
+  apriori_schema_path: "/qfs/people/tang584/scripts/PyFLEXTRKR/hm_wrf_tbradar_demo/hermes_configs/dummy_apriori_schema.yaml"
+  epoch_ms: 50
+  is_mpi: false
 
 dpe:
   default_placement_policy: "MinimizeIoTime"

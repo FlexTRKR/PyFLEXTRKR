@@ -1,10 +1,9 @@
 #!/bin/bash
 #SBATCH --job-name=dl_demo_cell_nerxrad_0
-#SBATCH --partition=all
-#SBATCH --exclude=dl[01-02,04-09]
-#SBATCH --time=01:30:00
+#SBATCH --partition=short
+#SBATCH --time=00:30:00
 #SBATCH -N 1
-#SBATCH -n 2
+#SBATCH -n 9
 #SBATCH --output=./R_%x.out
 #SBATCH --error=./R_%x.err
 
@@ -51,10 +50,11 @@ TEST_NAME='wrf_tbradar'
 # Specify directory for the demo data
 dir_demo="/qfs/projects/oddite/tang584/flextrkr_runs/${TEST_NAME}" #NFS
 mkdir -p $dir_demo
-rm -rf $dir_demo/*
+# rm -rf $dir_demo/*
 # Example config file name
 # config_example='config_wrf_mcs_tbradar_example.yml'
-config_example='config_wrf_mcs_tbradar_short.yml'
+# config_example='config_wrf_mcs_tbradar_short.yml'
+config_example='config_wrf_mcs_tbradar_seq.yml'
 config_demo='config_wrf_mcs_tbradar_demo.yml'
 cp ./$config_demo $dir_demo
 # Demo input data directory
@@ -75,54 +75,23 @@ RUN_TRACKING () {
     # Run tracking
     echo 'Running PyFLEXTRKR w/ VOL+VFD ...'
 
+    schema_file=data-stat-dl.yaml
+    rm -rf ./*$schema_file
+    # touch $schema_file
+    rm -rf ./*vfd-$schema_file
 
-    # LD_LIBRARY_PATH=$DLIFE_VOL_DIR:$LD_LIBRARY_PATH \
-    #     HDF5_VOL_CONNECTOR="${VOL_NAME} under_vol=0;under_info={};path=${SCRIPT_DIR}/vol-${task_id}_${FUNCNAME[0]}.log;level=2;format=" \
-    #     HDF5_DRIVER=hdf5_hermes_vfd \
-    #     HDF5_PLUGIN_PATH=$DLIFE_VOL_DIR:${HERMES_INSTALL_DIR}/lib \
+    # HDF5_PLUGIN_PATH=${HERMES_INSTALL_DIR}/lib:$TRACKER_VOL_DIR:$HDF5_PLUGIN_PATH \
 
-    # LD_LIBRARY_PATH=$DLIFE_VOL_DIR:$LD_LIBRARY_PATH \
-    #     HDF5_VOL_CONNECTOR="${VOL_NAME} under_vol=0;under_info={};path=./vol-${FUNCNAME[0]}.log;level=2;format=" \
-    #     HDF5_PLUGIN_PATH=$DLIFE_VOL_DIR \
-    #         srun -n1 -N1 --oversubscribe --mpi=pmi2 \
+    # valgrind --leak-check=full 
+    export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$TRACKER_VOL_DIR:$HDF5_PLUGIN_PATH
+    export HDF5_VOL_CONNECTOR="${VOL_NAME} under_vol=0;under_info={};path=${schema_file};level=2;format="
+    export HDF5_PLUGIN_PATH=${HERMES_INSTALL_DIR}/lib:$TRACKER_VOL_DIR
+    export HDF5_DRIVER=hdf5_hermes_vfd
+    export HERMES_CONF=$HERMES_CONF
+    export HERMES_CLIENT_CONF=$HERMES_CLIENT_CONF
+    export HDF5_DRIVER_CONFIG="true ${HERMES_PAGE_SIZE}"
 
-    
-    # LD_LIBRARY_PATH=$DLIFE_VOL_DIR:$LD_LIBRARY_PATH \
-    #     HDF5_VOL_CONNECTOR="${VOL_NAME} under_vol=0;under_info={};path=./vol-overhead-${FUNCNAME[0]}.log;level=0;format=" \
-    #     HDF5_DRIVER=hdf5_hermes_vfd \
-    #     HDF5_PLUGIN_PATH=$DLIFE_VOL_DIR:${HERMES_INSTALL_DIR}/lib:$HDF5_PLUGIN_PATH \
-    #     HERMES_CONF=$HERMES_CONF \
-    #     HERMES_CLIENT_CONF=$HERMES_CLIENT_CONF \
-    #     python ../runscripts/run_mcs_tbpfradar3d_wrf.py ${config_demo} &> ${FUNCNAME[0]}.log
-
-    schema_file=./data-stat-dl.yaml
-    rm -rf $schema_file
-    touch $schema_file
-
-    # LD_LIBRARY_PATH=$DLIFE_VOL_DIR:$LD_LIBRARY_PATH \
-    # HDF5_VOL_CONNECTOR="${VOL_NAME} under_vol=0;under_info={};path=${schema_file};level=2;format=" \
-    # HDF5_DRIVER=hermes \
-    # HDF5_PLUGIN_PATH=${HERMES_INSTALL_DIR}/lib:$DLIFE_VOL_DIR \
-    # HDF5_DRIVER_CONFIG="true ${HERMES_PAGESIZE}" HERMES_CONF=${HERMES_CONF} \
-    # LD_PRELOAD=${HERMES_INSTALL_DIR}/lib/libhdf5_hermes_vfd.so \
-
-
-    # LD_LIBRARY_PATH=$DLIFE_VOL_DIR:$LD_LIBRARY_PATH \
-    #     HDF5_VOL_CONNECTOR="${VOL_NAME} under_vol=0;under_info={};path=./${schema_file};level=2;format=" \
-    #     HDF5_DRIVER=hdf5_hermes_vfd \
-    #     HDF5_PLUGIN_PATH=$DLIFE_VOL_DIR:${HERMES_INSTALL_DIR}/lib:$HDF5_PLUGIN_PATH \
-    #     HDF5_DRIVER_CONFIG="true ${HERMES_PAGESIZE}" \
-    #     HERMES_CONF=$HERMES_CONF \
-    #     HERMES_CLIENT_CONF=$HERMES_CLIENT_CONF \
-
-    LD_LIBRARY_PATH=$DLIFE_VOL_DIR:$LD_LIBRARY_PATH \
-        HDF5_VOL_CONNECTOR="${VOL_NAME} under_vol=0;under_info={};path=${schema_file};level=2;format=yaml" \
-        HDF5_PLUGIN_PATH=$DLIFE_VOL_DIR:${HERMES_INSTALL_DIR}/lib:$HDF5_PLUGIN_PATH \
-        HDF5_DRIVER=hdf5_hermes_vfd \
-        HERMES_CONF=$HERMES_CONF \
-        HERMES_CLIENT_CONF=$HERMES_CLIENT_CONF \
-        HDF5_DRIVER_CONFIG="true ${HERMES_PAGESIZE}" \
-        python ../runscripts/run_mcs_tbpfradar3d_wrf.py ${config_demo} &> ${FUNCNAME[0]}-dl.log
+    srun -n1 -N1 --oversubscribe python ../runscripts/run_mcs_tbpfradar3d_wrf.py $config_demo &> ${FUNCNAME[0]}-dl.log
     
     set +x 
 
@@ -152,7 +121,7 @@ HERMES_DIS_CONFIG () {
     echo "SLURM_JOB_NODELIST = $(echo $SLURM_JOB_NODELIST|scontrol show hostnames)"
     NODE_NAMES=$(echo $SLURM_JOB_NODELIST|scontrol show hostnames)
 
-    prefix="dl" #dc dc00 a100-0
+    prefix="dc00" #dc dc00 a100-0
     sed "s/\$HOST_BASE_NAME/\"${prefix}\"/" $HERMES_DEFAULT_CONF  > $HERMES_CONF
     mapfile -t node_range < <(echo "$NODE_NAMES" | sed "s/${prefix}//g")
     rpc_host_number_range="[$(printf "%s," "${node_range[@]}" | sed 's/,$//')]"
@@ -179,7 +148,7 @@ HERMES_DIS_CONFIG () {
 STOP_DAEMON () {
 
     set -x
-    HERMES_CONF=$HERMES_CONF srun -n1 -N1 --oversubscribe --mpi=pmi2 \
+    HERMES_CONF=$HERMES_CONF srun -n1 -N1 --oversubscribe \
         ${HERMES_INSTALL_DIR}/bin/finalize_hermes &
 
     set +x
@@ -202,18 +171,19 @@ START_HERMES_DAEMON () {
     echo "Starting hermes_daemon..."
     set -x
 
-    HERMES_CONF=$HERMES_CONF srun -n$SLURM_JOB_NUM_NODES -w $hostlist --oversubscribe --mpi=pmi2 \
+
+    # LD_PRELOAD=${HERMES_INSTALL_DIR}/lib/libhdf5_hermes_vfd.so:$LD_PRELOAD \
+    HERMES_CONF=$HERMES_CONF srun -n$SLURM_JOB_NUM_NODES -w $hostlist --oversubscribe \
         ${HERMES_INSTALL_DIR}/bin/hermes_daemon &> ${FUNCNAME[0]}.log &
 
     # echo ls -l $DEV1_DIR/hermes_slabs
-    sleep 3
+    sleep 5
     echo "Show hermes slabs : "
     # srun -n$SLURM_JOB_NUM_NODES -w $hostlist --oversubscribe ls -l $DEV1_DIR/*
     ls -l $DEV1_DIR/*
     ls -l $DEV2_DIR/*
     set +x
 }
-
 
 
 source ./load_hermes_deps.sh
@@ -225,7 +195,7 @@ source activate pyflextrkr_copy # flextrkr pyflextrkr
 
 
 # export PYTHONLOGLEVEL=ERROR
-
+srun -n1 -N1 killall hermes_daemon
 
 PREPARE_CONFIG
 
@@ -233,6 +203,10 @@ set -x
 
 HERMES_DIS_CONFIG
 START_HERMES_DAEMON
+
+export FLUSH_MEM=TRUE # TRUE for flush, FALSE for no flush
+export INVALID_OS_CACHE=TRUE # TRUE for invalid, FALSE for no invalid
+export CURR_TASK=""
 
 start_time=$(($(date +%s%N)/1000000))
 RUN_TRACKING

@@ -9,15 +9,15 @@
 
 USER=$(whoami)
 
-HERMES_VERSION="vfd_hermes"
-#8dec_hermes dec_hermes 1dec_hermes debug_1dec_hermes
+HERMES_VERSION="1dec_hermes"
+#8dec_hermes dec_hermes 1dec_hermes 1dec_debug_hermes
 # dec_hermes-vfd
 
 # User directories
 MNT_HOME=$HOME #/people/$USER
 INSTALL_DIR=$HOME/install
 DL_DIR=$HOME/download
-SCRIPT_DIR=$MNT_HOME/scripts/local-co-scheduling
+SCRIPT_DIR=$MNT_HOME/scripts
 CONFIG_DIR=./hermes_configs
 
 # Hermes running dirs -----------
@@ -66,28 +66,22 @@ rm -rf $DEV2_DIR/*
 
 # Other tools dirs -----------
 BENCHMARKS_DIR=$HERMES_REPO/benchmarks
-HDF5_REPO=$DL_DIR/hdf5-hdf5-1_13_1
-IOR_REPO=$STAGE_DIR/ior
 IOR_INSTALL=$INSTALL_DIR/ior
 HDF5_INSTALL=$INSTALL_DIR/hdf5
-DLIFE_VOL_DIR=$SCRIPT_DIR/vol-datalife/src
-# DLIFE_VOL_DIR=$SCRIPT_DIR/vol-src
-VOL_NAME="datalife"
+TRACKER_VOL_DIR=$SCRIPT_DIR/vol-tracker/src
+VOL_NAME="tracker"
 
 # RECORDER_REPO=$DL_DIR/Recorder-2.3.2
 # RECORDER_INSTALL=$INSTALL_DIR/recorder
-LOG_DIR=$SCRIPT_DIR/tmp_outputs
-mkdir -p $LOG_DIR
+
 
 #conda activate /files0/oddite/conda/ddmd/ # original global env
 #conda activate hermes_ddmd # local
 
-PY_VENV=$SCRIPT_DIR/venv_ddmd
 
-
-export GLOG_minloglevel=2
-export FLAGS_logtostderr=2
-export HDF5_USE_FILE_LOCKING='FALSE' #'TRUE' 'FALSE'
+# export GLOG_minloglevel=2
+# export FLAGS_logtostderr=2
+export HDF5_USE_FILE_LOCKING='FALSE' #'TRUE' 'FALSE' 'BEST_EFFORT'
 # export MPICH_GNI_NDREG_ENTRIES=1024
 # export I_MPI_HYDRA_TOPOLIB=ipl
 # export I_MPI_PMI_LIBRARY=libpmi2.so
@@ -97,7 +91,8 @@ echo "HERMES_TRAIT_PATH = $HERMES_TRAIT_PATH"
 
 # export OFI_INTERFACE=ib0
 
-export HERMES_PAGESIZE=8192 #for Hermes_VFD
-export HERMES_PAGE_SIZE=131072 #for hermes_POSIX
-# page size : 4096 8192 32768 65536 131072 262144 524288 1048576 4194304 8388608
+# export HERMES_PAGESIZE=8192 #for Hermes_VFD
+export HERMES_PAGE_SIZE=1048576 #for hermes_POSIX
+# page size : 4096 8192 16384 32768 65536 131072 262144 524288 1048576 2097152 4194304 8388608
 # default : 1048576
+

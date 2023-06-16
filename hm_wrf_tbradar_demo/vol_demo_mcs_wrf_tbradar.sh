@@ -1,4 +1,11 @@
 #!/bin/bash
+#SBATCH --job-name=vol_demo_cell_nerxrad_0
+#SBATCH --partition=short
+#SBATCH --time=00:30:00
+#SBATCH -N 1
+#SBATCH -n 9
+#SBATCH --output=./R_%x.out
+#SBATCH --error=./R_%x.err
 
 ###############################################################################################
 # This script demonstrates running cell tracking on NEXRAD data (KHGX)
@@ -45,14 +52,14 @@ RUN_TRACKING () {
     echo 'Running PyFLEXTRKR w/ VOL ...'
 
 
-    # LD_LIBRARY_PATH=$DLIFE_VOL_DIR:$LD_LIBRARY_PATH \
+    # LD_LIBRARY_PATH=$TRACKER_VOL_DIR:$LD_LIBRARY_PATH \
     #     HDF5_VOL_CONNECTOR="${VOL_NAME} under_vol=0;under_info={};path=${SCRIPT_DIR}/vol-${task_id}_${FUNCNAME[0]}.log;level=2;format=" \
     #     HDF5_DRIVER=hdf5_hermes_vfd \
-    #     HDF5_PLUGIN_PATH=$DLIFE_VOL_DIR:${HERMES_INSTALL_DIR}/lib \
+    #     HDF5_PLUGIN_PATH=$TRACKER_VOL_DIR:${HERMES_INSTALL_DIR}/lib \
 
-    # LD_LIBRARY_PATH=$DLIFE_VOL_DIR:$LD_LIBRARY_PATH \
+    # LD_LIBRARY_PATH=$TRACKER_VOL_DIR:$LD_LIBRARY_PATH \
     #     HDF5_VOL_CONNECTOR="${VOL_NAME} under_vol=0;under_info={};path=./vol-${FUNCNAME[0]}.log;level=2;format=" \
-    #     HDF5_PLUGIN_PATH=$DLIFE_VOL_DIR \
+    #     HDF5_PLUGIN_PATH=$TRACKER_VOL_DIR \
     # HDF5_DRIVER=hdf5_hermes_vfd \
     #     HDF5_PLUGIN_PATH=${HERMES_INSTALL_DIR}/lib \
     #     HERMES_CONF=$HERMES_CONF \
@@ -60,11 +67,14 @@ RUN_TRACKING () {
     
     set -x
 
-    schema_file=./vol-stat-${FUNCNAME[0]}.yaml
+    schema_file=data-stat-vol.yaml
+    rm -rf ./*$schema_file
+    # touch $schema_file
 
-    LD_LIBRARY_PATH=$DLIFE_VOL_DIR:$LD_LIBRARY_PATH \
+    # LD_PRELOAD=/share/apps/gcc/9.1.0/lib64/libasan.so \
+    LD_LIBRARY_PATH=$TRACKER_VOL_DIR:$LD_LIBRARY_PATH \
         HDF5_VOL_CONNECTOR="${VOL_NAME} under_vol=0;under_info={};path=${schema_file};level=2;format=" \
-        HDF5_PLUGIN_PATH=$DLIFE_VOL_DIR:$HDF5_PLUGIN_PATH \
+        HDF5_PLUGIN_PATH=$TRACKER_VOL_DIR:$HDF5_PLUGIN_PATH \
         python ../runscripts/run_mcs_tbpfradar3d_wrf.py ${config_demo} &> ${FUNCNAME[0]}-vol.log
     
     set +x 

@@ -3,28 +3,28 @@
 # Tracking uses collocated Tb + Radar3D
 
 # Processing steps:
-run_preprocess: False
+run_preprocess: True
 run_idfeature : True
 run_tracksingle : True
-run_gettracks : False # not needed
-run_trackstats : False
-run_identifymcs : False # needed
-run_matchpf : False # needed
-run_robustmcs : False # needed
-run_mapfeature : False # needed
-run_speed : False # needed
+run_gettracks : True # not needed
+run_trackstats : True
+run_identifymcs : True # needed
+run_matchpf : True # needed
+run_robustmcs : True # needed
+run_mapfeature : True # needed
+run_speed : True # needed
 
 # Parallel processing set up
 # run_parallel: 1 (local cluster), 2 (Dask MPI)
-run_parallel: 0
-nprocesses : 1  # Number of processors to use if run_parallel=1
+run_parallel: 1
+nprocesses : 8  # Number of processors to use if run_parallel=1
 # dask_tmp_dir: '/tmp'  # Dask temporary directory if run_parallel=1
 dask_tmp_dir: '/scratch/tang584'  # Dask temporary directory if run_parallel=1
-timeout: 360  # [seconds] Dask timeout limit
+timeout: 360  # 360 [seconds] Dask timeout limit
 
 # Start/end date and time
 startdate: '20150506.0000'
-enddate: '20150506.0000'
+enddate: '20150506.0800'
 # enddate: '20150506.0800' # smallest possible to run all processing steps
 # enddate: '20150510.0000'
 
@@ -40,7 +40,7 @@ interp_levels: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
   11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25]
 
 # WRF raw data
-wrfout_path: '/global/cscratch1/sd/feng045/HyperFACETS/wrf_ext/ctl/wrfout/'
+wrfout_path: '/qfs/projects/oddite/tang584/flextrkr_runs/input_data/wrf_tbradar/'
 wrfout_basename: 'wrfout_d01_'
 # Tracking input files directory
 clouddata_path: '/qfs/projects/oddite/tang584/flextrkr_runs/input_data/wrf_tbradar/'
