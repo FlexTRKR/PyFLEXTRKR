@@ -234,7 +234,8 @@ def idcells_reflectivity(
     timestamp = time_coords[0]
     # Convert to basetime (i.e., Epoch time)
     # This is a more flexible way that can handle non-standard 360 day calendar
-    file_basetime = np.array([(pd.to_datetime(timestamp.data) - pd.Timestamp('1970-01-01T00:00:00')).total_seconds()])
+    iTimestamp = pd.to_datetime(timestamp.dt.strftime("%Y-%m-%dT%H:%M:%S").item())
+    file_basetime = np.array([(iTimestamp - pd.Timestamp('1970-01-01T00:00:00')).total_seconds()])
     # Convert to strings
     file_datestring = timestamp.dt.strftime("%Y%m%d").item()
     file_timestring = timestamp.dt.strftime("%H%M%S").item()

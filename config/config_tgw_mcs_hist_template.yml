@@ -3,7 +3,7 @@
 # Tracking uses collocated Tb + Precipitation
 
 # Processing steps:
-run_idfeature : False
+run_idfeature : True
 run_tracksingle : True
 run_gettracks : True
 run_trackstats : True
@@ -15,14 +15,14 @@ run_speed : True
 
 # Parallel processing set up
 # run_parallel: 1 (local cluster), 2 (Dask MPI)
-run_parallel: 1
+run_parallel: 0
 nprocesses: 16  # Number of processors to use if run_parallel=1
 dask_tmp_dir: '/tmp'  # Dask temporary directory if run_parallel=1
 timeout: 360  # [seconds] Dask timeout limit
 
 # Start/end date and time
-startdate: '20150101.0000'
-enddate: '20160101.0000'
+startdate: 'STARTDATE'
+enddate: 'ENDDATE'
 
 # Specify tracking input data date/time string format
 # This is the preprocessed file that contains Tb & rainrate
@@ -32,9 +32,12 @@ time_format: 'yyyy-mo-dd_hh:mm:ss'
 databasename: 'wrfout_d01_'  # Note: include all strings before the time (including "_", ".")
 
 # Tracking input files directory
-clouddata_path: '/global/cscratch1/sd/paullric/TGWforMCS/CONUS_TGW_WRF_Historical/'
+# clouddata_path: '/global/cscratch1/sd/souravt/PyFLEXTRKR/demo/tgw_mcs/hist/wrfout/'
+clouddata_path: '/pscratch/sd/s/souravt/PyFLEXTRKR/demo/tgw_mcs/hist/wrfout/'
 # Working directory for the tracking data
-root_path: '/global/cscratch1/sd/feng045/HyperFACETS/TGW_MCS/HIST/'
+## root_path: '/global/cscratch1/sd/feng045/HyperFACETS/TGW_MCS/HIST/'
+## root_path: '/global/cscratch1/sd/souravt/PyFLEXTRKR/TGW_MCS/HIST/WRF/'
+root_path: '/pscratch/sd/s/souravt/PyFLEXTRKR/TGW_MCS/HIST/WRF/'
 # Working sub-directory names
 tracking_path_name: 'tracking'
 stats_path_name: 'stats'

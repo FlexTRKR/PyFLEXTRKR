@@ -44,9 +44,12 @@ feature_type: 'generic'
 # Specify data structure
 datatimeresolution: 24.0     # hours
 pixel_radius: 200.0      # km
+time_dimname: 'time'
 x_dimname: 'lon'
 y_dimname: 'lat'
-time_dimname: 'time'
+time_coordname: 'time'
+x_coordname: 'lon'
+y_coordname: 'lat'
 field_varname: 'z500_anom_sm'
 
 # Feature detection parameters
