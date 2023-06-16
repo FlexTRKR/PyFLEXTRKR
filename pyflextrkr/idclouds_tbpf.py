@@ -195,7 +195,8 @@ def idclouds_tbpf(
         # Process time variable
         iTime = time_decode[tt]
         # Convert to basetime (i.e., Epoch time)
-        file_basetime = np.array([(pd.to_datetime(iTime.data) - pd.Timestamp('1970-01-01T00:00:00')).total_seconds()])
+        iTimestamp = pd.to_datetime(iTime.dt.strftime("%Y-%m-%dT%H:%M:%S").item())
+        file_basetime = np.array([(iTimestamp - pd.Timestamp('1970-01-01T00:00:00')).total_seconds()])
         # Convert to strings
         file_datestring = iTime.dt.strftime("%Y%m%d").item()
         file_timestring = iTime.dt.strftime("%H%M%S").item()

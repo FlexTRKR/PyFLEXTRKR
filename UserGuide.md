@@ -212,12 +212,21 @@ Expected output files at the completion of generic feature tracking are listed i
 | `pixel_path_name` <br> (Track mask pixel files) | `[pixeltracking_filebase]datetime.nc` | Individual pixel files containing track number masks from Step 5. |
 
 
+## **1.6.	Advanced workflow for climate data**
+
+To run tracking on large climate data with multiple years, an [example script](https://github.com/FlexTRKR/PyFLEXTRKR/blob/main/config/make_tgw_config_slurm_scripts.sh) is provided to demonstrate how to create multiple config files for a range of specified years and slurm job submission scripts.
+
+The script replaces the STARTDATE and ENDDATE in [a config template](https://github.com/FlexTRKR/PyFLEXTRKR/blob/main/config/config_tgw_mcs_hist_template.yml) and [a slurm template](https://github.com/FlexTRKR/PyFLEXTRKR/blob/main/slurm/slurm_tgw_mcs_template.sh) with a specific year, and saves them to new files for submitting as slurm jobs.
+
+Similarly, an [example script](https://github.com/FlexTRKR/PyFLEXTRKR/blob/main/Analysis/make_monthly_processlist.sh) is provided to demonstrate how to create a tasklist for calculating multiple years of monthly mean MCS statistics files that can be run in parallel using [TaskFarmer](https://docs.nersc.gov/jobs/workflow/taskfarmer/) on DOE's HPC system [NERSC](https://www.nersc.gov/). An example slurm script using TaskFarmer to run the tasklist is provided [here](https://github.com/FlexTRKR/PyFLEXTRKR/blob/main/Analysis/slurm.submit_mcs_monthly_rainmap.sh).
+
+
 # **2.	Algorithm and Workflow**
 
 ---
 **Tracking** in PyFLEXTRKR primarily uses object overlap technique, with an option to use advection estimates (2D cross-correlation) to increase overlap probability. Largest overlap objects are tracked continuously, and smaller overlap objects are marked as merging/splitting.
 
-![](https://portal.nersc.gov/project/m1867/PyFLEXTRKR/figures/tracking_merging_splitting.png)
+![](https://portal.nersc.gov/project/m1867/PyFLEXTRKR/figures/tracking_merging_splitting.gif)
 
 
 The main workflow of PyFLEXTRKR is illustrated in **Figure 1**. Explanation on the purpose for each of the steps are provided below.
@@ -259,7 +268,7 @@ In parallel processing, the track numbers belonging to the same time are first r
 **Output:** `pixel_path_name/pixeltracking_filebase_yyyymmdd_hhmmss.nc`
 
 
-![](https://portal.nersc.gov/project/m1867/PyFLEXTRKR/figures/PyFLEXTRKR_workflow_illustration_combine1.png)
+![](https://portal.nersc.gov/project/m1867/PyFLEXTRKR/figures/PyFLEXTRKR_workflow_illustration_combine1.gif)
 ### **Figure 1.** PyFLEXTRKR key workflow illustration.
 
 
@@ -305,5 +314,5 @@ Calculate robust MCS movement statistics such as movement speed, direction, and 
 
 
 
-![](https://portal.nersc.gov/project/m1867/PyFLEXTRKR/figures/PyFLEXTRKR_workflow_illustration_combine2.png)
+![](https://portal.nersc.gov/project/m1867/PyFLEXTRKR/figures/PyFLEXTRKR_workflow_illustration_combine2.gif)
 ### **Figure 2. PyFLEXTRKR MCS tracking workflow. The first four steps are the same that in Figure 1.**

@@ -127,20 +127,15 @@ python ./runscripts/run_mcs_tbpf.py ./config/config_wrf4km_mcs_tbpf_example.yml
 # **6. Statistical Analysis**
 
 ---
-A series of [Jupyter Notebooks](https://github.com/FlexTRKR/PyFLEXTRKR/tree/main/Notebooks) are provided to demonstrate various types of statistical analysis that can be applied to the tracking outputs. Below are some examples:
+### A [**Gallery of Statistical Analysis**](https://github.com/FlexTRKR/PyFLEXTRKR/blob/main/AnalysisGallery.md) that can be applied to the tracking outputs is provided. Below are some examples.
 
-* [**MCS track density maps**](https://github.com/FlexTRKR/PyFLEXTRKR/blob/main/Notebooks/plot_obs_wrf_robust_mcs_tracks_map.ipynb):
+![](https://portal.nersc.gov/project/m1867/PyFLEXTRKR/sample_data/saag/figures/imerg_wrf_mcs_irnumber_map_annual_2018-2019.gif)
 
-![](https://portal.nersc.gov/project/m1867/PyFLEXTRKR/sample_data/saag/figures/imerg_wrf_mcs_irnumber_map_annual_2018-2019.png)
+![](https://portal.nersc.gov/project/m1867/PyFLEXTRKR/sample_data/saag/figures/imerg_wrf_mcs_rainmap_annual_2018-2019.gif)
 
-* [**MCS precipitation maps**](https://github.com/FlexTRKR/PyFLEXTRKR/blob/main/Notebooks/plot_obs_wrf_mcs_seasonal_rainmap.ipynb):
+![](https://portal.nersc.gov/project/m1867/PyFLEXTRKR/sample_data/saag/figures/imerg_wrf_mcs_rainfrac_annual_2018-2019.gif)
 
-![](https://portal.nersc.gov/project/m1867/PyFLEXTRKR/sample_data/saag/figures/imerg_wrf_mcs_rainmap_annual_2018-2019.png)
-![](https://portal.nersc.gov/project/m1867/PyFLEXTRKR/sample_data/saag/figures/imerg_wrf_mcs_rainfrac_annual_2018-2019.png)
-
-* [**MCS track properties**](https://github.com/FlexTRKR/PyFLEXTRKR/blob/main/Notebooks/plot_obs_wrf_robust_mcs_trackstats_land_ocean.ipynb):
-
-![](https://portal.nersc.gov/project/m1867/PyFLEXTRKR/sample_data/saag/figures/kde1d_mcs_land_2x4_Amazon.png)
+![](https://portal.nersc.gov/project/m1867/PyFLEXTRKR/sample_data/saag/figures/kde1d_mcs_land_2x4_Amazon.gif)
 
 ![](https://portal.nersc.gov/project/m1867/PyFLEXTRKR/sample_data/saag/figures/mcs_composite_evolution_Amazon_land_crop.png)
 

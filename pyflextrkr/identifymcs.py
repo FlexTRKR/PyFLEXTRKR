@@ -178,7 +178,7 @@ def identifymcs_tb(config):
             mergetrack_idx = mergetrack_idx[trackstat_lifetime[mergetrack_idx] < merge_duration]
 
             # Make sure the merge tracks are not MCS
-            mergetrack_idx = mergetrack_idx[np.isin(mergetrack_idx, mcstracknumbers, invert=True)]
+            mergetrack_idx = mergetrack_idx[np.isin(mergetrack_idx, trackidx_mcs, invert=True)]
             if len(mergetrack_idx) > 0:
                 # Get data for merging tracks
                 mergingcloudnumber = cloudnumbers[mergetrack_idx, :].data
@@ -216,7 +216,7 @@ def identifymcs_tb(config):
             splittrack_idx = splittrack_idx[trackstat_lifetime[splittrack_idx] < split_duration]
 
             # Make sure the split tracks are not MCS
-            splittrack_idx = splittrack_idx[np.isin(splittrack_idx, mcstracknumbers, invert=True)]
+            splittrack_idx = splittrack_idx[np.isin(splittrack_idx, trackidx_mcs, invert=True)]
             if len(splittrack_idx) > 0:
                 # Get data for split tracks
                 splittingcloudnumber = cloudnumbers[splittrack_idx, :].data

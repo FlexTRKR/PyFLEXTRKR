@@ -116,7 +116,7 @@ def link_mergesplit_tracks(config):
             mergetrack_idx = mergetrack_idx[trackstat_lifetime[mergetrack_idx] < merge_duration]
 
             # Make sure the merge tracks are not main track
-            mergetrack_idx = mergetrack_idx[np.isin(mergetrack_idx, maintracknumbers, invert=True)]
+            mergetrack_idx = mergetrack_idx[np.isin(mergetrack_idx, maintrack_idx, invert=True)]
             if len(mergetrack_idx) > 0:
                 # Get data for merging tracks
                 mergingcloudnumber = cloudnumbers[mergetrack_idx, :].data
@@ -154,7 +154,7 @@ def link_mergesplit_tracks(config):
             splittrack_idx = splittrack_idx[trackstat_lifetime[splittrack_idx] < split_duration]
 
             # Make sure the split tracks are not main track
-            splittrack_idx = splittrack_idx[np.isin(splittrack_idx, maintracknumbers, invert=True)]
+            splittrack_idx = splittrack_idx[np.isin(splittrack_idx, maintrack_idx, invert=True)]
             if len(splittrack_idx) > 0:
                 # Get data for split tracks
                 splittingcloudnumber = cloudnumbers[splittrack_idx, :].data
