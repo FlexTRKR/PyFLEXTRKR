@@ -1,4 +1,11 @@
 #!/bin/bash
+#SBATCH --job-name=vol_demo_cell_nerxrad_0
+#SBATCH --partition=short
+#SBATCH --time=00:30:00
+#SBATCH -N 1
+#SBATCH -n 9
+#SBATCH --output=./R_%x.out
+#SBATCH --error=./R_%x.err
 
 ###############################################################################################
 # This script demonstrates running cell tracking on NEXRAD data (KHGX)

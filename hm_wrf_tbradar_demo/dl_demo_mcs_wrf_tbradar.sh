@@ -1,9 +1,9 @@
 #!/bin/bash
 #SBATCH --job-name=dl_demo_cell_nerxrad_0
-#SBATCH --partition=slurm
+#SBATCH --partition=short
 #SBATCH --time=00:30:00
 #SBATCH -N 1
-#SBATCH -n 2
+#SBATCH -n 9
 #SBATCH --output=./R_%x.out
 #SBATCH --error=./R_%x.err
 
@@ -50,10 +50,11 @@ TEST_NAME='wrf_tbradar'
 # Specify directory for the demo data
 dir_demo="/qfs/projects/oddite/tang584/flextrkr_runs/${TEST_NAME}" #NFS
 mkdir -p $dir_demo
-rm -rf $dir_demo/*
+# rm -rf $dir_demo/*
 # Example config file name
 # config_example='config_wrf_mcs_tbradar_example.yml'
-config_example='config_wrf_mcs_tbradar_short.yml'
+# config_example='config_wrf_mcs_tbradar_short.yml'
+config_example='config_wrf_mcs_tbradar_seq.yml'
 config_demo='config_wrf_mcs_tbradar_demo.yml'
 cp ./$config_demo $dir_demo
 # Demo input data directory
@@ -81,14 +82,16 @@ RUN_TRACKING () {
 
     # HDF5_PLUGIN_PATH=${HERMES_INSTALL_DIR}/lib:$TRACKER_VOL_DIR:$HDF5_PLUGIN_PATH \
 
-    LD_LIBRARY_PATH=$TRACKER_VOL_DIR:$LD_LIBRARY_PATH \
-        HDF5_VOL_CONNECTOR="${VOL_NAME} under_vol=0;under_info={};path=${schema_file};level=2;format=" \
-        HDF5_PLUGIN_PATH=${HERMES_INSTALL_DIR}/lib:$TRACKER_VOL_DIR:$HDF5_PLUGIN_PATH \
-        HDF5_DRIVER=hdf5_hermes_vfd \
-        HERMES_CONF=$HERMES_CONF \
-        HERMES_CLIENT_CONF=$HERMES_CLIENT_CONF \
-        HDF5_DRIVER_CONFIG="true ${HERMES_PAGE_SIZE}" \
-        python ../runscripts/run_mcs_tbpfradar3d_wrf.py ${config_demo} &> ${FUNCNAME[0]}-dl.log
+    # valgrind --leak-check=full 
+    export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$TRACKER_VOL_DIR:$HDF5_PLUGIN_PATH
+    export HDF5_VOL_CONNECTOR="${VOL_NAME} under_vol=0;under_info={};path=${schema_file};level=2;format="
+    export HDF5_PLUGIN_PATH=${HERMES_INSTALL_DIR}/lib:$TRACKER_VOL_DIR
+    export HDF5_DRIVER=hdf5_hermes_vfd
+    export HERMES_CONF=$HERMES_CONF
+    export HERMES_CLIENT_CONF=$HERMES_CLIENT_CONF
+    export HDF5_DRIVER_CONFIG="true ${HERMES_PAGE_SIZE}"
+
+    srun -n1 -N1 --oversubscribe python ../runscripts/run_mcs_tbpfradar3d_wrf.py $config_demo &> ${FUNCNAME[0]}-dl.log
     
     set +x 
 
@@ -145,7 +148,7 @@ HERMES_DIS_CONFIG () {
 STOP_DAEMON () {
 
     set -x
-    HERMES_CONF=$HERMES_CONF srun -n1 -N1 --oversubscribe --mpi=pmi2 \
+    HERMES_CONF=$HERMES_CONF srun -n1 -N1 --oversubscribe \
         ${HERMES_INSTALL_DIR}/bin/finalize_hermes &
 
     set +x
@@ -170,7 +173,7 @@ START_HERMES_DAEMON () {
 
 
     # LD_PRELOAD=${HERMES_INSTALL_DIR}/lib/libhdf5_hermes_vfd.so:$LD_PRELOAD \
-    HERMES_CONF=$HERMES_CONF srun -n$SLURM_JOB_NUM_NODES -w $hostlist --oversubscribe --mpi=pmi2 \
+    HERMES_CONF=$HERMES_CONF srun -n$SLURM_JOB_NUM_NODES -w $hostlist --oversubscribe \
         ${HERMES_INSTALL_DIR}/bin/hermes_daemon &> ${FUNCNAME[0]}.log &
 
     # echo ls -l $DEV1_DIR/hermes_slabs
@@ -200,6 +203,10 @@ set -x
 
 HERMES_DIS_CONFIG
 START_HERMES_DAEMON
+
+export FLUSH_MEM=TRUE # TRUE for flush, FALSE for no flush
+export INVALID_OS_CACHE=TRUE # TRUE for invalid, FALSE for no invalid
+export CURR_TASK=""
 
 start_time=$(($(date +%s%N)/1000000))
 RUN_TRACKING

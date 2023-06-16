@@ -1,0 +1,11 @@
+0:
+  - op_count_range: [5, 5]
+    prefetch:
+      - bucket: /qfs/projects/oddite/tang584/flextrkr_runs/hm_wrf_tbradar/tracking/cloudid_20150506_000000.nc
+        promote_blobs: [ 3, 4 ]
+        demote_blobs: [ 1, 2 ]
+  - op_count_range: [7, 7]
+    prefetch:
+      - bucket: /qfs/projects/oddite/tang584/flextrkr_runs/hm_wrf_tbradar/tracking/cloudid_20150506_010000.nc
+        promote_blobs: [ 5, 6 ]
+        demote_blobs: [ 3, 4 ]

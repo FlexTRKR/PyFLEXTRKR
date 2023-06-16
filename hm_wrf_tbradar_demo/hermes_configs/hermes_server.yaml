@@ -2,7 +2,7 @@
 devices:
   ram:
     mount_point: ""
-    capacity: 40GB
+    capacity: 100GB
     block_size: 4KB
     # slab_sizes: [ 1MB, 4MB, 16MB, 32MB ]
     # slab_sizes: [ 8KB, 32KB, 128KB, 1MB ]
@@ -16,7 +16,7 @@ devices:
 
   ssd:
     mount_point: "/scratch/tang584/hermes_slabs" 
-    capacity: 40GB
+    capacity: 380GB
     block_size: 4KB
     # slab_sizes: [ 1MB, 4MB, 16MB, 32MB ]
     # slab_sizes: [ 8KB, 32KB, 128KB, 1MB ]
@@ -30,7 +30,7 @@ devices:
 
   pfs:
     mount_point: "/rcfs/projects/chess/tang584/hermes_slabs" #deception PFS (BeeGFS)
-    capacity: 40GB
+    capacity: 800GB
     block_size: 4KB 
     # slab_sizes: [ 1MB, 4MB, 16MB, 32MB ]
     # slab_sizes: [ 8KB, 32KB, 128KB, 1MB ]
@@ -52,8 +52,8 @@ rpc:
 
 # rpc:
 #   host_file: "/qfs/people/tang584/scripts/local-co-scheduling/host_ip" # myhost host_ip
-#   base_name: "dc00"
-#   host_number_range: [dc019]
+#   base_name: "dc"
+#   host_number_range: [006]
 #   suffix: #".ibnet"
 #   protocol: "ucx+rc_verbs" #"ofi+sockets" #"ucx+ud" #"ucx+rc_verbs"
 #   domain: "mlx5_2:1" #mlx5_2:1 #mlx5_0:1
@@ -63,18 +63,26 @@ rpc:
 buffer_organizer:
   num_threads: 1
   port: 8081
-  flush_period: 1000 #1024
-  blob_reorg_period: 5000 #1024
+  flush_period: 1024 #1024 2048
+  # blob_reorg_period: 1024 #1024 2048
   # recency_min: 0
   # recency_max: 60
   # freq_max: 15
   # freq_min: 0
 
-# prefetch:
-#   enabled: false
-#   apriori_schema_path: ""
-#   epoch_ms: 50
-#   is_mpi: false
+### Define mdm properties
+mdm:
+  # This represents the number of blobs and buckets before collisions start
+  # to happen in the unordered_map tables.
+  est_blob_count: 100000
+  est_bucket_count: 100000
+  est_num_traits: 256
+  
+prefetch:
+  enabled: false
+  apriori_schema_path: "/qfs/people/tang584/scripts/PyFLEXTRKR/hm_wrf_tbradar_demo/hermes_configs/dummy_apriori_schema.yaml"
+  epoch_ms: 50
+  is_mpi: false
 
 dpe:
   default_placement_policy: "MinimizeIoTime"

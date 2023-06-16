@@ -4,8 +4,8 @@ path_inclusions: [
 ]
 path_exclusions: ["/",
 ]
-file_page_size: 1M # 4096KB 1MB 512KB
-base_adapter_mode: kDefault # kDefault kScratch
+file_page_size: 1MB # 4096KB 1MB 512KB
+base_adapter_mode: kDefault # kDefault kScratch kBypass
 flushing_mode: kAsync # kSync kAsync
 
 # file_adapter_configs:
