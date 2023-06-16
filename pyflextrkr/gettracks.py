@@ -711,7 +711,9 @@ def gettracknumbers(config):
     ds_out.to_netcdf(
         path=tracknumbers_outfile,
         mode="w",
-        format="NETCDF4_CLASSIC",
+        engine="h5netcdf",
+        format="NETCDF4",
+        # format="NETCDF4_CLASSIC",
         # unlimited_dims="ntracks",
         encoding={
             "ntracks": {"dtype": "int", "zlib": True},

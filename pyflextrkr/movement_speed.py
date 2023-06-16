@@ -92,6 +92,7 @@ def movement_speed(
 
     # Open stats file to get maximum number of storms to track.
     ds_stats = xr.open_dataset(statistics_file,
+                               engine='h5netcdf', # netcdf4 or h5netcdf
                                mask_and_scale=False,
                                decode_times=False)
     ntracks = ds_stats.dims[tracks_dimname]
