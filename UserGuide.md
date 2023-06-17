@@ -214,11 +214,11 @@ Expected output files at the completion of generic feature tracking are listed i
 
 ## **1.6.	Advanced workflow for climate data**
 
-To run tracking on large climate data with multiple years, an [example script](https://github.com/FlexTRKR/PyFLEXTRKR/blob/main/config/make_tgw_config_slurm_scripts.sh) is provided to demonstrate how to create multiple config files for a range of specified years and slurm job submission scripts.
+To run tracking on climate data (e.g., multiple years), an [example script](https://github.com/FlexTRKR/PyFLEXTRKR/blob/main/config/make_tgw_config_slurm_scripts.sh) is provided to demonstrate how to create multiple config files for a range of specified years and slurm job submission scripts.
 
 The script replaces the STARTDATE and ENDDATE in [a config template](https://github.com/FlexTRKR/PyFLEXTRKR/blob/main/config/config_tgw_mcs_hist_template.yml) and [a slurm template](https://github.com/FlexTRKR/PyFLEXTRKR/blob/main/slurm/slurm_tgw_mcs_template.sh) with a specific year, and saves them to new files for submitting as slurm jobs.
 
-Similarly, an [example script](https://github.com/FlexTRKR/PyFLEXTRKR/blob/main/Analysis/make_monthly_processlist.sh) is provided to demonstrate how to create a tasklist for calculating multiple years of monthly mean MCS statistics files that can be run in parallel using [TaskFarmer](https://docs.nersc.gov/jobs/workflow/taskfarmer/) on DOE's HPC system [NERSC](https://www.nersc.gov/). An example slurm script using TaskFarmer to run the tasklist is provided [here](https://github.com/FlexTRKR/PyFLEXTRKR/blob/main/Analysis/slurm.submit_mcs_monthly_rainmap.sh).
+Similarly, an [example script](https://github.com/FlexTRKR/PyFLEXTRKR/blob/main/Analysis/make_monthly_processlist.sh) is provided to demonstrate how to post process large amount of tracking outputs to get monthly means. The example script creates a tasklist for calculating multiple years of monthly mean MCS statistics files that can be run in parallel using [TaskFarmer](https://docs.nersc.gov/jobs/workflow/taskfarmer/) on DOE's HPC system [NERSC](https://www.nersc.gov/). An example slurm script using TaskFarmer to run the tasklist is provided [here](https://github.com/FlexTRKR/PyFLEXTRKR/blob/main/Analysis/slurm.submit_mcs_monthly_rainmap.sh). The post processed monthly data can then be further analyzed and visualized, see [**Gallery of Statistical Analysis**](https://github.com/FlexTRKR/PyFLEXTRKR/blob/main/AnalysisGallery.md) for more examples.
 
 
 # **2.	Algorithm and Workflow**
@@ -285,7 +285,7 @@ Identify MCSs based on the CCS area and duration criteria. A track with CCS area
 
 If there is no precipitation data available with the Tb data, this step is considered the final step of the MCS identification. Some modification of the code in Step 8 (see below) is needed to map the tracked MCS number to the pixel-level files.
 
-**Output: **`stats_outpath/mcs_tracks_startdate_enddate.nc`
+**Output:** `stats_outpath/mcs_tracks_startdate_enddate.nc`
 
 ## **Step 6. Calculate PF statistics within tracked MCS (parallel)**
 
