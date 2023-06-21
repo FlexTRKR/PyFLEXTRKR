@@ -1,13 +1,21 @@
 """
 Calculate grid-level rain rate PDF by different types of convection for land & ocean and save output to a netCDF file.
 Precipitation types: all, MCS, non-MCS deep convection, congestus
+
+>python calc_mcs_rainrate_hist_byregion.py -c config.yml -l landfrac_range -o oceanfrac_range
+Optional arguments:
+-s start_datetime yyyy-mm-ddThh:mm:ss
+-e end_datetime yyyy-mm-ddThh:mm:ss
+--extent domain extent lonmin lonmax latmin latmax
+
+Zhe Feng, PNNL
+contact: Zhe.Feng@pnnl.gov
 """
 import numpy as np
 import glob
 import xarray as xr
 import pandas as pd
 import time
-import yaml
 import argparse
 from pyflextrkr.ft_utilities import load_config
 
@@ -74,8 +82,8 @@ def calc_pdf(datafiles, outfile, lon_bounds, lat_bounds, rrbins, config):
     land_mask = (region_mask.data == True) & (l_mask.data == True)
     ocean_mask = (region_mask.data == True) & (o_mask.data == True)
     # Convert to DataArray
-    land_mask = xr.DataArray(land_mask, coords={'lon':ds['lon'], 'lat':ds['lat']}, dims=('lon','lat'))
-    ocean_mask = xr.DataArray(ocean_mask, coords={'lon':ds['lon'], 'lat':ds['lat']}, dims=('lon','lat'))
+    land_mask = xr.DataArray(land_mask, coords={'lat':ds['lat'], 'lon':ds['lon'], }, dims=('lat','lon'))
+    ocean_mask = xr.DataArray(ocean_mask, coords={'lat':ds['lat'], 'lon':ds['lon']}, dims=('lat','lon'))
 
 
     # Range of rain rate
@@ -137,10 +145,12 @@ def calc_pdf(datafiles, outfile, lon_bounds, lat_bounds, rrbins, config):
     coord_dict = {'bins': (['bins'], rrbins[:-1])}
     gattr_dict = {
         'title': 'Precipitation PDF by types',
-        'lon_bounds':lon_bounds,
-        'lat_bounds':lat_bounds,
-        'contact':'Zhe Feng, zhe.feng@pnnl.gov',
-        'created_on':time.ctime(time.time()),
+        'lon_bounds': lon_bounds,
+        'lat_bounds': lat_bounds,
+        'landfrac_range': land_range,
+        'oceanfrac_range': ocean_range,
+        'contact': 'Zhe Feng, zhe.feng@pnnl.gov',
+        'created_on': time.ctime(time.time()),
     }
     dsout = xr.Dataset(var_dict, coords=coord_dict, attrs=gattr_dict)
 
