@@ -50,6 +50,7 @@ landmask_x_dimname: 'lon'
 landmask_y_dimname: 'lat'
 landmask_x_coordname: 'lon'
 landmask_y_coordname: 'lat'
+landfrac_thresh: [0.9, 1]  # Define the range of fraction for land (depends on what value is land the landmask file)
 
 # Input dataset structure
 pixel_radius:  4.0  # [km] Spatial resolution of the input data
@@ -61,7 +62,6 @@ reflectivity_varname: 'Reflectivity'
 meltlevel_varname: 'ERAI_0C'
 clouddatasource: 'gpmir'
 radardatasource: 'gridrad'
-pfdatasource:  'wrf'  # flag for landmask convention to calculate PF land fraction
 time_dimname: 'time'
 x_dimname: 'lon'
 y_dimname: 'lat'
@@ -152,7 +152,7 @@ max_pf_majoraxis_thresh:  1800  # [km] MCS PF major axis length upper limit
 mcs_pf_durationthresh:  5  # [hour] PF minimum length of mcs
 mcs_pf_majoraxis_for_lifetime:  20  # [km] Minimum PF size to count PF lifetime
 mcs_pf_gap:  1  # [unitless] Allowable temporal gap in PF data for MCS characteristics
-landfrac_thresh: 90  # [%] Define threshold for PF land fraction
+
 # Specify rain rate parameters
 pf_rr_thres:  2.0  # [mm/hr] Rain rate threshold to define a precipitation feature
 pcp_thresh:  1.0  # [mm/hr] Rain rate threshold to label pixels with track number

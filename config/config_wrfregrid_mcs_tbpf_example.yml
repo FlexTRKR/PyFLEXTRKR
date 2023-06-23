@@ -40,13 +40,14 @@ pixel_path_name: 'mcstracking'
 regrid_pixel_path_name: 'mcstracking_native'
 
 # Land mask file (optional, leave it an empty string if not available)
-# Can use any standard wrfout file that contains LANDMASK
-landmask_filename: 'INPUT_DIR/wrf_landmask.nc'
-landmask_varname: 'LANDMASK'
-landmask_x_dimname: 'west_east'
-landmask_y_dimname: 'south_north'
-landmask_x_coordname: 'XLONG'
-landmask_y_coordname: 'XLAT'
+# Because we are regridding WRF to IMERG grid, we need to use the IMERG landmask file
+landmask_filename: 'INPUT_DIR/IMERG_landmask.nc'
+landmask_varname: 'landseamask'
+landmask_x_dimname: 'lon'
+landmask_y_dimname: 'lat'
+landmask_x_coordname: 'lon'
+landmask_y_coordname: 'lat'
+landfrac_thresh: [0, 90]  # Define the range of fraction for land (depends on what value is land the landmask file)
 
 # Specify tracking input data date/time string format
 # This is the preprocessed file that contains Tb & rainrate
@@ -81,7 +82,6 @@ datatimeresolution: 1.0  # [hour] Temporal resolution of the input data
 tb_varname:  'tb'
 pcp_varname: 'rainrate'
 clouddatasource: 'model'
-pfdatasource:  'wrf'
 time_dimname: 'time'
 x_dimname: 'lon'
 y_dimname: 'lat'
@@ -139,7 +139,6 @@ max_pf_majoraxis_thresh:  1800  # [km] MCS PF major axis length upper limit
 mcs_pf_durationthresh:  4  # [hour] PF minimum length of mcs
 mcs_pf_majoraxis_for_lifetime:  20  # [km] Minimum PF size to count PF lifetime
 mcs_pf_gap:  1  # [unitless] Allowable temporal gap in PF data for MCS characteristics
-landfrac_thresh: 90  # [%] Define threshold for PF land fraction
 
 # Specify rain rate parameters
 pf_rr_thres:  2.0  # Rain rate threshold [mm/hr]
