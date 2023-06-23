@@ -48,6 +48,7 @@ landmask_x_dimname: 'lon'
 landmask_y_dimname: 'lat'
 landmask_x_coordname: 'lon'
 landmask_y_coordname: 'lat'
+landfrac_thresh: [0, 90]  # Define the range of fraction for land (depends on what value is land the landmask file)
 
 # Specific to GPM Tb+IMERG combined dataset
 pixel_radius:  10.0  # [km] Spatial resolution of the input data
@@ -56,7 +57,6 @@ datatimeresolution: 1.0  # [hour] Temporal resolution of the input data
 tb_varname:  'Tb'
 pcp_varname: 'precipitationCal'
 clouddatasource:  'gpmirimerg'
-pfdatasource:  'imerg'
 time_dimname: 'time'
 x_dimname: 'lon'
 y_dimname: 'lat'
@@ -118,7 +118,6 @@ max_pf_majoraxis_thresh:  1800  # [km] MCS PF major axis length upper limit
 mcs_pf_durationthresh:  4  # [hour] PF minimum length of mcs
 mcs_pf_majoraxis_for_lifetime:  20  # [km] Minimum PF size to count PF lifetime
 mcs_pf_gap:  1  # [unitless] Allowable temporal gap in PF data for MCS characteristics
-landfrac_thresh: 90  # [%] Define threshold for PF land fraction
 
 # Specify rain rate parameters
 pf_rr_thres:  2.0  # Rain rate threshold [mm/hr]
@@ -167,7 +166,6 @@ fillval: -9999
 mcstbstats_filebase: 'mcs_tracks_'
 mcspfstats_filebase: 'mcs_tracks_pf_'
 mcsrobust_filebase: 'mcs_tracks_robust_'
-# mcsrobust_filebase: 'mcs_tracks_final_extc_'
 pixeltracking_filebase: 'mcstrack_'
 mcsfinal_filebase: 'mcs_tracks_final_'
 
