@@ -21,8 +21,10 @@ def idfeature_driver(config):
 
     clouddata_path = config["clouddata_path"]
     databasename = config["databasename"]
-    start_basetime = config["start_basetime"]
-    end_basetime = config["end_basetime"]
+    # start_basetime = config["start_basetime"]
+    # end_basetime = config["end_basetime"]
+    start_basetime = config.get("start_basetime", None)
+    end_basetime = config.get("end_basetime", None)
     time_format = config["time_format"]
     run_parallel = config["run_parallel"]
     feature_type = config["feature_type"]
@@ -42,8 +44,8 @@ def idfeature_driver(config):
     infiles_info = subset_files_timerange(
         clouddata_path,
         databasename,
-        start_basetime,
-        end_basetime,
+        start_basetime=start_basetime,
+        end_basetime=end_basetime,
         time_format=time_format,
     )
     # Get file list

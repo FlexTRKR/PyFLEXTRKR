@@ -36,9 +36,18 @@ def run_sl3d(ds, config):
     ny = ds.sizes[y_dimname]
     nz = ds.sizes[z_dimname]
     # Get data coordinates
-    lon2d = ds[x_coordname].data
-    lat2d = ds[y_coordname].data
-    height = ds[z_coordname].data
+    # lon2d = ds[x_coordname].data
+    # lat2d = ds[y_coordname].data
+    x_coord = ds[x_coordname].squeeze().data
+    y_coord = ds[y_coordname].squeeze().data
+    height = ds[z_coordname].squeeze().data
+    # Check coordinate dimensions
+    if (y_coord.ndim == 1) | (x_coord.ndim == 1):
+        # Mesh 1D coordinate into 2D
+        lon2d, lat2d = np.meshgrid(x_coord, y_coord)
+    elif (y_coord.ndim == 2) | (x_coord.ndim == 2):
+        lon2d = x_coord
+        lat2d = y_coord
     # Get data time
     Analysis_time = ds['time'].dt.strftime('%Y-%m-%dT%H:%M:%S').item()
     Analysis_month = ds['time'].dt.strftime('%m').item()

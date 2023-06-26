@@ -52,7 +52,6 @@ def matchtbpf_singlefile(
     # For now, make them the same
     nmaxcore = nmaxpf
     # nmaxcore = config.get("nmaxcore", 10)
-    pfdatasource = config["pfdatasource"]
     landmask_filename = config.get("landmask_filename", "")
     landmask_varname = config.get("landmask_varname", "")
     landfrac_thresh = config.get("landfrac_thresh", 0)
@@ -405,20 +404,11 @@ def matchtbpf_singlefile(
                         if landmask is not None:
                             # Subset landmask to current cloud area
                             sublandmask = landmask[miny:maxy, minx:maxx]
-                            #  If source is GPM, the landmask is 100% for pure water, 0% for pure land
-                            if pfdatasource == "imerg":
-                                npix_land = np.count_nonzero(
-                                    sublandmask[ipfy, ipfx] <= landfrac_thresh
-                                )
-                            elif pfdatasource == "wrf":
-                                # WRF: landmask is 1 for land, 0 for water
-                                npix_land = np.count_nonzero(sublandmask[ipfy, ipfx] == 1)
-                            else:
-                                logger.warning(f"WARNING: unknown pfdatasource: {pfdatasource}")
-                                logger.warning("Must define how to calculate landfrac.")
-                                logger.warning("pf_landfrac will be set to 0.")
-                                npix_land = 0
-
+                            # Count the number of grids within the specified land fraction range
+                            npix_land = np.count_nonzero(
+                                (sublandmask[ipfy, ipfx] >= np.min(landfrac_thresh)) & \
+                                (sublandmask[ipfy, ipfx] <= np.max(landfrac_thresh))
+                            )
                             if npix_land > 0:
                                 pf_landfrac[imatchcloud] = \
                                     float(npix_land) / float(nrainpix)
