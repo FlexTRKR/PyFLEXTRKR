@@ -41,13 +41,13 @@ stats_path_name: 'stats'
 pixel_path_name: 'mcstracking'
 
 # Land mask file
-landmask_filename: ''
-landmask_varname: 'LANDMASK'
+landmask_filename: '/global/cfs/cdirs/m2637/zfeng/derecho/scream/map_data/ocean_mask.nc'
+landmask_varname: 'mask'
 landmask_x_dimname: 'lon'
 landmask_y_dimname: 'lat'
 landmask_x_coordname: 'lon'
 landmask_y_coordname: 'lat'
-landfrac_thresh: [0.9, 1]  # Define the range of fraction for land (depends on what value is land the landmask file)
+landfrac_thresh: [0, 0.1]  # Define the range of fraction for land (depends on what value is land the landmask file)
 
 # Input dataset structure
 pixel_radius:  4.0  # [km] Spatial resolution of the input data
