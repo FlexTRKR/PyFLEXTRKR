@@ -516,8 +516,8 @@ if __name__ == "__main__":
     dbz_levels = np.arange(10, 70.1, 5)
     dbz_ticks = dbz_levels
     # Tb color levels
-    tb_levels = np.arange(180, 320.1, 5)
-    tb_ticks = np.arange(180, 320.1, 20)
+    tb_levels = np.arange(170, 300.1, 5)
+    tb_ticks = np.arange(170, 300.1, 10)
     levels = {'tb_levels': tb_levels, 'dbz_levels': dbz_levels}
     # Colorbar ticks & labels
     cbticks = {'tb_ticks': tb_ticks, 'dbz_ticks': dbz_ticks}
