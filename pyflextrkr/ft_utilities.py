@@ -37,8 +37,32 @@ def load_config(config_file):
     stream = open(config_file, "r")
     config = yaml.full_load(stream)
 
-    startdate = config["startdate"]
-    enddate = config["enddate"]
+    # Get start/end dates
+    startdate = config.get("startdate", None)
+    enddate = config.get("enddate", None)
+    # Get start/end date from input files if not specified
+    if startdate is None or enddate is None:
+        # Get start/end Epoch time from all input files
+        start_basetime, end_basetime = get_start_end_basetime_from_filenames(
+            config["clouddata_path"],
+            config["databasename"],
+            time_format=config["time_format"],
+        )
+        # Update start/end date
+        if startdate is None:
+            startdate = pd.to_datetime(start_basetime, unit='s').strftime("%Y%m%d.%H%M")
+        if enddate is None:
+            enddate = pd.to_datetime(end_basetime, unit='s').strftime("%Y%m%d.%H%M")
+        # Update config
+        config.update(
+            {
+                "startdate": startdate,
+                "enddate": enddate,
+            }
+        )
+        logger.info(f"startdate/enddate not specified in config.")
+        logger.info(f"startdate/enddate calculated from all input files, startdate: {startdate}, enddate: {enddate}")
+
     # Set up tracking output file locations
     tracking_outpath = config["root_path"] + "/" + config["tracking_path_name"] + "/"
     stats_outpath = config["root_path"] + "/" + config["stats_path_name"] + "/"
@@ -238,6 +262,39 @@ def subset_files_timerange(
         files_datestring,
         files_timestring,
     )
+
+def get_start_end_basetime_from_filenames(
+    data_path,
+    data_basename,
+    time_format="yyyymodd_hhmmss",
+):
+    """
+    Get start and end basetime from filenames.
+
+    Args:
+        data_path: string
+            Data directory name.
+        data_basename: string
+            Data base name.
+        time_format: string (optional, default="yyyymodd_hhmmss")
+            Specify file time format to extract date/time.
+
+    Returns:
+        start_basetime: int
+            Start base time (Epoch time).
+        end_basetime: int
+            End base time (Epoch time).
+    """
+    logger = logging.getLogger(__name__)
+    # Get basetime for all files
+    data_filenames, files_basetime, \
+    files_datestring, files_timestring = get_basetime_from_filename(
+        data_path, data_basename, time_format=time_format,
+    )
+    # Get min/max basetimes
+    start_basetime = np.nanmin(files_basetime)
+    end_basetime = np.nanmax(files_basetime)
+    return (start_basetime, end_basetime)
 
 def get_timestamp_from_filename_single(
     filename,
