@@ -1,6 +1,6 @@
 import numpy as np
 import xarray as xr
-import os, shutil
+import os
 import sys
 import time
 import warnings
@@ -29,10 +29,6 @@ def define_robust_mcs_pf(config):
     mcs_pf_durationthresh = config["mcs_pf_durationthresh"]
     mcs_pf_majoraxis_for_lifetime = config["mcs_pf_majoraxis_for_lifetime"]
     mcs_pf_gap = config["mcs_pf_gap"]
-    coefs_pf_area = config["coefs_pf_area"]
-    coefs_pf_rr = config["coefs_pf_rr"]
-    coefs_pf_skew = config["coefs_pf_skew"]
-    coefs_pf_heavyratio = config["coefs_pf_heavyratio"]
     max_pf_majoraxis_thresh = config["max_pf_majoraxis_thresh"]
     tracks_dimname = config["tracks_dimname"]
     times_dimname = config["times_dimname"]
@@ -40,7 +36,7 @@ def define_robust_mcs_pf(config):
     pixel_radius = config["pixel_radius"]
     mcs_min_rainvol_thresh = config["mcs_min_rainvol_thresh"]
     heavy_rainrate_thresh = config["heavy_rainrate_thresh"]
-    mcs_volrain_durationthresh = config["mcs_volrain_durationthresh"]
+    mcs_volrain_duration_thresh = config["mcs_volrain_duration_thresh"]
 
     np.set_printoptions(threshold=np.inf)
     logger = logging.getLogger(__name__)
@@ -145,9 +141,9 @@ def define_robust_mcs_pf(config):
                         dur_volrain = float(ct_volrain) * time_res
 
                         # Duration of max rain rate >= pf_mcs_dur [hour] and
-                        # Duration of volume rain >= mcs_volrain_durationthresh
+                        # Duration of volume rain >= mcs_volrain_duration_thresh
                         if (dur_maxrr >= mcs_pf_durationthresh) & (
-                            dur_volrain >= mcs_volrain_durationthresh
+                            dur_volrain >= mcs_volrain_duration_thresh
                         ):
                             # Label this period as an mcs
                             pf_mcsstatus[nt, igroup_indices] = 1
@@ -243,10 +239,9 @@ def define_robust_mcs_pf(config):
     dsout.attrs["MCS_PF_majoraxis_thresh"] = mcs_pf_majoraxis_thresh
     dsout.attrs["MCS_PF_duration_thresh"] = mcs_pf_durationthresh
     dsout.attrs["PF_PF_min_majoraxis_thresh"] = mcs_pf_majoraxis_for_lifetime
-    dsout.attrs["coefs_pf_area"] = coefs_pf_area
-    dsout.attrs["coefs_pf_rr"] = coefs_pf_rr
-    dsout.attrs["coefs_pf_skew"] = coefs_pf_skew
-    dsout.attrs["coefs_pf_heavyratio"] = coefs_pf_heavyratio
+    dsout.attrs["heavy_rainrate_thresh"] = heavy_rainrate_thresh
+    dsout.attrs["mcs_min_rainvol_thresh"] = mcs_min_rainvol_thresh
+    dsout.attrs["mcs_volrain_duration_thresh"] = mcs_volrain_duration_thresh
     dsout.attrs["Created_on"] = time.ctime(time.time())
 
 

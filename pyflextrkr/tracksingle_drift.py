@@ -267,11 +267,11 @@ def trackclouds(
 
         bt_new = np.array(
                     [pd.to_datetime(new_data["base_time"].data, unit="s")],
-                    dtype="datetime64[s]",
+                    dtype="datetime64[ns]",
                 )[0]
         bt_ref = np.array(
                     [pd.to_datetime(reference_data["base_time"].data, unit="s")],
-                    dtype="datetime64[s]",
+                    dtype="datetime64[ns]",
                 )[0]
 
         # Define output variables dictionary
