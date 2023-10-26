@@ -238,7 +238,7 @@ def calc_stats_singlefile(
                     out_corecold_mintb[itrack] = np.nanmin(file_tb[corecold_indices[0], corecold_indices[1]])
                     out_corecold_meantb[itrack] = np.nanmean(file_tb[corecold_indices[0], corecold_indices[1]])
                     # Get min Tb location
-                    mintb_index = np.argmin(file_tb[corecold_indices[0], corecold_indices[1]])
+                    mintb_index = np.nanargmin(file_tb[corecold_indices[0], corecold_indices[1]])
                     out_mintb_lat[itrack] = latitude[corecold_indices[0], corecold_indices[1]][mintb_index]
                     out_mintb_lon[itrack] = longitude[corecold_indices[0], corecold_indices[1]][mintb_index]
                     if core_npix > 0:
