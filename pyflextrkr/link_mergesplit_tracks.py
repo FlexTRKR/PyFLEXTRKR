@@ -85,7 +85,7 @@ def link_mergesplit_tracks(config):
         (trackstat_maxarea >= maintrack_area_thresh)
     ))[0]
     # Provide warning message and exit if no main track identified
-    if maintrack_idx == []:
+    if len(maintrack_idx) == 0:
         logger.critical("WARNING: No main track identified.")
         logger.critical(f"Tracking will now exit.")
         sys.exit()

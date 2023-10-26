@@ -1,0 +1,29 @@
+cff-version: 1.0.0
+message: "If you use this software, please cite it as below."
+authors:
+- family-names: "Feng"
+  given-names: "Zhe"
+  orcid: "https://orcid.org/0000-0002-7540-9017"
+- family-names: "Hardin"
+  given-names: "Joseph"
+  orcid: "https://orcid.org/0000-0002-8489-4763"
+- family-names: "Barnes"
+  given-names: "Hannah"
+  orcid: "https://orcid.org/0000-0002-1699-5749"
+- family-names: "Li"
+  given-names: "Jianfeng"
+  orcid: "https://orcid.org/0000-0002-1091-9753"
+- family-names: "Leung"
+  given-names: "L. Ruby"
+  orcid: "https://orcid.org/0000-0002-3221-9467"
+- family-names: "Varble"
+  given-names: "Adam"
+  orcid: "https://orcid.org/0000-0001-5926-7154"
+- family-names: "Zhang"
+  given-names: "Zhixiao"
+  orcid: ""
+title: "Python FLEXible object TRacKeR (PyFLEXTRKR)"
+version: 2023.10.0
+doi: 10.5281/zenodo.10044930
+date-released: 2023-10-26
+url: "https://github.com/FlexTRKR/PyFLEXTRKR"

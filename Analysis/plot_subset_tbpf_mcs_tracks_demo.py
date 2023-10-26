@@ -57,6 +57,7 @@ def parse_cmd_args():
     parser.add_argument("--figbasename", help="output figure base name", default="")
     parser.add_argument("--trackstats_file", help="MCS track stats file name", default=None)
     parser.add_argument("--pixel_path", help="Pixel-level tracknumer mask files directory", default=None)
+    parser.add_argument("--time_format", help="Pixel-level file datetime format", default=None)
     args = parser.parse_args()
 
     # Put arguments in a dictionary
@@ -73,9 +74,35 @@ def parse_cmd_args():
         'figbasename': args.figbasename,
         'trackstats_file': args.trackstats_file,
         'pixeltracking_path': args.pixel_path,
+        'time_format': args.time_format,
     }
 
     return args_dict
+
+#--------------------------------------------------------------------------
+def make_dilation_structure(dilate_radius, dx, dy):
+    """
+    Make a circular dilation structure
+
+    Args:
+        dilate_radius: float
+            Dilation radius [kilometer].
+        dx: float
+            Grid spacing in x-direction [kilometer].
+        dy: float
+            Grid spacing in y-direction [kilometer]. 
+    
+    Returns:
+        struc: np.array
+            Dilation structure array.
+    """
+    # Convert radius to number grids
+    rad_gridx = int(dilate_radius / dx)
+    rad_gridy = int(dilate_radius / dy)
+    xgrd, ygrd = np.ogrid[-rad_gridx:rad_gridx+1, -rad_gridy:rad_gridy+1]
+    # Make dilation structure
+    strc = xgrd*xgrd + ygrd*ygrd <= (dilate_radius / dx) * (dilate_radius / dy)
+    return strc
 
 #-----------------------------------------------------------------------
 def label_perimeter(tracknumber, dilationstructure):
@@ -211,6 +238,7 @@ def plot_map_2panels(pixel_dict, plot_info, map_info, track_dict):
     trackpath_color = plot_info['trackpath_color']
     mcsperim_color = plot_info['mcsperim_color']
     pfdiam_color = plot_info['pfdiam_color']
+    pfdiam_scale = plot_info['pfdiam_scale']
     map_edgecolor = plot_info['map_edgecolor']
     map_resolution = plot_info['map_resolution']
     timestr = plot_info['timestr']
@@ -387,7 +415,7 @@ def plot_map_2panels(pixel_dict, plot_info, map_info, track_dict):
         if (idt_match < dt_match):
             # Plot PF diameter circle
             if ~np.isnan(_irad):
-                ipfcircle = ax2.tissot(rad_km=_irad*2, lons=_ilon, lats=_ilat, n_samples=100,
+                ipfcircle = ax2.tissot(rad_km=_irad*pfdiam_scale, lons=_ilon, lats=_ilat, n_samples=100,
                                        facecolor='None', edgecolor=pfdiam_color, lw=pfdiam_linewidth, zorder=3)
             # Overplot tracknumbers at current frame
             if (_iccslon > map_extent[0]) & (_iccslon < map_extent[1]) & \
@@ -406,7 +434,7 @@ def plot_map_2panels(pixel_dict, plot_info, map_info, track_dict):
     legend_elements2 = [
         mpl.lines.Line2D([0], [0], color=trackpath_color, marker='o', lw=trackpath_linewidth, label='MCS Tracks'),
         mpl.lines.Line2D([0], [0], marker='o', lw=0, markerfacecolor='None',
-                         markeredgecolor=pfdiam_color, markersize=12, label='PF Diam (x2)'),
+                         markeredgecolor=pfdiam_color, markersize=12, label=f'PF Diam (x{pfdiam_scale:.1f})'),
     ]
     ax1.legend(handles=legend_elements1, loc='lower right')
     ax2.legend(handles=legend_elements2, loc='lower right')
@@ -440,6 +468,7 @@ def work_for_time_loop(datafile, track_dict, map_info, plot_info, config):
     """
 
     map_extent = map_info.get('map_extent', None)
+    perim_thick = plot_info.get('perim_thick')
     figdir = plot_info.get('figdir')
     figbasename = plot_info.get('figbasename')
 
@@ -458,9 +487,13 @@ def work_for_time_loop(datafile, track_dict, map_info, plot_info, config):
         map_info['subset'] = subset
 
     # Make dilation structure (larger values make thicker outlines)
-    perim_thick = 6
-    dilationstructure = np.zeros((perim_thick+1,perim_thick+1), dtype=int)
-    dilationstructure[1:perim_thick, 1:perim_thick] = 1
+    # perim_thick = 6
+    # dilationstructure = np.zeros((perim_thick+1,perim_thick+1), dtype=int)
+    # dilationstructure[1:perim_thick, 1:perim_thick] = 1
+
+    # Make a dilation structure
+    dilationstructure = make_dilation_structure(perim_thick, pixel_radius, pixel_radius)
+    # import pdb; pdb.set_trace()
 
     # Get tracknumbers
     tn = ds['cloudtracknumber'].squeeze()
@@ -537,6 +570,9 @@ if __name__ == "__main__":
     figbasename = args_dict.get('figbasename')
     trackstats_file = args_dict.get('trackstats_file')
     pixeltracking_path = args_dict.get('pixeltracking_path')
+    time_format = args_dict.get('time_format')
+
+    if time_format is None: time_format = "yyyymodd_hhmmss"
 
     # Specify plotting info
     # Precipitation color levels
@@ -565,9 +601,11 @@ if __name__ == "__main__":
         'fontsize': 10,
         'marker_size': 10,
         'trackpath_linewidth': 1.5,
-        'pfdiam_linewidth': 1,
         'trackpath_color': 'purple',
+        'perim_thick': 10,  # [km]
         'mcsperim_color': 'magenta',
+        'pfdiam_linewidth': 1,
+        'pfdiam_scale': 1,  # scaling ratio for PF diameter circle (1: no scaling)
         'pfdiam_color': 'magenta',
         'map_edgecolor': 'k',
         'map_resolution': '50m',
@@ -608,6 +646,7 @@ if __name__ == "__main__":
         pixeltracking_path = config["pixeltracking_outpath"]
     pixeltracking_filebase = config["pixeltracking_filebase"]
     n_workers = config["nprocesses"]
+    pixel_radius = config["pixel_radius"]
 
     # Output figure directory
     if out_dir is None:
@@ -636,7 +675,7 @@ if __name__ == "__main__":
         pixeltracking_filebase,
         start_basetime,
         end_basetime,
-        time_format="yyyymodd_hhmmss",
+        time_format=time_format,
     )
     print(f'Number of pixel files: {len(datafiles)}')
 
