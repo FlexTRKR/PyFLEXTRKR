@@ -22,8 +22,8 @@ authors:
 - family-names: "Zhang"
   given-names: "Zhixiao"
   orcid: ""
-title: "Python FLEXible object TRacKeR (PyFLEXTRKR)"
+title: "PyFLEXTRKR: a flexible feature tracking Python software for convective cloud analysis"
 version: 2023.10.0
-doi: 10.5281/zenodo.10044930
-date-released: 2023-10-26
+doi: 10.5194/gmd-16-2753-2023
+date-released: 2022-12-12
 url: "https://github.com/FlexTRKR/PyFLEXTRKR"
