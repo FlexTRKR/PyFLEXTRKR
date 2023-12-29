@@ -48,6 +48,7 @@ def regrid_tracking_mask(
     wrfout_path = config['wrfout_path']
     wrfout_basename = config['wrfout_basename']
     regrid_pixel_path_name = config.get('regrid_pixel_path_name')
+    regrid_mask_varnames = config.get('regrid_mask_varnames', None)
     # Default pixel-level mask input directory, file basename
     if pixeltracking_inpath is None:
         pixeltracking_inpath = config["pixeltracking_outpath"]
@@ -98,6 +99,7 @@ def regrid_tracking_mask(
         'y_coordname_src': y_coordname_dst,
         'weight_filename': weight_filename_rev,
         'regrid_method': regrid_method_rev,
+        'regrid_mask_varnames': regrid_mask_varnames,
     }
 
     # Build Regridder
@@ -142,6 +144,11 @@ def regrid_mask(inputfile, outdir, config_regrid):
 
     weight_filename = config_regrid.get('weight_filename')
     regrid_method = config_regrid.get('regrid_method')
+    regrid_mask_varnames = config_regrid.get('regrid_mask_varnames')
+
+    # If regrid_mask_varnames is not specified, regrid variable 'tracknumber'
+    if regrid_mask_varnames is None:
+        regrid_mask_varnames = ['tracknumber']
 
     # Make output filename
     fname = os.path.basename(inputfile)
@@ -154,16 +161,11 @@ def regrid_mask(inputfile, outdir, config_regrid):
 
     # Read input data
     ds_in = xr.open_dataset(inputfile, mask_and_scale=False)
-    # Regrid variables
-    tracknumber = regridder(ds_in['tracknumber'], keep_attrs=True)
-    merge_tracknumber = regridder(ds_in['merge_tracknumber'], keep_attrs=True)
-    split_tracknumber = regridder(ds_in['split_tracknumber'], keep_attrs=True)
-    track_status = regridder(ds_in['track_status'], keep_attrs=True)
-    cloudtracknumber = regridder(ds_in['cloudtracknumber'], keep_attrs=True)
-    cloudmerge_tracknumber = regridder(ds_in['cloudmerge_tracknumber'], keep_attrs=True)
-    cloudsplit_tracknumber = regridder(ds_in['cloudsplit_tracknumber'], keep_attrs=True)
-    pcptracknumber = regridder(ds_in['pcptracknumber'], keep_attrs=True)
-    # import pdb; pdb.set_trace()
+
+    # Regrid variables and put them in a dictionary
+    var_dict = {}
+    for ivar in regrid_mask_varnames:
+        var_dict[ivar] = regridder(ds_in[ivar], keep_attrs=True)
  
     # Output coordinates
     x_coord = grid_dst['lon']
@@ -171,18 +173,6 @@ def regrid_mask(inputfile, outdir, config_regrid):
     x_coord = xr.DataArray(x_coord, dims=('y', 'x'))
     y_coord = xr.DataArray(y_coord, dims=('y', 'x'))
     # Make output DataSet
-    var_dict = {
-        # 'longitude': x_coord,
-        # 'latitude': y_coord,
-        'tracknumber': tracknumber,
-        'merge_tracknumber': merge_tracknumber,
-        'split_tracknumber': split_tracknumber,
-        'track_status': track_status,
-        'cloudtracknumber': cloudtracknumber,
-        'cloudmerge_tracknumber': cloudmerge_tracknumber,
-        'cloudsplit_tracknumber': cloudsplit_tracknumber,
-        'pcptracknumber': pcptracknumber,
-    }
     ds_out = xr.Dataset(var_dict)
 
     # Delete file if it already exists

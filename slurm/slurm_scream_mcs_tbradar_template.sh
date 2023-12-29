@@ -7,7 +7,7 @@
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=64
 #SBATCH --exclusive
-#SBATCH --output=log_scream_mcs_CASE.log
+#SBATCH --output=log_scream_mcs_CASE_FORCING.log
 #SBATCH --mail-type=END
 #SBATCH --mail-user=zhe.feng@pnnl.gov
 
@@ -18,6 +18,6 @@ source activate /global/common/software/m1867/python/pyflex
 
 # Run Python
 cd /global/homes/f/feng045/program/PyFLEXTRKR-dev/runscripts
-python run_mcs_tbpfradar3d.py /global/homes/f/feng045/program/PyFLEXTRKR-dev/config/config_scream_mcs_CASE.yml
+python run_mcs_tbpfradar3d.py /global/homes/f/feng045/program/PyFLEXTRKR-dev/config/config_scream_mcs_CASE_FORCING.yml
 
 date
