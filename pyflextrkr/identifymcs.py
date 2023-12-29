@@ -114,7 +114,7 @@ def identifymcs_tb(config):
 
             # System may have multiple periods satisfying area and duration requirements
             # Loop over each period
-            if iccs != []:
+            if len(iccs) > 0:
                 for t in range(0, nbreaks):
                     # Duration requirement
                     # Duration length should be group's last index - first index + 1

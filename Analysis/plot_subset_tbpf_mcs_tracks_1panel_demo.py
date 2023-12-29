@@ -228,6 +228,8 @@ def plot_map_2panels(pixel_dict, plot_info, map_info, track_dict):
     # Get plot info from dictionary
     levels = plot_info['levels']
     cmaps = plot_info['cmaps']
+    tb_alpha = plot_info['tb_alpha']
+    pcp_alpha = plot_info['pcp_alpha']
     titles = plot_info['titles'] 
     cblabels = plot_info['cblabels']
     cbticks = plot_info['cbticks']
@@ -271,20 +273,15 @@ def plot_map_2panels(pixel_dict, plot_info, map_info, track_dict):
     mpl.rcParams['font.size'] = fontsize
     mpl.rcParams['font.family'] = 'Helvetica'
     fig = plt.figure(figsize=figsize, dpi=dpi, facecolor='w')
-    # vertical: left + right panel
-    if panel_orientation == 'vertical':
-        gs = gridspec.GridSpec(2,2, height_ratios=[1,0.02], width_ratios=[1,1])
-        gs.update(left=0.05, right=0.95, bottom=0.1, top=0.9, wspace=0.15, hspace=0.15)
-        ax2 = plt.subplot(gs[0,1], projection=proj)
-        cax1 = plt.subplot(gs[1,0])
-        cb_orientation = 'horizontal'
-    # horizontal: top + bottom panel
-    if panel_orientation == 'horizontal':
-        gs = gridspec.GridSpec(2,2, height_ratios=[0.4,0.4], width_ratios=[1,0.02])
-        gs.update(left=0.05, right=0.93, bottom=0.05, top=0.9, wspace=0.03, hspace=0.2)
-        ax2 = plt.subplot(gs[1,0], projection=proj)
-        cax1 = plt.subplot(gs[0,1])
-        cb_orientation = 'vertical'
+
+    # Set GridSpec for left (plot) and right (colorbars)
+    gs = gridspec.GridSpec(1, 2, height_ratios=[1], width_ratios=[1, 0.1])
+    gs.update(wspace=0.05, left=0.05, right=0.95, top=0.92, bottom=0.08)
+    # Use GridSpecFromSubplotSpec for panel and colorbar
+    gs_cb = gridspec.GridSpecFromSubplotSpec(1, 2, subplot_spec=gs[1], height_ratios=[1], width_ratios=[0.01,0.01], wspace=5)
+    ax1 = plt.subplot(gs[0], projection=proj)
+    cax1 = plt.subplot(gs_cb[0])
+    cax2 = plt.subplot(gs_cb[1])
     # Figure title: time
     fig.text(0.5, 0.96, timestr, fontsize=fontsize*1.4, ha='center')
 
@@ -292,11 +289,11 @@ def plot_map_2panels(pixel_dict, plot_info, map_info, track_dict):
     # Tb Panel
     ax1 = plt.subplot(gs[0,0], projection=proj)
     ax1.set_extent(map_extent, crs=data_proj)
-    ax1.add_feature(land, facecolor='none', edgecolor=map_edgecolor, zorder=3)
+    ax1.add_feature(land, facecolor='none', edgecolor=map_edgecolor, zorder=4)
     if draw_border == True:
-        ax1.add_feature(borders, edgecolor=map_edgecolor, facecolor='none', linewidth=0.8, zorder=3)
+        ax1.add_feature(borders, edgecolor=map_edgecolor, facecolor='none', linewidth=0.8, zorder=4)
     if draw_state == True:
-        ax1.add_feature(states, edgecolor=map_edgecolor, facecolor='none', linewidth=0.8, zorder=3)
+        ax1.add_feature(states, edgecolor=map_edgecolor, facecolor='none', linewidth=0.8, zorder=4)
     ax1.set_aspect('auto', adjustable=None)
     ax1.set_title(titles['tb_title'], loc='left')
     gl = ax1.gridlines(crs=data_proj, draw_labels=True, linestyle='--', linewidth=0.5)
@@ -310,65 +307,28 @@ def plot_map_2panels(pixel_dict, plot_info, map_info, track_dict):
     ax1.xaxis.set_major_formatter(lon_formatter)
     ax1.yaxis.set_major_formatter(lat_formatter)
 
+    # Tb
     cmap = plt.get_cmap(cmaps['tb_cmap'])
     norm = mpl.colors.BoundaryNorm(levels['tb_levels'], ncolors=cmap.N, clip=True)
     tb_masked = np.ma.masked_where((np.isnan(tb)), tb)
-    cf1 = ax1.pcolormesh(lon, lat, tb_masked, norm=norm, cmap=cmap, transform=data_proj, zorder=2)
+    cf1 = ax1.pcolormesh(lon, lat, tb_masked, norm=norm, cmap=cmap, transform=data_proj, zorder=2, alpha=tb_alpha)
     # Overplot cloudtracknumber boundary
-    tn = np.copy(tracknumber.data)
-    # Replace all valid cloudtracknumber with a constant, and invalid cloudtracknumber with 0
-    tn[(tn >= 1)] = 10
-    tn[np.isnan(tn)] = 0
-    # Overlay boundary of cloudtracknumber on Tb
-    Tn = np.ma.masked_where(tn_perim == 0, tn_perim)
-    Tn[Tn > 0] = 10
-    tn1 = ax1.pcolormesh(lon, lat, Tn, cmap='cool_r', transform=data_proj, zorder=3)
-    # Tb Colorbar
-    cb1 = plt.colorbar(cf1, cax=cax1, label=cblabels['tb_label'], ticks=cbticks['tb_ticks'],
-                       extend='both', orientation=cb_orientation)
-    
-    #################################################################
-    # Precipitation Panel
-    ax2.set_extent(map_extent, crs=data_proj)
-    ax2.add_feature(land, facecolor='none', edgecolor=map_edgecolor, zorder=3)
-    if draw_border == True:
-        ax2.add_feature(borders, edgecolor=map_edgecolor, facecolor='none', linewidth=0.8, zorder=3)
-    if draw_state == True:
-        ax2.add_feature(states, edgecolor=map_edgecolor, facecolor='none', linewidth=0.8, zorder=3)
-    ax2.set_aspect('auto', adjustable=None)
-    ax2.set_title(titles['pcp_title'], loc='left')
-    gl = ax2.gridlines(crs=data_proj, draw_labels=True, linestyle='--', linewidth=0.5)
-    gl.right_labels = False
-    gl.top_labels = False
-    if (lonv is not None) & (latv is not None):
-        gl.xlocator = mpl.ticker.FixedLocator(lonv)
-        gl.ylocator = mpl.ticker.FixedLocator(latv)
-    lon_formatter = LongitudeFormatter(zero_direction_label=True)
-    lat_formatter = LatitudeFormatter()
-    ax2.xaxis.set_major_formatter(lon_formatter)
-    ax2.yaxis.set_major_formatter(lat_formatter)
-
-    # MCS track number mask
     cmap = plt.get_cmap(cmaps['tn_cmap'])
-    # If only 1 track, add a number to make at least 2 color levels
-    if len(levels['tn_levels']) == 1:
-        levels['tn_levels'] = np.append(levels['tn_levels'], levels['tn_levels']+1)
-    norm = mpl.colors.BoundaryNorm(levels['tn_levels'], ncolors=cmap.N, clip=True)
-    tracknumber_masked = np.ma.masked_invalid(tracknumber)
-    # cm1 = ax2.pcolormesh(lon, lat, tracknumber_masked, norm=norm, cmap=cmap, transform=data_proj, zorder=2, alpha=0.7)
-    cm1 = ax2.pcolormesh(lon, lat, tracknumber_masked, vmin=min(levels['tn_levels']), vmax=max(levels['tn_levels']),
-                         cmap=cmap, transform=data_proj, zorder=2, alpha=0.7)
-    
+    Tn = np.ma.masked_where(tn_perim == 0, tn_perim)
+    tn1 = ax1.pcolormesh(lon, lat, Tn, vmin=min(levels['tn_levels']), vmax=max(levels['tn_levels']),
+                         cmap=cmap, transform=data_proj, zorder=4, alpha=1)  
     # Precipitation
     cmap = plt.get_cmap(cmaps['pcp_cmap'])
     norm = mpl.colors.BoundaryNorm(levels['pcp_levels'], ncolors=cmap.N, clip=True)
     pcp_masked = np.ma.masked_where(((pcp < min(levels['pcp_levels']))), pcp)
-    cf2 = ax2.pcolormesh(lon, lat, pcp_masked, norm=norm, cmap=cmap, transform=data_proj, zorder=2)
-    # Colorbar
-    cax2 = plt.subplot(gs[1,1])
+    cf2 = ax1.pcolormesh(lon, lat, pcp_masked, norm=norm, cmap=cmap, transform=data_proj, zorder=2, alpha=pcp_alpha)
+    # Tb Colorbar
+    cb1 = plt.colorbar(cf1, cax=cax1, label=cblabels['tb_label'], ticks=cbticks['tb_ticks'],
+                       extend='both', orientation='vertical')
+    # Precipitation Colorbar
     cb2 = plt.colorbar(cf2, cax=cax2, label=cblabels['pcp_label'], ticks=cbticks['pcp_ticks'],
-                       extend='both', orientation=cb_orientation)
-    
+                       extend='both', orientation='vertical')
+
     #################################################################
     # Plot track centroids and paths
     for itrack in range(0, ntracks):
@@ -376,7 +336,7 @@ def plot_map_2panels(pixel_dict, plot_info, map_info, track_dict):
         ilifetime = lifetime.data[itrack]
         itracknum = lifetime.tracks.data[itrack]+1
         idur = (ilifetime / time_res).astype(int)
-        idiam = track_pf_diam.data[itrack,:idur]       
+        idiam = track_pf_diam.data[itrack,:idur]
         # Get basetime of the track and the track end time
         ibt = track_bt.data[itrack,:idur]
         ibt_end = np.nanmax(ibt)
@@ -395,36 +355,31 @@ def plot_map_2panels(pixel_dict, plot_info, map_info, track_dict):
                 size_vals[0] = marker_size * 2
                 cc1 = ax1.plot(track_ccs_lon.data[itrack,idx_cut], track_ccs_lat.data[itrack,idx_cut],
                                lw=trackpath_linewidth, ls='-', color=trackpath_color, transform=data_proj, zorder=3)
-                cc2 = ax2.plot(track_ccs_lon.data[itrack,idx_cut], track_ccs_lat.data[itrack,idx_cut],
-                               lw=trackpath_linewidth, ls='-', color=trackpath_color, transform=data_proj, zorder=3)
                 # Initiation location
                 cl1 = ax1.scatter(track_ccs_lon.data[itrack,0], track_ccs_lat.data[itrack,0], s=marker_size*2,
-                                  transform=data_proj, zorder=4, **marker_style)
-                cl2 = ax2.scatter(track_ccs_lon.data[itrack,0], track_ccs_lat.data[itrack,0], s=marker_size*2,
                                   transform=data_proj, zorder=4, **marker_style)
                 
         # Find the closest time from track times
         idt = np.abs((ibt - pixel_bt).astype('timedelta64[m]'))
         idx_match = np.argmin(idt)
         idt_match = idt[idx_match]
+        # Get CCS center lat/lon from the matched tracks
+        _iccslon = track_ccs_lon.data[itrack,idx_match]
+        _iccslat = track_ccs_lat.data[itrack,idx_match]
         # Get PF radius from the matched tracks
         _irad = idiam[idx_match] / 2
         _ilon = track_pf_lon.data[itrack,idx_match]
         _ilat = track_pf_lat.data[itrack,idx_match]
-        _iccslon = track_ccs_lon.data[itrack,idx_match]
-        _iccslat = track_ccs_lat.data[itrack,idx_match]
         # Proceed if time difference is < dt_match
         if (idt_match < dt_match):
-            # Plot PF diameter circle
-            if ~np.isnan(_irad):
-                ipfcircle = ax2.tissot(rad_km=_irad*pfdiam_scale, lons=_ilon, lats=_ilat, n_samples=100,
-                                       facecolor='None', edgecolor=pfdiam_color, lw=pfdiam_linewidth, zorder=3)
+            # # Plot PF diameter circle
+            # if ~np.isnan(_irad):
+            #     ipfcircle = ax1.tissot(rad_km=_irad*2, lons=_ilon, lats=_ilat, n_samples=100,
+            #                            facecolor='None', edgecolor=pfdiam_color, lw=pfdiam_linewidth, zorder=3)
             # Overplot tracknumbers at current frame
             if (_iccslon > map_extent[0]) & (_iccslon < map_extent[1]) & \
                     (_iccslat > map_extent[2]) & (_iccslat < map_extent[3]):
-                ax1.text(_iccslon+0.05, _iccslat+0.05, f'{itracknum:.0f}', color='k', size=tracknumber_fontsize, 
-                         ha='left', va='center', weight='bold', transform=data_proj, zorder=5)
-                ax2.text(_iccslon+0.05, _iccslat+0.05, f'{itracknum:.0f}', color='k', size=tracknumber_fontsize, 
+                ax1.text(_iccslon+0.05, _iccslat+0.05, f'{itracknum:.0f}', color='k', size=tracknumber_fontsize,
                          ha='left', va='center', weight='bold', transform=data_proj, zorder=5)
     
     # Custom legend for track paths
@@ -433,13 +388,7 @@ def plot_map_2panels(pixel_dict, plot_info, map_info, track_dict):
         mpl.lines.Line2D([0], [0], marker='o', lw=0, markerfacecolor='None',
                          markeredgecolor=mcsperim_color, markersize=12, label='MCS Mask'),
     ]
-    legend_elements2 = [
-        mpl.lines.Line2D([0], [0], color=trackpath_color, marker='o', lw=trackpath_linewidth, label='MCS Tracks'),
-        mpl.lines.Line2D([0], [0], marker='o', lw=0, markerfacecolor='None',
-                         markeredgecolor=pfdiam_color, markersize=12, label=f'PF Diam (x{pfdiam_scale:.1f})'),
-    ]
     ax1.legend(handles=legend_elements1, loc='lower right')
-    ax2.legend(handles=legend_elements2, loc='lower right')
     
     # Thread-safe figure output
     canvas = FigureCanvas(fig)
@@ -585,8 +534,8 @@ if __name__ == "__main__":
             lat_span = map_extent[3] - map_extent[2]
             fig_ratio_yx = lat_span / lon_span
 
-            figsize_x = 8
-            figsize_y = figsize_x * fig_ratio_yx * 2.1
+            figsize_x = 12
+            figsize_y = figsize_x * fig_ratio_yx
             figsize_y = float("{:.2f}".format(figsize_y))  # round to 2 decimal digits
             figsize = [figsize_x, figsize_y]
         else:
@@ -594,28 +543,31 @@ if __name__ == "__main__":
 
     # Specify plotting info
     # Precipitation color levels
-    pcp_levels = [2, 3, 4, 5, 6, 8, 10, 15, 20]
+    pcp_levels = [2, 3, 4, 5, 6, 8, 10, 15, 20, 30]
     pcp_ticks = pcp_levels
     # Tb color levels
-    tb_levels = np.arange(200, 320.1, 5)
-    tb_ticks = np.arange(200, 320.1, 10)
+    tb_levels = np.arange(180, 300.1, 2)
+    tb_ticks = np.arange(180, 300.1, 20)
     levels = {'tb_levels': tb_levels, 'pcp_levels': pcp_levels}
     # Colorbar ticks & labels
     cbticks = {'tb_ticks': tb_ticks, 'pcp_ticks': pcp_ticks}
     cblabels = {'tb_label': 'Tb (K)', 'pcp_label': 'Precipitation (mm h$^{-1}$)'}
-    # Colormap
-    tb_cmap = truncate_colormap(plt.get_cmap('jet'), minval=0.05, maxval=0.95)
-    pcp_cmap = truncate_colormap(plt.get_cmap('viridis'), minval=0.2, maxval=1.0)
-    tn_cmap = cc.cm["glasbey_light"]
+    # Colormaps
+    tb_cmap = truncate_colormap(plt.get_cmap("Greys"), minval=0.01, maxval=0.99)
+    pcp_cmap = truncate_colormap(plt.get_cmap(cc.cm["CET_R1"]), minval=0, maxval=1.0)
+    # tn_cmap = cc.cm["glasbey_light"]
+    tn_cmap = cc.cm["glasbey_dark"]
     # tn_cmap = cc.cm["glasbey"]
     cmaps = {'tb_cmap': tb_cmap, 'pcp_cmap': pcp_cmap, 'tn_cmap': tn_cmap}
-    titles = {'tb_title': '(a) IR Brightness Temperature', 'pcp_title': '(b) Precipitation (Tracked MCSs Shaded)'}
+    titles = {'tb_title': 'IR Brightness Temperature, Precipitation, Tracked MCS (Outline)'}
     plot_info = {
         'levels': levels,
         'cmaps': cmaps,
         'titles': titles,
         'cbticks': cbticks,
         'cblabels': cblabels,
+        'tb_alpha': 0.7,
+        'pcp_alpha': 0.9,
         'fontsize': 10,
         'dpi': 200,
         'marker_size': 10,

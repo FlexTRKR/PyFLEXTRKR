@@ -32,16 +32,17 @@ time_format: 'yyyymoddThhmmss'
 databasename: 'obs_v4_2_'
 
 # Tracking input files directory
-clouddata_path: '/pscratch/sd/j/jli628/15min/CASE/'
+clouddata_path: '/pscratch/sd/f/feng045/HyperFACETS/derecho/scream_15min/FORCING/tb_radar/CASE/'
 # Working directory for the tracking data
-root_path: '/pscratch/sd/f/feng045/HyperFACETS/derecho/scream_15min/CASE/'
+root_path: '/pscratch/sd/f/feng045/HyperFACETS/derecho/scream_15min/FORCING/CASE/'
 # Working sub-directory names
 tracking_path_name: 'tracking'
 stats_path_name: 'stats'
 pixel_path_name: 'mcstracking'
 
 # Land mask file
-landmask_filename: '/global/cfs/cdirs/m2637/zfeng/derecho/scream/map_data/ocean_mask.nc'
+# landmask_filename: '/global/cfs/cdirs/m2637/zfeng/derecho/scream/map_data/ocean_mask.nc'
+landmask_filename: '/pscratch/sd/f/feng045/HyperFACETS/derecho/scream_15min/maps/cean_mask.nc'
 landmask_varname: 'mask'
 landmask_x_dimname: 'lon'
 landmask_y_dimname: 'lat'
