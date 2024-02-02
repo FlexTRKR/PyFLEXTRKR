@@ -42,6 +42,12 @@ echo 'Created new config file: '${config_demo}
 
 # Activate PyFLEXTRKR conda environment
 echo 'Activating PyFLEXTRKR environment ...'
+# sourcing conda
+case $(uname -s) in
+	'Linux')     echo "LinUx" && . $HOME/miniconda3/etc/profile.d/conda.sh;;
+	'Darwin')    echo "Mac" && . $HOME/miniconda3/etc/profile.d/conda.sh;;
+        *);;
+esac
 conda activate flextrkr
 
 # Run tracking
@@ -58,7 +64,7 @@ echo 'View quicklook plots here: '${quicklook_dir}
 
 # Make animation using ffmpeg
 echo 'Making animations from quicklook plots ...'
-ffmpeg -framerate 2 -pattern_type glob -i ${quicklook_dir}'*.png' -c:v libx264 -r 10 -crf 20 -pix_fmt yuv420p \
+ffmpeg -framerate 2 -pattern_type sequence -start_number 00001 -i ${quicklook_dir}'image%05d.png' -c:v libx264 -r 10 -crf 20 -pix_fmt yuv420p \
     -y ${quicklook_dir}quicklook_animation.mp4
 echo 'View animation here: '${quicklook_dir}quicklook_animation.mp4
 

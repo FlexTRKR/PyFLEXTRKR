@@ -94,8 +94,8 @@ def movement_speed(
     ds_stats = xr.open_dataset(statistics_file,
                                mask_and_scale=False,
                                decode_times=False)
-    ntracks = ds_stats.dims[tracks_dimname]
-    ntimes = ds_stats.dims[times_dimname]
+    ntracks = ds_stats.sizes[tracks_dimname]
+    ntimes = ds_stats.sizes[times_dimname]
     tracks_coord = ds_stats.coords[tracks_dimname].data
     times_coord = ds_stats.coords[times_dimname].data
     stats_basetime = ds_stats.variables['base_time'].values
@@ -144,8 +144,7 @@ def movement_speed(
     # Movement speed [m/s]
     movement_speed = r_speed * pixel_radius * 1000.
     # Movement direction
-    # theta is not the same with traditional direction definition in meteorology
-    # TODO: convert the direction to 0 deg = North
+    # '0 deg = North' now implemented in "offset_to_speed"
     movement_dir = r_dir
 
     # Put the movement variables in an Xarray Dataset
@@ -268,7 +267,11 @@ def movement_of_feature_fft(
             result = fftconvolve(masked_field_1, masked_field_2[::-1, ::-1], mode='same')
             # Get the index with max value (highest correlation)
             # then reshape it to 2D to get x, y index
-            y_step, x_step = np.unravel_index(np.argmax(result), result.shape)
+
+            # ALTERNATIVE No. 1
+            y_step, x_step = np.apply_along_axis(np.mean, 1,
+                np.asarray(np.where(result>np.quantile(result, .995)))).round(0).astype('int')
+
             y_dim, x_dim = np.shape(masked_field_1)
             # Get the relative position from the center of the image
             # This is the movement in x, y direction
@@ -369,7 +372,11 @@ def offset_to_speed(x, y, time_lag):
     # Movement in grid point units
     r_mag = np.sqrt(x**2 + y**2)
     # Movement direction
-    r_dir = np.arctan2(y, x)*180/np.pi
+    # ATERNATIVE No.1 (effective but maybe.too.complex?)
+    z = np.logical_and((y+x)==0, (y*x)==0)
+    r_dir = -np.arctan2(y, x) *180/np.pi +90
+    r_dir[r_dir<0] = (r_dir +360)[r_dir<0]
+    r_dir[z] = np.nan
     # Movement speed [n_grid / second]
     r_speed = np.array([r_mag_i / (time_lag) for r_mag_i in r_mag.T]).T
     return r_mag, r_dir, r_speed
@@ -527,25 +534,33 @@ def filter_interp_speed(dset, config):
             x = dset[times_dimname][total_mask[track]]
             xm = dset[times_dimname][mask_nan[track]]
             spd = dset['movement_speed'][track][total_mask[track]]
-            theta = dset['movement_theta'][track][total_mask[track]]
+        # because THETA is now not being interpolated
+            theta = dset['movement_theta'][track][xm]
             mag = dset['movement_distance'][track][total_mask[track]]
             intp_r = interp1d(x, spd, kind='quadratic', fill_value=fillval_f, bounds_error=False)
-            intp_theta = interp1d(x, theta, kind='quadratic', fill_value=fillval_f, bounds_error=False)
+        # the interpolation of THETA is now not necessary (np.nan also implies no movement --NOW--)
             intp_mag = interp1d(x, mag, kind='quadratic', fill_value=fillval_f, bounds_error=False)
 
-            # Original formula from Joe
-            # mov_x = 3.6 * intp_r(dset[times_dimname][mask_nan[track]]) * np.cos(
-            #     np.pi / 180.0 * intp_theta(dset[times_dimname][mask_nan[track]]))
-            # mov_y = 3.6 * intp_r(dset[times_dimname][mask_nan[track]]) * np.sin(
-            #     np.pi / 180.0 * intp_theta(dset[times_dimname][mask_nan[track]]))
-            # TODO: need to double check the following formula
-            mov_x = intp_mag(xm) * np.cos(np.pi / 180.0 * intp_theta(xm))
-            mov_y = intp_mag(xm) * np.sin(np.pi / 180.0 * intp_theta(xm))
+            # # Original formula from Joe
+            # # mov_x = 3.6 * intp_r(dset[times_dimname][mask_nan[track]]) * np.cos(
+            # #     np.pi / 180.0 * intp_theta(dset[times_dimname][mask_nan[track]]))
+            # # mov_y = 3.6 * intp_r(dset[times_dimname][mask_nan[track]]) * np.sin(
+            # #     np.pi / 180.0 * intp_theta(dset[times_dimname][mask_nan[track]]))
+            # # TODO: need to double check the following formula
+            # mov_x = intp_mag(xm) * np.cos(np.pi / 180.0 * intp_theta(xm))
+            # mov_y = intp_mag(xm) * np.sin(np.pi / 180.0 * intp_theta(xm))
+
+            # original formula from FELIPERIOSG (already checked as we're dealing with azimuths now)
+            mov_x = intp_mag(xm) * np.sin(np.pi / 180.0 * theta.values)
+            mov_y = intp_mag(xm) * np.cos(np.pi / 180.0 * theta.values)
+            # NP.NAN here (in XM) means no movement (check ALTERNATIVE 1 in "offset_to_speed")
+            mov_x[np.isnan(mov_x)] = 0
+            mov_y[np.isnan(mov_y)] = 0
 
             # Interpolate values
             m_mag[track][mask_nan[track]] = intp_mag(xm)
             m_speed[track][mask_nan[track]] = intp_r(xm)
-            m_theta[track][mask_nan[track]] = intp_theta(xm)
+            # m_theta[track][mask_nan[track]] = intp_theta(xm)
             m_x[track][mask_nan[track]] = mov_x
             m_y[track][mask_nan[track]] = mov_y
 

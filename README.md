@@ -42,6 +42,12 @@ Use the included environment.yml file to create a Conda virtual environment, mak
 conda env create -f environment.yml --prefix /conda_env_dir/flextrkr
 ```
 
+or ...
+
+```bash
+conda create -n flextrkr -c conda-forge --file requirements.txt
+```
+
 **Pro Tips:** using [mamba](https://anaconda.org/conda-forge/mamba) to create the virtual environment is much faster:
 
 ```bash

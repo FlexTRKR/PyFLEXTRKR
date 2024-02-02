@@ -417,6 +417,9 @@ def subset_ds_geolimit(
     }
     # Subset dataset
     ds_out = ds_in[subset_dict]
+    # transpose coordinates to enesure LAT is always the 1st dimension
+    ds_out = ds_out.transpose(y_dimname,x_dimname)
+    # ds_out = ds_out.transpose(y_coordname,x_coordname) # maybe?
     return ds_out
 
 def match_drift_times(
@@ -514,8 +517,8 @@ def load_sparse_trackstats(
                              decode_times=False)
     # Get sparse array info
     sparse_dimname = 'sparse_index'
-    nsparse_data = ds_all.dims[sparse_dimname]
-    ntracks = ds_all.dims[tracks_dimname]
+    nsparse_data = ds_all.sizes[sparse_dimname]
+    ntracks = ds_all.sizes[tracks_dimname]
     # Sparse array indices
     tracks_idx = ds_all[tracks_idx_varname].values
     times_idx = ds_all[times_idx_varname].values
@@ -585,8 +588,8 @@ def convert_trackstats_sparse2dense(
     )
     # Get sparse array info
     sparse_dimname = 'sparse_index'
-    nsparse_data = ds_all.dims[sparse_dimname]
-    ntracks = ds_all.dims[tracks_dimname]
+    nsparse_data = ds_all.sizes[sparse_dimname]
+    ntracks = ds_all.sizes[tracks_dimname]
     # Sparse array indices
     tracks_idx = ds_all[tracks_idx_varname].values
     times_idx = ds_all[times_idx_varname].values
