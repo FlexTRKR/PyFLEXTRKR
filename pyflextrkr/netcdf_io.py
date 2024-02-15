@@ -286,6 +286,16 @@ def write_radar_cellid(
         for key, value in kwargs['steiner_params'].items():
             gattr_dict[key] = value
 
+    # Check for optional keyword ds_pass
+    if 'ds_pass' in kwargs:
+        ds_pass = kwargs['ds_pass']
+        if ds_pass is not None:
+            # Get variable list from the DataSet
+            pass_varname = list(ds_pass.data_vars)
+            # Loop over each pass out variable and add to the output dictionary
+            for ivar in pass_varname:
+                var_dict[ivar] = (dim3d, ds_pass[ivar].data, ds_pass[ivar].attrs)
+
     # Define xarray dataset
     ds_out = xr.Dataset(var_dict, coords=coord_dict, attrs=gattr_dict)
     # Define variable attributes

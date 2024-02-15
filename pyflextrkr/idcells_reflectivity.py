@@ -198,6 +198,14 @@ def idcells_reflectivity(
                                        dbz_thresh=40, gap=echotop_gap, min_thick=0)
         echotop50 = echotop_height_wrf(dbz3d_filt, height, z_dimname, shape_2d,
                                        dbz_thresh=50, gap=echotop_gap, min_thick=0)
+    elif ('composite' in input_source):
+        # For 'composite' reflectivity (2D) input source, skip echo-top height calculations
+        echotop10 = np.full(shape_2d, np.nan, dtype=np.float32)
+        echotop20 = np.full(shape_2d, np.nan, dtype=np.float32)
+        echotop30 = np.full(shape_2d, np.nan, dtype=np.float32)
+        echotop40 = np.full(shape_2d, np.nan, dtype=np.float32)
+        echotop50 = np.full(shape_2d, np.nan, dtype=np.float32)
+
     del dbz3d_filt
 
     # Put all Steiner parameters in a dictionary
@@ -255,6 +263,9 @@ def idcells_reflectivity(
     out_nfeatures = np.zeros(1, dtype=int)
     out_nfeatures[0] = nfeatures
 
+    # Get passing variable DataSet from comp_dict
+    ds_pass = comp_dict.get('ds_pass', None)
+
     # Write output into netcdf file
     if return_diag == False:
         write_radar_cellid(
@@ -286,6 +297,7 @@ def idcells_reflectivity(
             out_nfeatures,
             config,
             steiner_params=steiner_params,
+            ds_pass=ds_pass,
         )
     if return_diag == True:
         write_radar_cellid(
@@ -320,6 +332,7 @@ def idcells_reflectivity(
             refl_bkg=refl_bkg,
             peakedness=peakedness,
             core_steiner_orig=core_steiner_orig,
+            ds_pass=ds_pass,
         )
     logger.info(f"{cloudid_outfile}")
 
@@ -609,32 +622,32 @@ def get_composite_reflectivity_wrf_composite(input_filename, config):
         comp_dict: dictionary
             Dictionary containing output variables
     """
-    # sfc_dz_min = config['sfc_dz_min']
-    # sfc_dz_max = config['sfc_dz_max']
     radar_sensitivity = config['radar_sensitivity']
-    time_dimname = config.get('time', 'time')
+    time_dimname = config.get('time_dimname', 'time')
     x_dimname = config.get('x_dimname', 'x')
     y_dimname = config.get('y_dimname', 'y')
-    # z_dimname = config.get('z_dimname', 'z')
+    z_dimname = config.get('z_dimname', 'z')
     x_varname = config['x_varname']
     y_varname = config['y_varname']
     # z_varname = config['z_varname']
     reflectivity_varname = config['reflectivity_varname']
-    # fillval = config['fillval']
+    pass_varname = config.get("pass_varname", None)
 
     # Read WRF file
     ds = xr.open_dataset(input_filename)
-    import pdb; pdb.set_trace()
-    # Drop XTIME dimension, and rename 'Time' dimension to 'time'
-    ds = ds.reset_coords(names='XTIME', drop=False).rename({'Time': time_dimname})
+    # Get dimension names from the file
+    dims_file = []
+    for key in ds.dims: dims_file.append(key)
+    # Find extra dimensions beyond [time, y, x]
+    dims_keep = [time_dimname, y_dimname, x_dimname]
+    dims_drop = list(set(dims_file) - set(dims_keep))
+    # Drop extra dimensions, reorder to [time, y, x]
+    ds = ds.drop_dims(dims_drop).transpose(time_dimname, y_dimname, x_dimname)
     # Rounds up to second, some model converted datetimes do not contain round second
-    time_coords = ds.XTIME.dt.round('S')
+    time_coords = ds[time_dimname].dt.round('S')
     # Get data coordinates and dimensions
-    # Get WRF height values
-    height = (ds['PH'] + ds['PHB']).squeeze().data / 9.80665
     nx = ds.sizes[x_dimname]
     ny = ds.sizes[y_dimname]
-    # nz = ds.sizes[z_dimname]
     # Create x, y coordinates to mimic radar
     dx = ds.attrs['DX']
     dy = ds.attrs['DY']
@@ -647,13 +660,18 @@ def get_composite_reflectivity_wrf_composite(input_filename, config):
     radar_lat = xr.DataArray(radar_lat, attrs={'long_name': 'Radar latitude'})
     grid_lon = ds[x_varname].squeeze()
     grid_lat = ds[y_varname].squeeze()
-    # Get radar variables
-    dbz3d = ds[reflectivity_varname].squeeze()
-    dbz3d_filt = dbz3d
+
     # Get composite reflectivity
-    dbz_comp = dbz3d_filt.max(dim=z_dimname)
+    dbz_comp = ds[reflectivity_varname].squeeze()
     # Get low-level reflectivity
-    dbz_lowlevel = dbz3d_filt.isel(bottom_top=1)
+    dbz_lowlevel = ds[reflectivity_varname].squeeze()
+    # Replace all values with NaN
+    dbz_lowlevel = dbz_lowlevel.where(dbz_lowlevel != dbz_lowlevel, np.NaN)
+    # Add a vertical dimension to make a fake 3D DataArray
+    dbz3d = dbz_lowlevel.expand_dims(z_dimname, axis=0)
+    # Make a fake height array
+    height = np.zeros(1)
+
     # Make a copy of the composite reflectivity (must do this or the dbz_comp will be altered)
     refl = np.copy(dbz_comp.values)
     # Replace all values less than min radar sensitivity, including NAN, to be equal to the sensitivity value
@@ -662,15 +680,22 @@ def get_composite_reflectivity_wrf_composite(input_filename, config):
     # This differs from Steiner.
     refl[(refl < radar_sensitivity) | np.isnan(refl)] = radar_sensitivity
     # Create a good value mask (everywhere is good for WRF)
-    # dster = xr.open_dataset(terrain_file)
-    # mask_goodvalues = dster.mask110.values.astype(int)
     mask_goodvalues = np.full(refl.shape, 1, dtype=int)
+
+    # Subset pass variable from input DataSet
+    if pass_varname is not None:
+        # Find the common variable names between the dataset and the list
+        pass_varname = set(ds.data_vars) & set(pass_varname)
+        # Subset the input dataset
+        ds_pass = ds[pass_varname]
+    else:
+        ds_pass = None
 
     # Put output variables in a dictionary
     comp_dict = {
         'x_coords': x_coords,
         'y_coords': y_coords,
-        'dbz3d_filt': dbz3d_filt,
+        'dbz3d_filt': dbz3d,
         'dbz_comp': dbz_comp,
         'dbz_lowlevel': dbz_lowlevel,
         'grid_lat': grid_lat,
@@ -681,6 +706,7 @@ def get_composite_reflectivity_wrf_composite(input_filename, config):
         'radar_lon': radar_lon,
         'refl': refl,
         'time_coords': time_coords,
+        'ds_pass': ds_pass,
     }
     return comp_dict
 
