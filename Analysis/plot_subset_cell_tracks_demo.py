@@ -534,12 +534,13 @@ if __name__ == "__main__":
     # var_scale = 1e-3    # scale factor for the variable
 
     # Colorfill levels
-    levels = np.arange(-10, 60.1, 5)
+    # levels = np.arange(-10, 60.1, 5)
+    levels = np.arange(-10, 70.1, 5)
     # levels = [1,1.5,2,2.5,3,3.5,4,4.5,5,6,7,8,9,10,12,14,16,18,20]
     lev_lifetime = np.arange(0.5, 4.01, 0.5)
     # Colorbar ticks & labels
-    cbticks = np.arange(-10, 60.1, 5)
-    # cbticks = levels
+    # cbticks = np.arange(-10, 60.1, 5)
+    cbticks = levels
     cblabels = 'Composite Reflectivity (dBZ)'
     # cblabels = '10 dBZ ETH (km)'
     cblabel_tracks = 'Lifetime (hour)'

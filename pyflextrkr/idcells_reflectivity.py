@@ -42,7 +42,8 @@ def idcells_reflectivity(
     radii_expand = config['radii_expand']
     weakEchoThres = config['weakEchoThres']
     bkgrndRadius = config['bkgrndRadius']
-    min_corearea = config['min_corearea']
+    min_corearea = config.get('min_corearea', 0)
+    min_cellarea = config.get('min_cellarea', 0)
     echotop_gap = config['echotop_gap']
     sfc_dz_min = config['sfc_dz_min']
     sfc_dz_max = config['sfc_dz_max']
@@ -54,6 +55,8 @@ def idcells_reflectivity(
     input_source = config['input_source']
     geolimits = config.get('geolimits', None)
     convolve_method = config.get('convolve_method', 'ndimage')
+    remove_smallcores = config.get('remove_smallcores', True)
+    remove_smallcells = config.get('remove_smallcells', False)
 
     # Set echo classification type values
     types_powell = {
@@ -141,7 +144,9 @@ def idcells_reflectivity(
             bkg_bin=bkg_bin,
             conv_rad_bin=conv_rad_bin,
             min_corearea=min_corearea,
-            remove_smallcores=True,
+            min_cellarea=min_cellarea,
+            remove_smallcores=remove_smallcores,
+            remove_smallcells=remove_smallcells,
             return_diag=return_diag,
             convolve_method=convolve_method,
         )
@@ -162,7 +167,9 @@ def idcells_reflectivity(
             bkg_bin=bkg_bin,
             conv_rad_bin=conv_rad_bin,
             min_corearea=min_corearea,
-            remove_smallcores=True,
+            min_cellarea=min_cellarea,
+            remove_smallcores=remove_smallcores,
+            remove_smallcells=remove_smallcells,
             return_diag=return_diag,
             convolve_method=convolve_method,
         )
