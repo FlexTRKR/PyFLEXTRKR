@@ -9,6 +9,7 @@ Optional arguments:
 --figsize width height (figure size in inches)
 --output output_directory (output figure directory)
 --figbasename figure base name (output figure base name)
+--figname_type figure name type (default: 'date_time', 'sequence': image00000.png)
 --trackstats_file MCS track stats file name (optional, if different from robust MCS track stats file)
 --pixel_path Pixel-level tracknumber mask files directory (optional, if different from robust MCS pixel files)
 
@@ -55,6 +56,7 @@ def parse_cmd_args():
     parser.add_argument("--figsize", nargs='+', help="figure size (width, height) in inches", type=float, default=None)
     parser.add_argument("--output", help="ouput directory", default=None)
     parser.add_argument("--figbasename", help="output figure base name", default="")
+    parser.add_argument("--figname_type", help="output figure name type", default="date_time")
     parser.add_argument("--trackstats_file", help="MCS track stats file name", default=None)
     parser.add_argument("--pixel_path", help="Pixel-level tracknumer mask files directory", default=None)
     parser.add_argument("--time_format", help="Pixel-level file datetime format", default=None)
@@ -72,6 +74,7 @@ def parse_cmd_args():
         'figsize': args.figsize,
         'out_dir': args.output,
         'figbasename': args.figbasename,
+        'figname_type': args.figname_type,
         'trackstats_file': args.trackstats_file,
         'pixeltracking_path': args.pixel_path,
         'time_format': args.time_format,
@@ -473,6 +476,7 @@ def work_for_time_loop(datafile, track_dict, map_info, plot_info, config, ifile)
     perim_thick = plot_info.get('perim_thick')
     figdir = plot_info.get('figdir')
     figbasename = plot_info.get('figbasename')
+    figname_type = plot_info.get('figname_type')
 
     # Read pixel-level data
     ds = xr.open_dataset(datafile)
@@ -532,8 +536,10 @@ def work_for_time_loop(datafile, track_dict, map_info, plot_info, config, ifile)
         # Plotting variables
         fdatetime = pd.to_datetime(ds['time'].data.item()).strftime('%Y%m%d_%H%M%S')
         timestr = pd.to_datetime(ds['time'].data.item()).strftime('%Y-%m-%d %H:%M:%S UTC')
-        # figname = f'{figdir}{figbasename}{fdatetime}.png'
-        figname = f'{figdir}image{"{:05d}".format(ifile+1)}.png'
+        if figname_type == 'date_time':
+            figname = f'{figdir}{figbasename}{fdatetime}.png'
+        elif figname_type == 'sequence':
+            figname = f'{figdir}{figbasename}{"{:05d}".format(ifile+1)}.png'
         # Put pixel data in a dictionary
         pixel_dict = {
             'lon': lon_sub,
@@ -570,6 +576,7 @@ if __name__ == "__main__":
     figsize = args_dict.get('figsize')
     out_dir = args_dict.get('out_dir')
     figbasename = args_dict.get('figbasename')
+    figname_type = args_dict.get('figname_type')
     trackstats_file = args_dict.get('trackstats_file')
     pixeltracking_path = args_dict.get('pixeltracking_path')
     time_format = args_dict.get('time_format')
@@ -632,6 +639,7 @@ if __name__ == "__main__":
         'map_central_lon': 180,
         'figsize': figsize,
         'figbasename': figbasename,
+        'figname_type': figname_type,
         'panel_orientation': panel_orientation,
     }
 
