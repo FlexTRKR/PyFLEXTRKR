@@ -5,12 +5,15 @@
 # 1. Modify the dir_demo to a directory containing the input data
 # 2. Run the script: bash demo_mcs_himawari.sh
 # 
-# By default the demo config uses 24 processors for parallel processing. 
+# By default the demo config uses 8 processors for parallel processing.
 #    You may modify 'nprocesses' in config_himawari_mcs_example.yml for your hardware.
 ###############################################################################################
 
 # Specify directory for the tracking data
-dir_demo='/gpfs/wolf/atm131/proj-shared/zfeng/demo/mcs_tbpf/himawari/'
+dir_demo='/Users/feng045/data/demo/mcs_tbpf/himawari/'
+
+# Example config file name
+config_demo='config_mcs_demo.yml'
 
 # Demo input data directory
 dir_input=${dir_demo}'input/'
@@ -18,8 +21,15 @@ dir_input=${dir_demo}'input/'
 # Create the demo directory
 mkdir -p ${dir_input}
 
-# Example config file name
-config_demo='config_mcs_demo.yml'
+# Download sample Himawari Tb data:
+echo 'Downloading demo input data ...'
+wget https://portal.nersc.gov/project/m1867/PyFLEXTRKR/sample_data/tb_pcp/himawari_tb.tar.gz -O ${dir_input}/himawari_tb.tar.gz
+
+# Extract intput data
+echo 'Extracting demo input data ...'
+tar -xvzf ${dir_input}himawari_tb.tar.gz -C ${dir_input}
+# Remove downloaded tar file
+rm -fv ${dir_input}himawari_tb.tar.gz
 
 # Add '\' to each '/' in directory names
 dir_input1=$(echo ${dir_input} | sed 's_/_\\/_g')

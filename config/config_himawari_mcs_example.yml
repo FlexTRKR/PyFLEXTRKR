@@ -9,11 +9,12 @@ run_gettracks : True
 run_trackstats : True
 run_identifymcs : True
 run_mapfeature : True
+run_speed: True
 
 # Parallel processing set up
 # run_parallel: 1 (local cluster), 2 (Dask MPI)
 run_parallel: 1
-nprocesses: 24  # Number of processors to use if run_parallel=1
+nprocesses: 8  # Number of processors to use if run_parallel=1
 dask_tmp_dir: '/tmp'  # Dask temporary directory if run_parallel=1
 timeout: 360  # [seconds] Dask timeout limit
 
@@ -122,3 +123,10 @@ mcspfstats_filebase: 'mcs_tracks_pf_'
 mcsrobust_filebase: 'mcs_tracks_robust_'
 pixeltracking_filebase: 'mcstrack_'
 mcsfinal_filebase: 'mcs_tracks_final_'
+
+# Feature movement speed parameters
+lag_for_speed: 1  # [unitless] lag intervals between tracked features to calculate movement
+track_number_for_speed: "cloudtracknumber"
+track_field_for_speed: 'tb'
+min_size_thresh_for_speed: 20 # [km] Min PF major axis length to calculate movement
+max_speed_thresh: 50  # [m/s] Speeds larger than this will be replaced by temporal filter
