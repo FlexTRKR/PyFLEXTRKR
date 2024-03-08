@@ -272,7 +272,7 @@ def plot_map_2panels(pixel_dict, plot_info, map_info, track_dict):
 
     # Set up figure
     mpl.rcParams['font.size'] = fontsize
-    mpl.rcParams['font.family'] = 'Trebuchet MS'#'Helvetica'
+    mpl.rcParams['font.family'] = 'Helvetica'
     fig = plt.figure(figsize=figsize, dpi=dpi, facecolor='w')
     # vertical: left + right panel
     if panel_orientation == 'vertical':
