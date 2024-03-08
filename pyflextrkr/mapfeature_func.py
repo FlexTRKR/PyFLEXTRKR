@@ -74,8 +74,8 @@ def map_feature(
         mask_and_scale=False
     )
     # Get data dimensions
-    ny = ds_in.dims[y_dimname]
-    nx = ds_in.dims[x_dimname]
+    ny = ds_in.sizes[y_dimname]
+    nx = ds_in.sizes[x_dimname]
     # Get dimension names from the file
     dims_file = []
     for key in ds_in.dims: dims_file.append(key)

@@ -56,6 +56,7 @@ def parse_cmd_args():
     parser.add_argument("--figbasename", help="output figure base name", default="")
     parser.add_argument("--trackstats_file", help="MCS track stats file name", default=None)
     parser.add_argument("--pixel_path", help="Pixel-level tracknumer mask files directory", default=None)
+    parser.add_argument("--time_format", help="Pixel-level file datetime format", default=None)
     args = parser.parse_args()
 
     # Put arguments in a dictionary
@@ -71,6 +72,7 @@ def parse_cmd_args():
         'figbasename': args.figbasename,
         'trackstats_file': args.trackstats_file,
         'pixeltracking_path': args.pixel_path,
+        'time_format': args.time_format,
     }
 
     return args_dict
@@ -452,6 +454,25 @@ if __name__ == "__main__":
     figbasename = args_dict.get('figbasename')
     trackstats_file = args_dict.get('trackstats_file')
     pixeltracking_path = args_dict.get('pixeltracking_path')
+    time_format = args_dict.get('time_format')
+
+    if time_format is None: time_format = "yyyymodd_hhmmss"
+
+    # Determine the figsize based on lat/lon ratio
+    if (figsize is None):
+        # If map_extent is specified, calculate aspect ratio
+        if (map_extent is not None):
+            # Get map aspect ratio from map_extent (minlon, maxlon, minlat, maxlat)
+            lon_span = map_extent[1] - map_extent[0]
+            lat_span = map_extent[3] - map_extent[2]
+            fig_ratio_yx = lat_span / lon_span
+
+            figsize_x = 12
+            figsize_y = figsize_x * fig_ratio_yx
+            figsize_y = float("{:.2f}".format(figsize_y))  # round to 2 decimal digits
+            figsize = [figsize_x, figsize_y]
+        else:
+            figsize = [10, 10]
 
     # Specify plotting info
     # Tb color levels
@@ -462,7 +483,7 @@ if __name__ == "__main__":
     cbticks = {'tb_ticks': tb_ticks, }
     cblabels = {'tb_label': 'T$_{b}$ (K)'}
     # Colormap
-    tb_cmap = truncate_colormap(plt.get_cmap('jet'), minval=0.05, maxval=0.95)
+    tb_cmap = truncate_colormap(plt.get_cmap('turbo'), minval=0.05, maxval=0.95)
     # tn_cmap = cc.cm["glasbey_light"]
     tn_cmap = cc.cm["glasbey"]
     cmaps = {'tb_cmap': tb_cmap, 'tn_cmap': tn_cmap}
@@ -546,7 +567,7 @@ if __name__ == "__main__":
         pixeltracking_filebase,
         start_basetime,
         end_basetime,
-        time_format="yyyymodd_hhmmss",
+        time_format=time_format,
     )
     print(f'Number of pixel files: {len(datafiles)}')
 

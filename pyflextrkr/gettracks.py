@@ -608,7 +608,7 @@ def gettracknumbers(config):
     # Define output variables dictionary
     var_dict = {
         "ntracks": (["time"], np.array([itrack])),
-        "basetimes": (["nfiles"], basetime[:nfiles]),
+        "basetimes": (["nfiles"], basetime[:nfiles].astype("datetime64[ns]")),
         "cloudid_files": (["nfiles", "ncharacters"], cloudidfiles[:nfiles,:]),
         "track_numbers": (["time", "nfiles", "nclouds"], tracknumber[:,:nfiles,:]),
         "track_status": (["time", "nfiles", "nclouds"], trackstatus[:,:nfiles,:].astype(int)),

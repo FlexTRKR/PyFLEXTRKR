@@ -12,3 +12,12 @@ joblib>=0.14
 ipython>=7.0
 setuptools>=65.5.1
 PyYAML>=5.4
+pip
+astropy
+wrf-python
+colorcet
+colormath
+seaborn
+scikit-learn
+ffmpeg
+xesmf

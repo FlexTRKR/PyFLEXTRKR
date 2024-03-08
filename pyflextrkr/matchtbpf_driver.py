@@ -63,8 +63,8 @@ def match_tbpf_tracks(config):
     ds = xr.open_dataset(mcsirstats_file,
                          mask_and_scale=False,
                          decode_times=False)
-    ir_ntracks = ds.dims[tracks_dimname]
-    ir_nmaxlength = ds.dims[times_dimname]
+    ir_ntracks = ds.sizes[tracks_dimname]
+    ir_nmaxlength = ds.sizes[times_dimname]
     ir_basetime = ds["base_time"].values
     ir_cloudnumber = ds["cloudnumber"].values
     ir_mergecloudnumber = ds["merge_cloudnumber"].values
