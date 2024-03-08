@@ -12,15 +12,15 @@ dependencies:
   - pytz>=2019
   - cartopy>=0.17
   - dask>=2.9
-  - scikit-image>=0.16
+  - scikit-image>=0.22
   - joblib>=0.14
   - ipython>7.0
   - pip
   - astropy
-  - wrf-python
   - colorcet
   - colormath
   - seaborn
   - scikit-learn
   - ffmpeg
   - xesmf
+  - wrf-python
