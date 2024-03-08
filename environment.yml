@@ -1,8 +1,8 @@
-name: base
+name: flextrkr
 channels:
   - conda-forge
 dependencies:
-  - python=3.10
+  - python>=3.10
   - numpy>=1.17
   - matplotlib>=3
   - xarray>=0.14

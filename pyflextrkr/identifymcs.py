@@ -60,7 +60,7 @@ def identifymcs_tb(config):
                                          tracks_idx_varname)
 
     # Get necessary variables
-    ntracks_all = ds_1d.dims[tracks_dimname]
+    ntracks_all = ds_1d.sizes[tracks_dimname]
     logger.debug(f"max_trackduration: {max_trackduration}")
     track_duration = ds_1d["track_duration"].values
     end_merge_tracknumber = ds_1d["end_merge_tracknumber"].values
@@ -135,7 +135,7 @@ def identifymcs_tb(config):
 
     ################################################################
     # Get unique track indices
-    trackidx_mcs = np.unique(trackidx_mcs.astype(int))
+    trackidx_mcs = np.unique(np.asarray(trackidx_mcs).astype(int))
     nmcs = len(trackidx_mcs)
     # Provide warning message and exit if no MCS identified
     if nmcs == 0:

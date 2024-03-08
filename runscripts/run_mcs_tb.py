@@ -10,6 +10,7 @@ from pyflextrkr.gettracks import gettracknumbers
 from pyflextrkr.trackstats_driver import trackstats_driver
 from pyflextrkr.identifymcs import identifymcs_tb
 from pyflextrkr.mapfeature_driver import mapfeature_driver
+from pyflextrkr.movement_speed import movement_speed
 
 if __name__ == '__main__':
 
@@ -72,3 +73,8 @@ if __name__ == '__main__':
         mapfeature_driver(config, trackstats_filebase=mcstbstats_filebase, outpath_basename=mcstbmap_outpath)
         # Map all Tb track numbers to pixel level files (provide outpath_basename keyword)
         # mapfeature_driver(config, trackstats_filebase=trackstats_filebase, outpath_basename=alltrackmap_outpath)
+
+    # Step 7 - Movement speed calculation
+    if config['run_speed']:
+        # For Tb-only MCS tracking, provide trackstats_filebase and pixelpath_basename keywords
+        movement_speed(config, trackstats_filebase=mcstbstats_filebase, pixelpath_basename=mcstbmap_outpath)
