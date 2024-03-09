@@ -535,7 +535,9 @@ def mod_steiner_classification(
         bkg_bin,
         conv_rad_bin,
         min_corearea=1,
+        min_cellarea=0,
         remove_smallcores=True,
+        remove_smallcells=False,
         return_diag=False,
         convolve_method='ndimage',
 ):
@@ -574,8 +576,12 @@ def mod_steiner_classification(
         Convective radius bins for dilation step function
     min_corearea: float, optional
         Minimum area to keep a convective core (km^2) (default 1)
+    min_cellarea: float, optional
+        Minimum area to keep a convective cell (km^2) (default 0)
     remove_smallcores: bool, optional
         A flag to remove convective cores smaller than min_corearea (default True)
+    remove_smallcells: bool, optional
+        A flag to remove convective cells smaller than min_cellarea (default True)
     return_diag: bool, optional
         A flag to return more fields for diagnostic purpose (default False)
     convolve_method: string, optional
@@ -632,6 +638,8 @@ def mod_steiner_classification(
             rid = np.where(tmpregions == rr)
             if (len(rid[0]) < min_corenpix):
                 score_keep[rid] = 0
+    else:
+        score_keep = score
 
     # Dilate convective radius
     sclass_new, score_dilate = mod_dilate_conv_rad(
@@ -646,6 +654,24 @@ def mod_steiner_classification(
         conv_rad_bin
     )
 
+    # Remove small cells with pixels < min_cellarea
+    if (remove_smallcells == True):
+        # Make a copy of the cell array
+        score_dilate_keep = np.copy(score_dilate)
+        # Convert min_corearea to number of pixels
+        # dx, dy are in [meter], min_corearea is in [km^2], convert all to [meter]
+        min_cellnpix = int(min_cellarea * (1000**2) / (dx * dy))
+        # Remove small cells
+        # Label connected cell pixels as regions
+        tmpregions, num_regions = ndimage.label(score_dilate_keep)
+        for rr in range(1, num_regions+1):
+            rid = np.where(tmpregions == rr)
+            if (len(rid[0]) < min_cellnpix):
+                score_dilate_keep[rid] = 0
+        # Replace cell array
+        score_dilate = score_dilate_keep
+
+    # Return values
     if (return_diag == False):
         return sclass_new, score_keep, score_dilate
     if (return_diag == True):

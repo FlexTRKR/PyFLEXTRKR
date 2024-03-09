@@ -11,6 +11,7 @@ from itertools import repeat
 from multiprocessing import Pool
 from pyflextrkr.ft_regrid_func import make_weight_file, make_grid4regridder
 from pyflextrkr.ftfunctions import olr_to_tb
+from pyflextrkr.ft_utilities import subset_files_timerange
 
 #-------------------------------------------------------------------------------------
 def preprocess_wrf_tb_rainrate(config):
@@ -35,16 +36,32 @@ def preprocess_wrf_tb_rainrate(config):
     outdir = config['clouddata_path']
     inbasename = config['wrfout_basename']
     outbasename = config['databasename']
+    start_basetime = config.get("start_basetime", None)
+    end_basetime = config.get("end_basetime", None)
+    time_format = config["time_format"]
     regrid_input = config.get('regrid_input', False)
 
     # Create output directory
     os.makedirs(outdir, exist_ok=True)
 
-    # Find all WRF files
-    filelist = sorted(glob.glob(f'{indir}/{inbasename}*'))
+    # Identify files to process
+    infiles_info = subset_files_timerange(
+        indir,
+        inbasename,
+        start_basetime=start_basetime,
+        end_basetime=end_basetime,
+        time_format=time_format,
+    )
+    # Get file list
+    filelist = infiles_info[0]
     nfiles = len(filelist)
     logger.info(f'Number of WRF files: {nfiles}')
 
+    # Find all WRF files
+    # filelist = sorted(glob.glob(f'{indir}/{inbasename}*'))
+    # nfiles = len(filelist)
+    # logger.info(f'Number of WRF files: {nfiles}')
+    # import pdb; pdb.set_trace()
     # Check regridding option
     if regrid_input:
         # Build Regridder
@@ -116,6 +133,7 @@ def calc_rainrate_tb(filepairnames, outdir, inbasename, outbasename, config):
 
     regrid_input = config.get('regrid_input', False)
     write_native = config.get('write_native', False)
+    rainrate_method = config.get('rainrate_method', 'standard')
     
     # Filenames with full path
     filein_t1 = filepairnames[0]
@@ -164,12 +182,20 @@ def calc_rainrate_tb(filepairnames, outdir, inbasename, outbasename, config):
     # Calculate basetime difference in [seconds]
     delta_times = np.diff(basetimes)
 
-    # Read accumulated precipitation and OLR
-    RAINNC = ds_in['RAINNC'].load()
-    RAINC = ds_in['RAINC'].load()
+    # Read and compute accumulated precipitation
+    if rainrate_method == 'standard':
+        RAINNC = ds_in['RAINNC']
+        RAINC = ds_in['RAINC']
+        # Add grid-scale and convective precipitation
+        RAINALL = (RAINNC + RAINC).load()
+    elif rainrate_method == 'saag':
+        RAINNC = ds_in['RAINNC']
+        I_RAINNC = ds_in['I_RAINNC']
+        # The total precipitation accumulation from the initial time is computed (units: mm)
+        RAINALL = (RAINNC + I_RAINNC * 100).load()
+    
+    # Read OLR
     OLR_orig = ds_in['OLR'].load()
-    # Add grid-scale and convective precipitation
-    RAINALL = RAINNC + RAINC
 
     # Create an array to store rainrates and brightness temperature
     rainrate = np.zeros((ntimes-1,ny,nx), dtype=float)

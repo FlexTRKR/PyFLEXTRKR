@@ -240,7 +240,7 @@ def plot_map(pixel_dict, plot_info, map_info, track_dict):
     pixel_bt = pixel_dict['pixel_bt']
     xx = pixel_dict['longitude']
     yy = pixel_dict['latitude']
-    dbz_comp = pixel_dict['dbz_comp']
+    var_fill = pixel_dict['var_fill']
     conv_mask = pixel_dict['conv_mask']
     tn_perim = pixel_dict['tn_perim']
     lon_tn = pixel_dict['lon_tn']
@@ -255,6 +255,7 @@ def plot_map(pixel_dict, plot_info, map_info, track_dict):
     dt_thres = track_dict['dt_thres']
     time_res = track_dict['time_res']
     # Get plot info from dictionary
+    var_scale = plot_info.get('var_scale', 1)
     levels = plot_info['levels']
     cmaps = plot_info['cmaps']
     # titles = plot_info['titles']
@@ -264,6 +265,8 @@ def plot_map(pixel_dict, plot_info, map_info, track_dict):
     timestr = plot_info['timestr']
     figname = plot_info['figname']
     figsize = plot_info['figsize']
+    show_tracks = plot_info.get('show_tracks', True)
+    mask_alpha = plot_info.get('mask_alpha', 1)
 
     marker_size = plot_info['marker_size']
     lw_centroid = plot_info['lw_centroid']
@@ -310,69 +313,73 @@ def plot_map(pixel_dict, plot_info, map_info, track_dict):
     ax1.xaxis.set_major_formatter(lon_formatter)
     ax1.yaxis.set_major_formatter(lat_formatter)
 
-    # Plot reflectivity
+    # Colorfill variable
     cmap = plt.get_cmap(cmaps)
-    norm_ref = mpl.colors.BoundaryNorm(levels, ncolors=cmap.N, clip=True)
-    dbz_comp = np.ma.masked_where(dbz_comp < min(levels), dbz_comp)
-    cf1 = ax1.pcolormesh(xx, yy, dbz_comp, norm=norm_ref, cmap=cmap, transform=proj, zorder=2)
+    norm_pcm = mpl.colors.BoundaryNorm(levels, ncolors=cmap.N, clip=True)
+    # Scale the variable
+    var_fill = var_fill * var_scale
+    var_fill = np.ma.masked_where(var_fill < min(levels), var_fill)
+    cf1 = ax1.pcolormesh(xx, yy, var_fill, norm=norm_pcm, cmap=cmap, transform=proj, zorder=2)
     # Overplot cell tracknumber perimeters
     Tn = np.ma.masked_where(tn_perim == 0, tn_perim)
     Tn[Tn > 0] = 10
-    tn1 = ax1.pcolormesh(xx, yy, Tn, cmap='gray', transform=proj, zorder=3)
+    tn1 = ax1.pcolormesh(xx, yy, Tn, cmap='gray', transform=proj, zorder=3, alpha=mask_alpha)
 
     # Plot track centroids and paths
-    marker_style_s = dict(edgecolor='k', linestyle='-', marker='o')
-    marker_style_m = dict(edgecolor='k', linestyle='-', marker='o')
-    marker_style_l = dict(edgecolor='k', linestyle='-', marker='o')
-    for itrack in range(0, ntracks):
-        # Get duration of the track
-        ilifetime = lifetime.values[itrack]
-        idur = (ilifetime / time_res).astype(int)
-        # Get basetime of the track and the last time
-        ibt = cell_bt.values[itrack,:idur]
-        ibt_last = np.nanmax(ibt)
-        # Compute time difference between current pixel-level data time and the last time of the track
-        idt = (pixel_bt - ibt_last).astype('timedelta64[m]')
-        # Proceed if time difference is <= threshold
-        # This means for tracks that end longer than the time threshold are not plotted
-        if (idt <= dt_thres):
-            # Find times in track data <= current pixel-level file time
-            idx_cut = np.where(ibt <= pixel_bt)[0]
-            idur_cut = len(idx_cut)
-            if (idur_cut > 0):
-                color_vals = np.repeat(ilifetime, idur_cut)
-                # Change centroid marker, linewidth based on track lifetime [hour]
-                if (ilifetime < 1):
-                    lw_c = lw_centroid[0]
-                    size_c = marker_size[0]
-                    marker_style = marker_style_s
-                elif ((ilifetime >= 1) & (ilifetime < 2)):
-                    lw_c = lw_centroid[1]
-                    size_c = marker_size[1]
-                    marker_style = marker_style_m
-                elif (ilifetime >= 2):
-                    lw_c = lw_centroid[2]
-                    size_c = marker_size[2]
-                    marker_style = marker_style_l
-                else:
-                    lw_c = 0
-                    size_c = 0
-                size_vals = np.repeat(size_c, idur_cut)
-                size_vals[0] = size_c * 2   # Make CI symbol size larger
-                cc = ax1.plot(cell_lon.values[itrack,idx_cut], cell_lat.values[itrack,idx_cut], lw=lw_c, ls='-', color='k', transform=proj, zorder=3)
-                cl = ax1.scatter(cell_lon.values[itrack,idx_cut], cell_lat.values[itrack,idx_cut], s=size_vals, c=color_vals, 
-                                 norm=norm_lifetime, cmap=cmap_lifetime, transform=proj, zorder=4, **marker_style)
+    if show_tracks:
+        marker_style_s = dict(edgecolor='k', linestyle='-', marker='o')
+        marker_style_m = dict(edgecolor='k', linestyle='-', marker='o')
+        marker_style_l = dict(edgecolor='k', linestyle='-', marker='o')
+        for itrack in range(0, ntracks):
+            # Get duration of the track
+            ilifetime = lifetime.values[itrack]
+            idur = (ilifetime / time_res).astype(int)
+            # Get basetime of the track and the last time
+            ibt = cell_bt.values[itrack,:idur]
+            ibt_last = np.nanmax(ibt)
+            # Compute time difference between current pixel-level data time and the last time of the track
+            idt = (pixel_bt - ibt_last).astype('timedelta64[m]')
+            # Proceed if time difference is <= threshold
+            # This means for tracks that end longer than the time threshold are not plotted
+            if (idt <= dt_thres):
+                # Find times in track data <= current pixel-level file time
+                idx_cut = np.where(ibt <= pixel_bt)[0]
+                idur_cut = len(idx_cut)
+                if (idur_cut > 0):
+                    color_vals = np.repeat(ilifetime, idur_cut)
+                    # Change centroid marker, linewidth based on track lifetime [hour]
+                    if (ilifetime < 1):
+                        lw_c = lw_centroid[0]
+                        size_c = marker_size[0]
+                        marker_style = marker_style_s
+                    elif ((ilifetime >= 1) & (ilifetime < 2)):
+                        lw_c = lw_centroid[1]
+                        size_c = marker_size[1]
+                        marker_style = marker_style_m
+                    elif (ilifetime >= 2):
+                        lw_c = lw_centroid[2]
+                        size_c = marker_size[2]
+                        marker_style = marker_style_l
+                    else:
+                        lw_c = 0
+                        size_c = 0
+                    size_vals = np.repeat(size_c, idur_cut)
+                    size_vals[0] = size_c * 2   # Make CI symbol size larger
+                    cc = ax1.plot(cell_lon.values[itrack,idx_cut], cell_lat.values[itrack,idx_cut], lw=lw_c, ls='-', color='k', transform=proj, zorder=3)
+                    cl = ax1.scatter(cell_lon.values[itrack,idx_cut], cell_lat.values[itrack,idx_cut], s=size_vals, c=color_vals, 
+                                    norm=norm_lifetime, cmap=cmap_lifetime, transform=proj, zorder=4, **marker_style)
+
+        # Plot colorbar for tracks
+        cax = inset_axes(ax1, width="100%", height="100%", bbox_to_anchor=(.04, .97, .3, .03), bbox_transform=ax1.transAxes)
+        cbinset = mpl.colorbar.ColorbarBase(cax, cmap=cmap_lifetime, norm=norm_lifetime, orientation='horizontal', label=cblabel_tracks)
+        cbinset.set_ticks(cbticks_tracks)
+            
     # Overplot cell tracknumbers at current frame
     for ii in range(0, len(lon_tn)):
         if (lon_tn[ii] > map_extent[0]) & (lon_tn[ii] < map_extent[1]) & \
             (lat_tn[ii] > map_extent[2]) & (lat_tn[ii] < map_extent[3]):
             ax1.text(lon_tn[ii]+0.02, lat_tn[ii]+0.02, f'{tracknumbers[ii]:.0f}', color='k', size=fontsize*0.8, 
                     weight='bold', ha='left', va='center', transform=proj, zorder=4)
-    
-    # Plot colorbar for tracks
-    cax = inset_axes(ax1, width="100%", height="100%", bbox_to_anchor=(.04, .97, .3, .03), bbox_transform=ax1.transAxes)
-    cbinset = mpl.colorbar.ColorbarBase(cax, cmap=cmap_lifetime, norm=norm_lifetime, orientation='horizontal', label=cblabel_tracks)
-    cbinset.set_ticks(cbticks_tracks)
 
     # Plot range circles around radar
     for ii in range(0, len(radii)):
@@ -414,6 +421,7 @@ def work_for_time_loop(datafile, track_dict, map_info, plot_info):
     map_extent = map_info.get('map_extent', None)
     figdir = plot_info.get('figdir')
     figbasename = plot_info.get('figbasename')
+    varname_fill = plot_info.get('varname_fill')
 
     # Read pixel-level data
     ds = xr.open_dataset(datafile)
@@ -451,7 +459,7 @@ def work_for_time_loop(datafile, track_dict, map_info, plot_info):
             yy_sub = mask.where(mask == True, drop=True).lat.data
             lon_sub = ds['longitude'].where(mask == True, drop=True).squeeze()
             lat_sub = ds['latitude'].where(mask == True, drop=True).squeeze()
-            dbz_comp = ds['dbz_comp'].where(mask == True, drop=True).squeeze()
+            var_fill = ds[varname_fill].where(mask == True, drop=True).squeeze()
             convmask_sub = ds['conv_mask'].where(mask == True, drop=True).squeeze()
             tracknumber_sub = ds['tracknumber'].where(mask == True, drop=True).squeeze()
         else:
@@ -459,7 +467,7 @@ def work_for_time_loop(datafile, track_dict, map_info, plot_info):
             yy_sub = ds['lat'].data
             lon_sub = ds['longitude'].data.squeeze()
             lat_sub = ds['latitude'].data.squeeze()
-            dbz_comp = ds['dbz_comp'].squeeze()
+            var_fill = ds[varname_fill].squeeze()
             convmask_sub = ds['conv_mask'].squeeze()
             tracknumber_sub = ds['tracknumber'].squeeze()
 
@@ -482,7 +490,7 @@ def work_for_time_loop(datafile, track_dict, map_info, plot_info):
             'pixel_bt': pixel_bt,
             'longitude': lon_sub, 
             'latitude': lat_sub, 
-            'dbz_comp': dbz_comp, 
+            'var_fill': var_fill, 
             'tn': tracknumber_sub,
             'conv_mask': convmask_sub,
             'tn_perim': tn_perim, 
@@ -520,19 +528,33 @@ if __name__ == "__main__":
     out_dir = args_dict.get('out_dir')
 
     # Specify plotting info
-    # Reflectivity color levels
-    levels = np.arange(-10, 60.1, 5)
+    varname_fill = 'dbz_comp'
+    # varname_fill = 'echotop10'
+    var_scale = 1     # scale factor for the variable
+    # var_scale = 1e-3    # scale factor for the variable
+
+    # Colorfill levels
+    # levels = np.arange(-10, 60.1, 5)
+    levels = np.arange(-10, 70.1, 5)
+    # levels = [1,1.5,2,2.5,3,3.5,4,4.5,5,6,7,8,9,10,12,14,16,18,20]
     lev_lifetime = np.arange(0.5, 4.01, 0.5)
     # Colorbar ticks & labels
-    cbticks = np.arange(-10, 60.1, 5)
+    # cbticks = np.arange(-10, 60.1, 5)
+    cbticks = levels
     cblabels = 'Composite Reflectivity (dBZ)'
+    # cblabels = '10 dBZ ETH (km)'
     cblabel_tracks = 'Lifetime (hour)'
     cbticks_tracks = [1,2,3,4]
     # Colormaps
     cmaps = 'gist_ncar'     # Reflectivity
+    # cmaps = 'nipy_spectral'     # Echo-top Height
     cmap_tracks = 'Spectral_r'  # Lifetime
+    show_tracks = True
     
+    # Put plot specifications in a dictionary
     plot_info = {
+        'varname_fill': varname_fill,
+        'var_scale': var_scale,
         'levels': levels,
         'lev_lifetime': lev_lifetime,
         'cbticks': cbticks,
@@ -540,10 +562,12 @@ if __name__ == "__main__":
         'cblabels': cblabels,
         'cblabel_tracks': cblabel_tracks,
         'fontsize': 13,
+        'mask_alpha': 0.6,   # transparancy alpha for cell perimeter mask
         'cmaps': cmaps,
         'cmap_tracks': cmap_tracks,
-        'marker_size': [30,30,30],    # track centroid marker size (short, medium, long lived)
-        'lw_centroid': [3,3,3],         # track path line width
+        'show_tracks': show_tracks,
+        'marker_size': [10,10,10],    # track centroid marker size (short, medium, long lived)
+        'lw_centroid': [1,1,1],         # track path line width
         'radii': np.arange(20,101,20),  # radii for the radar range rings [km]
         'azimuths': np.arange(0,361,90),   # azimuth angles for HSRHI scans [degree]
         'figbasename': figbasename,
@@ -632,6 +656,8 @@ if __name__ == "__main__":
 
         # Trigger dask computation
         final_result = dask.compute(*results)
-    
+
+        cluster.close()
+        client.close()    
     else:
         sys.exit('Valid parallelization flag not provided')

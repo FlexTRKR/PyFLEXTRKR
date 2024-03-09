@@ -158,7 +158,7 @@ def movement_of_storm_fft(
             # Updated to use phase_cross_correlation to replace masked_register_translation
             y, x = -1 * phase_cross_correlation(
                 field_1, field_2, reference_mask=mask_1t, moving_mask=mask_2t, overlap_ratio=0.7
-            )
+            )[0]
 
             # plot_subplots = True
             if plot_subplots:
