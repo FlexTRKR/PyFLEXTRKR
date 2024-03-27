@@ -61,7 +61,7 @@ def matchtbpf_singlefile(
 
     # Read landmask file
     if os.path.isfile(landmask_filename):
-        dslm = xr.open_dataset(landmask_filename)
+        dslm = xr.open_dataset(landmask_filename).squeeze()
         # Subset landmask to match geolimit
         dslm = subset_ds_geolimit(
             dslm, config,
