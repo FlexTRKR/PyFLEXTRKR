@@ -4,10 +4,10 @@
 
 # Processing steps:
 run_preprocess: False
-run_idfeature : True
-run_tracksingle : True
-run_gettracks : True
-run_trackstats : True
+run_idfeature : False
+run_tracksingle : False
+run_gettracks : False
+run_trackstats : False
 run_identifymcs : True
 run_matchpf : True
 run_robustmcs : True
@@ -16,7 +16,7 @@ run_speed : True
 
 # Parallel processing set up
 # run_parallel: 1 (local cluster), 2 (Dask MPI)
-run_parallel: 1
+run_parallel: 0
 nprocesses : 8  # Number of processors to use if run_parallel=1
 dask_tmp_dir: '/tmp'  # Dask temporary directory if run_parallel=1
 timeout: 360  # [seconds] Dask timeout limit
@@ -34,9 +34,9 @@ time_format: 'yyyymoddThhmmss'
 databasename: 'obs_v4_2_'
 
 # Tracking input files directory
-clouddata_path: 'INPUT_DIR/'
+clouddata_path: '/users/adrien/Documents/lsce/repos/PyFLEXTRKR/demos/mcs_tbpfradar3d/gridrad/input'
 # Working directory for the tracking data
-root_path: 'TRACK_DIR/'
+root_path: '/users/adrien/Documents/lsce/repos/PyFLEXTRKR/demos/mcs_tbpfradar3d/gridrad/'
 # Working sub-directory names
 tracking_path_name: 'tracking'
 stats_path_name: 'stats'

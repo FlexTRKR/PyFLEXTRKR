@@ -1,3 +1,7 @@
+# All changes #
+*
+!/.gitignore
+
 # Python #
 ##########
 */__pycache__/*
@@ -13,6 +17,7 @@ pyflextrkr.egg-info/*
 *.cdf
 *.out
 *tfin*
+*demo*
 
 # Compiled source #
 ###################

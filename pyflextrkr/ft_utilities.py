@@ -417,6 +417,7 @@ def subset_ds_geolimit(
     }
     # Subset dataset
     ds_out = ds_in[subset_dict]
+    print(ds_out)
     # transpose coordinates to enesure LAT is always the 1st dimension
     ds_out = ds_out.transpose(y_dimname,x_dimname)
     # ds_out = ds_out.transpose(y_coordname,x_coordname) # maybe?

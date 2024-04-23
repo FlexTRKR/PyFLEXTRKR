@@ -12,7 +12,7 @@
 ###############################################################################################
 
 # Specify directory for the demo data
-dir_demo='/Users/feng045/data/demo/mcs_tbpf/imerg/'
+dir_demo='/users/adrien/Documents/lsce/repos/PyFLEXTRKR/demo'
 
 # Example config file name
 config_demo='config_mcs_demo.yml'
@@ -23,15 +23,15 @@ dir_input=${dir_demo}'input/'
 # Create the demo directory
 mkdir -p ${dir_input}
 
-# Download sample GPM IMERG Tb+Precipitation data:
-echo 'Downloading demo input data ...'
-wget https://portal.nersc.gov/project/m1867/PyFLEXTRKR/sample_data/tb_pcp/gpm_tb_imerg.tar.gz -O ${dir_input}/gpm_tb_imerg.tar.gz
+# # Download sample GPM IMERG Tb+Precipitation data:
+# echo 'Downloading demo input data ...'
+# wget https://portal.nersc.gov/project/m1867/PyFLEXTRKR/sample_data/tb_pcp/gpm_tb_imerg.tar.gz -O ${dir_input}/gpm_tb_imerg.tar.gz
 
-# Extract intput data
-echo 'Extracting demo input data ...'
-tar -xvzf ${dir_input}gpm_tb_imerg.tar.gz -C ${dir_input}
-# Remove downloaded tar file
-rm -fv ${dir_input}gpm_tb_imerg.tar.gz
+# # Extract intput data
+# echo 'Extracting demo input data ...'
+# tar -xvzf ${dir_input}gpm_tb_imerg.tar.gz -C ${dir_input}
+# # Remove downloaded tar file
+# rm -fv ${dir_input}gpm_tb_imerg.tar.gz
 
 # Add '\' to each '/' in directory names
 dir_input1=$(echo ${dir_input} | sed 's_/_\\/_g')
@@ -48,20 +48,22 @@ echo 'Activating PyFLEXTRKR environment ...'
 #	'Darwin')    echo "Mac" && . $HOME/miniconda3/etc/profile.d/conda.sh;;
 #        *);;
 #esac
-conda activate flextrkr
+source ~/.venvs/flextrkr/bin/activate
 
-# Run tracking
-echo 'Running PyFLEXTRKR ...'
-python ../runscripts/run_mcs_tbpf.py ${config_demo}
-echo 'Tracking is done.'
+# # Run tracking
+# echo 'Running PyFLEXTRKR ...'
+# python ../runscripts/run_mcs_tbpf.py ${config_demo}
+# echo 'Tracking is done.'
 
-# Make quicklook plots
-echo 'Making quicklook plots ...'
-quicklook_dir=${dir_demo}'/quicklooks_trackpaths/'
-python ../Analysis/plot_subset_tbpf_mcs_tracks_demo.py -s '2019-01-25T00' -e '2019-01-27T00' \
-    -c ${config_demo} -o vertical -p 1 --figsize 10 8 --output ${quicklook_dir}
-    # --figbasename 'image' --figname_type 'sequence'
-echo 'View quicklook plots here: '${quicklook_dir}
+# # Make quicklook plots
+# echo 'Making quicklook plots ...'
+# quicklook_dir=${dir_demo}'/quicklooks_trackpaths/'
+quicklook_dir='~/Documents/LSCE/repos/thunderstorms/plots/20220818/quicklooks_trackpaths/'
+echo ${quicklook_dir}
+# python ../Analysis/plot_subset_tbpf_mcs_tracks_demo.py -s '2019-01-25T00' -e '2019-01-27T00' \
+#     -c ${config_demo} -o vertical -p 1 --figsize 10 8 --output ${quicklook_dir}
+#     # --figbasename 'image' --figname_type 'sequence'
+# echo 'View quicklook plots here: '${quicklook_dir}
 
 # Make animation using ffmpeg
 echo 'Making animations from quicklook plots ...'

@@ -14,42 +14,42 @@
 ###############################################################################################
 
 # Specify directory for the demo data
-dir_demo='/Users/feng045/data/demo/mcs_tbpfradar3d/gridrad/'
+dir_demo='/users/adrien/Documents/lsce/repos/PyFLEXTRKR/demos/mcs_tbpfradar3d/gridrad/'
 
 # Example config file name
-config_demo='config_mcs_demo.yml'
+config_demo='config_gridrad_mcs_example.yml'
 
 # Demo input data directory
 dir_input=${dir_demo}'input/'
 
 # Create the demo directory
-mkdir -p ${dir_input}
+# mkdir -p ${dir_input}
 
-# Download sample WRF Tb+Precipitation data:
-echo 'Downloading demo input data ...'
-wget https://portal.nersc.gov/project/m1867/PyFLEXTRKR/sample_data/tb_radar/gridrad_tbradar.tar.gz \
-  -O ${dir_input}/gridrad_tbradar.tar.gz
+# # Download sample WRF Tb+Precipitation data:
+# echo 'Downloading demo input data ...'
+# wget https://portal.nersc.gov/project/m1867/PyFLEXTRKR/sample_data/tb_radar/gridrad_tbradar.tar.gz \
+#   -O ${dir_input}/gridrad_tbradar.tar.gz
 
-# Extract intput data
-echo 'Extracting demo input data ...'
-tar -xvzf ${dir_input}gridrad_tbradar.tar.gz -C ${dir_input}
-# Remove downloaded tar file
-rm -fv ${dir_input}gridrad_tbradar.tar.gz
+# # Extract intput data
+# echo 'Extracting demo input data ...'
+# tar -xvzf ${dir_input}gridrad_tbradar.tar.gz -C ${dir_input}
+# # Remove downloaded tar file
+# rm -fv ${dir_input}gridrad_tbradar.tar.gz
 
 # Add '\' to each '/' in directory names
 dir_input1=$(echo ${dir_input} | sed 's_/_\\/_g')
 dir_demo1=$(echo ${dir_demo} | sed 's_/_\\/_g')
- Replace input directory names in example config file
-sed 's/INPUT_DIR/'${dir_input1}'/g;s/TRACK_DIR/'${dir_demo1}'/g' config_gridrad_mcs_example.yml > ${config_demo}
-echo 'Created new config file: '${config_demo}
+# Replace input directory names in example config file
+# sed 's/INPUT_DIR/'${dir_input1}'/g;s/TRACK_DIR/'${dir_demo1}'/g' config_gridrad_mcs_example.yml > ${config_demo}
+# echo 'Created new config file: '${config_demo}
 
 # Activate PyFLEXTRKR conda environment
 echo 'Activating PyFLEXTRKR environment ...'
-conda activate pyflextrkr
+source ~/.venvs/flextrkr/bin/activate
 
 # Run tracking
 echo 'Running PyFLEXTRKR ...'
-python ../runscripts/run_mcs_tbpfradar3d_wrf.py ${config_demo}
+# python ../runscripts/run_mcs_tbpfradar3d_wrf.py ${config_demo}
 echo 'Tracking is done.'
 
 # Make quicklook plots
