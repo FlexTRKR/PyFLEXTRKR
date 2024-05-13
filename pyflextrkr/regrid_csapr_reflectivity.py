@@ -10,6 +10,30 @@ import dask
 from dask.distributed import wait
 from pyflextrkr.ft_utilities import subset_files_timerange
 
+def create_semi_symmetric_array(size):
+    """
+    Make a semi-symmetric array around 0 increment by 1
+
+    If the size is even, the array starts from -(size // 2) + 1 and goes up to start + size - 1 
+    (e.g., for size = 10, the array would be [-4, -3, -2, -1, 0, 1, 2, 3, 4, 5]). 
+    If the size is odd, the array starts from -(size // 2) and goes up to start + size - 1 
+    (e.g., for size = 9, the array would be [-4, -3, -2, -1, 0, 1, 2, 3, 4]).
+
+    Args:
+        size: int
+            Size of the array.
+
+    Returns:
+        np.array
+    """
+    if size % 2 == 0:
+        start = -(size // 2) + 1
+    else:
+        start = -(size // 2)
+    array = np.arange(start, start + size)
+    return array
+
+
 def regrid_csapr_reflectivity(config):
     """
     Driver to coarsen CSPAR 3D reflectivity for tracking.
@@ -173,6 +197,7 @@ def regrid_file(in_filename, in_basename, out_dir, out_basename, config):
     z_dimname = config.get('z_dimname', 'z')
     dx = config['dx']
     dy = config['dy']
+    regrid_ratio = config.get('regrid_ratio')
 
     # Read input data
     ds = xr.open_dataset(in_filename)
@@ -187,24 +212,21 @@ def regrid_file(in_filename, in_basename, out_dir, out_basename, config):
     latitude = ds[lat_varname]
 
     # Make a kernel for weights
-    ratio = 5   # Must be odd number
-    start_idx = int((ratio-1) / 2)
-    kernel = np.zeros((ratio+1,ratio+1), dtype=int)
-    kernel[1:ratio, 1:ratio] = 1
+    start_idx = int((regrid_ratio-1) / 2)
+    kernel = np.zeros((regrid_ratio+1,regrid_ratio+1), dtype=int)
+    kernel[1:regrid_ratio, 1:regrid_ratio] = 1
 
     # Make a 3D kernel
     kernel3d = kernel[None,:,:]
     # Call convlution function
     REFL_conv = convolve_reflectivity(REFL.data, kernel3d)
     ncp_conv = convolve_var(ncp.data, kernel3d)
-    # REFL_MAX_conv = convolve_reflectivity(REFL_MAX.data, kernel)
 
     # Subsample every X grid points
-    REFL_reg = REFL_conv[:,start_idx::ratio,start_idx::ratio]
-    ncp_reg = ncp_conv[:,start_idx::ratio,start_idx::ratio]
-    # REFL_MAX_reg = REFL_MAX_conv[start_idx::ratio,start_idx::ratio]
-    longitude_reg = longitude.data[:,start_idx::ratio,start_idx::ratio]
-    latitude_reg = latitude.data[:,start_idx::ratio,start_idx::ratio]
+    REFL_reg = REFL_conv[:,start_idx::regrid_ratio,start_idx::regrid_ratio]
+    ncp_reg = ncp_conv[:,start_idx::regrid_ratio,start_idx::regrid_ratio]
+    longitude_reg = longitude.data[:,start_idx::regrid_ratio,start_idx::regrid_ratio]
+    latitude_reg = latitude.data[:,start_idx::regrid_ratio,start_idx::regrid_ratio]
 
     # Make output filename
     nleadingchar = len(f'{in_basename}')
@@ -214,15 +236,20 @@ def regrid_file(in_filename, in_basename, out_dir, out_basename, config):
     
     # Make output coordinate
     nz, ny, nx = REFL_reg.shape
-    xcoord = np.arange(-nx/2, nx/2, 1) * dx
-    ycoord = np.arange(-ny/2, ny/2, 1) * dy
+    # xcoord = np.arange(-nx/2, nx/2, 1) * dx
+    # ycoord = np.arange(-ny/2, ny/2, 1) * dy
+    xcoord = create_semi_symmetric_array(nx) * dx
+    ycoord = create_semi_symmetric_array(ny) * dy
     xcoord_attrs = ds[x_varname].attrs
     ycoord_attrs = ds[y_varname].attrs
     # Get radar lat/lon from the regridded lat/lon
-    xid0 = np.where(xcoord == 0)[0]
-    yid0 = np.where(ycoord == 0)[0]
+    xid0 = np.nanargmin(np.absolute(xcoord - 0))
+    yid0 = np.nanargmin(np.absolute(ycoord - 0))
     radar_lon = longitude_reg[0, yid0, xid0]
     radar_lat = latitude_reg[0, yid0, xid0]
+    # Expand dimension if needed
+    if np.isscalar(radar_lon): radar_lon = np.expand_dims(radar_lon, axis=0)
+    if np.isscalar(radar_lat): radar_lat = np.expand_dims(radar_lat, axis=0)
 
     # Define output variablesf
     var_dict = {
@@ -233,7 +260,6 @@ def regrid_file(in_filename, in_basename, out_dir, out_basename, config):
         'origin_longitude': ([time_dimname], radar_lon, radar_lon_attrs),
         'origin_latitude': ([time_dimname], radar_lat, radar_lat_attrs),
         'alt': ([time_dimname], np.expand_dims(radar_alt.data, axis=0), radar_alt.attrs),
-        # 'REFL_MAX': (['Time', y_dimname, x_dimname], np.expand_dims(REFL_MAX_reg, axis=0), REFL_MAX.attrs),
     }
     # Output coordinates
     coord_dict = {
