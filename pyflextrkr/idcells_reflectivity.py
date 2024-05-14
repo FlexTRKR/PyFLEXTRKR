@@ -173,7 +173,7 @@ def idcells_reflectivity(
             return_diag=return_diag,
             convolve_method=convolve_method,
         )
-    
+
     # Expand convective cell masks outward to a set of radii to
     # increase the convective cell footprint for better tracking convective cells
     core_expand, core_sorted = expand_conv_core(
@@ -771,14 +771,17 @@ def get_composite_reflectivity_radar(input_filename, config):
     radar_lon = ds['origin_longitude']
     radar_lat = ds['origin_latitude']
     radar_alt = ds['alt']
-    # Take the first vertical level from 3D lat/lon
-    grid_lon = ds[lon_varname].isel(z=0)
-    grid_lat = ds[lat_varname].isel(z=0)
+    # Take the first vertical level for 3D lat/lon
+    if z_dimname in ds[lon_varname].dims:
+        grid_lon = ds[lon_varname].isel({z_dimname:0})        
+        grid_lat = ds[lat_varname].isel({z_dimname:0})
+    else:
+        grid_lon = ds[lon_varname]
+        grid_lat = ds[lat_varname]
 
     # Change radar height coordinate from AGL to MSL
     z_agl = ds[z_dimname] + radar_alt
     ds[z_dimname] = z_agl
-
     if terrain_file is not None:
         # Read terrain file
         dster = xr.open_dataset(terrain_file)
