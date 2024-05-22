@@ -1,8 +1,6 @@
 ---
-# Example GoAmazon SIPAM radar cell tracking configuration file (4 km resolution)
+# SAAG WRF simulated radar cell tracking configuration file
 
-# Regrid input reflectivity
-run_regridreflectivity: True
 # Identify features to track
 run_idfeature: True
 # Tracking steps to run
@@ -15,54 +13,47 @@ run_gettracks: True
 run_trackstats: True
 # Map tracking to pixel files
 run_mapfeature: True
-# Regrid pixel files to original grid
-run_regridmask: False
 
 # Parallel processing set up
 # run_parallel: 1 (local cluster), 2 (Dask MPI)
 run_parallel: 1
-nprocesses: 64  # Number of processors to use if run_parallel=1
+nprocesses: 128  # Number of processors to use if run_parallel=1
 dask_tmp_dir: '/tmp'  # Dask temporary directory if run_parallel=1
 timeout: 360  # [seconds] Dask timeout limit
 
 # Start/end date and time
-# startdate: '20140319.0000'
-# enddate: '20140319.2300'
-startdate: '20140317.0000'
-enddate: '20140318.0000'
+startdate: '20181001.0000'
+enddate: '20190302.0000'
+# startdate: '20190123.0000'
+# enddate: '20190124.0000'
 
 # Specify tracking input data date/time string format
-# This is the preprocessed file that contains Tb & rainrate
+# This is only used to identify the files within the tracking period
 # E.g., databasename20181101.011503.nc --> yyyymodd.hhmmss
 # E.g., databasename2018-11-01_01:15:00 --> yyyy-mo-dd_hh:mm:ss
-time_format: 'yyyymodd_hhmmss'
-rawdatabasename: 'sbmn_cappi_'
-databasename: 'sbmn_cappi_4km_'
+time_format: 'yyyy-mo-dd_hh:mm:ss'
+databasename: 'refl_'
 
-# Raw input files directory
-rawdata_path: '/pscratch/sd/f/feng045/SAAG/hist/cell_tracking/sipam/CAPPI_v2/'
+# WRF raw data
+wrfout_path: '/pscratch/sd/f/feng045/SAAG/hist/auxhist/refl/cacti/'
+wrfout_basename: 'refl_'
 # Input files directory
-clouddata_path: '/pscratch/sd/f/feng045/SAAG/hist/cell_tracking/sipam/CAPPI_v2/regrid/'
+clouddata_path: '/pscratch/sd/f/feng045/SAAG/hist/auxhist/refl/cacti/'
 # Working directory for the tracking data
-root_path: '/pscratch/sd/f/feng045/SAAG/hist/cell_tracking/sipam/'
+root_path: '/pscratch/sd/f/feng045/SAAG/hist/cell_tracking/cacti/'
 # Working sub-directory names
 tracking_path_name: 'tracking'
 stats_path_name: 'stats'
 pixel_path_name: 'celltracking'
 
 # Terrain file
-# terrain_file: '/pscratch/sd/f/feng045/SAAG/hist/cell_tracking/sipam/CAPPI_v2/sipam_grid_mask_ter_4km.cdf'
-# Elevation variable to use in terrain file
-elev_varname: 'hgt'
-# Range mask variable to use in terrain file
-rangemask_varname: 'mask200km_0km'
+# terrain_file: ''
+# Range mask variable (for compatibility purpose with radar data only)
+rangemask_varname: 'mask110'
 
 # Specify types of feature being tracked
 # This adds additional feature-specific statistics to be computed
 feature_type: 'radar_cells'
-
-# Regrid parameters
-regrid_ratio: 2
 
 # Advection calculation parameters
 advection_field_threshold: 10    # radar reflectivity threshold [dBZ]
@@ -73,6 +64,8 @@ advection_buffer: 6  # number of grid points around the edge of domain to buffer
 advection_size_threshold: 10  # number of min valid points to calculate advection
 advection_tiles: [1,1]   # number of tiles to calculate advection [y,x]
 advection_filename: 'advection_'
+# Subset boundary [lat_min, lon_min, lat_max, lon_max]
+# geolimits: [-5.3, -62.2, -1.0, -57.8]
 
 # Cell identification parameters
 # Parameter in Steiner
@@ -130,11 +123,11 @@ remove_smallcells: True
 min_cellarea: 96
 # Number of vertical level gaps allowed in calculating echo-top height
 echotop_gap: 4
-# Minimum height above surface elevation to filter the data, must be in the same unit as the radar vertical coordinate
-sfc_dz_min: 0.5
-# Maximum height above surface to calculate low-level max reflectivity, must be in the same unit as the radar vertical coordinate
+# Minimum height above surface elevation to filter the data
+sfc_dz_min: 500
+# Maximum height above surface [m] to calculate low-level max reflectivity
 # (similar to lowest-level composite reflectiivty)
-sfc_dz_max: 3.0
+sfc_dz_max: 3000
 # Set equivalent radar sensitivity [dBZ]
 radar_sensitivity: 0.0
 # Flag to output additional Steiner variables for diagnostic purpose
@@ -142,25 +135,19 @@ return_diag: True
 # Radar file data dimensions and reflectivity variable name
 dx: 4000  # meter
 dy: 4000  # meter
-x_dimname: 'x0'
-y_dimname: 'y0'
-z_dimname: 'z0'
-time_dimname: 'time'
-x_varname: 'x0'
-y_varname: 'y0'
-z_varname: 'z0'
-lon_varname: 'lon0'
-lat_varname: 'lat0'
-radar_lon_varname: 'origin_longitude'
-radar_lat_varname: 'origin_latitude'
-radar_alt_varname: 'alt'
-reflectivity_varname: 'DBZc'
-# Input data source: 'radar', 'wrf', 'wrf_regrid'
-input_source: 'radar'
+x_dimname: "lon"
+y_dimname: "lat"
+z_dimname: "z"
+x_varname: "longitude"
+y_varname: "latitude"
+reflectivity_varname: 'REFL_COM'
+# Input data source: 'radar', 'wrf'
+input_source: 'wrf_composite'
 
 # Specify data structure
-datatimeresolution: 0.2     # hours
+datatimeresolution: 0.25     # hour
 pixel_radius: 4.0      # km
+time_dimname: 'time'
 ref_varname: 'dbz_comp'
 
 # Tracking parameters
@@ -188,3 +175,8 @@ tracks_dimname: 'tracks'
 times_dimname: 'times'
 fillval: -9999
 pixeltracking_filebase: 'celltracks_'
+
+# List of variable names to pass from input to tracking output data
+pass_varname:
+  - 'tb'
+  - 'rainrate'
