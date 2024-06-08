@@ -1,6 +1,7 @@
 import os
 import sys
 import time
+import glob
 import logging
 import numpy as np
 import xarray as xr
@@ -45,10 +46,10 @@ def regrid_celltracking_mask(config):
     for ifile in in_files:
         # Serial
         if run_parallel == 0:
-            result = regrid_file(ifile, in_basename, out_dir, out_basename)
+            result = regrid_file(ifile, in_basename, out_dir, out_basename, config)
         # Parallel
         elif run_parallel >= 1:
-            result = dask.delayed(regrid_file)(ifile, in_basename, out_dir, out_basename)
+            result = dask.delayed(regrid_file)(ifile, in_basename, out_dir, out_basename, config)
             results.append(result)
         else:
             sys.exit('Valid parallelization flag not provided')
@@ -62,7 +63,7 @@ def regrid_celltracking_mask(config):
     return
 
 
-def regrid_file(in_filename, in_basename, out_dir, out_basename):
+def regrid_file(in_filename, in_basename, out_dir, out_basename, config):
     """
     Regrid pixel level masks for a given input file.
 
@@ -75,6 +76,8 @@ def regrid_file(in_filename, in_basename, out_dir, out_basename):
             Output file directory.
         out_basename: string
             Output file basename.
+        config: dictionary
+            Dictionary containing config parameters.
 
     Returns:
         out_filename: string
@@ -83,20 +86,54 @@ def regrid_file(in_filename, in_basename, out_dir, out_basename):
 
     logger = logging.getLogger(__name__)
 
+    raw_dir = config['rawdata_path']
+    raw_basename = config['rawdatabasename']
+    x_varname = config['x_varname']
+    y_varname = config['y_varname']
+    regrid_ratio = config.get('regrid_ratio')
+    # 
+    raw_files = sorted(glob.glob(f'{raw_dir}{raw_basename}*'))
+    if (len(raw_files) == 0):
+        logger.critical(f"ERROR: No raw files found: {raw_dir}{raw_basename}*")
+        logger.critical(f"Require raw files for native data coordinates to regrid tracking masks.")
+        logger.critical("Tracking will now exit.")
+        sys.exit()
+    else:
+        # Read raw input file
+        dso = xr.open_dataset(raw_files[0])
+        # Get coordinates
+        xcoord_orig = dso[x_varname].squeeze()
+        ycoord_orig = dso[y_varname].squeeze()
+        xcoord_attrs = xcoord_orig.attrs
+        ycoord_attrs = ycoord_orig.attrs
+        # Check coordinate dimensions
+        if (xcoord_orig.ndim == 1) | (ycoord_orig.ndim == 1):
+            # Mesh 1D coordinate into 2D
+            xcoord_2d, ycoord_2d = np.meshgrid(xcoord_orig, ycoord_orig)
+        elif (xcoord_orig.ndim == 2) | (ycoord_orig.ndim == 2):
+            xcoord_2d = xcoord_orig
+            ycoord_2d = ycoord_orig
+        else:
+            logger.critical("ERROR: Unexpected input data x, y coordinate dimensions.")
+            logger.critical(f"{x_varname} dimension: {xcoord_orig.ndim}")
+            logger.critical(f"{y_varname} dimension: {ycoord_orig.ndim}")
+            logger.critical("Tracking will now exit.")
+            sys.exit()
+
     # Read input data
     ds = xr.open_dataset(in_filename, decode_times=False, mask_and_scale=False)
     time_coord = ds['time']
     ny, nx = ds.sizes['lat'], ds.sizes['lon']
-    # Create a coordinate to mimic subsampling a 5:1 ratio of the full coordinate
-    ratio = 5
-    xcoord = (np.linspace(2, nx*ratio+2, nx, endpoint=False, dtype=int))
-    ycoord = (np.linspace(2, ny*ratio+2, ny, endpoint=False, dtype=int))
+    # Create a coordinate to mimic subsampling regrid_ratio:1 ratio of the full coordinate
+    # regrid_ratio = 5
+    xcoord = (np.linspace(2, nx*regrid_ratio+2, nx, endpoint=False, dtype=int))
+    ycoord = (np.linspace(2, ny*regrid_ratio+2, ny, endpoint=False, dtype=int))
     # Replace the input data coordinate
-    ds = ds.assign_coords({'lat':ycoord, 'lon':xcoord})    
+    ds = ds.assign_coords({'lat':ycoord, 'lon':xcoord})
 
     # Create a full coordinate
-    xcoord_out = np.arange(0, nx*ratio, 1)
-    ycoord_out = np.arange(0, ny*ratio, 1)
+    xcoord_out = np.arange(0, nx*regrid_ratio, 1)
+    ycoord_out = np.arange(0, ny*regrid_ratio, 1)
 
     # Get variables for regridding
     tracknumber = ds['tracknumber']
@@ -169,8 +206,8 @@ def regrid_file(in_filename, in_basename, out_dir, out_basename):
     # Define variable list
     var_dict = {
         "base_time": (["time"], time_coord.data, time_coord.attrs),
-        # "longitude": (["lat", "lon"], longitude),
-        # "latitude": (["lat", "lon"], latitude),
+        "longitude": (["lat", "lon"], xcoord_2d.data, xcoord_attrs),
+        "latitude": (["lat", "lon"], ycoord_2d.data, ycoord_attrs),
         # "nclouds": (["time"], ds['nclouds'].data, ds['nclouds'].attrs),
         "dbz_comp": (["time", "lat", "lon"], dbz_comp_out, dbz_comp.attrs),
         "dbz_lowlevel": (["time", "lat", "lon"], dbz_lowlevel_out, dbz_lowlevel.attrs),

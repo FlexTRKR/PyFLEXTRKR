@@ -47,8 +47,9 @@ if __name__ == '__main__':
             from pyflextrkr.regrid_lasso_reflectivity import regrid_lasso_reflectivity as regrid_func
         elif config['input_source'] == 'csapr_cacti':
             from pyflextrkr.regrid_csapr_reflectivity import regrid_csapr_reflectivity as regrid_func
+        elif config['input_source'] == 'radar':
+            from pyflextrkr.regrid_radar_reflectivity import regrid_radar_reflectivity as regrid_func
         regrid_func(config)
-        # regrid_lasso_reflectivity(config)
 
     # Step 1 - Identify features
     if config['run_idfeature']:

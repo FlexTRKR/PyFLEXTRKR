@@ -135,8 +135,8 @@ def gettracknumbers(config):
         # the numbers in that row are indices of clouds in the reference file linked that cloud in the new file
         ref_file = f"{tracking_outpath}{singletracking_data.getncattr('ref_file')}"
         new_file = f"{tracking_outpath}{singletracking_data.getncattr('new_file')}"
-        ref_date = f"{tracking_outpath}{singletracking_data.getncattr('ref_date')}"
-        new_date = f"{tracking_outpath}{singletracking_data.getncattr('new_date')}"
+        ref_date = f"{singletracking_data.getncattr('ref_date')}"
+        new_date = f"{singletracking_data.getncattr('new_date')}"
 
         singletracking_data.close()
 
@@ -177,19 +177,23 @@ def gettracknumbers(config):
         time_new = np.copy(basetime_new[0])
 
         # Check if files immediately follow each other. Missing files can exist.
-        # If missing files exist need to increment index and track numbers
+        # If missing files exist need to increment track numbers
         if ifile > 0:
-            hour_diff = np.array([time_new - time_prev]).astype(float)
-            if hour_diff > (timegap * 3.6 * 10 ** 12):
-                logger.debug(f"Track terminates on: {ref_date}")
-                logger.debug(f"Time difference: {str(hour_diff)}")
-                logger.debug(f"Maximum timegap allowed: {str(timegap)}")
-                logger.debug(f"New track starts on: {new_date}")
+            time_diff = np.array([time_new - time_prev]).astype(float)
+            # Convert timegap from [hour] to [second]
+            # if time_diff > (timegap * 3.6 * 10 ** 12):
+            if time_diff > (timegap * 3600):
+                logger.info(f"Track terminates on: {ref_date}")
+                logger.info(f"Time difference: {time_diff}")
+                logger.info(f"Maximum timegap allowed: {timegap * 3600}")
+                logger.info(f"New track starts on: {new_date}")
 
                 # Flag the previous file as the last file
                 trackreset[0, ifill, :] = 2
 
-                ifill = ifill + 2
+                # No need to skip time index (discussed with Jianfeng Li, Zhe Feng, 5/20/2024)
+                # ifill = ifill + 2
+                ifill = ifill + 1
 
                 # Fill tracking matrices with reference data and record that the track ended
                 cloudidfiles[ifill, :] = list(os.path.basename(ref_file))

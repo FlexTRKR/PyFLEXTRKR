@@ -1,0 +1,180 @@
+---
+# SAAG WRF simulated radar cell tracking configuration file
+
+# Identify features to track
+run_idfeature: True
+# Tracking steps to run
+run_advection: True
+# Track single consecutive feature files
+run_tracksingle: True
+# Run tracking for all files
+run_gettracks: True
+# Calculate feature statistics
+run_trackstats: True
+# Map tracking to pixel files
+run_mapfeature: True
+
+# Parallel processing set up
+# run_parallel: 1 (local cluster), 2 (Dask MPI)
+run_parallel: 1
+nprocesses: 128  # Number of processors to use if run_parallel=1
+dask_tmp_dir: '/tmp'  # Dask temporary directory if run_parallel=1
+timeout: 360  # [seconds] Dask timeout limit
+
+# Start/end date and time
+startdate: '20140301.0000'
+enddate: '20140401.0000'
+
+# Specify tracking input data date/time string format
+# This is only used to identify the files within the tracking period
+# E.g., databasename20181101.011503.nc --> yyyymodd.hhmmss
+# E.g., databasename2018-11-01_01:15:00 --> yyyy-mo-dd_hh:mm:ss
+time_format: 'yyyy-mo-dd_hh:mm:ss'
+databasename: 'refl_'
+
+# WRF raw data
+wrfout_path: '/pscratch/sd/f/feng045/SAAG/hist/auxhist/refl/goamazon/'
+wrfout_basename: 'refl_'
+# Input files directory
+clouddata_path: '/pscratch/sd/f/feng045/SAAG/hist/auxhist/refl/goamazon/'
+# Working directory for the tracking data
+root_path: '/pscratch/sd/f/feng045/SAAG/hist/cell_tracking/goamazon/'
+# Working sub-directory names
+tracking_path_name: 'tracking'
+stats_path_name: 'stats'
+pixel_path_name: 'celltracking'
+
+# Terrain file
+# terrain_file: ''
+# Range mask variable (for compatibility purpose with radar data only)
+rangemask_varname: 'mask110'
+
+# Specify types of feature being tracked
+# This adds additional feature-specific statistics to be computed
+feature_type: 'radar_cells'
+
+# Advection calculation parameters
+advection_field_threshold: 10    # radar reflectivity threshold [dBZ]
+advection_med_filt_len: 9         # median filter length for advection speed time seires [number of points]
+advection_max_movement_mps: 60    # maximum advection speed allowed [m/s]
+advection_mask_method: 'greater'  # masking method
+advection_buffer: 6  # number of grid points around the edge of domain to buffer
+advection_size_threshold: 10  # number of min valid points to calculate advection
+advection_tiles: [1,1]   # number of tiles to calculate advection [y,x]
+advection_filename: 'advection_'
+# Subset boundary [lat_min, lon_min, lat_max, lon_max]
+# geolimits: [-5.3, -62.2, -1.0, -57.8]
+
+# Cell identification parameters
+# Parameter in Steiner
+# The background reflectivity fall off point in the cosine fucntion,
+# if background reflectivity > absConvThres [dBZ], the grid point is a convective core
+absConvThres: 60
+# Minimum difference to background reflectivity [dB] in the cosine function
+minZdiff: 10
+# Any grid point reflectivity > truncZconvThres [dBZ] is automatically a convective core
+truncZconvThres: 55
+# These two reflectivity values sets up the step function background Ze values
+# They control the dilation of grids surrounding the convective cores to be included as "convective region"
+mindBZuse: 25
+dBZforMaxConvRadius: 60
+# Convective radius step-function start value [km]
+# conv_rad_start: 5.8  # option0
+# conv_rad_start: 4.0  # option1
+# conv_rad_start: 2.0  # option2
+# conv_rad_start: 4.0  # option3
+# conv_rad_start: 3.0  # option4
+# conv_rad_start: 2.0  # option5
+conv_rad_start: 4.0  # option6
+# Convective radius step-function start end value (maximum convective radius dilation) [km]
+# maxConvRadius: 9.0    # option0
+# maxConvRadius: 6.0  # option1
+# maxConvRadius: 10.0  # option2
+# maxConvRadius: 8.0  # option3
+# maxConvRadius: 8.0  # option4
+# maxConvRadius: 8.0  # option5
+maxConvRadius: 8.0  # option6
+# Convective radius step-function increment [km]
+# conv_rad_increment: 0.5  # option0
+# conv_rad_increment: 0.5  # option1
+# conv_rad_increment: 2.0  # option2
+# conv_rad_increment: 1.0  # option3
+# conv_rad_increment: 1.0  # option4
+# conv_rad_increment: 1.0  # option5
+conv_rad_increment: 0.75  # option6
+# Background reflectivity step-function increment [dB]
+bkg_refl_increment: 5
+# Convolution method to calculate background reflectivity: 'ndimage' (default), 'signal' (FFT)
+convolve_method: 'ndimage'
+# Define a set of radii for final step of convective cell expansion [km]
+# This is for the purpose of making the convective region larger for tracking convective cells
+radii_expand: [1,2,3,4,5,6,7,8]
+# Weak echo threshold [dBZ]
+weakEchoThres: 15
+# Background radius to calculate background reflectivity intensity [km]
+bkgrndRadius: 14.
+# Minimum area threshold to be a convective core [km^2]
+# min_corearea: 32
+min_corearea: 16
+# Minimum area threshold to be a convective cell [km^2]
+remove_smallcells: True
+min_cellarea: 96
+# Number of vertical level gaps allowed in calculating echo-top height
+echotop_gap: 4
+# Minimum height above surface elevation to filter the data
+sfc_dz_min: 500
+# Maximum height above surface [m] to calculate low-level max reflectivity
+# (similar to lowest-level composite reflectiivty)
+sfc_dz_max: 3000
+# Set equivalent radar sensitivity [dBZ]
+radar_sensitivity: 0.0
+# Flag to output additional Steiner variables for diagnostic purpose
+return_diag: True
+# Radar file data dimensions and reflectivity variable name
+dx: 4000  # meter
+dy: 4000  # meter
+x_dimname: "lon"
+y_dimname: "lat"
+z_dimname: "z"
+x_varname: "longitude"
+y_varname: "latitude"
+reflectivity_varname: 'REFL_COM'
+# Input data source: 'radar', 'wrf'
+input_source: 'wrf_composite'
+
+# Specify data structure
+datatimeresolution: 0.25     # hour
+pixel_radius: 4.0      # km
+time_dimname: 'time'
+ref_varname: 'dbz_comp'
+
+# Tracking parameters
+timegap: 0.5           # hour
+othresh: 0.3           # overlap percentage threshold
+maxnclouds: 1000       # Maximum number of clouds in one snapshot
+nmaxlinks: 10          # Maximum number of clouds that any single cloud can be linked to
+duration_range: [2, 60]   # A vector [minlength,maxlength] to specify the duration range for the tracks
+# Flag to remove short-lived tracks [< min(duration_range)] that are not mergers/splits with other tracks
+# 0:keep all tracks; 1:remove short tracks
+remove_shorttracks: 1
+# Set this flag to 1 to write a dense (2D) trackstats netCDF file
+# Note that for datasets with lots of tracks, the memory consumption could be very large
+trackstats_dense_netcdf: 1
+# Minimum time difference threshold to match track stats with cloudid pixel files
+match_pixel_dt_thresh: 60.0  # seconds
+
+# Define tracked feature variable names
+feature_varname: 'feature_number'
+nfeature_varname: 'nfeatures'
+featuresize_varname: 'npix_feature'
+
+# Track statistics output file dimension names
+tracks_dimname: 'tracks'
+times_dimname: 'times'
+fillval: -9999
+pixeltracking_filebase: 'celltracks_'
+
+# List of variable names to pass from input to tracking output data
+pass_varname:
+  - 'tb'
+  - 'rainrate'

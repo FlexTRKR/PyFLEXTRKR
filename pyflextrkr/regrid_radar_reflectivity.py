@@ -34,9 +34,9 @@ def create_semi_symmetric_array(size):
     return array
 
 
-def regrid_csapr_reflectivity(config):
+def regrid_radar_reflectivity(config):
     """
-    Driver to coarsen CSPAR 3D reflectivity for tracking.
+    Driver to coarsen 3D radar reflectivity for tracking.
 
     Args:
         config: dictionary
@@ -47,7 +47,7 @@ def regrid_csapr_reflectivity(config):
     """
 
     logger = logging.getLogger(__name__)
-    logger.info('Regridding CSPAR reflectivity')
+    logger.info('Regridding radar reflectivity')
 
     in_dir = config['rawdata_path']
     in_basename = config['rawdatabasename']
@@ -195,6 +195,9 @@ def regrid_file(in_filename, in_basename, out_dir, out_basename, config):
     x_dimname = config.get('x_dimname', 'x')
     y_dimname = config.get('y_dimname', 'y')
     z_dimname = config.get('z_dimname', 'z')
+    radar_lon_varname = config.get('radar_lon_varname', 'origin_longitude')
+    radar_lat_varname = config.get('radar_lat_varname', 'origin_latitude')
+    radar_alt_varname = config.get('radar_alt_varname', 'alt')
     dx = config['dx']
     dy = config['dy']
     regrid_ratio = config.get('regrid_ratio')
@@ -202,12 +205,12 @@ def regrid_file(in_filename, in_basename, out_dir, out_basename, config):
     # Read input data
     ds = xr.open_dataset(in_filename)
     in_time = ds[time_dimname]
-    radar_lon_attrs = ds['origin_longitude'].attrs
-    radar_lat_attrs = ds['origin_latitude'].attrs
-    radar_alt = ds['alt']
+    # Get radar location variables
+    radar_lon_attrs = ds[radar_lon_varname].attrs if radar_lon_varname in ds else ""
+    radar_lat_attrs = ds[radar_lat_varname].attrs if radar_lat_varname in ds else ""
+    radar_alt = ds[radar_alt_varname].data if radar_alt_varname in ds else 0.0
+    # Get variables
     REFL = ds[reflectivity_varname].squeeze()
-    ncp = ds['normalized_coherent_power'].squeeze()
-    # REFL_MAX = ds['REFL_MAX'].squeeze()
     longitude = ds[lon_varname]
     latitude = ds[lat_varname]
 
@@ -220,13 +223,19 @@ def regrid_file(in_filename, in_basename, out_dir, out_basename, config):
     kernel3d = kernel[None,:,:]
     # Call convlution function
     REFL_conv = convolve_reflectivity(REFL.data, kernel3d)
-    ncp_conv = convolve_var(ncp.data, kernel3d)
 
     # Subsample every X grid points
     REFL_reg = REFL_conv[:,start_idx::regrid_ratio,start_idx::regrid_ratio]
-    ncp_reg = ncp_conv[:,start_idx::regrid_ratio,start_idx::regrid_ratio]
-    longitude_reg = longitude.data[:,start_idx::regrid_ratio,start_idx::regrid_ratio]
-    latitude_reg = latitude.data[:,start_idx::regrid_ratio,start_idx::regrid_ratio]
+    # Check lat/lon array dimension
+    if longitude.ndim == 1:
+        longitude_reg = longitude.data[start_idx::regrid_ratio]
+        latitude_reg = latitude.data[start_idx::regrid_ratio]
+    elif longitude.ndim == 2:
+        longitude_reg = longitude.data[start_idx::regrid_ratio,start_idx::regrid_ratio]
+        latitude_reg = latitude.data[start_idx::regrid_ratio,start_idx::regrid_ratio]
+    elif longitude.ndim == 3:
+        longitude_reg = longitude.data[:,start_idx::regrid_ratio,start_idx::regrid_ratio]
+        latitude_reg = latitude.data[:,start_idx::regrid_ratio,start_idx::regrid_ratio]
 
     # Make output filename
     nleadingchar = len(f'{in_basename}')
@@ -236,8 +245,6 @@ def regrid_file(in_filename, in_basename, out_dir, out_basename, config):
     
     # Make output coordinate
     nz, ny, nx = REFL_reg.shape
-    # xcoord = np.arange(-nx/2, nx/2, 1) * dx
-    # ycoord = np.arange(-ny/2, ny/2, 1) * dy
     xcoord = create_semi_symmetric_array(nx) * dx
     ycoord = create_semi_symmetric_array(ny) * dy
     xcoord_attrs = ds[x_varname].attrs
@@ -245,22 +252,43 @@ def regrid_file(in_filename, in_basename, out_dir, out_basename, config):
     # Get radar lat/lon from the regridded lat/lon
     xid0 = np.nanargmin(np.absolute(xcoord - 0))
     yid0 = np.nanargmin(np.absolute(ycoord - 0))
-    radar_lon = longitude_reg[0, yid0, xid0]
-    radar_lat = latitude_reg[0, yid0, xid0]
+    if longitude.ndim == 1:
+        radar_lon = longitude_reg[xid0].item()
+        radar_lat = latitude_reg[yid0].item()
+    elif longitude.ndim == 2:
+        radar_lon = longitude_reg[yid0, xid0].item()
+        radar_lat = latitude_reg[yid0, xid0].item()
+    elif longitude.ndim == 3:
+        radar_lon = longitude_reg[0, yid0, xid0].item()
+        radar_lat = latitude_reg[0, yid0, xid0].item()
     # Expand dimension if needed
-    if np.isscalar(radar_lon): radar_lon = np.expand_dims(radar_lon, axis=0)
-    if np.isscalar(radar_lat): radar_lat = np.expand_dims(radar_lat, axis=0)
+    # if np.isscalar(radar_lon): radar_lon = np.expand_dims(radar_lon, axis=0)
+    # if np.isscalar(radar_lat): radar_lat = np.expand_dims(radar_lat, axis=0)
 
-    # Define output variablesf
+    # Define output variables
+    # radar_lon = xr.DataArray(radar_lon, attrs=radar_lon_attrs)
+    # radar_lat = xr.DataArray(radar_lat, attrs=radar_lat_attrs)
+    # radar_alt = xr.DataArray(radar_alt, attrs=radar_alt_attrs)
+    # Array dimensions
+    dim4d = [time_dimname, z_dimname, y_dimname, x_dimname]
+    dim3d = [z_dimname, y_dimname, x_dimname]
+    dim2d = [y_dimname, x_dimname]
     var_dict = {
-        lon_varname: ([z_dimname, y_dimname, x_dimname], longitude_reg, longitude.attrs),
-        lat_varname: ([z_dimname, y_dimname, x_dimname], latitude_reg, latitude.attrs),
-        reflectivity_varname: ([time_dimname, z_dimname, y_dimname, x_dimname], np.expand_dims(REFL_reg, axis=0), REFL.attrs),
-        'normalized_coherent_power': ([time_dimname, z_dimname, y_dimname, x_dimname], np.expand_dims(ncp_reg, axis=0), ncp.attrs),
-        'origin_longitude': ([time_dimname], radar_lon, radar_lon_attrs),
-        'origin_latitude': ([time_dimname], radar_lat, radar_lat_attrs),
-        'alt': ([time_dimname], np.expand_dims(radar_alt.data, axis=0), radar_alt.attrs),
+        reflectivity_varname: (dim4d, np.expand_dims(REFL_reg, axis=0), REFL.attrs),
+        'origin_longitude': radar_lon, 
+        'origin_latitude': radar_lat,
+        'alt': radar_alt,
+        # 'origin_longitude': ([time_dimname], radar_lon, radar_lon_attrs),
+        # 'origin_latitude': ([time_dimname], radar_lat, radar_lat_attrs),
+        # 'alt': ([time_dimname], np.expand_dims(radar_alt.data, axis=0), radar_alt.attrs),
     }
+    # Add lat/lon to dictionary
+    if longitude_reg.ndim == 2:
+        var_dict[lon_varname] = (dim2d, longitude_reg, longitude.attrs)
+        var_dict[lat_varname] = (dim2d, latitude_reg, latitude.attrs)
+    elif longitude_reg.ndim == 3:
+        var_dict[lon_varname] = (dim3d, longitude_reg, longitude.attrs)
+        var_dict[lat_varname] = (dim3d, latitude_reg, latitude.attrs)
     # Output coordinates
     coord_dict = {
         time_dimname: ([time_dimname], in_time.data),
@@ -270,7 +298,7 @@ def regrid_file(in_filename, in_basename, out_dir, out_basename, config):
     }
     # Output global attributes
     gattr_dict = {
-        'Title': 'Regrid CSAPR reflectivity',
+        'Title': 'Regridded radar reflectivity',
         'DX': dx,
         'DY': dy,
         'Contact': 'Zhe Feng, zhe.feng@pnnl.gov',
