@@ -37,7 +37,7 @@ if __name__ == "__main__":
     # Read and concatinate data
     ds = xr.open_mfdataset(mcsfiles, concat_dim='time', combine='nested')
     print('Finish reading input files.')
-    ntimes = ds.dims['time']
+    ntimes = ds.sizes['time']
     longitude = ds['longitude'].isel(time=0)
     latitude = ds['latitude'].isel(time=0)
 

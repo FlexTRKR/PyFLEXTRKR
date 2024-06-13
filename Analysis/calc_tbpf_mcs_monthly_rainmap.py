@@ -36,9 +36,12 @@ if __name__ == "__main__":
         # Read and concatinate data
         ds = xr.open_mfdataset(mcsfiles, concat_dim='time', combine='nested')
         print('Finish reading input files.')
-        ntimes = ds.dims['time']
+        ntimes = ds.sizes['time']
         longitude = ds['longitude'].isel(time=0)
         latitude = ds['latitude'].isel(time=0)
+
+        # Sum MCS counts over time to get number of hours
+        mcscloudct = (ds['cloudtracknumber'] > 0).sum(dim='time')
 
         # Sum MCS precipitation over time, use cloudtracknumber > 0 as mask
         mcsprecip = ds[pcpvarname].where(ds['cloudtracknumber'] > 0).sum(dim='time')
@@ -46,15 +49,20 @@ if __name__ == "__main__":
         # Sum total precipitation over time
         totprecip = ds[pcpvarname].sum(dim='time')
 
-        # Convert all MCS track number to 1 for summation purpose
-        pcpnumber = ds['pcptracknumber'].values
-        pcpnumber[pcpnumber > 0] = 1
-
-        # Convert numpy array to DataArray
-        mcspcpmask = xr.DataArray(pcpnumber, coords={'time':ds.time, 'lat':ds.lat, 'lon':ds.lon}, dims=['time','lat','lon'])
-
-        # Sum MCS PF counts overtime to get number of hours
+        # Convert all MCS track numbers to 1 for summation purpose
+        mcspcpmask = xr.where(ds['pcptracknumber'] > 0, 1, 0)
+        # Sum MCS PF counts overtime to get the number of hours
         mcspcpct = mcspcpmask.sum(dim='time')
+
+        # # Convert all MCS track number to 1 for summation purpose
+        # pcpnumber = ds['pcptracknumber'].values
+        # pcpnumber[pcpnumber > 0] = 1
+
+        # # Convert numpy array to DataArray
+        # mcspcpmask = xr.DataArray(pcpnumber, coords={'time':ds.time, 'lat':ds.lat, 'lon':ds.lon}, dims=['time','lat','lon'])
+
+        # # Sum MCS PF counts overtime to get number of hours
+        # mcspcpct = mcspcpmask.sum(dim='time')
 
         # Compute Epoch Time for the month
         months = np.zeros(1, dtype=int)
@@ -68,6 +76,7 @@ if __name__ == "__main__":
             'precipitation': (['time', 'lat', 'lon'], totprecip.expand_dims('time', axis=0).data),
             'mcs_precipitation': (['time', 'lat', 'lon'], mcsprecip.expand_dims('time', axis=0).data),
             'mcs_precipitation_count': (['time', 'lat', 'lon'], mcspcpct.expand_dims('time', axis=0).data),
+            'mcs_cloud_count': (['time', 'lat', 'lon'], mcscloudct.expand_dims('time', axis=0).data),
             'ntimes': (['time'], xr.DataArray(ntimes).expand_dims('time', axis=0).data),
         }
         coord_dict = {
@@ -95,6 +104,8 @@ if __name__ == "__main__":
         dsout.mcs_precipitation.attrs['units'] = 'mm'
         dsout.mcs_precipitation_count.attrs['long_name'] = 'Number of hours MCS precipitation is recorded'
         dsout.mcs_precipitation_count.attrs['units'] = 'hour'
+        dsout.mcs_cloud_count.attrs['long_name'] = 'Number of hours MCS cloud is recorded'
+        dsout.mcs_cloud_count.attrs['units'] = 'hour'
 
         fillvalue = np.nan
         # Set encoding/compression for all variables

@@ -101,8 +101,8 @@ if __name__ == "__main__":
 
     # Get map dimensions
     dspix = xr.open_dataset(pixel_files[0])
-    nx = dspix.dims['lon']
-    ny = dspix.dims['lat']
+    nx = dspix.sizes['lon']
+    ny = dspix.sizes['lat']
     lon = dspix.lon
     lat = dspix.lat
 
@@ -112,7 +112,7 @@ if __name__ == "__main__":
     initmonth = inittime.dt.month
     initday = inittime.dt.day
     # Get max track length
-    ntimes = stats.dims['times']
+    ntimes = stats.sizes['times']
 
     # Select track indices with initial time within the current month
     trackidx = stats['tracks'].where((initmonth == month), drop=True)
