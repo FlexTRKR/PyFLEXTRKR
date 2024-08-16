@@ -23,23 +23,23 @@ if __name__ == "__main__":
     # end_year = 2020
 
     # Submit job at run time
-    submit_job = True
+    submit_job = False
 
-    start_month = 4
-    end_month = 9
+    # start_month = 1
+    # end_month = 12
 
     # period = f"{start_year[0:4]}"
     task_type = f"mcs_tbze_quicklook"
 
     # Python analysis code name
-    code_dir = "/global/homes/f/feng045/program/PyFLEXTRKR/Analysis/"
+    code_dir = "/global/homes/f/feng045/program/PyFLEXTRKR-dev/Analysis/"
     python_codename = f"{code_dir}plot_subset_tbze_mcs_tracks_demo.py"
 
     # Tracking config file
-    config_dir = "/global/homes/f/feng045/program/PyFLEXTRKR/config/"
+    config_dir = "/global/homes/f/feng045/program/pyflex_config/config/"
     config_basename = "config_gridrad_mcs_"
 
-    fig_dir = "/global/cscratch1/sd/feng045/usa/gridrad_v2/quicklooks_maxze/"
+    fig_dir = "/pscratch/sd/f/feng045/usa/gridrad_v3/quicklooks_maxze/"
     figbasename = "mcs_"
     figsize = "10 13"
 
@@ -54,9 +54,20 @@ if __name__ == "__main__":
 
     # Loop over years
     for iyear in range(start_year, end_year+1):
-        sdate = f"{iyear}-{start_month:02}-01T00"
-        edate = f"{iyear}-{end_month:02}-01T00"
-        out_dir = f"{fig_dir}{iyear}{start_month:02}01_{iyear}{end_month:02}01/"
+        if iyear <= 2017:
+            start_month = 1
+            end_month = 12
+            sdate = f"{iyear}-12-01T00"
+            edate = f"{iyear+1}-01-01T00"
+        else:
+            start_month = 4
+            end_month = 9
+            sdate = f"{iyear}-{start_month:02}-01T00"
+            edate = f"{iyear}-{end_month:02}-01T00"
+        # sdate = f"{iyear}-{start_month:02}-01T00"
+        # edate = f"{iyear}-{end_month:02}-01T00"
+        # out_dir = f"{fig_dir}{iyear}{start_month:02}01_{iyear}{end_month:02}01/"
+        out_dir = f"{fig_dir}{iyear}/"
         config = f"{config_dir}/{config_basename}{iyear}.yml"
         print(sdate, edate)
         cmd = f"python {python_codename} -s {sdate} -e {edate} -c {config} " + \
@@ -85,12 +96,12 @@ if __name__ == "__main__":
     text = f"""\
         #!/bin/bash
         #SBATCH -J {task_type}
-        #SBATCH -A m1867
-        #SBATCH -t 00:30:00
+        #SBATCH -A m2637
+        #SBATCH -t 00:05:00
         #SBATCH -q regular
         #SBATCH -N 1
-        #SBATCH -n 64
-        #SBATCH -C haswell
+        #SBATCH -n 128
+        #SBATCH -C cpu
         #SBATCH --exclusive
         #SBATCH --output=log_{task_type}_%A_%a.log
         #SBATCH --mail-type=END
@@ -98,8 +109,7 @@ if __name__ == "__main__":
         #SBATCH --array=1-{ntasks}
 
         date
-        source activate flextrkr
-        # cd {code_dir}
+        source activate /global/common/software/m1867/python/pyflex
 
         # Takes a specified line ($SLURM_ARRAY_TASK_ID) from the task file
         LINE=$(sed -n "$SLURM_ARRAY_TASK_ID"p {task_filename})
