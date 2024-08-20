@@ -878,8 +878,14 @@ def get_composite_reflectivity_csapr_cacti(input_filename, config):
 
     # Read radar file
     ds = xr.open_dataset(input_filename)
-    # Reorder the dimensions using dimension names to [time, z, y, x]
-    ds = ds.transpose(time_dimname, z_dimname, y_dimname, x_dimname)
+    # Get dimension names from the file
+    dims_file = []
+    for key in ds.dims: dims_file.append(key)
+    # Find extra dimensions beyond [time, z, y, x]
+    dims_keep = [time_dimname, z_dimname, y_dimname, x_dimname]
+    dims_drop = list(set(dims_file) - set(dims_keep))
+    # Drop extra dimensions, reorder to [time, z, y, x]
+    ds = ds.drop_dims(dims_drop).transpose(time_dimname, z_dimname, y_dimname, x_dimname)
     # Create time_coords
     time_coords = ds[time_coordname]
     # Get data coordinates and dimensions
