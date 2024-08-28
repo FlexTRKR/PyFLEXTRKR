@@ -9,7 +9,7 @@ python calc_tbpf_mcs_monthly_rainmap.py config.yml 2018 8
 
 Each line will be submitted as a slurm job using Job Array.
 """
-import sys
+import sys, os
 import textwrap
 import subprocess
 import pandas as pd
@@ -26,20 +26,22 @@ if __name__ == "__main__":
     # data_source = 'gpm'
 
     # Submit job at run time
-    submit_job = True
+    submit_job = False
 
     period = f"{start_date[0:4]}-{end_date[0:4]}"
-    # task_type = f"mcs_monthly_rainmap_{data_source}_saag"
-    task_type = f"mcs_monthly_statsmap_{data_source}_saag"
+    task_type = f"mcs_monthly_rainmap_{data_source}"
+    # task_type = f"mcs_monthly_statsmap_{data_source}_saag"
 
     # Python analysis code name
-    code_dir = "/ccsopen/home/zhe1feng1/program/PyFLEXTRKR/Analysis/"
-    # python_codename = f"{code_dir}calc_tbpf_mcs_monthly_rainmap.py"
-    python_codename = f"{code_dir}calc_tbpf_mcs_monthly_statsmap.py"
+    # code_dir = "/ccsopen/home/zhe1feng1/program/PyFLEXTRKR/Analysis/"
+    code_dir = os.getcwd()
+    python_codename = f"{code_dir}/calc_tbpf_mcs_monthly_rainmap.py"
+    # python_codename = f"{code_dir}calc_tbpf_mcs_monthly_statsmap.py"
 
     # Tracking config file
-    config_dir = "/ccsopen/home/zhe1feng1/program/pyflex_config/"
-    config = f"{config_dir}config/config_{data_source}_mcs_saag_cu2_{period}.yml"
+    config_dir = "/global/homes/f/feng045/program/scream/config/"
+    # config_dir = "/global/homes/f/feng045/program/PyFLEXTRKR-dev/"
+    config = f"{config_dir}config_{data_source}.yml"
 
     # Make task and slurm file name
     task_filename = f"tasklist_{task_type}_{period}.txt"
@@ -66,11 +68,12 @@ if __name__ == "__main__":
     text = f"""\
         #!/bin/bash
         #SBATCH --job-name={period}
-        #SBATCH -A atm131
-        #SBATCH --time=02:00:00
-        #SBATCH -p batch_all
+        #SBATCH -A m1867
+        #SBATCH --time=00:10:00
+        #SBATCH -q regular
+        #SBATCH -C cpu
         #SBATCH -N 1
-        #SBATCH --ntasks=128
+        #SBATCH --cpus-per-task=128
         #SBATCH --exclusive
         #SBATCH --output=log_{task_type}_{period}_%A_%a.log
         #SBATCH --mail-type=END
@@ -78,7 +81,7 @@ if __name__ == "__main__":
         #SBATCH --array=1-{ntasks}
 
         date
-        # conda activate flextrkr
+        source activate /global/common/software/m1867/python/pyflex
         # cd {code_dir}
 
         # Takes a specified line ($SLURM_ARRAY_TASK_ID) from the task file
