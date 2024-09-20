@@ -44,9 +44,9 @@ def mainfunc():
     # https://catalog.data.gov/dataset/global-land-one-kilometer-base-elevation-globe-v-1
     source = '/global/cfs/cdirs/m1867/zfeng/globe_topography/ETOPO1_Ice_g_gmt4.nc'
     # Input radar data containing lat/lon grid
-    radar_file = '/global/cscratch1/sd/feng045/pyflextrkr_test/cell_radar/nexrad/input/KHGX20140807.120057.nc'
+    radar_file = '/pscratch/sd/f/feng045/demo/cell_radar/nexrad/input/KHGX20140807.120057.nc'
     # Output terrain rangemask filename
-    out_filename = '/global/cscratch1/sd/feng045/pyflextrkr_test/cell_radar/nexrad/Terrain_RangeMask.nc'
+    out_filename = '/pscratch/sd/f/feng045/demo/cell_radar/nexrad/intput/Terrain_RangeMask_new.nc'
     
     # Read sample radar data (gridded by PyART)
     # Drop dimensions ['time', 'nradar'], select lowest z level
@@ -91,7 +91,7 @@ def mainfunc():
     # Make output dataset
     ds_out = grid.copy()
     # Replace hgt_out coordinates with the input grid coordinates
-    ds_out['hgt'] = hgt_out.drop_vars(['longitude','latitude']).assign_coords({'y':grid['y'], 'x':grid['x']})
+    ds_out['hgt'] = hgt_out.assign_coords({'y':grid['y'], 'x':grid['x']})
 
     # Create range masks
     ds_out = create_mask(ds_out, grid)
