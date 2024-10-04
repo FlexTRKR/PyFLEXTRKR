@@ -260,7 +260,13 @@ def plot_map_2panels(pixel_dict, plot_info, map_info, track_dict):
     marker_style = dict(edgecolor=trackpath_color, facecolor=trackpath_color, linestyle='-', marker='o')
 
     # Set up map projection
-    proj = ccrs.PlateCarree(central_longitude=180)
+    # If longitude extent spans across 0 degree longitude, set central_longitude=0
+    # otherwise, set it to 180
+    if ((map_extent[0] < 0) & (map_extent[1] > 0)):
+        central_longitude = 0
+    else:
+        central_longitude = 180
+    proj = ccrs.PlateCarree(central_longitude=central_longitude)
     data_proj = ccrs.PlateCarree(central_longitude=0)
     land = cfeature.NaturalEarthFeature('physical', 'land', map_resolution)
     borders = cfeature.NaturalEarthFeature('cultural', 'admin_0_boundary_lines_land', map_resolution)
@@ -280,7 +286,7 @@ def plot_map_2panels(pixel_dict, plot_info, map_info, track_dict):
     cax1 = plt.subplot(gs_cb[0])
     cax2 = plt.subplot(gs_cb[1])
     # Figure title: time
-    fig.text(0.5, 0.96, timestr, fontsize=fontsize*1.4, ha='center')
+    fig.suptitle(timestr, fontsize=fontsize*1.4)
 
     #################################################################
     # Tb Panel

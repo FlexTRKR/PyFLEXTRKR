@@ -50,6 +50,9 @@ def parse_cmd_args():
     parser.add_argument("--figsize", nargs='+', help="figure size (width, height) in inches", type=float, default=[8,7])
     parser.add_argument("--output", help="ouput directory", default=None)
     parser.add_argument("--figbasename", help="output figure base name", default="")
+    parser.add_argument("--trackstats_file", help="MCS track stats file name", default=None)
+    parser.add_argument("--pixel_path", help="Pixel-level tracknumer mask files directory", default=None)
+    parser.add_argument("--time_format", help="Pixel-level file datetime format", default=None)
     args = parser.parse_args()
 
     # Put arguments in a dictionary
@@ -63,6 +66,9 @@ def parse_cmd_args():
         'figsize': args.figsize,
         'out_dir': args.output,
         'figbasename': args.figbasename,
+        'trackstats_file': args.trackstats_file,
+        'pixeltracking_path': args.pixel_path,
+        'time_format': args.time_format,
     }
 
     return args_dict
@@ -203,14 +209,17 @@ def plot_map(pixel_dict, plot_info, map_info, track_dict):
     levels = plot_info['levels']
     cmap = plot_info['cmap']
     # titles = plot_info['titles']
+    remove_oob_low = plot_info.get('remove_oob_low', False)
+    remove_oob_high = plot_info.get('remove_oob_high', False)
     cblabels = plot_info['cblabels']
     cbticks = plot_info['cbticks']
     marker_size = plot_info['marker_size']
+    tracknumber_fontsize = plot_info['tracknumber_fontsize']
     trackpath_linewidth = plot_info['trackpath_linewidth']
     trackpath_color = plot_info['trackpath_color']
     map_edgecolor = plot_info['map_edgecolor']
     map_resolution = plot_info['map_resolution']
-    map_central_lon = plot_info['map_central_lon']
+    # map_central_lon = plot_info['map_central_lon']
     timestr = plot_info['timestr']
     figname = plot_info['figname']
     figsize = plot_info['figsize']
@@ -227,7 +236,13 @@ def plot_map(pixel_dict, plot_info, map_info, track_dict):
     marker_style = dict(edgecolor=trackpath_color, facecolor=trackpath_color, linestyle='-', marker='o')
 
     # Set up map projection
-    proj = ccrs.PlateCarree(central_longitude=map_central_lon)
+    # If longitude extent spans across 0 degree longitude, set central_longitude=0
+    # otherwise, set it to 180
+    if ((map_extent[0] < 0) & (map_extent[1] > 0)):
+        central_longitude = 0
+    else:
+        central_longitude = 180
+    proj = ccrs.PlateCarree(central_longitude=central_longitude)
     data_proj = ccrs.PlateCarree()
     land = cfeature.NaturalEarthFeature('physical', 'land', map_resolution)
     borders = cfeature.NaturalEarthFeature('cultural', 'admin_0_boundary_lines_land', map_resolution)
@@ -250,7 +265,7 @@ def plot_map(pixel_dict, plot_info, map_info, track_dict):
     if draw_state == True:
         ax1.add_feature(states, edgecolor=map_edgecolor, facecolor='none', linewidth=0.8, zorder=3)
     # Grid lines
-    gl = ax1.gridlines(crs=data_proj, draw_labels=True, linestyle='--', linewidth=0.)
+    gl = ax1.gridlines(crs=data_proj, draw_labels=True, linestyle='--', linewidth=0.5)
     gl.right_labels = False
     gl.top_labels = False
     if (lonv is not None) & (latv is not None):
@@ -264,7 +279,11 @@ def plot_map(pixel_dict, plot_info, map_info, track_dict):
     # Plot variable
     cmap = plt.get_cmap(cmap)
     norm_ref = mpl.colors.BoundaryNorm(levels, ncolors=cmap.N, clip=True)
-    # fvar = np.ma.masked_where(fvar < min(levels), fvar)
+    # Remove out-of-bounds values
+    if (remove_oob_low):
+        fvar = np.ma.masked_where(fvar < min(levels), fvar)
+    if (remove_oob_high):
+        fvar = np.ma.masked_where(fvar > max(levels), fvar)
     cf1 = ax1.pcolormesh(xx, yy, fvar, norm=norm_ref, cmap=cmap, transform=data_proj, zorder=2)
     # Overplot tracknumber perimeters
     Tn = np.ma.masked_where(tn_perim == 0, tn_perim)
@@ -297,8 +316,11 @@ def plot_map(pixel_dict, plot_info, map_info, track_dict):
                 size_vals[0] = marker_size * 2   # Make start symbol size larger
                 cc = ax1.plot(meanlon.values[itrack,idx_cut], meanlat.values[itrack,idx_cut],
                               lw=trackpath_linewidth, ls='-', color=trackpath_color, transform=data_proj, zorder=3)
-                cl = ax1.scatter(meanlon.values[itrack,idx_cut], meanlat.values[itrack,idx_cut],
-                                 s=size_vals, transform=data_proj, zorder=4, **marker_style)
+                # cl = ax1.scatter(meanlon.values[itrack,idx_cut], meanlat.values[itrack,idx_cut],
+                #                  s=size_vals, transform=data_proj, zorder=4, **marker_style)
+                # Initiation location
+                cl1 = ax1.scatter(meanlon.values[itrack,0], meanlat.values[itrack,0], s=marker_size*2, 
+                                  transform=data_proj, zorder=4, **marker_style)
 
     # Overplot tracknumbers at current frame
     for ii in range(0, len(lon_tn)):
@@ -355,7 +377,10 @@ def work_for_time_loop(datafile, track_dict, map_info, plot_info, config):
     # perim_thick = 1
     # dilationstructure = np.zeros((perim_thick+1,perim_thick+1), dtype=int)
     # dilationstructure[1:perim_thick, 1:perim_thick] = 1
-    dilationstructure = generate_binary_structure(2,1)
+    # dilationstructure = generate_binary_structure(2,1)
+    perim_width = plot_info['perim_width']
+    dilationstructure = np.zeros((perim_width+1,perim_width+1), dtype=int)
+    dilationstructure[1:perim_width, 1:perim_width] = 1
 
     # Data variable names
     field_varname = config["field_varname"]
@@ -435,20 +460,53 @@ if __name__ == "__main__":
     figsize = args_dict.get('figsize')
     out_dir = args_dict.get('out_dir')
     figbasename = args_dict.get('figbasename')
+    trackstats_file = args_dict.get('trackstats_file')
+    pixeltracking_path = args_dict.get('pixeltracking_path')
+    time_format = args_dict.get('time_format')
+
+    if time_format is None: time_format = "yyyymodd_hhmmss"
+
+    # Determine the figsize based on lat/lon ratio
+    if (figsize is None):
+        # If map_extent is specified, calculate aspect ratio
+        if (map_extent is not None):
+            # Get map aspect ratio from map_extent (minlon, maxlon, minlat, maxlat)
+            lon_span = map_extent[1] - map_extent[0]
+            lat_span = map_extent[3] - map_extent[2]
+            fig_ratio_yx = lat_span / lon_span
+
+            figsize_x = 12
+            figsize_y = figsize_x * fig_ratio_yx
+            figsize_y = float("{:.2f}".format(figsize_y))  # round to 2 decimal digits
+            figsize = [figsize_x, figsize_y]
+        else:
+            figsize = [10, 10]
 
     # Specify plotting info
+    # cmap = 'RdBu_r',   # colormap
+    # levels = np.arange(-4, 4.01, 0.2),  # shading levels
+    # cbticks = np.arange(-4, 4.01, 1),  # colorbar ticks
+    # cblabels = 'Z500 Anomaly (m$^{2}$ s$^{-1}$)',  # colorbar label
+    cmap = 'gist_ncar'   # colormap
+    levels = np.arange(0, 70.01, 5)  # shading levels
+    cbticks = np.arange(0, 70.01, 10)  # colorbar ticks
+    cblabels = 'Reflectivity (dBZ)'  # colorbar label
     plot_info = {
         'fontsize': 13,     # plot font size
-        'cmap': 'RdBu_r',   # colormap
-        'levels': np.arange(-4, 4.01, 0.2),  # shading levels
-        'cbticks': np.arange(-4, 4.01, 1),  # colorbar ticks
-        'cblabels': 'Z500 Anomaly (m$^{2}$ s$^{-1}$)',  # colorbar label
-        'marker_size': 8,   # track symbol marker size
+        'cmap': cmap,
+        'levels': levels,
+        'cbticks': cbticks, 
+        'cblabels': cblabels,
+        'remove_oob_low': True,   # mask out-of-bounds low values (< min(levels))
+        'remove_oob_high': False,  # mask out-of-bounds high values (> max(levels))
+        'marker_size': 10,   # track symbol marker size
+        'tracknumber_fontsize': 10,
+        'perim_width': 6,  # width of the track feature perimeter (number of pixels)
         'trackpath_linewidth': 1.5, # track path line width
         'trackpath_color': 'blueviolet',    # track path color
         'map_edgecolor': 'gray',    # background map edge color
-        'map_resolution': '110m',   # background map resolution ('110m', '50m', 10m')
-        'map_central_lon': 180,     # map projection central longitude (for global map)
+        'map_resolution': '50m',   # background map resolution ('110m', '50m', 10m')
+        # 'map_central_lon': 180,     # map projection central longitude (for global map)
         'figsize': figsize,
         'figbasename': figbasename,
     }
@@ -462,16 +520,9 @@ if __name__ == "__main__":
         'subset': subset,
         'lonv': lonv,
         'latv': latv,
-        'draw_border': False,
-        'draw_state': False,
+        'draw_border': True,
+        'draw_state': True,
     }
-
-    # Tracks that end longer than this threshold from the current pixel-level frame are not plotted
-    # This treshold controls the time window to retain previous tracks
-    track_retain_time_min = 60
-
-    # Create a timedelta threshold in minutes
-    dt_thres = datetime.timedelta(minutes=track_retain_time_min)
 
     # Track stats file
     config = load_config(config_file)
@@ -483,12 +534,24 @@ if __name__ == "__main__":
     startdate = config["startdate"]
     enddate = config["enddate"]
     n_workers = config["nprocesses"]
+    datatimeresolution = config["datatimeresolution"]  # hour
 
-    # If finalstats_filebase is present, use it (links merge/split tracks)
-    if finalstats_filebase is None:
-        trackstats_file = f"{stats_path}{trackstats_filebase}{startdate}_{enddate}.nc"
-    else:
-        trackstats_file = f"{stats_path}{finalstats_filebase}{startdate}_{enddate}.nc"
+    # Tracks that end longer than this threshold from the current pixel-level frame are not plotted
+    # This treshold controls the time window to retain previous tracks
+    track_retain_time_min = (datatimeresolution * 60)
+
+    # Create a timedelta threshold in minutes
+    dt_thres = datetime.timedelta(minutes=track_retain_time_min)
+
+    # If trackstats_file is not specified
+    if trackstats_file is None:
+        # If finalstats_filebase is present, use it (links merge/split tracks)
+        if finalstats_filebase is None:
+            trackstats_file = f"{stats_path}{trackstats_filebase}{startdate}_{enddate}.nc"
+        else:
+            trackstats_file = f"{stats_path}{finalstats_filebase}{startdate}_{enddate}.nc"
+    if pixeltracking_path is None:
+        pixeltracking_path = f"{config['root_path']}{config['pixel_path_name']}/{startdate}_{enddate}/"
 
     # Output figure directory
     if out_dir is None:

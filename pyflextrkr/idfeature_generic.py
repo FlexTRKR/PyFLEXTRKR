@@ -7,6 +7,7 @@ import pandas as pd
 import logging
 from scipy.ndimage import label
 from pyflextrkr.ftfunctions import sort_renumber, skimage_watershed
+from pyflextrkr.ft_utilities import get_timestamp_from_filename_single
 
 def idfeature_generic(
     input_filename,
@@ -28,6 +29,8 @@ def idfeature_generic(
     np.set_printoptions(threshold=np.inf)
     logger = logging.getLogger(__name__)
 
+    databasename = config.get("databasename")
+    time_format = config.get("time_format")
     feature_varname = config.get("feature_varname", "feature_number")
     nfeature_varname = config.get("nfeature_varname", "nfeatures")
     featuresize_varname = config.get("featuresize_varname", "npix_feature")
@@ -54,7 +57,7 @@ def idfeature_generic(
     ds = xr.open_dataset(input_filename, mask_and_scale=False)
     # Get dimension names from the file
     dims_file = []
-    for key in ds.dims: dims_file.append(key)
+    for key in ds.sizes: dims_file.append(key)
     # Find extra dimensions beyond [time, z, y, x]
     dims_keep = [time_dimname, z_dimname, y_dimname, x_dimname]
     dims_drop = list(set(dims_file) - set(dims_keep))
@@ -70,8 +73,28 @@ def idfeature_generic(
             time_dimname, y_dimname, x_dimname, missing_dims='ignore',
         )
 
+    # Check if time dimension exists in the DataSet
+    if time_dimname not in ds.sizes:
+        # Add a 'time' dimension with size 1 to all variables
+        ds = ds.expand_dims(time_dimname, axis=0)
+
+    # Check if time coordinate exists in the DataSet
+    if time_coordname not in ds:
+        # Handle no time coordinate in Dataset
+        logger.warning(f'No time coordinate: {time_coordname} found in input data')
+        logger.warning(f'Will estimate time from filename based on time_format in config: {time_format}')
+        # Get Timestamp from filename
+        file_timestamp = get_timestamp_from_filename_single(
+            input_filename, databasename, time_format=time_format,
+        )
+        # Add Timestamp coordinate to the Dataset
+        ds = ds.assign_coords({time_coordname:file_timestamp})
+        # Add time dimension to all variables in the Dataset
+        ds = xr.concat([ds], dim=time_dimname)
+        logger.debug(f'Added Timestamp: {file_timestamp} calculated from filename to the input data')
+
     # Read data variables
-    ntimes = ds.dims[time_dimname]
+    ntimes = ds.sizes[time_dimname]
     x_coord = ds.coords[x_coordname]
     y_coord = ds.coords[y_coordname]
     time_decode = ds[time_coordname]
