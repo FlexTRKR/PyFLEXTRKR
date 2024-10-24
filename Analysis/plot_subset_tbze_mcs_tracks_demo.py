@@ -488,7 +488,11 @@ def work_for_time_loop(datafile, track_dict, map_info, plot_info, config):
     # Tracknumber color levels for MCS masks (limit to 256 to fit in a colormap)
     tracknumbers = track_dict['lifetime'].tracks
     tn_nlev = np.min([len(tracknumbers), 256])
-    tn_levels = np.linspace(np.min(tracknumbers)+1, np.max(tracknumbers)+1, tn_nlev)
+    if tn_nlev > 1:
+        tn_levels = np.linspace(np.min(tracknumbers)+1, np.max(tracknumbers)+1, tn_nlev)
+    else:
+        # If only 1 track, add another level for color fill
+        tn_levels = np.linspace(np.min(tracknumbers)+1, np.max(tracknumbers)+2, tn_nlev+1)
     # Add to plot_info dictionary
     plot_info['levels']['tn_levels'] = tn_levels
 

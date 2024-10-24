@@ -48,7 +48,6 @@ def parse_cmd_args():
     parser.add_argument("-s", "--start", help="first time in time series to plot, format=YYYY-mm-ddTHH:MM:SS", required=True)
     parser.add_argument("-e", "--end", help="last time in time series to plot, format=YYYY-mm-ddTHH:MM:SS", required=True)
     parser.add_argument("-c", "--config", help="yaml config file for tracking", required=True)
-    parser.add_argument("-o", "--orientation", help="panel orientation ('vertical' or 'horizontal')", required=True)
     parser.add_argument("-p", "--parallel", help="flag to run in parallel (0:serial, 1:parallel)", type=int, default=0)
     parser.add_argument("--extent", nargs='+', help="map extent (lonmin, lonmax, latmin, latmax)", type=float, default=None)
     parser.add_argument("--subset", help="flag to subset data (0:no, 1:yes)", type=int, default=0)
@@ -66,7 +65,6 @@ def parse_cmd_args():
         'end_datetime': args.end,
         'run_parallel': args.parallel,
         'config_file': args.config,
-        'panel_orientation': args.orientation,
         'extent': args.extent,
         'subset': args.subset,
         'figsize': args.figsize,
@@ -248,7 +246,6 @@ def plot_map_2panels(pixel_dict, plot_info, map_info, track_dict):
     figname = plot_info['figname']
     figsize = plot_info['figsize']
     dpi = plot_info['dpi']
-    panel_orientation = plot_info['panel_orientation']
     # Map domain, lat/lon ticks, background map features
     map_extent = map_info['map_extent']
     lonv = map_info.get('lonv', None)
@@ -263,7 +260,13 @@ def plot_map_2panels(pixel_dict, plot_info, map_info, track_dict):
     marker_style = dict(edgecolor=trackpath_color, facecolor=trackpath_color, linestyle='-', marker='o')
 
     # Set up map projection
-    proj = ccrs.PlateCarree(central_longitude=180)
+    # If longitude extent spans across 0 degree longitude, set central_longitude=0
+    # otherwise, set it to 180
+    if ((map_extent[0] < 0) & (map_extent[1] > 0)):
+        central_longitude = 0
+    else:
+        central_longitude = 180
+    proj = ccrs.PlateCarree(central_longitude=central_longitude)
     data_proj = ccrs.PlateCarree(central_longitude=0)
     land = cfeature.NaturalEarthFeature('physical', 'land', map_resolution)
     borders = cfeature.NaturalEarthFeature('cultural', 'admin_0_boundary_lines_land', map_resolution)
@@ -283,7 +286,7 @@ def plot_map_2panels(pixel_dict, plot_info, map_info, track_dict):
     cax1 = plt.subplot(gs_cb[0])
     cax2 = plt.subplot(gs_cb[1])
     # Figure title: time
-    fig.text(0.5, 0.96, timestr, fontsize=fontsize*1.4, ha='center')
+    fig.suptitle(timestr, fontsize=fontsize*1.4)
 
     #################################################################
     # Tb Panel
@@ -513,7 +516,6 @@ if __name__ == "__main__":
     end_datetime = args_dict.get('end_datetime')
     run_parallel = args_dict.get('run_parallel')
     config_file = args_dict.get('config_file')
-    panel_orientation = args_dict.get('panel_orientation')
     map_extent = args_dict.get('extent')
     subset = args_dict.get('subset')
     figsize = args_dict.get('figsize')
@@ -584,7 +586,6 @@ if __name__ == "__main__":
         'map_central_lon': 180,
         'figsize': figsize,
         'figbasename': figbasename,
-        'panel_orientation': panel_orientation,
     }
 
     # Customize lat/lon labels
@@ -596,7 +597,6 @@ if __name__ == "__main__":
         'subset': subset,
         'lonv': lonv,
         'latv': latv,
-        'panel_orientation': panel_orientation,
         'draw_border': False,
         'draw_state': False,
     }

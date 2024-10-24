@@ -54,6 +54,8 @@ def parse_cmd_args():
     parser.add_argument("--figbasename", help="output figure base name", default="")
     parser.add_argument("--figsize", nargs='+', help="figure size (width, height) in inches", type=float, default=[8,7])
     parser.add_argument("--output", help="ouput directory", default=None)
+    parser.add_argument("--time_format", help="Pixel-level file datetime format", default="yyyymodd_hhmmss")
+    parser.add_argument("--varname", help="Variable name for plotting in pixel files", default="dbz_comp")
     args = parser.parse_args()
 
     # Put arguments in a dictionary
@@ -69,6 +71,8 @@ def parse_cmd_args():
         'figbasename': args.figbasename,
         'figsize': args.figsize,
         'out_dir': args.output,
+        'time_format': args.time_format,
+        'varname': args.varname,
     }
 
     return args_dict
@@ -526,9 +530,11 @@ if __name__ == "__main__":
     figbasename = args_dict.get('figbasename')
     figsize = args_dict.get('figsize')
     out_dir = args_dict.get('out_dir')
+    time_format = args_dict.get('time_format')
+    varname_fill = args_dict.get('varname')
 
     # Specify plotting info
-    varname_fill = 'dbz_comp'
+    # varname_fill = 'dbz_comp'
     # varname_fill = 'echotop10'
     var_scale = 1     # scale factor for the variable
     # var_scale = 1e-3    # scale factor for the variable
@@ -618,7 +624,7 @@ if __name__ == "__main__":
         pixeltracking_filebase,
         start_basetime,
         end_basetime,
-        time_format="yyyymodd_hhmmss",
+        time_format=time_format,
     )
     print(f'Number of pixel files: {len(datafiles)}')
 
