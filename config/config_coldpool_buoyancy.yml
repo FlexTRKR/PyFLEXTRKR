@@ -61,7 +61,7 @@ label_method: 'skimage.watershed'
 # Buoyancy parameters
 buoy_thresh: -0.005  # [m/s^2]
 min_cp_depth: 400.  # [m]
-buoy_smooth_sigma: 1  # Gaussian smoothing sigma for cold pool intensity
+buoy_smooth_sigma: 1.5  # Gaussian smoothing sigma for cold pool intensity
 # peak_local_max parameters
 plm_min_distance: 20   # min_distance - distance buffer between maxima; num grid points
 plm_exclude_border: 5   # exclude_border - distance buffer between maxima and the domain sides; num grid points

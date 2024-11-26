@@ -92,7 +92,7 @@ def calc_coldpool_intensity(buoy, zz, threshold=-0.005, min_cp_depth=0):
             # Check if it exceeds min coldpool depth
             if z_depth > min_cp_depth:
                 # Vertically integrate buoyancy
-                integrated_buoyancy = integrate.simpson(buoy_profile[kbot:ktopp1], zz_profile[kbot:ktopp1])
+                integrated_buoyancy = integrate.simpson(buoy_profile[kbot:ktopp1], x=zz_profile[kbot:ktopp1])
                 # integrated_buoyancy = integrate.simps(buoy_profile[kbot:ktopp1], zz_profile[kbot:ktopp1])
                 # depthpool[jpool[m], ipool[m]] = zz[ktop-kbot, jpool[m], ipool[m]]
                 # depth_base[jpool[m], ipool[m]] = zz[kbot, jpool[m], ipool[m]]
