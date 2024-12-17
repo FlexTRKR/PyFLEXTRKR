@@ -39,9 +39,12 @@ if __name__ == '__main__':
         client = Client(cluster)
         client.run(setup_logging)
     elif config['run_parallel'] == 2:
-        # Dask-MPI
-        scheduler_file = os.path.join(os.environ["SCRATCH"], "scheduler.json")
+        # Dask scheduler
+        # Get the scheduler filename from input argument
+        scheduler_file = sys.argv[2]
+        timeout = config.get("timeout", 120)
         client = Client(scheduler_file=scheduler_file)
+        # client.wait_for_workers(n_workers=n_workers, timeout=timeout)
         client.run(setup_logging)
     else:
         logger.info(f"Running in serial.")
