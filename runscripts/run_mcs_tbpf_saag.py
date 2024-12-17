@@ -49,9 +49,12 @@ if __name__ == '__main__':
         client = Client(cluster)
         client.run(setup_logging)
     elif config['run_parallel'] == 2:
-        # Dask-MPI
-        scheduler_file = os.path.join(os.environ["SCRATCH"], "scheduler.json")
+        # Dask scheduler
+        # Get the scheduler filename from input argument
+        scheduler_file = sys.argv[2]
+        timeout = config.get("timeout", 120)
         client = Client(scheduler_file=scheduler_file)
+        # client.wait_for_workers(n_workers=n_workers, timeout=timeout)
         client.run(setup_logging)
     else:
         logger.info(f"Running in serial.")
@@ -91,7 +94,7 @@ if __name__ == '__main__':
         # Map Tb-only MCS track numbers to pixel files (provide outpath_basename keyword)
         # mapfeature_driver(config, trackstats_filebase=mcstbstats_filebase, outpath_basename=mcstbmap_outpath)
         # Map all Tb track numbers to pixel level files (provide outpath_basename keyword)
-        # mapfeature_driver(config, trackstats_filebase, outpath_basename=alltrackmap_outpath)
+        # mapfeature_driver(config, trackstats_filebase=trackstats_filebase, outpath_basename=alltrackmap_outpath)
 
     # Step 9 - Movement speed calculation
     if config['run_speed']:
