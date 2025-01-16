@@ -36,6 +36,16 @@ warnings.filterwarnings("ignore")
 from pyflextrkr.ft_utilities import load_config, subset_files_timerange
 
 #-----------------------------------------------------------------------
+def four_floats(value):
+    # Split string by ' '
+    values = value.split(' ')
+    if len(values) != 4:
+        raise argparse.ArgumentError
+    # Convert list to array and type to float
+    values = np.array(values).astype(float)
+    return values
+
+#-----------------------------------------------------------------------
 def parse_cmd_args():
     # Define and retrieve the command-line arguments...
     parser = argparse.ArgumentParser(
@@ -45,7 +55,8 @@ def parse_cmd_args():
     parser.add_argument("-e", "--end", help="last time in time series to plot, format=YYYY-mm-ddTHH:MM:SS", required=True)
     parser.add_argument("-c", "--config", help="yaml config file for tracking", required=True)
     parser.add_argument("-p", "--parallel", help="flag to run in parallel (0:serial, 1:parallel)", type=int, default=0)
-    parser.add_argument("--extent", nargs='+', help="map extent (lonmin, lonmax, latmin, latmax)", type=float, default=None)
+    # parser.add_argument("--extent", nargs='+', help="map extent (lonmin, lonmax, latmin, latmax)", type=float, default=None)
+    parser.add_argument("--extent", help="map extent (lonmin lonmax latmin latmax)", type=four_floats, action='store', default=None)
     parser.add_argument("--subset", help="flag to subset data (0:no, 1:yes)", type=int, default=0)
     parser.add_argument("--figsize", nargs='+', help="figure size (width, height) in inches", type=float, default=[8,7])
     parser.add_argument("--output", help="ouput directory", default=None)
@@ -195,9 +206,9 @@ def plot_map(pixel_dict, plot_info, map_info, track_dict):
     yy = pixel_dict['latitude']
     fvar = pixel_dict['fvar']
     tn_perim = pixel_dict['tn_perim']
-    lon_tn = pixel_dict['lon_tn']
-    lat_tn = pixel_dict['lat_tn']
-    tracknumbers = pixel_dict['tracknumber_unique']
+    # lon_tn = pixel_dict['lon_tn']
+    # lat_tn = pixel_dict['lat_tn']
+    # tracknumbers = pixel_dict['tracknumber_unique']
     # Get track data from dictionary
     ntracks = track_dict['ntracks']
     lifetime = track_dict['lifetime']
@@ -219,7 +230,6 @@ def plot_map(pixel_dict, plot_info, map_info, track_dict):
     trackpath_color = plot_info['trackpath_color']
     map_edgecolor = plot_info['map_edgecolor']
     map_resolution = plot_info['map_resolution']
-    # map_central_lon = plot_info['map_central_lon']
     timestr = plot_info['timestr']
     figname = plot_info['figname']
     figsize = plot_info['figsize']
@@ -231,6 +241,9 @@ def plot_map(pixel_dict, plot_info, map_info, track_dict):
     latv = map_info['latv']
     draw_border = map_info.get('draw_border', False)
     draw_state = map_info.get('draw_state', False)
+
+    # Time difference matching pixel-time and track time
+    dt_match = 1  # [min]
 
     # Marker style for track center
     marker_style = dict(edgecolor=trackpath_color, facecolor=trackpath_color, linestyle='-', marker='o')
@@ -297,6 +310,7 @@ def plot_map(pixel_dict, plot_info, map_info, track_dict):
     for itrack in range(0, ntracks):
         # Get duration of the track
         ilifetime = lifetime.values[itrack]
+        itracknum = lifetime.tracks.data[itrack]+1
         idur = (ilifetime / time_res).astype(int)
         # Get basetime of the track and the last time
         ibt = base_time.values[itrack,:idur]
@@ -322,10 +336,25 @@ def plot_map(pixel_dict, plot_info, map_info, track_dict):
                 cl1 = ax1.scatter(meanlon.values[itrack,0], meanlat.values[itrack,0], s=marker_size*2, 
                                   transform=data_proj, zorder=4, **marker_style)
 
-    # Overplot tracknumbers at current frame
-    for ii in range(0, len(lon_tn)):
-        ax1.text(lon_tn[ii]+0.02, lat_tn[ii]+0.02, f'{tracknumbers[ii]:.0f}', color='k', size=10, 
-                 weight='bold', ha='left', va='center', transform=data_proj, zorder=4)
+        # Find the closest time from track times
+        idt = np.abs((ibt - pixel_bt).astype('timedelta64[m]'))
+        idx_match = np.argmin(idt)
+        idt_match = idt[idx_match]
+        # Get center lat/lon from the matched tracks
+        _ilon = meanlon.data[itrack,idx_match]
+        _ilat = meanlat.data[itrack,idx_match]
+        # Proceed if time difference is < dt_match
+        if (idt_match < dt_match):
+            # Overplot tracknumbers at current frame
+            if (_ilon > map_extent[0]) & (_ilon < map_extent[1]) & \
+                (_ilat > map_extent[2]) & (_ilat < map_extent[3]):
+                ax1.text(_ilon+0.02, _ilat+0.02, f'{itracknum:.0f}', color='k', size=tracknumber_fontsize,
+                         ha='left', va='center', weight='bold', transform=data_proj, zorder=5)
+
+    # # Overplot tracknumbers at current frame
+    # for ii in range(0, len(lon_tn)):
+    #     ax1.text(lon_tn[ii]+0.02, lat_tn[ii]+0.02, f'{tracknumbers[ii]:.0f}', color='k', size=10, 
+    #              weight='bold', ha='left', va='center', transform=data_proj, zorder=4)
 
     # Thread-safe figure output
     canvas = FigureCanvas(fig)
@@ -507,7 +536,6 @@ if __name__ == "__main__":
         'trackpath_color': 'blueviolet',    # track path color
         'map_edgecolor': 'gray',    # background map edge color
         'map_resolution': '50m',   # background map resolution ('110m', '50m', 10m')
-        # 'map_central_lon': 180,     # map projection central longitude (for global map)
         'figsize': figsize,
         'figbasename': figbasename,
     }
