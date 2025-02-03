@@ -49,6 +49,11 @@ def idclouds_tbpf(
     # minimum and maximum brightness temperature thresholds. data outside of this range is filtered
     mintb_thresh = config['absolutetb_threshs'][0]
     maxtb_thresh = config['absolutetb_threshs'][1]
+
+    # Periodic boundary conditions 
+    pbc_direction  = config.get('pbc_direction', 'none')   #options are 'x', 'y', 'both' and 'none'
+    extended_fraction = config.get('extended_fraction', 1) 
+
     # Get Tb thresholds
     thresh_core = config['cloudtb_core']
     thresh_cold = config['cloudtb_cold']
@@ -245,6 +250,14 @@ def idclouds_tbpf(
                 # Determine number of missing data
                 missingcount = np.count_nonzero(np.isnan(out_ir))
                 ny, nx = np.shape(out_ir)
+
+
+                # if pbc_direction!='none':
+                #     # Step 2: Extend and pad data
+                #     out_ir = pad_and_extend(out_ir, config)
+
+
+
                 # Proceed if fraction of missing data does not exceed threshold
                 if np.divide(missingcount, (ny * nx)) < miss_thresh:
                     ######################################################
@@ -271,14 +284,16 @@ def idclouds_tbpf(
                         logger.critical(f"ERROR: Unknown cloudidmethod: {cloudidmethod}")
                         logger.critical("Tracking will now exit.")
                         sys.exit()
+                    
 
+                    import pdb; pdb.set_trace()
                     ######################################################
                     # Separate output into the separate variables
                     final_nclouds = np.array([clouddata["final_nclouds"]])
-                    final_ncorepix = clouddata["final_ncorepix"]
-                    final_ncoldpix = clouddata["final_ncoldpix"]
+                    # final_ncorepix = clouddata["final_ncorepix"] not used
+                    # final_ncoldpix = clouddata["final_ncoldpix"] not used
                     final_ncorecoldpix = clouddata["final_ncorecoldpix"]
-                    final_nwarmpix = clouddata["final_nwarmpix"]
+                    # final_nwarmpix = clouddata["final_nwarmpix"] not used
                     final_cloudtype = np.array([clouddata["final_cloudtype"]])
                     final_cloudnumber = np.array([clouddata["final_cloudnumber"]])
                     final_convcold_cloudnumber = np.array(
