@@ -210,7 +210,7 @@ def label_and_grow_cold_clouds(
     else:
         #################################################
         # Label regions with cold anvils and cores
-        corecold_flag = core_flag + coldanvil_flag
+        # corecold_flag = core_flag + coldanvil_flag not used
         corecold_number2d, ncorecold = label(coldanvil_flag)
 
         ##########################################################
@@ -401,14 +401,14 @@ def label_and_grow_cold_clouds(
             ##############################################################################
             # Save final matrices
             final_corecoldwarmnumber = np.copy(labelcorecoldwarm_number2d)
-            final_ncorecoldwarmpix = np.copy(ncorecoldwarmpix)
+            # final_ncorecoldwarmpix = np.copy(ncorecoldwarmpix) not used
             final_nwarmpix = ncorecoldwarmpix - final_ncorecoldpix
 
         #######################################################################
         # If not expanding to warm anvil just copy core-cold data
         else:
             final_corecoldwarmnumber = np.copy(final_corecoldnumber)
-            final_ncorecoldwarmpix = np.copy(final_ncorecoldpix)
+            # final_ncorecoldwarmpix = np.copy(final_ncorecoldpix) not used
 
     ##################################################################
     # Output data. Only done if core-cold exist in this file
