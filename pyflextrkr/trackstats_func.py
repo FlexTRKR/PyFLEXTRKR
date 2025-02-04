@@ -47,6 +47,7 @@ def calc_stats_singlefile(
     terrain_file = config.get("terrain_file", None)
     rangemask_varname = config.get("rangemask_varname", 'None')
     feature_varname = config.get("feature_varname", "feature_number")
+    pbc_direction = config.get("pbc_direction", "none")
 
     # Only process file if that file contains a track
     if np.nanmax(tracknumbers) > 0:
@@ -206,15 +207,46 @@ def calc_stats_singlefile(
             corecold_npix, corecold_indices = get_loc_indices(
                 cloudnumber1d_uniq, cloudnumber1d_counts,
                 ast_corecoldarea, cumcounts_corecoldarea,
-                cloudnumber_map, nx, ny,
+                cloudnumber_map, nx, ny
             )
 
             if corecold_npix > 0:
                 out_area[itrack] = corecold_npix * pixel_radius ** 2
                 corecold_lat = latitude[corecold_indices[0], corecold_indices[1]]
                 corecold_lon = longitude[corecold_indices[0], corecold_indices[1]]
-                out_meanlon[itrack] = np.nanmean(corecold_lon)
-                out_meanlat[itrack] = np.nanmean(corecold_lat)
+                # Calculate ranges based on coordinate space rather than grid size
+                lon_range = np.ptp(longitude)  # Total range of longitude values
+                lat_range = np.ptp(latitude)   # Total range of latitude values
+
+                if pbc_direction in ['x', 'y', 'both']:
+                    # Adjust for x-direction wrap-around
+                    if pbc_direction in ['x', 'both']:
+                        lon_diff = np.ptp(corecold_lon)
+                        if lon_diff > (lon_range / 2):
+                            corecold_lon = np.where(corecold_lon < (lon_range / 2), corecold_lon + lon_range, corecold_lon)
+                    
+                    # Adjust for y-direction wrap-around
+                    if pbc_direction in ['y', 'both']:
+                        lat_diff = np.ptp(corecold_lat)
+                        if lat_diff > (lat_range / 2):
+                            corecold_lat = np.where(corecold_lat < (lat_range / 2), corecold_lat + lat_range, corecold_lat)
+                    
+                    # Calculate the mean positions, wrap values back to domain range
+                    # print('meanval lon raw, meanval lon adjs')
+                    # print(np.nanmean(corecold_lon) ,np.nanmean(corecold_lon) % lon_range)
+                    mean_lon = np.nanmean(corecold_lon) % lon_range
+                    mean_lat = np.nanmean(corecold_lat) % lat_range
+                else:
+                    # Direct calculation without wrap-around adjustment
+                    mean_lon = np.nanmean(corecold_lon)
+                    mean_lat = np.nanmean(corecold_lat)
+                
+                # Store the calculated mean positions
+                out_meanlon[itrack] = mean_lon
+                out_meanlat[itrack] = mean_lat
+
+                # out_meanlon[itrack] = np.nanmean(corecold_lon)
+                # out_meanlat[itrack] = np.nanmean(corecold_lat)
 
                 # Calculate feature specific statistics
                 # Satellite Tb
@@ -409,7 +441,160 @@ def calc_stats_singlefile(
 
 
 
+################################################################################
 
+
+def handle_pbc_features(cloud_indices, current_mean_lat, current_mean_lon, nx,ny, config):
+    """
+    Adjust feature positions considering periodic boundary conditions.
+
+    Args:
+        cloud_indices: tuple of numpy arrays
+            Indices of the cloud feature in 2D space.
+        current_mean_lat: float
+            Current calculated mean latitude for the feature.
+        current_mean_lon: float
+            Current calculated mean longitude for the feature.
+        ds: xarray Dataset
+            Dataset containing latitude and longitude sizes.
+        config: dictionary
+            Configuration dictionary containing PBC and feature information.
+
+    Returns:
+        Tuple of (adjusted_mean_lat, adjusted_mean_lon).
+    """
+    
+    pbc_direction = config['pbc_direction']
+    print('raw mean lon and lat')
+    print(current_mean_lon,current_mean_lat)
+
+    # If PBC in the x-direction
+    if pbc_direction in ['x', 'both']:
+        x_indices = cloud_indices[1]
+        
+        if (x_indices.max() - x_indices.min()) > nx / 2:
+            print('meet condition')
+            x_indices[x_indices < nx / 2] += nx
+            # print(x_indices )
+            print(' nx'); print(nx)
+
+            # Compute new mean considering periodicity
+            adjusted_mean_lon = np.nanmean(x_indices) % nx
+            print('adjusted lon')
+            print(adjusted_mean_lon)
+        else:
+            adjusted_mean_lon = current_mean_lon
+
+    # If PBC in the y-direction
+    if pbc_direction in ['y', 'both']:
+        y_indices = cloud_indices[0]
+        if (y_indices.max() - y_indices.min()) > ny / 2:
+            print('meet Y condition')
+            y_indices[y_indices < ny / 2] += ny
+            # print(y_indices )
+            # Compute new mean considering periodicity
+            adjusted_mean_lat = np.nanmean(y_indices) % ny
+            print('adjusted lat')
+            print(adjusted_mean_lat)
+        else:
+            print('doesnt meet Y condition')
+            adjusted_mean_lat = current_mean_lat
+    print('adjusted mean lon and lat')
+    print(adjusted_mean_lon,adjusted_mean_lat)
+
+    return adjusted_mean_lat, adjusted_mean_lon
+
+
+def calc_stats_with_pbc(
+        tracknumbers,
+        cloudidfile,
+        trackstatus,
+        trackmerge,
+        tracksplit,
+        trackreset,
+        config):
+    """
+    Wrapper function for calculating statistics considering periodic boundary conditions.
+
+    Args:
+        tracknumbers: numpy array
+            Cloud track numbers.
+        cloudidfile: string
+            Cloud ID filename.
+        trackstatus: numpy array
+            Status of each cloud track.
+        trackmerge: numpy array
+            Track numbers that the small clouds merge into.
+        tracksplit: numpy array
+            Track numbers that the small clouds split from.
+        trackreset: numpy array
+            Flag of track starts and abrupt track stops.
+        config: dictionary
+            Configuration dictionary with settings.
+
+    Returns:
+        out_dict: dictionary containing track statistics data.
+        out_dict_attrs: dictionary containing attributes of track statistics data.
+    """
+    logger = logging.getLogger(__name__)
+
+    tracking_outpath = config["tracking_outpath"]
+    feature_varname = config.get("feature_varname", "feature_number")
+
+    # Only process file if that file contains a track
+    if np.nanmax(tracknumbers) > 0:
+        fname = chartostring(cloudidfile).item()
+        logger.info(fname)
+        # Load cloudid file
+        cloudid_file = f"{tracking_outpath}{fname}"
+        ds = xr.open_dataset(cloudid_file,
+                             mask_and_scale=False,
+                             decode_times=False)
+        
+        nx, ny = ds.sizes["lon"], ds.sizes["lat"]
+        file_corecold_cloudnumber = ds[feature_varname].squeeze().values
+
+        # Call the existing single file stats function
+        out_dict, out_dict_attrs = calc_stats_singlefile(
+            tracknumbers, cloudidfile, trackstatus, trackmerge, tracksplit, trackreset, config
+        )
+
+        logger.info("Adjusting feature positions using periodic boundary conditions.")
+        # Determine features at boundary edges
+        x_edge_features = np.unique(np.concatenate([
+            file_corecold_cloudnumber[:, 0],  # left edge
+            file_corecold_cloudnumber[:, -1]  # right edge
+        ]))
+        
+        y_edge_features = np.unique(np.concatenate([
+            file_corecold_cloudnumber[0, :],  # top edge
+            file_corecold_cloudnumber[-1, :]  # bottom edge
+        ]))
+
+        # Filter out feature label "0" (not a feature)
+        x_edge_features = x_edge_features[x_edge_features > 0]
+        y_edge_features = y_edge_features[y_edge_features > 0]
+
+        # import pdb; pdb.set_trace()
+
+        # Adjust positions for features spanning boundaries
+        unique_cloud_numbers = np.unique(file_corecold_cloudnumber[file_corecold_cloudnumber > 0])
+        for i, cloud_number in enumerate(unique_cloud_numbers):
+            if cloud_number in x_edge_features or cloud_number in y_edge_features:
+                indices = np.where(file_corecold_cloudnumber == cloud_number)
+                mean_lat, mean_lon = handle_pbc_features(indices, out_dict['meanlat'][i], out_dict['meanlon'][i], nx,ny, config)
+                out_dict['meanlat'][i] = mean_lat
+                out_dict['meanlon'][i] = mean_lon
+
+        
+        ds.close()
+        
+        return out_dict, out_dict_attrs
+    else:
+        logger.info("No tracks in file.")
+        return None, None   
+
+################################################################################
 
 def define_base_vars_dict(file_basetime, fillval, fillval_f, numtracks, out_area, out_basetime, out_cloudnumber,
                           out_meanlat, out_meanlon, out_mergenumber, out_splitnumber, out_status,
@@ -787,6 +972,7 @@ def get_loc_indices(
     """
     # Find index of pre-sorted cloudnumber matching the current cloud
     idx = np.where(cloudnumber1d_uniq == cloudnumber_map)[0]
+
     if len(idx) > 0:
         corecold_npix = cloudnumber1d_counts[idx]
 
@@ -807,6 +993,8 @@ def get_loc_indices(
                 ast_cloudarea[0: cumcounts_cloudarea[idx][0]],
                 (ny, nx),
             )
+        
+
     else:
         corecold_npix = 0
         indices = None
