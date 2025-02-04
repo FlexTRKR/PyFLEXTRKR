@@ -20,7 +20,7 @@ enddate: '20000201.0000'
 
 # Parallel processing set up
 # run_parallel: 1 (local cluster), 2 (Dask MPI)
-run_parallel: 1
+run_parallel: 0
 nprocesses: 64  # Number of processors to use if run_parallel=1
 dask_tmp_dir: '/tmp'  # Dask temporary directory if run_parallel=1
 timeout: 360  # [seconds] Dask timeout limit
@@ -31,9 +31,9 @@ databasename: buoyancy_
 # E.g., wrfout_2018-11-01_01:15:00 --> yyyy-mo-dd_hh:mm:ss
 time_format: 'yyyy-mo-ddThh-mm-ss'
 # Input files directory
-clouddata_path: '/pscratch/sd/p/paccini/temp/output_pinacles/buoyancy_10min/'
+clouddata_path: '/Users/pacc275/local_documents/buoyancy_sub/'
 # Working directory for the tracking data
-root_path: '/pscratch/sd/w/wcmca1/PINACLES/rce/1km/coldpool/'
+root_path: '/Users/pacc275/local_documents/output_tracking//tracking_coldpool_sub_testPOS_t4/'
 # Working sub-directory names
 tracking_path_name: 'tracking'
 stats_path_name: 'stats'
@@ -60,12 +60,12 @@ field_varname: 'buoyancy'
 label_method: 'skimage.watershed'
 # Buoyancy parameters
 buoy_thresh: -0.005  # [m/s^2]
-min_cp_depth: 400.  # [m]
-buoy_smooth_sigma: 1.5  # Gaussian smoothing sigma for cold pool intensity
+min_cp_depth: 200.  # [m]
+buoy_smooth_sigma: 1  # Gaussian smoothing sigma for cold pool intensity
 # peak_local_max parameters
 plm_min_distance: 20   # min_distance - distance buffer between maxima; num grid points
-plm_exclude_border: 5   # exclude_border - distance buffer between maxima and the domain sides; num grid points
-plm_threshold_abs: 0   # threshold_abs - minimum magnitude required to define a maxima
+plm_exclude_border: 0   # exclude_border - distance buffer between maxima and the domain sides; num grid points
+plm_threshold_abs: 4.5   # threshold_abs - minimum magnitude required to define a maxima
 # watershed parameters
 cont_thresh: 1.4142   # contour defining outermost of flood-filled object area
 compa: 0    #"compactness factor" - (how much you'll let a flood fill spread into a neighbor's domain.)
@@ -85,6 +85,11 @@ remove_shorttracks: 1
 trackstats_dense_netcdf: 1
 # Minimum time difference threshold to match track stats with cloudid pixel files
 match_pixel_dt_thresh: 60.0  # seconds
+
+# Tracking parameters - periodic boundary conditions
+pbc_direction: 'both'  #options are 'x', 'y', 'both' and 'none'
+extended_fraction: 1
+# max_refinements: 2 # Max refinement iterations
 
 # Link merge/split parameters to main tracks
 maintrack_area_thresh: 78.0  # [km^2] Main track area threshold
