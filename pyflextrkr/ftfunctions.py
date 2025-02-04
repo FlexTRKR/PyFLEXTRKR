@@ -507,3 +507,140 @@ def skimage_watershed(fvar, config):
     var_number = watershed(-fvar, markers, mask=Pmask, watershed_line=True, compactness=compa)
 
     return var_number, param_dict
+
+
+def pad_and_extend(fvar, config):
+    """
+    Pad and extend data based on specified periodic boundary conditions.
+    """
+    ext_frac = config.get('extended_fraction', 1.0)
+    pbc_direction = config.get('pbc_direction', 'both')
+    pad_x, pad_y = (0, 0), (0, 0)
+    if pbc_direction in ['x', 'both']:
+        pad_x = (calc_extension(fvar.shape[1], ext_frac),) * 2
+    if pbc_direction in ['y', 'both']:
+        pad_y = (calc_extension(fvar.shape[0], ext_frac),) * 2
+        
+    return np.pad(fvar, pad_width=(pad_y, pad_x), mode='wrap')
+
+def calc_extension(size, ext_frac):
+    """Calculate the extension size."""
+    return int(size * ext_frac)
+
+def cache_label_positions(segments):
+    """Cache the positions of labels in segments (features)."""
+    label_positions_cache = {}
+    unique_labels = np.unique(segments)
+    for label in unique_labels:
+        if label != 0:  # Ignore background
+            label_positions = np.where(segments == label)
+            label_positions_cache[label] = label_positions
+    return label_positions_cache
+
+def adjust_axis(segments, axis, original_shape, ext_frac):
+    """Adjust the segments (features) along a specified axis."""
+    ext_size = calc_extension(original_shape[axis], ext_frac)
+    adjusted = False
+    label_positions_cache = cache_label_positions(segments)
+    
+    if axis == 1:  # X-axis
+        left_slice = segments[:, :ext_size]
+        middle_slice = segments[:, ext_size:ext_size + original_shape[1]]
+        shared_labels = np.intersect1d(left_slice[:, -1], middle_slice[:, 0])     
+    elif axis == 0:  # Y-axis
+        top_slice = segments[:ext_size, :]
+        middle_slice = segments[ext_size:ext_size + original_shape[0], :]
+        shared_labels = np.intersect1d(top_slice[-1, :], middle_slice[0, :])
+
+    if shared_labels.size > 0 and not np.all(shared_labels == 0):
+        for label in shared_labels:
+            if label == 0:
+                continue
+            # Verify if the label spans the middle slice in Y direction
+            if np.all(middle_slice == label):
+                print(f"Full-domain spanning feature detected in axis {axis} with label {label}.")
+                continue
+            adjusted = True
+            # Start with initial min_pos for the label
+            min_pos = np.min(label_positions_cache[label][axis])
+            
+            # Iteratively refine min_pos using cache
+            while True:
+                current_labels = segments[min_pos, :] if axis == 0 else segments[:, min_pos]
+                non_zero_labels = current_labels[current_labels != 0]
+                unique_labels = np.unique(non_zero_labels)
+                # If position includes multiple labels, refine min_pos
+                if unique_labels.size > 1:
+                    min_positions = [np.min(label_positions_cache[ul][axis]) for ul in unique_labels]
+                    new_min_pos = min(min_positions)
+                    if new_min_pos == min_pos:
+                        break
+                    min_pos = new_min_pos
+                else:
+                    break
+        # Calculate cropping and rolling adjustments
+        if axis == 1:
+            dx = ext_size - min_pos
+            segments = segments[:, min_pos:ext_size + original_shape[1] - dx]
+            segments = np.roll(segments, shift=-dx, axis=1)
+        elif axis == 0:
+            dy = ext_size - min_pos
+            segments = segments[min_pos:ext_size + original_shape[0] - dy, :]
+            segments = np.roll(segments, shift=-dy, axis=0)
+        
+    else:
+        print(f"Warning: No shared labels found in axis {axis}.")
+    return segments, adjusted
+
+def adjust_pbc_coldpools(fvar, config):
+    """
+    Process data to handle PBC when identifying coldpools using watershed segmentation.
+    Steps:
+    1. Reads parameters related to boundary conditions from config file. 
+    2. Extends and pads data.
+    3. Apply watershed segmentation .
+    4. Adjust axis based on PBC direction. 
+    """
+    ext_frac = config.get('extended_fraction', 1.0)
+    pbc_direction = config.get('pbc_direction', 'both')
+    # Step 2: Extend and pad data
+    extended_data = pad_and_extend(fvar, config)
+    # Step 3: Apply watershed segmentation
+    extended_segments, param_dict = skimage_watershed(extended_data, config)
+    # Step 4: Adjust axis based on PBC direction
+    adjusted_segments = call_adjust_axis(extended_segments,fvar,config)
+
+    return adjusted_segments, param_dict
+
+def call_adjust_axis(extended_segments,fvar,config):
+    """
+    Process data to adjust axis based on periodic boundary directions. 
+    Parameters:
+    - extended_segments: 2D numpy array of the extended and padded feature data.
+    - fvar: 2D numpy array of the original feature data.
+    - config: Dictionary containing configuration parameters.
+
+    Returns:
+    - Adjusted segments according to periodic boundary considerations.
+    """
+    ext_frac = config.get('extended_fraction', 1.0)
+    pbc_direction = config.get('pbc_direction', 'both')
+    # x_adjusted, y_adjusted = False, False
+    original_shape = fvar.shape
+    
+    # Adjust each specified axis (X and/or Y)
+    if pbc_direction in ['x', 'both']:
+        extended_segments, x_adjusted = adjust_axis(extended_segments, 1, original_shape, ext_frac)
+    if pbc_direction in ['y', 'both']:
+        extended_segments, y_adjusted = adjust_axis(extended_segments, 0, original_shape, ext_frac)
+        
+    # Restore to the original structure in non-adjusted dimensions
+    if not x_adjusted:
+        crop_start_x = calc_extension(original_shape[1], ext_frac)
+        extended_segments = extended_segments[:, crop_start_x:crop_start_x + original_shape[1]]
+
+    if not y_adjusted:
+        crop_start_y = calc_extension(original_shape[0], ext_frac)
+        extended_segments = extended_segments[crop_start_y:crop_start_y + original_shape[0], :]
+
+    return extended_segments
