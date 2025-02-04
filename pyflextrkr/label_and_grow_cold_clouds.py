@@ -2,7 +2,7 @@ import logging
 import numpy as np
 from scipy.ndimage import label, binary_dilation, generate_binary_structure
 from astropy.convolution import Box2DKernel, convolve
-from pyflextrkr.ftfunctions import sort_renumber, grow_cells
+from pyflextrkr.ftfunctions import sort_renumber, grow_cells, pad_and_extend, call_adjust_axis
 
 
 def label_and_grow_cold_clouds(
@@ -13,6 +13,7 @@ def label_and_grow_cold_clouds(
     mincoldcorepix,
     smoothsize,
     warmanvilexpansion,
+    config
 ):
     """
     Label and growth cold clouds using infrared Tb.
@@ -39,6 +40,9 @@ def label_and_grow_cold_clouds(
     """
 
     logger = logging.getLogger(__name__)
+
+    # Periodic boundary conditions 
+    pbc_direction  = config.get('pbc_direction', 'none') 
 
     # Separate array threshold
     thresh_core = tb_threshs[0]  # Convective core threshold [K]
@@ -68,10 +72,24 @@ def label_and_grow_cold_clouds(
     )
 
     #################################################################
-    # Smooth Tb data
-    smoothir = smooth_tb(ir, smoothsize)
-    # Label cold cores
-    labelcore_number2d, nlabelcores = find_and_label_cold_cores(smoothir, thresh_core)
+
+    if pbc_direction!='none':
+        # Step 2: Extend and pad data
+        out_ir_orig = np.copy(ir)
+        out_ir = pad_and_extend(ir, config)
+        # Smooth Tb data
+        smoothir = smooth_tb(out_ir, smoothsize)
+        # Label cold cores on extended array
+        labelcore_number2d, nlabelcores = find_and_label_cold_cores(smoothir, thresh_core)
+        # Adjust axis and restore to original structure
+        labelcore_number2d = call_adjust_axis(labelcore_number2d, out_ir_orig, config)
+                       
+
+    else:
+        # Smooth Tb data
+        smoothir = smooth_tb(ir, smoothsize)
+        # Label cold cores
+        labelcore_number2d, nlabelcores = find_and_label_cold_cores(smoothir, thresh_core)
 
     # Create empty arrays
     labelcorecold_number2d = np.zeros((ny, nx), dtype=int)
@@ -173,6 +191,8 @@ def label_and_grow_cold_clouds(
         sortedcorecoldisolated_number1d = np.copy(labelcorecoldisolated_number1d[order])
 
         # Re-number clouds
+
+
         sortedcorecoldisolated_number2d = np.zeros((ny, nx), dtype=int)
         final_ncorepix = np.ones(ncorecoldisolated, dtype=int) * -9999
         final_ncoldpix = np.ones(ncorecoldisolated, dtype=int) * -9999
@@ -197,6 +217,7 @@ def label_and_grow_cold_clouds(
 
         ##############################################
         # Save final matrices
+
         final_corecoldnumber = np.copy(sortedcorecoldisolated_number2d)
         final_ncorecold = np.copy(ncorecoldisolated)
 
