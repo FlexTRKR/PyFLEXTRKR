@@ -11,7 +11,7 @@ from pyflextrkr import netcdf_io as net
 from pyflextrkr.ftfunctions import olr_to_tb
 from pyflextrkr.futyan3 import futyan3
 from pyflextrkr.label_and_grow_cold_clouds import label_and_grow_cold_clouds
-from pyflextrkr.ftfunctions import sort_renumber, sort_renumber2vars, link_pf_tb
+from pyflextrkr.ftfunctions import sort_renumber, sort_renumber2vars, link_pf_tb, pad_and_extend, call_adjust_axis 
 from pyflextrkr.sl3d_func import run_sl3d
 from pyflextrkr.ft_utilities import get_timestamp_from_filename_single
 
@@ -51,8 +51,7 @@ def idclouds_tbpf(
     maxtb_thresh = config['absolutetb_threshs'][1]
 
     # Periodic boundary conditions 
-    pbc_direction  = config.get('pbc_direction', 'none')   #options are 'x', 'y', 'both' and 'none'
-    extended_fraction = config.get('extended_fraction', 1) 
+    pbc_direction  = config.get('pbc_direction', 'none') 
 
     # Get Tb thresholds
     thresh_core = config['cloudtb_core']
@@ -251,13 +250,6 @@ def idclouds_tbpf(
                 missingcount = np.count_nonzero(np.isnan(out_ir))
                 ny, nx = np.shape(out_ir)
 
-
-                # if pbc_direction!='none':
-                #     # Step 2: Extend and pad data
-                #     out_ir = pad_and_extend(out_ir, config)
-
-
-
                 # Proceed if fraction of missing data does not exceed threshold
                 if np.divide(missingcount, (ny * nx)) < miss_thresh:
                     ######################################################
@@ -271,6 +263,7 @@ def idclouds_tbpf(
                             mincoldcorepix,
                             smoothwindowdimensions,
                             warmanvilexpansion,
+                            config
                         )
                     elif cloudidmethod == "futyan3":
                         clouddata = futyan3(
@@ -286,7 +279,6 @@ def idclouds_tbpf(
                         sys.exit()
                     
 
-                    import pdb; pdb.set_trace()
                     ######################################################
                     # Separate output into the separate variables
                     final_nclouds = np.array([clouddata["final_nclouds"]])
@@ -300,6 +292,7 @@ def idclouds_tbpf(
                         [clouddata["final_convcold_cloudnumber"]]
                     )
 
+                    # import pdb; pdb.set_trace()
                     # Option to linkpf
                     if linkpf == 1:
 
@@ -328,19 +321,35 @@ def idclouds_tbpf(
 
                             # Replace values <=0 with 0 before smoothing
                             pcp_linkpf[pcp_linkpf <= 0] = 0
-                            # Smooth pcp_linkpf using convolve filter (handles NaN)
-                            kernel = Box2DKernel(pf_smooth_window)
-                            pcp_s = convolve(
-                                np.squeeze(pcp_linkpf), kernel, 
-                                boundary="extend", nan_treatment="interpolate", preserve_nan=True,
-                            )
-                            # Smooth PF variable, then label PF exceeding threshold
-                            # pcp_s = filters.uniform_filter(
-                            #     np.squeeze(pcp_linkpf),
-                            #     size=pf_smooth_window,
-                            #     mode="nearest",
-                            # )
-                            pf_number, npf = label(pcp_s >= pf_dbz_thresh)
+
+                            if pbc_direction!='none':
+                                # Step 2: Extend and pad data
+                                pcp_linkpf_orig = np.copy(pcp_linkpf)
+                                pcp_linkpf = pad_and_extend(pcp_linkpf, config)
+                                # Smooth pcp_linkpf using convolve filter (handles NaN)
+                                kernel = Box2DKernel(pf_smooth_window)
+                                pcp_s = convolve(
+                                    np.squeeze(pcp_linkpf), kernel, 
+                                    boundary="extend", nan_treatment="interpolate", preserve_nan=True,
+                                )
+                                # Label precipitation features on extended array
+                                pf_number, npf = label(pcp_s >= pf_dbz_thresh)
+                                # Adjust axis and restore to original structure
+                                pf_number = call_adjust_axis(pf_number, pcp_linkpf_orig, config)
+                            else:
+                                # Smooth pcp_linkpf using convolve filter (handles NaN)
+                                kernel = Box2DKernel(pf_smooth_window)
+                                pcp_s = convolve(
+                                    np.squeeze(pcp_linkpf), kernel, 
+                                    boundary="extend", nan_treatment="interpolate", preserve_nan=True,
+                                )
+                                # Smooth PF variable, then label PF exceeding threshold
+                                # pcp_s = filters.uniform_filter(
+                                #     np.squeeze(pcp_linkpf),
+                                #     size=pf_smooth_window,
+                                #     mode="nearest",
+                                # )
+                                pf_number, npf = label(pcp_s >= pf_dbz_thresh)
 
                             # Convert PF area threshold to number of pixels
                             min_npix = np.ceil(
