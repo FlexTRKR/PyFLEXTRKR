@@ -250,7 +250,7 @@ def plot_map(pixel_dict, plot_info, map_info, track_dict):
     # Get plot info from dictionary
     fontsize = plot_info['fontsize']
     levels = plot_info['levels']
-    cmaps = plot_info['cmaps']
+    cmaps = plot_info['cmap']
     # titles = plot_info['titles']
     remove_oob_low = plot_info.get('remove_oob_low', False)
     remove_oob_high = plot_info.get('remove_oob_high', False)
@@ -293,7 +293,7 @@ def plot_map(pixel_dict, plot_info, map_info, track_dict):
     gs.update(wspace=0.05, left=0.05, right=0.95, top=0.92, bottom=0.08)
     # Use GridSpecFromSubplotSpec for panel and colorbar
     gs_cb = gridspec.GridSpecFromSubplotSpec(1, 2, subplot_spec=gs[1], height_ratios=[1], width_ratios=[0.01,0.01], wspace=5)
-    ax1 = plt.subplot(gs[0], projection=proj)
+    ax1 = plt.subplot(gs[0])
     cax1 = plt.subplot(gs_cb[0])
     cax2 = plt.subplot(gs_cb[1])
     # Figure title: time
@@ -302,7 +302,7 @@ def plot_map(pixel_dict, plot_info, map_info, track_dict):
 
     #################################################################
     # Tb Panel
-    ax1 = plt.subplot(gs[0,0], projection=proj)
+    ax1 = plt.subplot(gs[0,0])
     ax1.set_aspect('auto', adjustable=None)
     ax1.set_title(titles['tb_title'], loc='left')
 
@@ -311,9 +311,9 @@ def plot_map(pixel_dict, plot_info, map_info, track_dict):
     norm_ref = mpl.colors.BoundaryNorm(levels['tb_levels'], ncolors=cmap.N, clip=True)
     # Remove out-of-bounds values
     if (remove_oob_low):
-        fvar = np.ma.masked_where(fvar < min(levels), fvar)
+        fvar = np.ma.masked_where(fvar < min(levels['tb_levels']), fvar)
     if (remove_oob_high):
-        fvar = np.ma.masked_where(fvar > max(levels), fvar)
+        fvar = np.ma.masked_where(fvar > max(levels['tb_levels']), fvar)
     cf1 = ax1.pcolormesh(xx, yy, fvar, norm=norm_ref, cmap=cmap, zorder=2)
 
     # Overplot tracknumber perimeters
