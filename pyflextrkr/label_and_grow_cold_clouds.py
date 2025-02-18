@@ -76,13 +76,13 @@ def label_and_grow_cold_clouds(
     if pbc_direction!='none':
         # Step 2: Extend and pad data
         out_ir_orig = np.copy(ir)
-        out_ir = pad_and_extend(ir, config)
+        out_ir, padded_x, padded_y = pad_and_extend(ir, config)
         # Smooth Tb data
         smoothir = smooth_tb(out_ir, smoothsize)
         # Label cold cores on extended array
         labelcore_number2d, nlabelcores = find_and_label_cold_cores(smoothir, thresh_core)
         # Adjust axis and restore to original structure
-        labelcore_number2d = call_adjust_axis(labelcore_number2d, out_ir_orig, config)
+        labelcore_number2d = call_adjust_axis(labelcore_number2d, out_ir_orig, config, padded_x, padded_y)
                        
 
     else:

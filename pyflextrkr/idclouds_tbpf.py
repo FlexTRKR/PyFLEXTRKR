@@ -325,7 +325,7 @@ def idclouds_tbpf(
                             if pbc_direction!='none':
                                 # Step 2: Extend and pad data
                                 pcp_linkpf_orig = np.copy(pcp_linkpf)
-                                pcp_linkpf = pad_and_extend(pcp_linkpf, config)
+                                pcp_linkpf, padded_x, padded_y = pad_and_extend(pcp_linkpf, config)
                                 # Smooth pcp_linkpf using convolve filter (handles NaN)
                                 kernel = Box2DKernel(pf_smooth_window)
                                 pcp_s = convolve(
@@ -335,7 +335,7 @@ def idclouds_tbpf(
                                 # Label precipitation features on extended array
                                 pf_number, npf = label(pcp_s >= pf_dbz_thresh)
                                 # Adjust axis and restore to original structure
-                                pf_number = call_adjust_axis(pf_number, pcp_linkpf_orig, config)
+                                pf_number = call_adjust_axis(pf_number, pcp_linkpf_orig, config, padded_x, padded_y)
                             else:
                                 # Smooth pcp_linkpf using convolve filter (handles NaN)
                                 kernel = Box2DKernel(pf_smooth_window)
