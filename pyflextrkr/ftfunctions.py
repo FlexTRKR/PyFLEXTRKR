@@ -516,12 +516,18 @@ def pad_and_extend(fvar, config):
     ext_frac = config.get('extended_fraction', 1.0)
     pbc_direction = config.get('pbc_direction', 'both')
     pad_x, pad_y = (0, 0), (0, 0)
+    padded_x = padded_y = False
+
     if pbc_direction in ['x', 'both']:
         pad_x = (calc_extension(fvar.shape[1], ext_frac),) * 2
+        padded_x = True
     if pbc_direction in ['y', 'both']:
         pad_y = (calc_extension(fvar.shape[0], ext_frac),) * 2
-        
-    return np.pad(fvar, pad_width=(pad_y, pad_x), mode='wrap')
+        padded_y = True
+
+    extended_data = np.pad(fvar, pad_width=(pad_y, pad_x), mode='wrap')
+    
+    return extended_data, padded_x, padded_y
 
 def calc_extension(size, ext_frac):
     """Calculate the extension size."""
@@ -604,15 +610,15 @@ def adjust_pbc_coldpools(fvar, config):
     ext_frac = config.get('extended_fraction', 1.0)
     pbc_direction = config.get('pbc_direction', 'both')
     # Step 2: Extend and pad data
-    extended_data = pad_and_extend(fvar, config)
+    extended_data, padded_x, padded_y = pad_and_extend(fvar, config)
     # Step 3: Apply watershed segmentation
     extended_segments, param_dict = skimage_watershed(extended_data, config)
     # Step 4: Adjust axis based on PBC direction
-    adjusted_segments = call_adjust_axis(extended_segments,fvar,config)
+    adjusted_segments = call_adjust_axis(extended_segments,fvar,config, padded_x, padded_y)
 
     return adjusted_segments, param_dict
 
-def call_adjust_axis(extended_segments,fvar,config):
+def call_adjust_axis(extended_segments,fvar,config, padded_x, padded_y):
     """
     Process data to adjust axis based on periodic boundary directions. 
     Parameters:
@@ -625,7 +631,8 @@ def call_adjust_axis(extended_segments,fvar,config):
     """
     ext_frac = config.get('extended_fraction', 1.0)
     pbc_direction = config.get('pbc_direction', 'both')
-    # x_adjusted, y_adjusted = False, False
+    #   Initialize adjustment flags
+    x_adjusted, y_adjusted = False, False
     original_shape = fvar.shape
     
     # Adjust each specified axis (X and/or Y)
@@ -635,11 +642,11 @@ def call_adjust_axis(extended_segments,fvar,config):
         extended_segments, y_adjusted = adjust_axis(extended_segments, 0, original_shape, ext_frac)
         
     # Restore to the original structure in non-adjusted dimensions
-    if not x_adjusted:
+    if padded_x and not x_adjusted:
         crop_start_x = calc_extension(original_shape[1], ext_frac)
         extended_segments = extended_segments[:, crop_start_x:crop_start_x + original_shape[1]]
 
-    if not y_adjusted:
+    if padded_y and not y_adjusted:
         crop_start_y = calc_extension(original_shape[0], ext_frac)
         extended_segments = extended_segments[crop_start_y:crop_start_y + original_shape[0], :]
 
