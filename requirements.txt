@@ -20,4 +20,3 @@ seaborn
 scikit-learn
 ffmpeg
 xesmf
-wrf-python
