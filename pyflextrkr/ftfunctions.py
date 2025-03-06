@@ -598,9 +598,9 @@ def adjust_axis(segments, axis, original_shape, ext_frac):
         print(f"Warning: No shared labels found in axis {axis}.")
     return segments, adjusted
 
-def adjust_pbc_coldpools(fvar, config):
+def adjust_pbc_watershed(fvar, config):
     """
-    Process data to handle PBC when identifying coldpools using watershed segmentation.
+    Process data to handle PBC when identifying features using watershed segmentation.
     Steps:
     1. Reads parameters related to boundary conditions from config file. 
     2. Extends and pads data.
