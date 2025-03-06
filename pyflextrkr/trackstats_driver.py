@@ -45,6 +45,10 @@ def trackstats_driver(config):
     trackstats_dense_netcdf = config["trackstats_dense_netcdf"]
     fillval_f = np.nan
 
+    #Get PBC condition
+    pbc_direction = config.get('pbc_direction', "none")
+    domain_max = config.get('domain_max', "none")
+
     # Set output filename
     trackstats_outfile = f"{stats_path}{trackstats_filebase}{startdate}_{enddate}.nc"
     trackstats_sparse_outfile = f"{stats_path}{trackstats_sparse_filebase}{startdate}_{enddate}.nc"
@@ -330,6 +334,18 @@ def trackstats_driver(config):
         "long_name": "Times indices for constructing sparse array",
     }
 
+    #########################################################################################
+    # Adjust lat,lon positions for PBC
+    # 
+    # import pdb; pdb.set_trace()
+
+    if pbc_direction !='none':
+        # Example invocation
+        adjust_positions_for_tracks(out_dict, domain_max=domain_max)
+
+    # import pdb; pdb.set_trace()
+
+
     # Write dense arrays output file
     if trackstats_dense_netcdf == 1:
         write_trackstats_dense(config, fillval, fillval_f,
@@ -339,8 +355,146 @@ def trackstats_driver(config):
     # Write sparse arrays output file
     write_trackstats_sparse(config, numtracks, out_dict_attrs, out_dict, row_out, tracks_dimname,
                             trackstats_sparse_outfile)
-
+    # import pdb; pdb.set_trace()
     return trackstats_outfile
+
+def adjust_positions_for_tracks(out_dict, domain_max):
+    """
+    Adjust mean latitude and longitude for tracks to ensure continuity
+    across periodic boundaries, while preserving sparse matrix structure.
+    Args:
+        out_dict (dict): Dictionary containing the output variables with tracks and times.
+        domain_max (float): The maximum value of the domain.
+    """
+    # Get the sparse matrices
+    meanlat_sparse = out_dict['meanlat']
+    meanlon_sparse = out_dict['meanlon']
+
+    # Get the non-zero data and indices for meanlat
+    meanlat_data = meanlat_sparse.data.copy()
+    meanlat_indices = meanlat_sparse.indices
+    meanlat_indptr = meanlat_sparse.indptr
+
+    # Get the non-zero data and indices for meanlon
+    meanlon_data = meanlon_sparse.data.copy()
+    meanlon_indices = meanlon_sparse.indices
+    meanlon_indptr = meanlon_sparse.indptr
+
+    # Adjust positions for meanlat
+    adjust_sparse_positions(meanlat_data, meanlat_indptr, domain_max)
+    # Adjust positions for meanlon
+    adjust_sparse_positions(meanlon_data, meanlon_indptr, domain_max)
+
+    # Reconstruct sparse matrices with adjusted data
+    out_dict['meanlat'] = csr_matrix((meanlat_data, meanlat_indices, meanlat_indptr),
+                                     shape=meanlat_sparse.shape)
+    out_dict['meanlon'] = csr_matrix((meanlon_data, meanlon_indices, meanlon_indptr),
+                                     shape=meanlon_sparse.shape)
+
+def adjust_sparse_positions(data, indptr, domain_max):
+    """
+    Adjust the positions in the sparse data array in-place to ensure continuity
+    across periodic boundaries.
+    Args:
+        data (np.ndarray): Non-zero data values of the sparse matrix.
+        indptr (np.ndarray): Index pointer array for the sparse matrix.
+        domain_max (float): The maximum value of the domain.
+    """
+    num_tracks = len(indptr) - 1
+    for i in range(num_tracks):
+        start = indptr[i]
+        end = indptr[i + 1]
+        if start >= end:
+            continue  # No data for this track
+        track_values = data[start:end]
+        # Replace zeros with NaNs if necessary
+        track_values = np.where(track_values != 0, track_values, np.nan)
+        # Adjust positions
+        adjusted_values = adjust_position_continuous_simple(track_values, domain_max)
+        # Update the data array in-place
+        data[start:end] = adjusted_values
+
+def adjust_position_continuous_simple(values, domain_max):
+    """
+    Adjust positions in a 1D array to ensure continuity across periodic boundaries.
+    Args:
+        values (np.ndarray): Array of position values for a track.
+        domain_max (float): The maximum value of the domain.
+    Returns:
+        np.ndarray: Adjusted position values.
+    """
+    adjusted_values = np.copy(values)
+    for i in range(1, len(values)):
+        if np.isnan(values[i]) or np.isnan(values[i - 1]):
+            continue
+        diff = adjusted_values[i] - adjusted_values[i - 1]
+        if diff > domain_max / 2:
+            adjusted_values[i:] -= domain_max
+        elif diff < -domain_max / 2:
+            adjusted_values[i:] += domain_max
+    return adjusted_values
+# def adjust_positions_for_tracks(out_dict, domain_max):
+#     """
+#     Adjust mean latitude and longitude for tracks to ensure continuity
+#     based on differences between consecutive positions.
+
+#     Args:
+#         out_dict (dict): Dictionary containing the output variables with tracks and times.
+#         domain_max (float): The maximum value of the domain.
+#     """
+#     tracks = out_dict['meanlat'].shape[0]
+    
+#     for track in range(tracks):
+#         # Adjust mean latitude
+#         adjusted_meanlat = adjust_position_continuous(out_dict['meanlat'][track], domain_max)
+#         if isinstance(out_dict['meanlat'][track], csr_matrix):
+#             out_dict['meanlat'][track] = csr_matrix(adjusted_meanlat)
+#         else:
+#             out_dict['meanlat'][track] = adjusted_meanlat
+        
+#         # Adjust mean longitude
+#         adjusted_meanlon = adjust_position_continuous(out_dict['meanlon'][track], domain_max)
+#         if isinstance(out_dict['meanlon'][track], csr_matrix):
+#             out_dict['meanlon'][track] = csr_matrix(adjusted_meanlon)
+#         else:
+#             out_dict['meanlon'][track] = adjusted_meanlon
+        
+# def adjust_position_continuous(values, domain_max):
+#     """
+#     Adjust position values to ensure continuity across periodic boundaries
+#     based on differences between consecutive positions, without modulus wrapping.
+
+#     Args:
+#         values (np.array): Array of position values for a track.
+#         domain_max (float): The maximum value of the domain.
+
+#     Returns:
+#         np.array: Adjusted position values (may exceed domain_max).
+#     """
+#     # Convert to dense if it's a sparse row
+#     if isinstance(values, csr_matrix):
+#         values = values.toarray().flatten()
+    
+#     # Replace zeros with NaNs if necessary
+#     values = np.where(values != 0, values, np.nan)
+    
+#     # Copy the values
+#     adjusted_values = np.copy(values)
+    
+#     # Loop over time steps
+#     for i in range(1, len(values)):
+#         if np.isnan(values[i]) or np.isnan(values[i - 1]):
+#             continue
+#         diff = adjusted_values[i] - adjusted_values[i - 1]
+#         if diff > domain_max / 2:
+#             # Adjust for wrap-around from low to high
+#             adjusted_values[i:] -= domain_max
+#         elif diff < -domain_max / 2:
+#             # Adjust for wrap-around from high to low
+#             adjusted_values[i:] += domain_max
+#         # No adjustment needed
+
+#     return adjusted_values
 
 
 def write_trackstats_sparse(config, numtracks, out_dict_attrs, out_dict, row_out, tracks_dimname,
