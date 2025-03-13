@@ -70,7 +70,7 @@ def run_sl3d(ds, config):
     dbz_comp = refl3d.max(dim=z_dimname).data
 
     # Replace fillval with NaN
-    reflArray[reflArray == fillval] = np.NaN
+    reflArray[reflArray == fillval] = np.nan
 
     x = {
         'values': lon2d,
@@ -86,7 +86,7 @@ def run_sl3d(ds, config):
     }
     Z_H = {
         'values': reflArray,
-        'missing': np.NaN,
+        'missing': np.nan,
     }
     data = {
         'x': x,
@@ -133,12 +133,12 @@ def run_sl3d(ds, config):
         'reflectivity_lowlevel': {
             'long_name': f'Low-level reflectivity ({dbz_lowlevel_asl:.1f} km)',
             'units': 'dBZ',
-            '_FillValue': np.NaN,
+            '_FillValue': np.nan,
         },
         'reflectivity_comp': {
             'long_name': 'Composite (column maximum) reflectivity',
             'units': 'dBZ',
-            '_FillValue': np.NaN,
+            '_FillValue': np.nan,
         },
         'sl3d': {
             'long_name': 'SL3D classification category',
@@ -150,32 +150,32 @@ def run_sl3d(ds, config):
         'echotop10': {
             'long_name': '10 dBZ echo top height',
             'units': 'km',
-            '_FillValue': np.NaN,
+            '_FillValue': np.nan,
         },
         'echotop20': {
             'long_name': '20 dBZ echo top height',
             'units': 'km',
-            '_FillValue': np.NaN,
+            '_FillValue': np.nan,
         },
         'echotop30': {
             'long_name': '30 dBZ echo top height',
             'units': 'km',
-            '_FillValue': np.NaN,
+            '_FillValue': np.nan,
         },
         'echotop40': {
             'long_name': '40 dBZ echo top height',
             'units': 'km',
-            '_FillValue': np.NaN,
+            '_FillValue': np.nan,
         },
         'echotop45': {
             'long_name': '45 dBZ echo top height',
             'units': 'km',
-            '_FillValue': np.NaN,
+            '_FillValue': np.nan,
         },
         'echotop50': {
             'long_name': '50 dBZ echo top height',
             'units': 'km',
-            '_FillValue': np.NaN,
+            '_FillValue': np.nan,
         },
     }
     return data_dict, attrs_dict
@@ -348,7 +348,7 @@ def gridrad_sl3d(data, config, **kwargs):
         dbz_aml = np.nanmax(tmp * (zzz > (zml + 1.0)), axis=0)
 
     # Create array to compute peakedness in lowest 9 km altitude layer
-    peak = np.full((k9km+1,ny,nx), np.NaN, dtype=data['Z_H']['values'].dtype)
+    peak = np.full((k9km+1,ny,nx), np.nan, dtype=data['Z_H']['values'].dtype)
 
     # Loop over the lowest 9 km levels
     for k in range(0, k9km+1):
@@ -363,7 +363,7 @@ def gridrad_sl3d(data, config, **kwargs):
 
     # Compute peakedness threshold for reflectivity value
     tmp = 10.0 - ((data['Z_H']['values'][0:k9km+1,:,:])**2) / 337.5
-    peak_thresh = np.full(peak.shape, np.NaN, dtype=peak.dtype)
+    peak_thresh = np.full(peak.shape, np.nan, dtype=peak.dtype)
     largeindex = (~np.isnan(tmp)) & (tmp > 4.0)
     smallindex = (~np.isnan(tmp)) & (tmp <= 4.0)
     peak_thresh[largeindex] = tmp[largeindex]

@@ -41,14 +41,14 @@ sed 's/INPUT_DIR/'${dir_input1}'/g;s/TRACK_DIR/'${dir_demo1}'/g' config_imerg_mc
 echo 'Created new config file: '${config_demo}
 
 # Activate PyFLEXTRKR conda environment
-echo 'Activating PyFLEXTRKR environment ...'
+# echo 'Activating PyFLEXTRKR environment ...'
 ## sourcing conda
 #case $(uname -s) in
 #	'Linux')     echo "LinUx" && . $HOME/miniconda3/etc/profile.d/conda.sh;;
 #	'Darwin')    echo "Mac" && . $HOME/miniconda3/etc/profile.d/conda.sh;;
 #        *);;
 #esac
-conda activate flextrkr
+# conda activate flextrkr
 
 # Run tracking
 echo 'Running PyFLEXTRKR ...'

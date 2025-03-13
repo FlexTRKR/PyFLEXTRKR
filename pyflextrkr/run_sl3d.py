@@ -161,7 +161,7 @@ def process_file(infilename, config):
 
     # Replace missing_val with NaN
     missing_val = -9999.
-    reflArray[reflArray == missing_val] = np.NaN
+    reflArray[reflArray == missing_val] = np.nan
 
     x = {
         'values' : lon2d,
@@ -177,7 +177,7 @@ def process_file(infilename, config):
     }
     Z_H = {
         'values' : reflArray,
-        'missing' : np.NaN,
+        'missing' : np.nan,
         # 'wvalues' : wvalues[0,:,:,:].transpose(2,1,0),
         # 'wmissing' : wvalues._FillValue,
     }

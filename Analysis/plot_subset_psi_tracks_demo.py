@@ -235,7 +235,7 @@ def plot_map(pixel_dict, plot_info, map_info, track_dict):
 
     # Set up figure
     mpl.rcParams['font.size'] = fontsize
-    mpl.rcParams['font.family'] = 'Helvetica'
+    # mpl.rcParams['font.family'] = 'Helvetica'
     fig = plt.figure(figsize=figsize, dpi=200)
     gs = gridspec.GridSpec(1,2, height_ratios=[1], width_ratios=[1,0.03])
     gs.update(wspace=0.05, hspace=0.05, left=0.1, right=0.9, top=0.92, bottom=0.08)
