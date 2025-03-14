@@ -673,7 +673,7 @@ def get_composite_reflectivity_wrf_composite(input_filename, config):
     # Get low-level reflectivity
     dbz_lowlevel = ds[reflectivity_varname].squeeze()
     # Replace all values with NaN
-    dbz_lowlevel = dbz_lowlevel.where(dbz_lowlevel != dbz_lowlevel, np.NaN)
+    dbz_lowlevel = dbz_lowlevel.where(dbz_lowlevel != dbz_lowlevel, np.nan)
     # Add a vertical dimension to make a fake 3D DataArray
     dbz3d = dbz_lowlevel.expand_dims(z_dimname, axis=0)
     # Make a fake height array

@@ -36,9 +36,9 @@ runscript=${pyflex_dir}'/runscripts/run_celltracking.py'
 config_file=/global/homes/f/feng045/program/PyFLEXTRKR-dev/config/config_saag_wrf4km_${site}.yml
 quicklook_dir=/pscratch/sd/f/feng045/SAAG/hist/cell_tracking/${site}/quicklooks/
 
-# Activate PyFLEXTRKR conda environment
-echo 'Activating PyFLEXTRKR environment ...'
-source activate /global/common/software/m1867/python/pyflex
+# # Activate PyFLEXTRKR conda environment
+# echo 'Activating PyFLEXTRKR environment ...'
+# source activate /global/common/software/m1867/python/pyflex
 
 # Run tracking
 echo 'Running PyFLEXTRKR ...'

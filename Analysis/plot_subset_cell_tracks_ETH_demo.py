@@ -1,5 +1,5 @@
 """
-Demonstrates ploting cell tracks on radar reflectivity snapshots for a single radar domain.
+Demonstrates ploting cell tracks on radar echo-top height snapshots for a single radar domain.
 
 >python plot_subset_cell_tracks_demo.py -s STARTDATE -e ENDDATE -c CONFIG.yml --radar_lat LAT --radar_lon LON
 Optional arguments:
@@ -54,8 +54,6 @@ def parse_cmd_args():
     parser.add_argument("--figbasename", help="output figure base name", default="")
     parser.add_argument("--figsize", nargs='+', help="figure size (width, height) in inches", type=float, default=[8,7])
     parser.add_argument("--output", help="ouput directory", default=None)
-    parser.add_argument("--time_format", help="Pixel-level file datetime format", default="yyyymodd_hhmmss")
-    parser.add_argument("--varname", help="Variable name for plotting in pixel files", default="dbz_comp")
     args = parser.parse_args()
 
     # Put arguments in a dictionary
@@ -71,8 +69,6 @@ def parse_cmd_args():
         'figbasename': args.figbasename,
         'figsize': args.figsize,
         'out_dir': args.output,
-        'time_format': args.time_format,
-        'varname': args.varname,
     }
 
     return args_dict
@@ -297,7 +293,7 @@ def plot_map(pixel_dict, plot_info, map_info, track_dict):
 
     # Set up figure
     mpl.rcParams['font.size'] = fontsize
-    # mpl.rcParams['font.family'] = 'Helvetica'
+    mpl.rcParams['font.family'] = 'Helvetica'
     fig = plt.figure(figsize=figsize, dpi=300, facecolor='w')
     gs = gridspec.GridSpec(1,2, height_ratios=[1], width_ratios=[1,0.03])
     gs.update(wspace=0.05, hspace=0.05, left=0.1, right=0.9, top=0.92, bottom=0.08)
@@ -530,32 +526,28 @@ if __name__ == "__main__":
     figbasename = args_dict.get('figbasename')
     figsize = args_dict.get('figsize')
     out_dir = args_dict.get('out_dir')
-    time_format = args_dict.get('time_format')
-    varname_fill = args_dict.get('varname')
 
     # Specify plotting info
     # varname_fill = 'dbz_comp'
-    # varname_fill = 'echotop10'
-    var_scale = 1     # scale factor for the variable
-    # var_scale = 1e-3    # scale factor for the variable
-
+    varname_fill = 'echotop10'
+    # var_scale = 1     # scale factor for the variable
+    var_scale = 1e-3    # scale factor for the variable
     # Colorfill levels
     # levels = np.arange(-10, 60.1, 5)
-    levels = np.arange(-10, 70.1, 5)
-    # levels = [1,1.5,2,2.5,3,3.5,4,4.5,5,6,7,8,9,10,12,14,16,18,20]
+    levels = [1,1.5,2,2.5,3,3.5,4,4.5,5,6,7,8,9,10,12,14,16,18,20]
     lev_lifetime = np.arange(0.5, 4.01, 0.5)
     # Colorbar ticks & labels
-    # cbticks = np.arange(-10, 60.1, 5)
     cbticks = levels
-    cblabels = 'Composite Reflectivity (dBZ)'
-    # cblabels = '10 dBZ ETH (km)'
+    # cbticks = np.arange(-10, 60.1, 5)
+    # cblabels = 'Composite Reflectivity (dBZ)'
+    cblabels = '10 dBZ ETH (km)'
     cblabel_tracks = 'Lifetime (hour)'
     cbticks_tracks = [1,2,3,4]
     # Colormaps
-    cmaps = 'gist_ncar'     # Reflectivity
-    # cmaps = 'nipy_spectral'     # Echo-top Height
+    # cmaps = 'gist_ncar'     # Reflectivity
+    cmaps = 'nipy_spectral'     # Echo-top Height
     cmap_tracks = 'Spectral_r'  # Lifetime
-    show_tracks = True
+    show_tracks = False
     
     # Put plot specifications in a dictionary
     plot_info = {
@@ -572,8 +564,8 @@ if __name__ == "__main__":
         'cmaps': cmaps,
         'cmap_tracks': cmap_tracks,
         'show_tracks': show_tracks,
-        'marker_size': [10,10,10],    # track centroid marker size (short, medium, long lived)
-        'lw_centroid': [1,1,1],         # track path line width
+        'marker_size': [30,30,30],    # track centroid marker size (short, medium, long lived)
+        'lw_centroid': [3,3,3],         # track path line width
         'radii': np.arange(20,101,20),  # radii for the radar range rings [km]
         'azimuths': np.arange(0,361,90),   # azimuth angles for HSRHI scans [degree]
         'figbasename': figbasename,
@@ -624,7 +616,7 @@ if __name__ == "__main__":
         pixeltracking_filebase,
         start_basetime,
         end_basetime,
-        time_format=time_format,
+        time_format="yyyymodd_hhmmss",
     )
     print(f'Number of pixel files: {len(datafiles)}')
 

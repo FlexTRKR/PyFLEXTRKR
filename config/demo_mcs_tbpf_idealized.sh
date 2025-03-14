@@ -33,7 +33,7 @@ wget https://portal.nersc.gov/project/m1867/PyFLEXTRKR/sample_data/tb_pcp/ideali
 
 # Extract intput data
 echo 'Extracting demo input data ...'
-tar -xvzf ${dir_input}idealized_tbpcp.tar.gz -C ${dir_input} ${data_basename}*.nc
+tar -xvzf ${dir_input}idealized_tbpcp.tar.gz -C ${dir_input} --wildcards "${data_basename}*.nc"
 # Remove downloaded tar file
 rm -fv ${dir_input}idealized_tbpcp.tar.gz
 
@@ -45,8 +45,8 @@ sed 's/INPUT_DIR/'${dir_input1}'/g;s/TRACK_DIR/'${dir_demo1}'/g;s/BASENAME/'${da
 echo 'Created new config file: '${config_demo}
 
 # Activate PyFLEXTRKR conda environment
-echo 'Activating PyFLEXTRKR environment ...'
-conda activate flextrkr
+# echo 'Activating PyFLEXTRKR environment ...'
+# conda activate flextrkr
 
 # Run tracking
 echo 'Running PyFLEXTRKR ...'

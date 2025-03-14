@@ -346,7 +346,6 @@ def write_netcdf(
     # Specify attributes
     dsout[time_dimname].attrs['long_name'] = 'Epoch time (seconds since 1970-01-01 00:00:00)'
     dsout[time_dimname].attrs['units'] = 'seconds since 1970-01-01 00:00:00'
-    # dsout[time_dimname].attrs['_FillValue'] = np.NaN
     dsout[time_dimname].attrs['tims_string'] = _TimeStr
     # dsout['Times'].attrs['long_name'] = 'WRF-based time'
     dsout[x_coordname].attrs['long_name'] = 'Longitude'

@@ -40,9 +40,9 @@ dir_demo1=$(echo ${dir_demo} | sed 's_/_\\/_g')
 sed 's/INPUT_DIR/'${dir_input1}'/g;s/TRACK_DIR/'${dir_demo1}'/g' config_csapr4km_example.yml > ${config_demo}
 echo 'Created new config file: '${config_demo}
 
-# Activate PyFLEXTRKR conda environment
-echo 'Activating PyFLEXTRKR environment ...'
-conda activate pyflex
+# # Activate PyFLEXTRKR conda environment
+# echo 'Activating PyFLEXTRKR environment ...'
+# conda activate pyflex
 
 # Run tracking
 echo 'Running PyFLEXTRKR ...'

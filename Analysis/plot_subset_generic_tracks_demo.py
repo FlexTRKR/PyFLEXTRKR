@@ -250,7 +250,7 @@ def plot_map(pixel_dict, plot_info, map_info, track_dict):
 
     # Set up figure
     mpl.rcParams['font.size'] = fontsize
-    mpl.rcParams['font.family'] = 'Helvetica'
+    # mpl.rcParams['font.family'] = 'Helvetica'
     fig = plt.figure(figsize=figsize, dpi=200)
     gs = gridspec.GridSpec(1,2, height_ratios=[1], width_ratios=[1,0.03])
     gs.update(wspace=0.05, hspace=0.05, left=0.1, right=0.9, top=0.92, bottom=0.08)
@@ -374,13 +374,13 @@ def work_for_time_loop(datafile, track_dict, map_info, plot_info, config):
         map_info['subset'] = subset
 
     # Make dilation structure (larger values make thicker outlines)
-    # perim_thick = 1
-    # dilationstructure = np.zeros((perim_thick+1,perim_thick+1), dtype=int)
-    # dilationstructure[1:perim_thick, 1:perim_thick] = 1
-    # dilationstructure = generate_binary_structure(2,1)
     perim_width = plot_info['perim_width']
-    dilationstructure = np.zeros((perim_width+1,perim_width+1), dtype=int)
-    dilationstructure[1:perim_width, 1:perim_width] = 1
+    if perim_width > 1:
+        dilationstructure = np.zeros((perim_width+1,perim_width+1), dtype=int)
+        dilationstructure[1:perim_width, 1:perim_width] = 1
+    else:
+        dilationstructure = generate_binary_structure(2,1)
+    # import pdb; pdb.set_trace()
 
     # Data variable names
     field_varname = config["field_varname"]
@@ -483,25 +483,26 @@ if __name__ == "__main__":
             figsize = [10, 10]
 
     # Specify plotting info
-    # cmap = 'RdBu_r',   # colormap
-    # levels = np.arange(-4, 4.01, 0.2),  # shading levels
-    # cbticks = np.arange(-4, 4.01, 1),  # colorbar ticks
-    # cblabels = 'Z500 Anomaly (m$^{2}$ s$^{-1}$)',  # colorbar label
-    cmap = 'gist_ncar'   # colormap
-    levels = np.arange(0, 70.01, 5)  # shading levels
-    cbticks = np.arange(0, 70.01, 10)  # colorbar ticks
-    cblabels = 'Reflectivity (dBZ)'  # colorbar label
+    cmap = 'RdBu_r'   # colormap
+    levels = np.arange(-4, 4.01, 0.2)  # shading levels
+    cbticks = np.arange(-4, 4.01, 1)  # colorbar ticks
+    cblabels = 'Z500 Anomaly (m$^{2}$ s$^{-1}$)'  # colorbar label
+    # cmap = 'gist_ncar'   # colormap
+    # levels = np.arange(0, 70.01, 5)  # shading levels
+    # cbticks = np.arange(0, 70.01, 10)  # colorbar ticks
+    # cblabels = 'Reflectivity (dBZ)'  # colorbar label
     plot_info = {
         'fontsize': 13,     # plot font size
         'cmap': cmap,
         'levels': levels,
         'cbticks': cbticks, 
         'cblabels': cblabels,
-        'remove_oob_low': True,   # mask out-of-bounds low values (< min(levels))
+        'remove_oob_low': False,   # mask out-of-bounds low values (< min(levels))
         'remove_oob_high': False,  # mask out-of-bounds high values (> max(levels))
         'marker_size': 10,   # track symbol marker size
         'tracknumber_fontsize': 10,
-        'perim_width': 6,  # width of the track feature perimeter (number of pixels)
+        # 'perim_width': 6,  # width of the track feature perimeter (number of pixels)
+        'perim_width': 1,  # width of the track feature perimeter (number of pixels)
         'trackpath_linewidth': 1.5, # track path line width
         'trackpath_color': 'blueviolet',    # track path color
         'map_edgecolor': 'gray',    # background map edge color
@@ -521,7 +522,7 @@ if __name__ == "__main__":
         'lonv': lonv,
         'latv': latv,
         'draw_border': True,
-        'draw_state': True,
+        'draw_state': False,
     }
 
     # Track stats file

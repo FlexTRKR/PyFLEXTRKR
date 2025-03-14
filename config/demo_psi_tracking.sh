@@ -21,9 +21,9 @@ dir_input=${dir_demo}'input/'
 # Create the demo directory
 mkdir -p ${dir_input}
 
-# Activate PyFLEXTRKR conda environment
-echo 'Activating PyFLEXTRKR environment ...'
-conda activate flextrkr
+# # Activate PyFLEXTRKR conda environment
+# echo 'Activating PyFLEXTRKR environment ...'
+# conda activate flextrkr
 
 # Run tracking
 echo 'Running PyFLEXTRKR ...'

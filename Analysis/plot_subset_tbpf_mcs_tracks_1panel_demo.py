@@ -274,7 +274,7 @@ def plot_map_2panels(pixel_dict, plot_info, map_info, track_dict):
 
     # Set up figure
     mpl.rcParams['font.size'] = fontsize
-    mpl.rcParams['font.family'] = 'Helvetica'
+    # mpl.rcParams['font.family'] = 'Helvetica'
     fig = plt.figure(figsize=figsize, dpi=dpi, facecolor='w')
 
     # Set GridSpec for left (plot) and right (colorbars)
@@ -455,7 +455,7 @@ def work_for_time_loop(datafile, track_dict, map_info, plot_info, config):
     if (np.nanmax(tn) > 0):
 
         # Tracknumber color levels for MCS masks (limit to 256 to fit in a colormap)
-        tracknumbers = track_dict['lifetime'].tracks
+        tracknumbers = track_dict['lifetime'].tracks.values
         tn_nlev = np.min([len(tracknumbers), 256])
         tn_levels = np.linspace(np.min(tracknumbers)+1, np.max(tracknumbers)+1, tn_nlev)
         # Add to plot_info dictionary

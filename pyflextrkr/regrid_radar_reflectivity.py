@@ -123,11 +123,11 @@ def convolve_reflectivity(in_reflectivity, kernel):
     numPixs[mask_goodvalues==0] = 0
 
     # Calculate average linear reflectivity and convert to log values
-    out_reflectivity = np.full(in_reflectivity.shape, np.NaN, dtype=np.float32)
+    out_reflectivity = np.full(in_reflectivity.shape, np.nan, dtype=np.float32)
     out_reflectivity[numPixs>0] = 10.0 * np.log10(bkg_linrefl[numPixs>0] / numPixs[numPixs>0])
 
     # Remove pixels with 0 number of pixels
-    out_reflectivity[mask_goodvalues==0] = np.NaN
+    out_reflectivity[mask_goodvalues==0] = np.nan
     
     return out_reflectivity
 
@@ -156,11 +156,11 @@ def convolve_var(in_var, kernel):
     numPixs[mask_goodvalues==0] = 0
 
     # Calculate average linear reflectivity and convert to log values
-    out_var = np.full(in_var.shape, np.NaN, dtype=np.float32)
+    out_var = np.full(in_var.shape, np.nan, dtype=np.float32)
     out_var[numPixs>0] = bkg_var[numPixs>0] / numPixs[numPixs>0]
 
     # Remove pixels with 0 number of pixels
-    out_var[mask_goodvalues==0] = np.NaN
+    out_var[mask_goodvalues==0] = np.nan
 
     return out_var
 

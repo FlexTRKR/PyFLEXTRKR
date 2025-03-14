@@ -349,7 +349,7 @@ def get_timestamp_from_filename_single(
         file_timestamp = pd.Timestamp(f"{year}-{month}-{day}T{hour}:{minute}:{second}")
     else:
         logger.warning(f'File has invalid date/time, will return timestampe as NaN: {filename}')
-        file_timestamp = np.NaN
+        file_timestamp = np.nan
     return file_timestamp
 
 def subset_ds_geolimit(
