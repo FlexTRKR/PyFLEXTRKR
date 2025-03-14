@@ -7,7 +7,7 @@ import pandas as pd
 import logging
 from scipy import integrate
 from scipy.ndimage import gaussian_filter
-from pyflextrkr.ftfunctions import sort_renumber, skimage_watershed, adjust_pbc_coldpools
+from pyflextrkr.ftfunctions import sort_renumber, skimage_watershed, adjust_pbc_watershed
 from pyflextrkr.ft_utilities import get_timestamp_from_filename_single
 
 #---------------------------------------------------------------------------------
@@ -304,7 +304,7 @@ def idcoldpool(
         ### Label feauture considering boundary conditions
         if config["pbc_direction"] != "none":
 
-            var_number, param_dict = adjust_pbc_coldpools(cp_intensity_s, config)
+            var_number, param_dict = adjust_pbc_watershed(cp_intensity_s, config)
         else:
             # Label feature
             var_number, param_dict = skimage_watershed(cp_intensity_s, config)
