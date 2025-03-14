@@ -24,6 +24,24 @@ The input data must contain at least 3 dimensions: *time, y, x*, with correspond
 # **3. Installing PyFLEXTRKR**
 
 ---
+PyFLEXTRKR requires Python 3.6 and above. Support for Python 3.8 and lower has reached end-of-life so it is recommended to use Python 3.9 or higher.
+
+## **Install via Conda**
+
+The easiest way to install the most recent version of PyFLEXTRKR is via conda through the conda-forge channel:
+
+```
+conda install pyflextrkr -c conda-forge
+```
+
+This will also install all dependencies and should be sufficient for most users. You can update the installation by:
+
+```
+conda update pyflextrkr -c conda-forge
+```
+
+## **Install from source via Github**
+
 Clone PyFLEXTRKR to your local computer (e.g., /PyFLEXTRKR):
 
 ```bash
