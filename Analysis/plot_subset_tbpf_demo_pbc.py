@@ -10,8 +10,7 @@ Optional arguments:
 --output output_directory (output figure directory)
 --figbasename figure base name (output figure base name)
 """
-__author__ = "Zhe.Feng@pnnl.gov"
-__created_date__ = "26-Jan-2023"
+
 
 import argparse
 import numpy as np
@@ -51,8 +50,6 @@ def parse_cmd_args():
     parser.add_argument("-e", "--end", help="last time in time series to plot, format=YYYY-mm-ddTHH:MM:SS", required=True)
     parser.add_argument("-c", "--config", help="yaml config file for tracking", required=True)
     parser.add_argument("-p", "--parallel", help="flag to run in parallel (0:serial, 1:parallel)", type=int, default=0)
-    # parser.add_argument("-v", "--varname", help="variable name to plot", type=int, default=None)
-    # parser.add_argument("--extent", nargs='+', help="map extent (lonmin, lonmax, latmin, latmax)", type=float, default=None)
     parser.add_argument("--extent", help="map extent (lonmin lonmax latmin latmax)", type=four_floats, action='store', default=None)
     parser.add_argument("--subset", help="flag to subset data (0:no, 1:yes)", type=int, default=0)
     parser.add_argument("--figsize", nargs='+', help="figure size (width, height) in inches", type=float, default=None)
@@ -172,6 +169,8 @@ def get_track_stats(trackstats_file, start_datetime, end_datetime, dt_thres):
     """
     # Read track stats file
     dss = xr.open_dataset(trackstats_file)
+    
+
     stats_starttime = dss.base_time.isel(times=0)
     # Convert input datetime to np.datetime64
     stime = np.datetime64(start_datetime)
@@ -193,11 +192,6 @@ def get_track_stats(trackstats_file, start_datetime, end_datetime, dt_thres):
         'track_bt': dss['base_time'].isel(tracks=idx),
         'track_meanlon': dss['meanlon'].isel(tracks=idx) * xscale,
         'track_meanlat': dss['meanlat'].isel(tracks=idx) * yscale,
-        # 'start_split_tracknumber': dss['start_split_tracknumber'].isel(tracks=idx),
-        # 'end_merge_tracknumber': dss['end_merge_tracknumber'].isel(tracks=idx),
-        # 'track_pf_lon': dss['pf_lon_centroid'].isel(tracks=idx, nmaxpf=0) * xscale,
-        # 'track_pf_lat': dss['pf_lat_centroid'].isel(tracks=idx, nmaxpf=0) * yscale,
-        # 'track_pf_diam': 2 * np.sqrt(dss['pf_area'].isel(tracks=idx, nmaxpf=0) / np.pi),
         'dt_thres': dt_thres,
         'time_res': time_res,
     }
@@ -233,25 +227,18 @@ def plot_map(pixel_dict, plot_info, map_info, track_dict):
     pcp = pixel_dict['pcp']
     tn_perim = pixel_dict['tn_perim']
     tn = pixel_dict['tn']
-    # lon_tn = pixel_dict['lon_tn']
-    # lat_tn = pixel_dict['lat_tn']
-    # tracknumbers = pixel_dict['tracknumber_unique']
-    # Get track data from dictionary
     ntracks = track_dict['ntracks']
     lifetime = track_dict['lifetime']
     track_bt = track_dict['track_bt']
     track_meanlon = track_dict['track_meanlon']
     track_meanlat = track_dict['track_meanlat']
-    # track_pf_lon = track_dict['track_pf_lon']
-    # track_pf_lat = track_dict['track_pf_lat']
-    # track_pf_diam = track_dict['track_pf_diam']
+ 
     dt_thres = track_dict['dt_thres']
     time_res = track_dict['time_res']
     # Get plot info from dictionary
     fontsize = plot_info['fontsize']
     levels = plot_info['levels']
     cmaps = plot_info['cmap']
-    # titles = plot_info['titles']
     remove_oob_low = plot_info.get('remove_oob_low', False)
     remove_oob_high = plot_info.get('remove_oob_high', False)
     cblabels = plot_info['cblabels']
@@ -262,7 +249,6 @@ def plot_map(pixel_dict, plot_info, map_info, track_dict):
     trackpath_color = plot_info['trackpath_color']
     xlabel = plot_info['xlabel']
     ylabel = plot_info['ylabel']
-    # map_central_lon = plot_info['map_central_lon']
     timestr = plot_info['timestr']
     figname = plot_info['figname']
     figsize = plot_info['figsize']
@@ -281,11 +267,7 @@ def plot_map(pixel_dict, plot_info, map_info, track_dict):
 
     # Set up figure
     mpl.rcParams['font.size'] = fontsize
-    mpl.rcParams['font.family'] = 'Helvetica'
     fig = plt.figure(figsize=figsize, dpi=200)
-
-    # ax1 = plt.subplot(gs[0])
-    # cax1 = plt.subplot(gs[1])
 
 
     # Set GridSpec for left (plot) and right (colorbars)
@@ -324,7 +306,7 @@ def plot_map(pixel_dict, plot_info, map_info, track_dict):
     elif perim_plot == 'contour':
         Tn = np.copy(tn.data)
         Tn[Tn > 0] = 10
-        tn1 = ax1.contour(xx, yy, Tn, levels=[9,11], colors='black', linewidths=perim_linewidth, zorder=3)
+        tn1 = ax1.contour(xx, yy, Tn, levels=[9,11], colors='orange', linewidths=perim_linewidth, zorder=3)
     else:
         print(f"ERROR: undefined perim_plot method: {perim_plot}!")
         sys.exit()
@@ -333,9 +315,7 @@ def plot_map(pixel_dict, plot_info, map_info, track_dict):
     ax1.set_ylim(map_extent[2], map_extent[3])
     ax1.set_xlabel(xlabel)
     ax1.set_ylabel(ylabel)
-    # Variable colorbar
-    # cb1 = plt.colorbar(cf1, cax=cax1, label=cblabels, ticks=cbticks, extend='both')
-    # ax1.set_title(timestr)
+
 
     # Precipitation
     cmap = plt.get_cmap(cmaps['pcp_cmap'])
@@ -350,6 +330,9 @@ def plot_map(pixel_dict, plot_info, map_info, track_dict):
                        extend='both', orientation='vertical')
 
 
+    # Get domain maximum values 
+    domain_max_x = map_extent[1] - map_extent[0]
+    domain_max_y = map_extent[3] - map_extent[2]
 
     # Plot track centroids and paths
     for itrack in range(0, ntracks):
@@ -357,7 +340,7 @@ def plot_map(pixel_dict, plot_info, map_info, track_dict):
         ilifetime = lifetime.values[itrack]
         itracknum = lifetime.tracks.data[itrack]+1
         idur = (ilifetime / time_res).astype(int)
-        # idiam = track_pf_diam.data[itrack,:idur]
+        
         # Get basetime of the track and the last time
         ibt = track_bt.values[itrack,:idur]
         ibt_end = np.nanmax(ibt)
@@ -370,44 +353,63 @@ def plot_map(pixel_dict, plot_info, map_info, track_dict):
             idx_cut = np.where(ibt <= pixel_bt)[0]
             idur_cut = len(idx_cut)
             if (idur_cut > 0):
-                color_vals = np.repeat(ilifetime, idur_cut)
-                # Track path
-                size_vals = np.repeat(marker_size, idur_cut)
-                size_vals[0] = marker_size * 2   # Make start symbol size larger
-                cc = ax1.plot(track_meanlon.values[itrack,idx_cut], track_meanlat.values[itrack,idx_cut],
-                              lw=trackpath_linewidth, ls='-', color=trackpath_color, zorder=3)
-                # cl = ax1.scatter(track_meanlon.values[itrack,idx_cut], track_meanlat.values[itrack,idx_cut],
-                #                  s=size_vals, zorder=4, **marker_style)
-                # Initiation location
-                cl1 = ax1.scatter(track_meanlon.values[itrack,0], track_meanlat.values[itrack,0], s=marker_size*2, 
-                                  zorder=4, **marker_style)
-                
+                ### Handle tracks that cross domain for plotting
+                # Get adjusted positions
+                adjusted_lon = track_meanlon.values[itrack, idx_cut]
+                adjusted_lat = track_meanlat.values[itrack, idx_cut]
+
+                # Wrap positions back into domain for plotting
+                wrapped_lon = np.mod(adjusted_lon - map_extent[0], domain_max_x) + map_extent[0]
+                wrapped_lat = np.mod(adjusted_lat - map_extent[2], domain_max_y) + map_extent[2]
+
+                # Identify where wrap-around occurs to split the trajectory
+                lon_diff = np.abs(np.diff(wrapped_lon))
+                lat_diff = np.abs(np.diff(wrapped_lat))
+                wrap_indices = np.where((lon_diff > (domain_max_x / 2)) | (lat_diff > (domain_max_y / 2)))[0] + 1
+
+                # Split the trajectory at wrap-around points
+                split_lon = np.split(wrapped_lon, wrap_indices)
+                split_lat = np.split(wrapped_lat, wrap_indices)
+
+                # import pdb; pdb.set_trace()
+
+                # Plot each segment separately
+                for lon_seg, lat_seg in zip(split_lon, split_lat):
+                    # Ensure there are at least two points to plot a line
+                    if len(lon_seg) >= 2:
+                        ax1.plot(lon_seg, lat_seg, lw=trackpath_linewidth, ls='-', color=trackpath_color, zorder=3)
+                    else:
+                        # For single points, plot as markers
+                        ax1.scatter(lon_seg, lat_seg, s=marker_size, color=trackpath_color, zorder=3,)
+
+                # Initiation location (adjusted)
+                init_lon = track_meanlon.values[itrack, 0]
+                init_lat = track_meanlat.values[itrack, 0]
+                wrapped_init_lon = np.mod(init_lon - map_extent[0], domain_max_x) + map_extent[0]
+                wrapped_init_lat = np.mod(init_lat - map_extent[2], domain_max_y) + map_extent[2]
+                ax1.scatter(wrapped_init_lon, wrapped_init_lat, s=marker_size*2, zorder=4, **marker_style)
+
         # Find the closest time from track times
         idt = np.abs((ibt - pixel_bt).astype('timedelta64[m]'))
         idx_match = np.argmin(idt)
         idt_match = idt[idx_match]
         # Get track data
-        _imeanlon = track_meanlon.data[itrack,idx_match]
-        _imeanlat = track_meanlat.data[itrack,idx_match]
-        # # Get PF radius from the matched tracks
-        # _irad = idiam[idx_match] / 2
-        # _ilon = track_pf_lon.data[itrack,idx_match]
-        # _ilat = track_pf_lat.data[itrack,idx_match]
+        _imeanlon = track_meanlon.data[itrack, idx_match]
+        _imeanlat = track_meanlat.data[itrack, idx_match]
+
+        # Adjust positions for plotting
+        _iwrapped_meanlon = np.mod(_imeanlon - map_extent[0], domain_max_x) + map_extent[0]
+        _iwrapped_meanlat = np.mod(_imeanlat - map_extent[2], domain_max_y) + map_extent[2]
+
         # Proceed if time difference is < dt_match
-        if (idt_match < dt_match):
+        if idt_match < dt_match:
             # Overplot tracknumbers at current frame
-            if (_imeanlon > map_extent[0]) & (_imeanlon < map_extent[1]) & \
-                (_imeanlat > map_extent[2]) & (_imeanlat < map_extent[3]):
-                ax1.text(_imeanlon+0.02, _imeanlat+0.02, f'{itracknum:.0f}', color='k', size=tracknumber_fontsize, 
-                        weight='bold', ha='left', va='center', zorder=4)
-
-    # # Overplot tracknumbers at current frame
-    # for ii in range(0, len(lon_tn)):
-    #     if (lon_tn[ii] > map_extent[0]) & (lon_tn[ii] < map_extent[1]) & \
-    #        (lat_tn[ii] > map_extent[2]) & (lat_tn[ii] < map_extent[3]):
-    #         ax1.text(lon_tn[ii]+0.02, lat_tn[ii]+0.02, f'{tracknumbers[ii]:.0f}', color='k', size=10, 
-    #                 weight='bold', ha='left', va='center', zorder=4)
-
+            if (_iwrapped_meanlon > map_extent[0]) & (_iwrapped_meanlon < map_extent[1]) & \
+                (_iwrapped_meanlat > map_extent[2]) & (_iwrapped_meanlat < map_extent[3]):
+                ax1.text(_iwrapped_meanlon+0.02, _iwrapped_meanlat+0.02, f'{itracknum:.0f}',
+                            color='r', size=tracknumber_fontsize, weight='bold', ha='left', va='center', zorder=4)
+                             
+      
     # Thread-safe figure output
     canvas = FigureCanvas(fig)
     canvas.print_png(figname)
@@ -416,6 +418,7 @@ def plot_map(pixel_dict, plot_info, map_info, track_dict):
     return fig
 
 #-----------------------------------------------------------------------
+
 def work_for_time_loop(datafile, track_dict, map_info, plot_info, config):
     """
     Process data for a single frame and make the plot.
@@ -455,23 +458,13 @@ def work_for_time_loop(datafile, track_dict, map_info, plot_info, config):
         map_info['map_extent'] = map_extent
         map_info['subset'] = subset
 
-    # Make dilation structure (larger values make thicker outlines)
-    # perim_thick = 1
-    # dilationstructure = np.zeros((perim_thick+1,perim_thick+1), dtype=int)
-    # dilationstructure[1:perim_thick, 1:perim_thick] = 1
-    # dilationstructure = generate_binary_structure(2,1)
-
-    # dilationstructure = np.zeros((perim_thick+1,perim_thick+1), dtype=int)
-    # dilationstructure[1:perim_thick, 1:perim_thick] = 1
-    
+  
     dilationstructure = make_dilation_structure(perim_thick, pixel_radius, pixel_radius)
 
     # Data variable names
-    # field_varname = config["field_varname"]
     field_varname = 'tb'
 
-    # Get tracknumbers
-    # tn = ds['cloudtracknumber'].squeeze()
+
 
     # Only plot if there is feature in the frame
     # if (np.nanmax(tn) > 0):
@@ -483,14 +476,6 @@ def work_for_time_loop(datafile, track_dict, map_info, plot_info, config):
         latmin, latmax = map_extent[2]-buffer, map_extent[3]+buffer
         mask = (ds['longitude'] >= lonmin) & (ds['longitude'] <= lonmax) & \
                (ds['latitude'] >= latmin) & (ds['latitude'] <= latmax)
-        # xmin = mask.where(mask == True, drop=True).lon.min().item()
-        # xmax = mask.where(mask == True, drop=True).lon.max().item()
-        # ymin = mask.where(mask == True, drop=True).lat.min().item()
-        # ymax = mask.where(mask == True, drop=True).lat.max().item()
-        # lon_sub = ds['longitude'].isel(lon=slice(xmin,xmax), lat=slice(ymin,ymax)).data
-        # lat_sub = ds['latitude'].isel(lon=slice(xmin,xmax), lat=slice(ymin,ymax)).data
-        # fvar = ds[field_varname].isel(lon=slice(xmin,xmax), lat=slice(ymin,ymax)).squeeze()
-        # tracknumber_sub = ds['cloudtracknumber'].isel(lon=slice(xmin,xmax), lat=slice(ymin,ymax)).squeeze()
         fvar = ds[field_varname].where(mask == True, drop=True).squeeze()
         pcp_sub = ds['precipitation'].where(mask == True, drop=True).squeeze()
         tracknumber_sub = ds['cloudtracknumber'].where(mask == True, drop=True).squeeze()
@@ -580,10 +565,7 @@ if __name__ == "__main__":
             figsize = [10, 10]
 
     # Specify plotting info
-    # cmap = 'YlGnBu'   # colormap
-    # levels = np.arange(0.1, 12.01, 0.1)  # shading levels
-    # cbticks = np.arange(0, 12.01, 1)  # colorbar ticks
-    # cblabels = 'Cold Pool Intensity (m s$^{-1}$)'  # colorbar label
+    
     # Precipitation color levels
     pcp_levels = [2, 3, 4, 5, 6, 8, 10, 15, 20, 30]
     pcp_ticks = pcp_levels
@@ -597,9 +579,6 @@ if __name__ == "__main__":
     # Colormaps
     tb_cmap = 'Greys'
     pcp_cmap = 'YlGnBu'
-    # tn_cmap = cc.cm["glasbey_light"]
-    #tn_cmap = cc.cm["glasbey_dark"]
-    # tn_cmap = cc.cm["glasbey"]
     cmaps = {'tb_cmap': tb_cmap, 'pcp_cmap': pcp_cmap}
     titles = {'tb_title': 'IR Brightness Temperature, Precipitation, Tracked MCS (Outline)'}
 
@@ -608,12 +587,9 @@ if __name__ == "__main__":
 
     
     # Scaling factor for x, y coordinates
-    xscale = 1e-3
-    yscale = 1e-3
-    # cmap = 'gist_ncar'   # colormap
-    # levels = np.arange(0, 70.01, 5)  # shading levels
-    # cbticks = np.arange(0, 70.01, 10)  # colorbar ticks
-    # cblabels = 'Reflectivity (dBZ)'  # colorbar label
+    xscale = 1 #10
+    yscale = 1 #!0
+   
     plot_info = {
         'fontsize': 14,     # plot font size
         'cmap': cmaps,
@@ -627,7 +603,7 @@ if __name__ == "__main__":
         'mask_alpha': 0.6,   # transparancy alpha for perimeter mask
         'marker_size': 10,   # track symbol marker size
         'tracknumber_fontsize': 14,
-        'perim_plot': 'pcolormesh',  # method to plot tracked feature perimeter ('contour', 'pcolormesh')
+        'perim_plot': 'contour',  # method to plot tracked feature perimeter ('contour', 'pcolormesh')
         'perim_linewidth': 1.5,  # perimeter line width for 'contour' method
         'perim_thick': 2,  # width of the tracked feature perimeter [km]
         'trackpath_linewidth': 1.5, # track path line width
