@@ -47,6 +47,7 @@ def calc_stats_singlefile(
     terrain_file = config.get("terrain_file", None)
     rangemask_varname = config.get("rangemask_varname", 'None')
     feature_varname = config.get("feature_varname", "feature_number")
+    pbc_direction = config.get("pbc_direction", "none")
 
     # Only process file if that file contains a track
     if np.nanmax(tracknumbers) > 0:
@@ -206,15 +207,31 @@ def calc_stats_singlefile(
             corecold_npix, corecold_indices = get_loc_indices(
                 cloudnumber1d_uniq, cloudnumber1d_counts,
                 ast_corecoldarea, cumcounts_corecoldarea,
-                cloudnumber_map, nx, ny,
+                cloudnumber_map, nx, ny
             )
 
             if corecold_npix > 0:
                 out_area[itrack] = corecold_npix * pixel_radius ** 2
                 corecold_lat = latitude[corecold_indices[0], corecold_indices[1]]
                 corecold_lon = longitude[corecold_indices[0], corecold_indices[1]]
-                out_meanlon[itrack] = np.nanmean(corecold_lon)
-                out_meanlat[itrack] = np.nanmean(corecold_lat)
+                # Calculate ranges based on coordinate space rather than grid size
+                lon_range = np.ptp(longitude)  # Total range of longitude values
+                lat_range = np.ptp(latitude)   # Total range of latitude values
+                # import pdb; pdb.set_trace()
+
+                if pbc_direction in ['x', 'both']:
+                    mean_lon = circular_mean(corecold_lon, np.min(longitude),np.max(longitude))
+                else:
+                    mean_lon = np.nanmean(corecold_lon)
+
+                if pbc_direction in ['y', 'both']:
+                    mean_lat = circular_mean(corecold_lat, np.min(latitude), np.max(latitude))
+                else:
+                    mean_lat = np.nanmean(corecold_lat)
+                
+                # Store the calculated mean positions
+                out_meanlon[itrack] = mean_lon
+                out_meanlat[itrack] = mean_lat
 
                 # Calculate feature specific statistics
                 # Satellite Tb
@@ -409,7 +426,36 @@ def calc_stats_singlefile(
 
 
 
+################################################################################
 
+def circular_mean(values, domain_min, domain_max):
+    """
+    Compute the circular mean of values in a periodic domain.
+    
+    Parameters:
+    - values: Array of positions
+    - domain_min: Minimum value of the domain (e.g., 0 or -180)
+    - domain_max: Maximum value of the domain (e.g., 100 or 180)
+
+    Returns:
+    - Mean position in the original domain range
+    """
+
+    # Convert to [0, 1] range within the domain
+    domain_range = domain_max - domain_min
+    normalized_values = (values - domain_min) / domain_range * 2 * np.pi  # Convert to radians
+
+    # Compute the circular mean using trigonometry
+    mean_angle = np.arctan2(np.nanmean(np.sin(normalized_values)), np.nanmean(np.cos(normalized_values)))
+
+    # Convert back to original domain
+    mean_value = (mean_angle / (2 * np.pi) * domain_range) + domain_min
+
+    # Ensure the mean value stays within the original domain
+    return (mean_value - domain_min) % domain_range + domain_min
+
+
+################################################################################
 
 def define_base_vars_dict(file_basetime, fillval, fillval_f, numtracks, out_area, out_basetime, out_cloudnumber,
                           out_meanlat, out_meanlon, out_mergenumber, out_splitnumber, out_status,
@@ -787,6 +833,7 @@ def get_loc_indices(
     """
     # Find index of pre-sorted cloudnumber matching the current cloud
     idx = np.where(cloudnumber1d_uniq == cloudnumber_map)[0]
+
     if len(idx) > 0:
         corecold_npix = cloudnumber1d_counts[idx]
 
@@ -807,6 +854,8 @@ def get_loc_indices(
                 ast_cloudarea[0: cumcounts_cloudarea[idx][0]],
                 (ny, nx),
             )
+        
+
     else:
         corecold_npix = 0
         indices = None

@@ -1,0 +1,66 @@
+#!/bin/bash
+###############################################################################################
+# This script demonstrates running MCS tracking on idealized Tb + precipitation data
+# To run this demo script:
+# 1. Modify the dir_demo to a directory on your computer to download the sample data
+# 2. Modify the test input basename
+# 3. Run the script: bash demo_mcs_tbpf_idealized.sh
+#
+# By default the demo config uses 4 processors for parallel processing,
+#    assuming most computers have at least 4 CPU cores.
+###############################################################################################
+
+# Specify start/end datetime
+start_date='2020-01-01T00' 
+end_date='2020-01-03T00' 
+
+# Plotting map domain (lonmin lonmax latmin latmax)
+map_extent='0. 1500 0. 1500'  # (xmin xmax ymin ymax)
+run_parallel=1
+
+# Specify directory for the demo data
+# There are a total of 4 tests (e.g., test1, test2, test3, test4)
+dir_demo='/pscratch/sd/p/paccini/temp/output_tracking/tracking_mcs_idealized_demo_/' 
+
+# Test input file basename
+# There are a total of 4 tests (e.g., 'MCS-test-1_', 'MCS-test-2_', etc.)
+# data_basename='PBC_mcs_rolled_demo_'
+
+# Example config file name
+config_demo='/global/cfs/cdirs/wcm_code/lpaccini/PyFLEXTRKR-dev/config/config_mcs_pbc_idealized.yml'
+
+# Demo input data directory
+dir_input='/pscratch/sd/p/paccini/temp/sample_data/'
+quicklook_dir=${dir_demo}'/quicklooks_trackpaths/'
+animation_dir=${dir_demo}'/animations/'
+animation_filename=${animation_dir}mcs_tracking_${start_date}_${end_date}.mp4
+
+# Make quicklook & animation directories
+mkdir -p ${quicklook_dir}
+mkdir -p ${animation_dir}
+
+
+# Run tracking
+echo 'Running PyFLEXTRKR ...'
+python /global/cfs/cdirs/wcm_code/lpaccini/PyFLEXTRKR-dev/runscripts/run_mcs_tbpf_saag.py ${config_demo}
+# python /global/cfs/cdirs/wcm_code/lpaccini/PyFLEXTRKR-dev/runscripts/run_mcs_tbpf.py ${config_demo}
+echo 'Tracking is done.'
+
+# Make quicklook plots
+echo 'Making quicklook plots ...'
+python /global/cfs/cdirs/wcm_code/lpaccini/PyFLEXTRKR-dev/Analysis/plot_subset_tbpf_demo_pbc.py -s ${start_date} -e ${end_date} \
+    -c ${config_demo} -p ${run_parallel}  --output ${quicklook_dir} \
+    --extent "${map_extent}" --subset 0
+# python /global/cfs/cdirs/wcm_code/lpaccini/PyFLEXTRKR-dev/Analysis/plot_subset_tbpf_mcs_tracks_demo.py -s '2020-01-01T00' -e '2020-01-03T00' \
+#     -c ${config_demo} -o vertical -p 1 --figsize 10 8 --output ${quicklook_dir}
+echo 'View quicklook plots here: '${quicklook_dir}
+
+# Make animation using ffmpeg
+vfscale='1200:-1'
+framerate=2
+echo 'Making animations from quicklook plots ...'
+ffmpeg -framerate ${framerate} -pattern_type glob -i ${quicklook_dir}'*.png' -c:v libx264 -r 10 -crf 20 -pix_fmt yuv420p \
+    -y ${animation_filename}
+echo 'View animation here: '${animation_filename}
+
+# echo 'Demo completed!'
