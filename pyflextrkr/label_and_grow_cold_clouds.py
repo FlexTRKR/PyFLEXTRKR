@@ -73,25 +73,6 @@ def label_and_grow_cold_clouds(
 
     #################################################################
 
-    # if pbc_direction!='none':
-    #     # Step 2: Extend and pad data
-    #     out_ir_orig = np.copy(ir)
-    #     out_ir, padded_x, padded_y = pad_and_extend(ir, config)
-    #     # Smooth Tb data
-    #     smoothir = smooth_tb(out_ir, smoothsize)
-    #     # Label cold cores on extended array
-    #     labelcore_number2d, nlabelcores = find_and_label_cold_cores(smoothir, thresh_core)
-    #     # Adjust axis and restore to original structure
-    #     labelcore_number2d = call_adjust_axis(labelcore_number2d, out_ir_orig, config, padded_x, padded_y)
-    #     # Determine dimensions
-    #     ny, nx = np.shape(out_ir)
-        
-    # else:
-    #     # Smooth Tb data
-    #     smoothir = smooth_tb(ir, smoothsize)
-    #     # Label cold cores
-    #     labelcore_number2d, nlabelcores = find_and_label_cold_cores(smoothir, thresh_core)
-
     if pbc_direction != 'none':
         # Save original data
         ir_orig = np.copy(ir)
@@ -183,18 +164,6 @@ def label_and_grow_cold_clouds(
         if nisolated > 0:
             isolated_flag[isolated_indices] = 1
 
-        # if pbc_direction!='none':
-        #     # Step 2: Extend and pad data
-        #     isolated_flag_orig = np.copy(isolated_flag)
-        #     isolated_flag_ext, padded_x, padded_y = pad_and_extend(isolated_flag, config)
-        #     # Label isolated cold cores or cold anvils on extended array
-        #     labelisolated_number2d, nlabelisolated = label(isolated_flag_ext)
-        #     # Adjust axis and restore to original structure
-        #     labelisolated_number2d = call_adjust_axis(labelisolated_number2d, isolated_flag_orig, config, padded_x, padded_y)    
-        # else:
-        #     # Label isolated cold cores or cold anvils
-        #     labelisolated_number2d, nlabelisolated = label(isolated_flag)
-        # Label isolated cold cores or cold anvils
         labelisolated_number2d, nlabelisolated = label(isolated_flag)
         # Sort isolated cold cores/anvils by size and remove small ones
         sortedisolated_number2d, sortedisolated_npix = sort_renumber(labelisolated_number2d, nthresh)
@@ -268,23 +237,8 @@ def label_and_grow_cold_clouds(
     ######################################################################
     # If no core is found, use cold anvil threshold to identify features
     else:
-        #################################################
-        # Label regions with cold anvils and cores
-        # corecold_flag = core_flag + coldanvil_flag not used
-        if pbc_direction!='none':
-            # Step 2: Extend and pad data
-            coldanvil_flag_orig = np.copy(coldanvil_flag)
-            coldanvil_flag_ext, padded_x, padded_y = pad_and_extend(coldanvil_flag, config)
-            # Label  on extended array
-            corecold_number2d, ncorecold = label(coldanvil_flag_ext)
-            # Adjust axis and restore to original structure
-            corecold_number2d = call_adjust_axis(corecold_number2d, coldanvil_flag_orig, config, padded_x, padded_y)    
-        else:
-            # Label 
-            corecold_number2d, ncorecold = label(coldanvil_flag)
-
-
-        # corecold_number2d, ncorecold = label(coldanvil_flag)
+        # Label 
+        corecold_number2d, ncorecold = label(coldanvil_flag_orig)
 
         ##########################################################
         # Loop through clouds and only keep those where core + cold anvil exceed threshold
