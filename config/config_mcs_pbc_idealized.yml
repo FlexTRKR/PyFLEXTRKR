@@ -14,6 +14,7 @@ run_robustmcs : True
 run_mapfeature : True
 run_speed: True
 run_regrid_mask: False
+run_preprocess: False
 
 # Parallel processing set up
 # run_parallel: 1 (local cluster), 2 (Dask MPI)
@@ -21,7 +22,6 @@ run_parallel: 1
 nprocesses : 8  # Number of processors to use if run_parallel=1
 dask_tmp_dir: '/tmp'  # Dask temporary directory if run_parallel=1
 timeout: 360  # [seconds] Dask timeout limit
-run_preprocess: False
 
 # Start/end date and time
 startdate: '20200101.0000'
@@ -101,9 +101,9 @@ trackstats_dense_netcdf: 1
 match_pixel_dt_thresh: 60.0  # seconds
 
 # Tracking parameters - periodic boundary conditions
-pbc_direction: 'both'  #options are 'x', 'y', 'both' and 'none'
-extended_fraction: 1
-domain_max: 1500
+pbc_direction: 'both'    # options are 'x', 'y', 'both' and 'none'
+extended_fraction: 1    # Fraction to extend the domain (range: 0 to 1)
+domain_max: 1500    # @laurapaccini please modify this to be the fraction of the domain size for x & y separately
 
 # MCS Tb parameters
 mcs_tb_area_thresh: 40000  # [km^2] Tb area threshold

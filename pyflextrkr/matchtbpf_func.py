@@ -185,9 +185,61 @@ def matchtbpf_singlefile(
                                                                 icloudlocationy,
                                                                 xdim,
                                                                 ydim)
+                    
+                    # Check cloud boundary span
+                    # If boundary span across the whole domain, it indicates periodic boundary condition
+                    # roll the data such that the cloud does not span across the domain boundary
+                    if ((maxx - minx) == xdim) | ((maxy - miny) == ydim):
+                        # Subset cloudnumber mask that contains the current cloud
+                        sub_cmask = cloudnumbermap[miny:maxy, minx:maxx] == ittcloudnumber
+                        # Label the connected pixels
+                        cloudnumberlabelmap, num_cld = label(sub_cmask)
+                        # Count number of pixels for each labeled cloud
+                        uniq_cldnum, npix_cldmap = np.unique(cloudnumberlabelmap, return_counts=True)
+                        # Exclude 0 (background)
+                        _idx = uniq_cldnum > 0
+                        uniq_cldnum = uniq_cldnum[_idx]
+                        npix_cldmap = npix_cldmap[_idx]
+                        # Loop over each labeled cloud to find their min/max positions
+                        xmax_left = []                       
+                        xmin_right = []
+                        ymax_bottom = []
+                        ymin_top = []
+                        for cc in uniq_cldnum:
+                            _y, _x = np.array(np.where(cloudnumberlabelmap == cc))
+                            _maxx, _maxy, _minx, _miny = get_cloud_boundary(_x, _y, xdim, ydim)
+                            # print(cc, _minx, _maxx, _miny, _maxy)
+                            if _minx == 0:  # Feature touching left boundary
+                                xmax_left.append(_maxx)
+                            if _maxx == xdim:  # Feature touching right boundary
+                                xmin_right.append(_minx)
+                            if _miny == 0:  # Feature touching bottom boundary
+                                ymax_bottom.append(_maxy)
+                            if _maxy == ydim:  # Feature touching top boundary
+                                ymin_top.append(_miny)
 
-                    # Isolate region over the cloud shield
-                    sub_rainrate_map = np.copy(rainrate_map[miny:maxy, minx:maxx])
+                        # Find max indices to roll
+                        shift_x_left = np.max(xmax_left) if (len(xmax_left) > 0) else 0
+                        shift_x_right = (xdim - np.min(xmin_right)) if (len(xmin_right) > 0) else 0
+                        shift_y_bottom = np.max(ymax_bottom) if (len(ymax_bottom) > 0) else 0
+                        shift_y_top = (ydim - np.min(ymin_top)) if (len(ymin_top) > 0) else 0
+
+                        # Isolate region over the cloud shield
+                        sub_rainrate_map = np.copy(rainrate_map[miny:maxy, minx:maxx])
+                        # Roll array
+                        sub_rainrate_map_rolled = np.roll(sub_rainrate_map, shift=(np.abs(shift_y_top), np.abs(shift_x_right)), axis=(0,1))
+                        # Find valid rain values
+                        rain_y, rain_x = np.where(~np.isnan(sub_rainrate_map_rolled))
+                        # Get rain boundary
+                        rain_maxx, rain_maxy, rain_minx, rain_miny = get_cloud_boundary(rain_x, rain_y, xdim, ydim)
+                        # Subset rain array
+                        sub_rainrate_map = sub_rainrate_map_rolled[rain_miny:rain_maxy, rain_minx:rain_maxx]
+                        
+                        # import matplotlib.pyplot as plt
+                        # import pdb; pdb.set_trace()
+                    else:
+                        # Isolate region over the cloud shield
+                        sub_rainrate_map = np.copy(rainrate_map[miny:maxy, minx:maxx])
 
                     # Calculate total rainfall within the cold cloud shield
                     total_rain[imatchcloud] = np.nansum(sub_rainrate_map)

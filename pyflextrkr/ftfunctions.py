@@ -1,3 +1,4 @@
+import logging
 import numpy as np
 from collections import deque
 from skimage.segmentation import watershed
@@ -512,6 +513,16 @@ def skimage_watershed(fvar, config):
 def pad_and_extend(fvar, config):
     """
     Pad and extend data based on specified periodic boundary conditions.
+
+    Args:
+        fvar:
+        config: dictionary
+            Dictionary containing config parameters.
+
+    Returns:
+        extended_data:
+        padded_x:
+        padded_y:
     """
     ext_frac = config.get('extended_fraction', 1.0)
     pbc_direction = config.get('pbc_direction', 'both')
@@ -530,11 +541,21 @@ def pad_and_extend(fvar, config):
     return extended_data, padded_x, padded_y
 
 def calc_extension(size, ext_frac):
-    """Calculate the extension size."""
+    """
+    Calculate the extension size.
+    """
     return int(size * ext_frac)
 
 def cache_label_positions(segments):
-    """Cache the positions of labels in segments (features)."""
+    """
+    Cache the positions of labels in segments (features).
+    
+    Args:
+        segments:
+
+    Returns:
+        label_positions_cache:
+    """
     label_positions_cache = {}
     unique_labels = np.unique(segments)
     for label in unique_labels:
@@ -544,7 +565,20 @@ def cache_label_positions(segments):
     return label_positions_cache
 
 def adjust_axis(segments, axis, original_shape, ext_frac):
-    """Adjust the segments (features) along a specified axis."""
+    """
+    Adjust the segments (features) along a specified axis.
+
+    Args:
+        segments:
+        axis:
+        original_shape:
+        ext_frac:
+
+    Returns:
+        segments:
+        adjusted:
+    """
+    logger = logging.getLogger(__name__)
     ext_size = calc_extension(original_shape[axis], ext_frac)
     adjusted = False
     label_positions_cache = cache_label_positions(segments)
@@ -564,7 +598,7 @@ def adjust_axis(segments, axis, original_shape, ext_frac):
                 continue
             # Verify if the label spans the middle slice in Y direction
             if np.all(middle_slice == label):
-                print(f"Full-domain spanning feature detected in axis {axis} with label {label}.")
+                logger.warning(f"Full-domain spanning feature detected in axis {axis} with label {label}.")
                 continue
             adjusted = True
             # Start with initial min_pos for the label
@@ -595,7 +629,7 @@ def adjust_axis(segments, axis, original_shape, ext_frac):
             segments = np.roll(segments, shift=-dy, axis=0)
         
     else:
-        print(f"Warning: No shared labels found in axis {axis}.")
+        logger.debug(f"No shared labels found in axis {axis}.")
     return segments, adjusted
 
 def adjust_pbc_watershed(fvar, config):
@@ -606,6 +640,15 @@ def adjust_pbc_watershed(fvar, config):
     2. Extends and pads data.
     3. Apply watershed segmentation .
     4. Adjust axis based on PBC direction. 
+
+    Args:
+        fvar:
+        config: dictionary
+            Dictionary containing config parameters.
+
+    Returns:
+        adjusted_segments:
+        param_dict:
     """
     ext_frac = config.get('extended_fraction', 1.0)
     pbc_direction = config.get('pbc_direction', 'both')
@@ -618,16 +661,21 @@ def adjust_pbc_watershed(fvar, config):
 
     return adjusted_segments, param_dict
 
-def call_adjust_axis(extended_segments,fvar,config, padded_x, padded_y):
+def call_adjust_axis(extended_segments, fvar, config, padded_x, padded_y):
     """
     Process data to adjust axis based on periodic boundary directions. 
-    Parameters:
-    - extended_segments: 2D numpy array of the extended and padded feature data.
-    - fvar: 2D numpy array of the original feature data.
-    - config: Dictionary containing configuration parameters.
+
+    Args:
+        extended_segments: np.ndarray()
+            2D numpy array of the extended and padded feature data.
+        fvar: np.ndarray()
+            2D numpy array of the original feature data.
+        config: dictionary
+            Dictionary containing config parameters.
 
     Returns:
-    - Adjusted segments according to periodic boundary considerations.
+        extended_segments: np.ndarray()
+            Adjusted segments according to periodic boundary considerations.
     """
     ext_frac = config.get('extended_fraction', 1.0)
     pbc_direction = config.get('pbc_direction', 'both')

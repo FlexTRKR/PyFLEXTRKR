@@ -64,6 +64,13 @@ def calc_stats_singlefile(
         longitude = ds["longitude"].values
         nx = ds.sizes["lon"]
         ny = ds.sizes["lat"]
+        # Get domain coordinate size information
+        lon_range = np.ptp(longitude)  # Total range of longitude values
+        lat_range = np.ptp(latitude)   # Total range of latitude values
+        longitude_min = np.nanmin(longitude)
+        longitude_max = np.nanmax(longitude)
+        latitude_min = np.nanmin(latitude)
+        latitude_max = np.nanmax(latitude)
         # file_cloudnumber = ds["cloudnumber"].squeeze().values
         file_corecold_cloudnumber = ds[feature_varname].squeeze().values
         file_basetime = ds["base_time"].squeeze()
@@ -74,6 +81,12 @@ def calc_stats_singlefile(
             # Convert x,y units to [km]
             x_coords = ds["x"] / 1000.
             y_coords = ds["y"] / 1000.
+            # Get domain coordinate size information
+            x_coords_min = np.nanmin(x_coords)
+            x_coords_max = np.nanmax(x_coords)
+            y_coords_min = np.nanmin(y_coords)
+            y_coords_max = np.nanmax(y_coords)
+            # Get variables
             file_dbz = ds[ref_varname].squeeze().values
             file_conv_core = ds["conv_core"].squeeze().values
             file_conv_mask = ds["conv_mask"].squeeze().values
@@ -214,18 +227,15 @@ def calc_stats_singlefile(
                 out_area[itrack] = corecold_npix * pixel_radius ** 2
                 corecold_lat = latitude[corecold_indices[0], corecold_indices[1]]
                 corecold_lon = longitude[corecold_indices[0], corecold_indices[1]]
-                # Calculate ranges based on coordinate space rather than grid size
-                lon_range = np.ptp(longitude)  # Total range of longitude values
-                lat_range = np.ptp(latitude)   # Total range of latitude values
                 # import pdb; pdb.set_trace()
 
                 if pbc_direction in ['x', 'both']:
-                    mean_lon = circular_mean(corecold_lon, np.min(longitude),np.max(longitude))
+                    mean_lon = circular_mean(corecold_lon, longitude_min, longitude_max)
                 else:
                     mean_lon = np.nanmean(corecold_lon)
 
                 if pbc_direction in ['y', 'both']:
-                    mean_lat = circular_mean(corecold_lat, np.min(latitude), np.max(latitude))
+                    mean_lat = circular_mean(corecold_lat, latitude_min, latitude_max)
                 else:
                     mean_lat = np.nanmean(corecold_lat)
                 
@@ -295,16 +305,34 @@ def calc_stats_singlefile(
                     cell_x = x_coords[corecold_indices[1]]
 
                     # Core center location
-                    out_core_meanlat[itrack] = np.nanmean(core_lat)
-                    out_core_meanlon[itrack] = np.nanmean(core_lon)
-                    out_core_mean_y[itrack] = np.nanmean(core_y)
-                    out_core_mean_x[itrack] = np.nanmean(core_x)
+                    if pbc_direction in ['x', 'both']:
+                        out_core_meanlon[itrack] = circular_mean(core_lon, longitude_min, longitude_max)
+                        out_core_mean_x[itrack] = circular_mean(core_x, x_coords_min, x_coords_max)
+                    else:
+                        out_core_meanlon[itrack] = np.nanmean(core_lon)
+                        out_core_mean_x[itrack] = np.nanmean(core_x)
+                    
+                    if pbc_direction in ['y', 'both']:
+                        out_core_meanlat[itrack] = circular_mean(core_lat, latitude_min, latitude_max)
+                        out_core_mean_y[itrack] = circular_mean(core_y, y_coords_min, y_coords_max)
+                    else:
+                        out_core_meanlat[itrack] = np.nanmean(core_lat)                    
+                        out_core_mean_y[itrack] = np.nanmean(core_y)                    
 
                     # Cell center location
-                    out_cell_meanlat[itrack] = np.nanmean(cell_lat)
-                    out_cell_meanlon[itrack] = np.nanmean(cell_lon)
-                    out_cell_mean_y[itrack] = np.nanmean(cell_y)
-                    out_cell_mean_x[itrack] = np.nanmean(cell_x)
+                    if pbc_direction in ['x', 'both']:
+                        out_cell_meanlon[itrack] = circular_mean(cell_lon, longitude_min, longitude_max)
+                        out_cell_mean_x[itrack] = circular_mean(cell_x, x_coords_min, x_coords_max)
+                    else:
+                        out_cell_meanlon[itrack] = np.nanmean(cell_lon)
+                        out_cell_mean_x[itrack] = np.nanmean(cell_x)
+
+                    if pbc_direction in ['y', 'both']:
+                        out_cell_meanlat[itrack] = circular_mean(cell_lat, latitude_min, latitude_max)
+                        out_cell_mean_y[itrack] = circular_mean(cell_y, y_coords_min, y_coords_max)
+                    else:
+                        out_cell_meanlat[itrack] = np.nanmean(cell_lat)                    
+                        out_cell_mean_y[itrack] = np.nanmean(cell_y)                        
 
                     out_core_area[itrack] = core_npix * pixel_radius ** 2
                     out_cell_area[itrack] = corecold_npix * pixel_radius ** 2
@@ -432,13 +460,16 @@ def circular_mean(values, domain_min, domain_max):
     """
     Compute the circular mean of values in a periodic domain.
     
-    Parameters:
-    - values: Array of positions
-    - domain_min: Minimum value of the domain (e.g., 0 or -180)
-    - domain_max: Maximum value of the domain (e.g., 100 or 180)
+    Args:
+        values: np.ndarray()
+            Array of positions
+        domain_min: float
+            Minimum value of the domain (e.g., 0 or -180)
+        domain_max: float
+            Maximum value of the domain (e.g., 100 or 180)
 
     Returns:
-    - Mean position in the original domain range
+        Mean position in the original domain range
     """
 
     # Convert to [0, 1] range within the domain

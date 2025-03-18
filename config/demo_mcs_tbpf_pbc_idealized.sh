@@ -27,7 +27,8 @@ dir_demo='/pscratch/sd/p/paccini/temp/output_tracking/tracking_mcs_idealized_dem
 # data_basename='PBC_mcs_rolled_demo_'
 
 # Example config file name
-config_demo='/global/cfs/cdirs/wcm_code/lpaccini/PyFLEXTRKR-dev/config/config_mcs_pbc_idealized.yml'
+# config_demo='/global/cfs/cdirs/wcm_code/lpaccini/PyFLEXTRKR-dev/config/config_mcs_pbc_idealized.yml'
+config_demo='./config_mcs_pbc_idealized.yml'
 
 # Demo input data directory
 dir_input='/pscratch/sd/p/paccini/temp/sample_data/'
@@ -42,13 +43,15 @@ mkdir -p ${animation_dir}
 
 # Run tracking
 echo 'Running PyFLEXTRKR ...'
-python /global/cfs/cdirs/wcm_code/lpaccini/PyFLEXTRKR-dev/runscripts/run_mcs_tbpf_saag.py ${config_demo}
+python ../runscripts/run_mcs_tbpf_saag.py ${config_demo}
+# python /global/cfs/cdirs/wcm_code/lpaccini/PyFLEXTRKR-dev/runscripts/run_mcs_tbpf_saag.py ${config_demo}
 # python /global/cfs/cdirs/wcm_code/lpaccini/PyFLEXTRKR-dev/runscripts/run_mcs_tbpf.py ${config_demo}
 echo 'Tracking is done.'
 
 # Make quicklook plots
 echo 'Making quicklook plots ...'
-python /global/cfs/cdirs/wcm_code/lpaccini/PyFLEXTRKR-dev/Analysis/plot_subset_tbpf_demo_pbc.py -s ${start_date} -e ${end_date} \
+# python /global/cfs/cdirs/wcm_code/lpaccini/PyFLEXTRKR-dev/Analysis/plot_subset_tbpf_demo_pbc.py -s ${start_date} -e ${end_date} \
+python ../Analysis/plot_subset_tbpf_demo_pbc.py -s ${start_date} -e ${end_date} \
     -c ${config_demo} -p ${run_parallel}  --output ${quicklook_dir} \
     --extent "${map_extent}" --subset 0
 # python /global/cfs/cdirs/wcm_code/lpaccini/PyFLEXTRKR-dev/Analysis/plot_subset_tbpf_mcs_tracks_demo.py -s '2020-01-01T00' -e '2020-01-03T00' \
