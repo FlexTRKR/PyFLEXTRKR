@@ -192,6 +192,10 @@ def get_track_stats(trackstats_file, start_datetime, end_datetime, dt_thres):
         'track_bt': dss['base_time'].isel(tracks=idx),
         'track_meanlon': dss['meanlon'].isel(tracks=idx) * xscale,
         'track_meanlat': dss['meanlat'].isel(tracks=idx) * yscale,
+        'track_pflon': dss['pf_lon'].isel(tracks=idx, nmaxpf=0) * xscale,
+        'track_pflat': dss['pf_lat'].isel(tracks=idx, nmaxpf=0) * yscale,
+        # 'track_pflon': dss['pf_lon_weightedcentroid'].isel(tracks=idx, nmaxpf=0) * xscale,
+        # 'track_pflat': dss['pf_lat_weightedcentroid'].isel(tracks=idx, nmaxpf=0) * yscale,
         'dt_thres': dt_thres,
         'time_res': time_res,
     }
@@ -232,6 +236,8 @@ def plot_map(pixel_dict, plot_info, map_info, track_dict):
     track_bt = track_dict['track_bt']
     track_meanlon = track_dict['track_meanlon']
     track_meanlat = track_dict['track_meanlat']
+    track_pflon = track_dict['track_pflon']
+    track_pflat = track_dict['track_pflat']
  
     dt_thres = track_dict['dt_thres']
     time_res = track_dict['time_res']
@@ -357,19 +363,28 @@ def plot_map(pixel_dict, plot_info, map_info, track_dict):
                 # Get adjusted positions
                 adjusted_lon = track_meanlon.values[itrack, idx_cut]
                 adjusted_lat = track_meanlat.values[itrack, idx_cut]
+                adjusted_pflon = track_pflon.values[itrack, idx_cut]
+                adjusted_pflat = track_pflat.values[itrack, idx_cut]
 
                 # Wrap positions back into domain for plotting
                 wrapped_lon = np.mod(adjusted_lon - map_extent[0], domain_max_x) + map_extent[0]
                 wrapped_lat = np.mod(adjusted_lat - map_extent[2], domain_max_y) + map_extent[2]
+                wrapped_pflon = np.mod(adjusted_pflon - map_extent[0], domain_max_x) + map_extent[0]
+                wrapped_pflat = np.mod(adjusted_pflat - map_extent[2], domain_max_y) + map_extent[2]
 
                 # Identify where wrap-around occurs to split the trajectory
                 lon_diff = np.abs(np.diff(wrapped_lon))
                 lat_diff = np.abs(np.diff(wrapped_lat))
                 wrap_indices = np.where((lon_diff > (domain_max_x / 2)) | (lat_diff > (domain_max_y / 2)))[0] + 1
+                pflon_diff = np.abs(np.diff(wrapped_pflon))
+                pflat_diff = np.abs(np.diff(wrapped_pflat))
+                pfwrap_indices = np.where((pflon_diff > (domain_max_x / 2)) | (pflat_diff > (domain_max_y / 2)))[0] + 1
 
                 # Split the trajectory at wrap-around points
                 split_lon = np.split(wrapped_lon, wrap_indices)
                 split_lat = np.split(wrapped_lat, wrap_indices)
+                split_pflon = np.split(wrapped_pflon, pfwrap_indices)
+                split_pflat = np.split(wrapped_pflat, pfwrap_indices)
 
                 # import pdb; pdb.set_trace()
 
@@ -381,6 +396,13 @@ def plot_map(pixel_dict, plot_info, map_info, track_dict):
                     else:
                         # For single points, plot as markers
                         ax1.scatter(lon_seg, lat_seg, s=marker_size, color=trackpath_color, zorder=3,)
+                for lon_seg, lat_seg in zip(split_pflon, split_pflat):
+                    # Ensure there are at least two points to plot a line
+                    # if len(lon_seg) >= 2:
+                    #     ax1.plot(lon_seg, lat_seg, lw=trackpath_linewidth, ls='-', color='orange', zorder=3)
+                    # else:
+                    # For single points, plot as markers
+                    ax1.scatter(lon_seg, lat_seg, s=marker_size, marker='^', color='red', zorder=3,)
 
                 # Initiation location (adjusted)
                 init_lon = track_meanlon.values[itrack, 0]
@@ -634,7 +656,8 @@ if __name__ == "__main__":
     pixeltracking_path = config["pixeltracking_outpath"]
     pixeltracking_filebase = config["pixeltracking_filebase"]
     trackstats_filebase = config["trackstats_filebase"]
-    finalstats_filebase = config.get("finalstats_filebase", None)
+    # finalstats_filebase = config.get("finalstats_filebase", None)
+    mcsfinal_filebase = config.get("mcsfinal_filebase", None)
     startdate = config["startdate"]
     enddate = config["enddate"]
     n_workers = config["nprocesses"]
@@ -651,10 +674,11 @@ if __name__ == "__main__":
     # If trackstats_file is not specified
     if trackstats_file is None:
         # If finalstats_filebase is present, use it (links merge/split tracks)
-        if finalstats_filebase is None:
+        # if finalstats_filebase is None:
+        if mcsfinal_filebase is None:
             trackstats_file = f"{stats_path}{trackstats_filebase}{startdate}_{enddate}.nc"
         else:
-            trackstats_file = f"{stats_path}{finalstats_filebase}{startdate}_{enddate}.nc"
+            trackstats_file = f"{stats_path}{mcsfinal_filebase}{startdate}_{enddate}.nc"
     if pixeltracking_path is None:
         pixeltracking_path = f"{config['root_path']}{config['pixel_path_name']}/{startdate}_{enddate}/"
 

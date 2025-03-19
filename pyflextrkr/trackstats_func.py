@@ -4,6 +4,7 @@ import xarray as xr
 import sys
 import logging
 import warnings
+from pyflextrkr.ftfunctions import circular_mean
 
 def calc_stats_singlefile(
         tracknumbers,
@@ -227,7 +228,6 @@ def calc_stats_singlefile(
                 out_area[itrack] = corecold_npix * pixel_radius ** 2
                 corecold_lat = latitude[corecold_indices[0], corecold_indices[1]]
                 corecold_lon = longitude[corecold_indices[0], corecold_indices[1]]
-                # import pdb; pdb.set_trace()
 
                 if pbc_direction in ['x', 'both']:
                     mean_lon = circular_mean(corecold_lon, longitude_min, longitude_max)
@@ -273,7 +273,6 @@ def calc_stats_singlefile(
 
                     # iy_min, iy_max = np.min(corecold_indices[0]), np.max(corecold_indices[0])
                     # ix_min, ix_max = np.min(corecold_indices[1]), np.max(corecold_indices[1])
-                    # import pdb; pdb.set_trace()
 
                 # Calculate feature specific statistics
                 # Radar cells
@@ -449,41 +448,7 @@ def calc_stats_singlefile(
         out_dict = None
         out_dict_attrs = None
 
-    # import pdb; pdb.set_trace()
     return (out_dict, out_dict_attrs)
-
-
-
-################################################################################
-
-def circular_mean(values, domain_min, domain_max):
-    """
-    Compute the circular mean of values in a periodic domain.
-    
-    Args:
-        values: np.ndarray()
-            Array of positions
-        domain_min: float
-            Minimum value of the domain (e.g., 0 or -180)
-        domain_max: float
-            Maximum value of the domain (e.g., 100 or 180)
-
-    Returns:
-        Mean position in the original domain range
-    """
-
-    # Convert to [0, 1] range within the domain
-    domain_range = domain_max - domain_min
-    normalized_values = (values - domain_min) / domain_range * 2 * np.pi  # Convert to radians
-
-    # Compute the circular mean using trigonometry
-    mean_angle = np.arctan2(np.nanmean(np.sin(normalized_values)), np.nanmean(np.cos(normalized_values)))
-
-    # Convert back to original domain
-    mean_value = (mean_angle / (2 * np.pi) * domain_range) + domain_min
-
-    # Ensure the mean value stays within the original domain
-    return (mean_value - domain_min) % domain_range + domain_min
 
 
 ################################################################################
@@ -1094,11 +1059,9 @@ def get_track_startend_status(
                     else:
                         logger.debug(f"Merge time occur after track ends??")
                 else:
-                    # import pdb; pdb.set_trace()
                     logger.debug(
                         f"Error: track {itrack} has no matching time in the track it merges with!"
                     )
-                    # import pdb; pdb.set_trace()
                     sys.exit(itrack)
 
             # If start split tracknumber exists, this track starts from a split

@@ -1,5 +1,6 @@
 import numpy as np
 import xarray as xr
+from netCDF4 import chartostring
 from scipy.sparse import csr_matrix
 import os
 import sys
@@ -35,6 +36,7 @@ def trackstats_driver(config):
     trackstats_sparse_filebase = config["trackstats_sparse_filebase"]
     startdate = config["startdate"]
     enddate = config["enddate"]
+    tracking_outpath = config["tracking_outpath"]
     stats_path = config["stats_outpath"]
     duration_range = config["duration_range"]
     run_parallel = config["run_parallel"]
@@ -72,7 +74,9 @@ def trackstats_driver(config):
     ds.close()
 
     # Read one cloudid file to get domain & coordinates information
-    dspix = xr.open_dataset(cloudidfiles[0])
+    fname = chartostring(cloudidfiles[0]).item()
+    cloudid_file = f"{tracking_outpath}{fname}"
+    dspix = xr.open_dataset(cloudid_file)
     # Get 2D lat/lon coordinates
     latitude = dspix["latitude"].values
     longitude = dspix["longitude"].values

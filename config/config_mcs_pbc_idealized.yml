@@ -70,7 +70,7 @@ mincoldcorepix:  4  # Minimum number of pixels for the cold core
 smoothwindowdimensions:  5  # Dimension of the Box2DKernel filter on Tb.
 medfiltsize: 5      # Window size to perform medfilt2d to fill missing Tb pixels, must be an odd number
 geolimits: [-100, -100, 100000000, 110000000] # 4-element array to subset domain boundaries [lat_min, lon_min, lat_max, lon_max]
-area_thresh:  1000  # [km^2] Minimum area to define a cloud
+area_thresh:  100  # [km^2] Minimum area to define a cloud
 miss_thresh:  0.4  # Missing data fraction threshold. If missing data exceeds this, the time frame will be omitted.
 cloudtb_core:  225.0  # [K]
 cloudtb_cold:  241.0  # [K]
@@ -86,7 +86,7 @@ pf_dbz_thresh:  3  # [dBZ] for reflectivity, or [mm/h] for rainrate
 pf_link_area_thresh:  650.0  # [km^2]
 
 # Tracking parameters
-othresh: 0.5  # overlap fraction threshold. Clouds that overlap more than this between times are tracked.
+othresh: 0.4  # overlap fraction threshold. Clouds that overlap more than this between times are tracked.
 timegap: 3.1  # [hour] If missing data duration longer than this, tracking restarts
 nmaxlinks: 10  # Maximum number of clouds that any single cloud can be linked to
 maxnclouds: 3000  # Maximum number of clouds in one snapshot
