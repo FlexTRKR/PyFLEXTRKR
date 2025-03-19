@@ -7,9 +7,9 @@ from scipy.ndimage import label
 from skimage.measure import regionprops
 from math import pi
 from scipy.stats import skew
-import warnings
 from pyflextrkr.ftfunctions import sort_renumber
 from pyflextrkr.ft_utilities import subset_ds_geolimit
+from pyflextrkr.ftfunctions import circular_mean, get_cloud_boundary, find_max_indices_to_roll, subset_roll_map
 
 def matchtbpf_singlefile(
     cloudid_filename,
@@ -55,6 +55,10 @@ def matchtbpf_singlefile(
     landmask_y_dimname = config.get("landmask_y_dimname", None)
     landmask_x_coordname = config.get("landmask_x_coordname", None)
     landmask_y_coordname = config.get("landmask_y_coordname", None)
+    # Parameters for handling perdiodic boundary condition
+    pbc_direction = config.get("pbc_direction", "none")
+    max_feature_frac_x = 0.95   # Max fraction of domain size for a feature in x-direction
+    max_feature_frac_y = 0.95   # Max fraction of domain size for a feature in y-direction
 
     fillval = config["fillval"]
     fillval_f = np.nan
@@ -92,6 +96,10 @@ def matchtbpf_singlefile(
         cloudid_basetime = ds["base_time"].data.squeeze()
         lon = ds["longitude"].data.squeeze()
         lat = ds["latitude"].data.squeeze()
+        lon_min = np.nanmin(lon)
+        lon_max = np.nanmax(lon)
+        lat_min = np.nanmin(lat)
+        lat_max = np.nanmax(lat)
         ds.close()
 
         # Get dimensions of data
@@ -147,6 +155,8 @@ def matchtbpf_singlefile(
                 #########################################################################
                 # Intialize matrices for only MCS data
                 rainrate_map = np.full((ydim, xdim), np.nan, dtype=float)
+                lon_map = np.full((ydim, xdim), np.nan, dtype=float)
+                lat_map = np.full((ydim, xdim), np.nan, dtype=float)
                 logger.debug(
                     ("rainrate_map allocation size: ", rainrate_map.shape)
                 )
@@ -175,6 +185,9 @@ def matchtbpf_singlefile(
                     rainrate_map[icloudlocationy, icloudlocationx] = np.copy(
                         rawrainratemap[icloudlocationy, icloudlocationx]
                     )
+                    lon_map[icloudlocationy, icloudlocationx] = np.copy(lon[icloudlocationy, icloudlocationx])
+                    lat_map[icloudlocationy, icloudlocationx] = np.copy(lat[icloudlocationy, icloudlocationx])
+
 
                     ########################################################################
                     ## Isolate small region of cloud data around mcs at this time
@@ -185,9 +198,38 @@ def matchtbpf_singlefile(
                                                                 icloudlocationy,
                                                                 xdim,
                                                                 ydim)
-
-                    # Isolate region over the cloud shield
-                    sub_rainrate_map = np.copy(rainrate_map[miny:maxy, minx:maxx])
+                    
+                    # Check cloud boundary span
+                    # If boundary span > X fraction of domain, and periodic boundary condition is set,
+                    # roll the data such that the cloud does not span across the domain boundary
+                    roll_flag = False
+                    if (((maxx - minx) >= xdim * max_feature_frac_x) or \
+                        ((maxy - miny) >= ydim * max_feature_frac_y)) and \
+                        (pbc_direction != 'none'):
+                        # Subset cloudnumber mask that contains the current cloud
+                        sub_mask = cloudnumbermap[miny:maxy, minx:maxx] == ittcloudnumber
+                        # Find the indices to roll the array to avoid periodic boundary condition
+                        shift_x_right, shift_y_top = find_max_indices_to_roll(
+                            sub_mask, xdim, ydim,
+                        )
+                        # Subset rainrate over the cloud shield
+                        sub_rainrate = np.copy(rainrate_map[miny:maxy, minx:maxx])
+                        sub_lon = np.copy(lon_map[miny:maxy, minx:maxx])
+                        sub_lat = np.copy(lat_map[miny:maxy, minx:maxx])
+                        # Roll rainrate to avoid periodic boundary condition
+                        sub_rainrate_map = subset_roll_map(
+                            sub_rainrate, shift_x_right, shift_y_top, xdim, ydim,
+                        )
+                        lon_roll = subset_roll_map(sub_lon, shift_x_right, shift_y_top, xdim, ydim)
+                        lat_roll = subset_roll_map(sub_lat, shift_x_right, shift_y_top, xdim, ydim)
+                        roll_flag = True
+                    else:
+                        # Isolate region over the cloud shield
+                        sub_rainrate_map = np.copy(rainrate_map[miny:maxy, minx:maxx])
+                        shift_x_right = 0
+                        shift_y_top = 0
+                        lon_roll = None
+                        lat_roll = None
 
                     # Calculate total rainfall within the cold cloud shield
                     total_rain[imatchcloud] = np.nansum(sub_rainrate_map)
@@ -256,6 +298,10 @@ def matchtbpf_singlefile(
                                 lat, lon, minx, miny, nmaxpf, numpf,
                                 pf_npix, pfnumberlabelmap, pixel_radius,
                                 subdimx, subdimy, sub_rainrate_map,
+                                roll_flag=roll_flag,
+                                lon_roll=lon_roll, lat_roll=lat_roll,
+                                lon_min=lon_min, lon_max=lon_max,
+                                lat_min=lat_min, lat_max=lat_max,
                             )
 
                             # Save precipitation feature statisitcs
@@ -473,29 +519,61 @@ def matchtbpf_singlefile(
 
 ##########################################################################
 # Custom functions
+#-----------------------------------------------------------------------
 def calc_pf_stats(
         fillval, fillval_f, heavy_rainrate_thresh, lat, lon, minx, miny, nmaxpf, numpf, pf_npix,
         pfnumberlabelmap, pixel_radius, subdimx, subdimy, sub_rainrate_map,
+        roll_flag=False, lon_roll=None, lat_roll=None,
+        lon_min=None, lon_max=None, lat_min=None, lat_max=None,
 ):
     """
     Calculate individual PF statistics.
 
     Args:
         fillval:
-        fillval_f:
-        heavy_rainrate_thresh:
-        lat:
-        lon:
-        minx:
-        miny:
-        nmaxpf:
-        numpf:
-        pf_npix:
-        pfnumberlabelmap:
-        pixel_radius:
-        subdimx:
-        subdimy:
-        sub_rainrate_map:
+            Fill value from config file.
+        fillval_f: float
+            Fill value for float data.
+        heavy_rainrate_thresh: float
+            Heavy rain rate threshold.
+        lat: np.array()
+            2D latitude array of the full domain.
+        lon: np.array()
+            2D longitude array of the full domain.
+        minx: int
+            Lower-left corner X index of the box containing the cloud mask.
+        miny: int
+            Lower-left corner Y index of the box containing the cloud mask.
+        nmaxpf: int
+            Number of PFs to save.
+        numpf: int
+            Number of PFs within the cloud.
+        pf_npix: np.array()
+            Number of pixels in each PF.
+        pfnumberlabelmap: np.array()
+            Subsetted 2D labeled map of PFs.
+        pixel_radius: float
+            Pixel radius.
+        subdimx: int
+            X dimension of the subsetted region.
+        subdimy: int
+            Y dimension of the subsetted region.
+        sub_rainrate_map: np.array()
+            Subsetted 2D rain rate array.
+        roll_flag: bool, default=False
+            Flag to indicate if the data is rolled.
+        lon_roll: np.array(), default=None
+            Subsetted 2D longitude array after rolling.
+        lat_roll: np.array(), default=None
+            Subsetted 2D latitude array after rolling.
+        lon_min: float, default=None
+            Minimum longitude value of the full domain.
+        lon_max: float, default=None
+            Maximum longitude value of the full domain.
+        lat_min: float, default=None
+            Minimum latitude value of the full domain.
+        lat_max: float, default=None
+            Maximum latitude value of the full domain.
 
     Returns:
         pf_stats_dict: dictionary
@@ -566,8 +644,16 @@ def calc_pf_stats(
             # Basic statistics
             pfnpix[ipf - 1] = np.copy(iipfnpix)
             pfid[ipf - 1] = np.copy(int(ipf))
-            pflon[ipf - 1] = np.nanmean(lon[iipfy[:] + miny, iipfx[:] + minx])
-            pflat[ipf - 1] = np.nanmean(lat[iipfy[:] + miny, iipfx[:] + minx])
+            if roll_flag:
+                # Remove NaN values from the rolled lon/lat arrays
+                lon_roll_v = lon_roll[~np.isnan(lon_roll)]
+                lat_roll_v = lat_roll[~np.isnan(lat_roll)]
+                # Calculate circular mean of lon/lat
+                pflon[ipf - 1] = circular_mean(lon_roll_v, lon_min, lon_max)
+                pflat[ipf - 1] = circular_mean(lat_roll_v, lat_min, lat_max)
+            else:
+                pflon[ipf - 1] = np.nanmean(lon[iipfy[:] + miny, iipfx[:] + minx])
+                pflat[ipf - 1] = np.nanmean(lat[iipfy[:] + miny, iipfx[:] + minx])
 
             pfrainrate[ipf - 1] = np.nanmean(sub_rainrate_map[iipfy[:], iipfx[:]])
             pfmaxrainrate[ipf - 1] = np.nanmax(sub_rainrate_map[iipfy[:], iipfx[:]])
@@ -626,6 +712,7 @@ def calc_pf_stats(
             # Shift the centroids by minx/miny
             # since the PF is a subset from the full image
             # Round the centroid values as indices
+            # TODO: the lat/lon values below are not correct for PFs at the boundary of the domain
             ycentroid = int(np.round(ycentroid + miny))
             xcentroid = int(np.round(xcentroid + minx))
             yweightedcentroid = int(np.round(yweightedcentroid + miny))
@@ -672,52 +759,6 @@ def calc_pf_stats(
         "pflat_maxrainrate": pflat_maxrainrate,
     }
     return pf_stats_dict
-
-
-def get_cloud_boundary(icloudlocationx, icloudlocationy, xdim, ydim):
-    """
-    Get the boundary indices of a cloud feature.
-
-    Args:
-        icloudlocationx: numpy array
-            Cloud location indices in x-direction.
-        icloudlocationy: numpy array
-            Cloud location indices in y-direction.
-        xdim: int
-            Full pixel image dimension in x-direction.
-        ydim: int
-            Full pixel image dimension in y-direction.
-
-    Returns:
-        maxx: int
-        maxy: int
-        minx: int
-        miny: int
-    """
-    # buffer = 10
-    buffer = 0
-    miny = np.nanmin(icloudlocationy)
-    if miny <= 10:
-        miny = 0
-    else:
-        miny = miny - buffer
-    maxy = np.nanmax(icloudlocationy)
-    if maxy >= ydim - 10:
-        maxy = ydim
-    else:
-        maxy = maxy + buffer + 1
-    minx = np.nanmin(icloudlocationx)
-    if minx <= 10:
-        minx = 0
-    else:
-        minx = minx - buffer
-    maxx = np.nanmax(icloudlocationx)
-    if maxx >= xdim - 10:
-        maxx = xdim
-    else:
-        maxx = maxx + buffer + 1
-    return maxx, maxy, minx, miny
-
 
 def add_merge_split_cloud_locations(
         cloudnumbermap,

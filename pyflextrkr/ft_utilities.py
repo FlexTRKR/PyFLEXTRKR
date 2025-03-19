@@ -174,8 +174,8 @@ def get_basetime_from_filename(
 
     # Add basetime character counts to get the actual date/time string positions
     yyyy_idx = nleadingchar + yyyy_idx
-    mo_idx = nleadingchar + mo_idx
-    dd_idx = nleadingchar + dd_idx
+    mo_idx = nleadingchar + mo_idx if (mo_idx != -1) else None
+    dd_idx = nleadingchar + dd_idx if (dd_idx != -1) else None
     hh_idx = nleadingchar + hh_idx if (hh_idx != -1) else None
     mm_idx = nleadingchar + mm_idx if (mm_idx != -1) else None
     ss_idx = nleadingchar + ss_idx if (ss_idx != -1) else None
@@ -183,8 +183,8 @@ def get_basetime_from_filename(
     # Loop over each file
     for ii, ifile in enumerate(filenames):
         year = ifile[yyyy_idx:yyyy_idx+4]
-        month = ifile[mo_idx:mo_idx+2]
-        day = ifile[dd_idx:dd_idx+2]
+        month = ifile[mo_idx:mo_idx+2] if (mo_idx is not None) else '01'
+        day = ifile[dd_idx:dd_idx+2] if (dd_idx is not None) else '01'
         # If hour, minute, second is not in time_format, assume 0
         hour = ifile[hh_idx:hh_idx+2] if (hh_idx is not None) else '00'
         minute = ifile[mm_idx:mm_idx+2] if (mm_idx is not None) else '00'

@@ -35,6 +35,8 @@ def idfeature_driver(config):
         from pyflextrkr.idcells_reflectivity import idcells_reflectivity as id_feature
     elif "tb_pf" in feature_type:
         from pyflextrkr.idclouds_tbpf import idclouds_tbpf as id_feature
+    elif "coldpool" in feature_type:
+        from pyflextrkr.idcoldpool import idcoldpool as id_feature
     else:
         logger.critical(f"ERROR: Unknown feature_type: {feature_type}")
         logger.critical("Tracking will now exit.")
