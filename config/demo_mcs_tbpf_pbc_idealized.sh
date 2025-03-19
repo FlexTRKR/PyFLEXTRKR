@@ -20,7 +20,7 @@ run_parallel=1
 
 # Specify directory for the demo data
 # There are a total of 4 tests (e.g., test1, test2, test3, test4)
-dir_demo='/pscratch/sd/p/paccini/temp/output_tracking/tracking_mcs_idealized_demo_/' 
+dir_demo='/pscratch/sd/p/paccini/temp/output_tracking/tracking_mcs_idealized_demo_v2/' 
 
 # Test input file basename
 # There are a total of 4 tests (e.g., 'MCS-test-1_', 'MCS-test-2_', etc.)
@@ -34,7 +34,7 @@ config_demo='./config_mcs_pbc_idealized.yml'
 dir_input='/pscratch/sd/p/paccini/temp/sample_data/'
 quicklook_dir=${dir_demo}'/quicklooks_trackpaths/'
 animation_dir=${dir_demo}'/animations/'
-animation_filename=${animation_dir}mcs_tracking_${start_date}_${end_date}.mp4
+animation_filename=${animation_dir}mcs_tracking2_${start_date}_${end_date}.mp4
 
 # Make quicklook & animation directories
 mkdir -p ${quicklook_dir}

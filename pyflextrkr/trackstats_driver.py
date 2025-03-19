@@ -50,7 +50,8 @@ def trackstats_driver(config):
 
     #Get PBC condition
     pbc_direction = config.get('pbc_direction', "none")
-    domain_max = config.get('domain_max', "none")
+    # domain_max = config.get('domain_max', "none")
+    max_domain_fraction = config.get('max_domain_fraction', 0.5)
 
     # Set output filename
     trackstats_outfile = f"{stats_path}{trackstats_filebase}{startdate}_{enddate}.nc"
@@ -73,13 +74,17 @@ def trackstats_driver(config):
     trackstatus = ds["track_status"].squeeze()
     ds.close()
 
+    # import pdb; pdb.set_trace()
+
     # Read one cloudid file to get domain & coordinates information
     fname = chartostring(cloudidfiles[0]).item()
-    cloudid_file = f"{tracking_outpath}{fname}"
-    dspix = xr.open_dataset(cloudid_file)
+    dspix = xr.open_dataset(f"{tracking_outpath}{fname}")
+
     # Get 2D lat/lon coordinates
     latitude = dspix["latitude"].values
     longitude = dspix["longitude"].values
+    dy = np.median(np.diff(latitude[:,0]))
+    dx = np.median(np.diff(longitude[0,:]))
     nx = dspix.sizes["lon"]
     ny = dspix.sizes["lat"]
     if feature_type == "radar_cells":
@@ -90,6 +95,13 @@ def trackstats_driver(config):
     dspix.close()
     # TODO: @laurapaccini: here is where we can convert domain fraction thresholds to absolute distance thresholds
 
+    if pbc_direction != 'none':
+        if feature_type == "radar_cells":
+            thresh_x = max_domain_fraction*len(x_coords)
+            thresh_y = max_domain_fraction*len(y_coords)
+        else:
+            thresh_x = max_domain_fraction*nx*dx
+            thresh_y = max_domain_fraction*ny*dy
 
     #########################################################################################
     # loop over files. Calculate statistics and organize matrices by tracknumber and cloud
@@ -358,13 +370,7 @@ def trackstats_driver(config):
     #########################################################################################
     # Adjust lat,lon positions for PBC
     if pbc_direction != 'none':
-        # Example invocation
-        # TODO: @laurapaccini: add a list of variable names to adjust positions
-        # Note: depending on feature_type (e.g., 'radar_cells'), there could be more variables to adjust
-        # 	feature_type: 'radar_cells': 
-		#       - core_meanlat, core_meanlon, core_mean_y, core_mean_x, 
-        #       - cell_meanlat, cell_meanlon, cell_mean_y, cell_mean_x
-        adjust_positions_for_tracks(out_dict, domain_max=domain_max)
+        adjust_positions_for_tracks(out_dict, thresh_x,thresh_y, max_domain_fraction, feature_type)
         # Add attributes for the new variable
         out_dict_attrs['pbc_flag'] = {
             "long_name": "Flag indicating if position adjustment was applied due to PBC",
@@ -384,7 +390,8 @@ def trackstats_driver(config):
     # import pdb; pdb.set_trace()
     return trackstats_outfile
 
-def adjust_positions_for_tracks(out_dict, domain_max):
+
+def adjust_positions_for_tracks(out_dict, thresh_x,thresh_y, max_domain_fraction, feature_type):
     """
     Adjust mean latitude and longitude for tracks to ensure continuity
     across periodic boundaries, while preserving sparse matrix structure.
@@ -392,52 +399,62 @@ def adjust_positions_for_tracks(out_dict, domain_max):
     Args:
         out_dict: dictionary 
             Dictionary containing the output variables with tracks and times.
-        domain_max: float
-            The maximum value of the domain.
+        thresh_x, thresh_y: float
+            The maximum value for each axis of the domain.
+        max_domain_fraction: float
+            Fraction of the domain to determine the threshold for adjustment.
+        feature_type: string
+            Name of feature type.
 
     Returns:
-        None. Modifies out_dict in-place, adding a 'pbc_flag' variable.
+        None. Modifies out_dict in-place, adding a 'pbc_flag' variable (int).
     """
-    # TODO: @laurapaccini: modify this function to take a list of variable names 
-    # and adjust them one by one and replace them in the out_dict
-
-    # Get the sparse matrices
-    meanlat_sparse = out_dict['meanlat']
-    meanlon_sparse = out_dict['meanlon']
-
-    # Get the non-zero data and indices for meanlat
-    meanlat_data = meanlat_sparse.data.copy()
-    meanlat_indices = meanlat_sparse.indices
-    meanlat_indptr = meanlat_sparse.indptr
-
-    # Get the non-zero data and indices for meanlon
-    meanlon_data = meanlon_sparse.data.copy()
-    meanlon_indices = meanlon_sparse.indices
-    meanlon_indptr = meanlon_sparse.indptr
-
-    # Adjust positions for meanlat, collect flags
-    pbc_flag_lat = adjust_sparse_positions(meanlat_data, meanlat_indptr, domain_max)
-
-    # Adjust positions for meanlon, collect flags
-    pbc_flag_lon = adjust_sparse_positions(meanlon_data, meanlon_indptr, domain_max)
-
-    # Combine flags (if adjustments were made in either latitude or longitude)
-    pbc_flag = np.logical_or(pbc_flag_lat, pbc_flag_lon).astype(np.int32)
-
-    # Reconstruct sparse matrices with adjusted data
-    out_dict['meanlat'] = csr_matrix((meanlat_data, meanlat_indices, meanlat_indptr),
-                                     shape=meanlat_sparse.shape)
-    out_dict['meanlon'] = csr_matrix((meanlon_data, meanlon_indices, meanlon_indptr),
-                                     shape=meanlon_sparse.shape)
+    # Define variable names based on the feature type
+    # if feature_type == 'tb_pf' or feature_type == 'generic' or feature_type == 'coldpool':
+        # variable_names = ['meanlat', 'meanlon']
+    if feature_type == 'radar_cells':
+        variable_names = [
+            'core_meanlat', 'core_meanlon', 'core_mean_y', 'core_mean_x',
+            'cell_meanlat', 'cell_meanlon', 'cell_mean_y', 'cell_mean_x'
+        ]
+    else:
+        variable_names = ['meanlat', 'meanlon']
     
-    # Create pbc_flag sparse matrix
-    # pbc_flag_data = adjustment_flags_combined.astype(np.int32)
-    # pbc_flag = csr_matrix((pbc_flag_data, meanlat_indices, meanlat_indptr),
-    #                       shape=meanlat_sparse.shape)
-    # Add the pbc_flag to out_dict
-    out_dict['pbc_flag'] = pbc_flag
+    overall_flag = None  # Will accumulate the overall flag (dense array) here.
 
-def adjust_sparse_positions(data, indptr, domain_max):
+    for var_name in variable_names:
+        # Get the sparse matrix for the variable
+        sparse_matrix = out_dict[var_name]
+        data = sparse_matrix.data.copy()
+        indices = sparse_matrix.indices
+        indptr = sparse_matrix.indptr
+
+        # Decide which threshold to use based on the variable name.
+        var_lower = var_name.lower()
+        if ('lon' in var_lower) or ('x' in var_lower):
+            thresh = thresh_x
+        elif ('lat' in var_lower) or ('y' in var_lower):
+            thresh = thresh_y
+        else:
+            thresh = thresh_x  # Default case.
+        
+        # Adjust positions for the variable and collect adjustment flags
+        adjustment_flags = adjust_sparse_positions(data, indptr, thresh, max_domain_fraction)
+        
+        # Reconstruct the sparse matrix with adjusted data
+        out_dict[var_name] = csr_matrix((data, indices, indptr), shape=sparse_matrix.shape)
+
+        # Accumulate overall flag (logical OR across variables)
+        if overall_flag is None:
+            overall_flag = adjustment_flags.copy()
+        else:
+            overall_flag = np.logical_or(overall_flag, adjustment_flags)
+    
+    # Add the pbc_flag to out_dict as int32
+    out_dict['pbc_flag'] = overall_flag.astype(np.int32)
+
+
+def adjust_sparse_positions(data, indptr, thresh, max_domain_fraction):
     """
     Adjust the positions in the sparse data array in-place to ensure continuity
     across periodic boundaries.
@@ -447,8 +464,10 @@ def adjust_sparse_positions(data, indptr, domain_max):
             Non-zero data values of the sparse matrix.
         indptr: np.ndarray()
             Index pointer array for the sparse matrix.
-        domain_max: float
-            The maximum value of the domain.
+        thresh: float
+            The maximum value for each axis of the domain.
+        max_domain_fraction: float
+            Fraction of the domain to determine the threshold for adjustment.
 
     Returns:
         adjustment_flag: np.ndarray()
@@ -466,22 +485,24 @@ def adjust_sparse_positions(data, indptr, domain_max):
         # Replace zeros with NaNs if necessary
         track_values = np.where(track_values != 0, track_values, np.nan)
         # Adjust positions and collect adjustment flag
-        adjusted_values, adjustment_made = adjust_position_continuous_simple(track_values, domain_max)
+        adjusted_values, adjustment_made = adjust_position_continuous_simple(track_values, thresh, max_domain_fraction)
         # Update the data array in-place
         data[start:end] = adjusted_values
         # Record the adjustment flag for this track
         adjustment_flag[i] = adjustment_made
     return adjustment_flag
 
-def adjust_position_continuous_simple(values, domain_max):
+def adjust_position_continuous_simple(values, thresh, max_domain_fraction):
     """
     Adjust positions in a 1D array to ensure continuity across periodic boundaries.
 
     Args:
         values: np.ndarray()
             Array of position values for a track.
-        domain_max: float
-            The maximum value of the domain.
+        thresh: float
+            The maximum value for each axis of the domain.
+        max_domain_fraction: float
+            Fraction of the domain to determine the threshold for adjustment.
 
     Returns:
         adjusted_values: np.array()
@@ -489,8 +510,6 @@ def adjust_position_continuous_simple(values, domain_max):
         adjustment_made: bool
             True if any adjustments were made, False otherwise.
     """
-    # TODO: @laurapaccini: modify this function to take in two values for X & Y separately
-
     adjusted_values = np.copy(values)
     adjustment_made = False  # Initialize adjustment flag
 
@@ -498,11 +517,11 @@ def adjust_position_continuous_simple(values, domain_max):
         if np.isnan(values[i]) or np.isnan(values[i - 1]):
             continue
         diff = adjusted_values[i] - adjusted_values[i - 1]
-        if diff > domain_max / 2:
-            adjusted_values[i:] -= domain_max
+        if diff > thresh:
+            adjusted_values[i:] -= thresh/max_domain_fraction
             adjustment_made = True  # Adjustment was made
-        elif diff < -domain_max / 2:
-            adjusted_values[i:] += domain_max
+        elif diff < -thresh:
+            adjusted_values[i:] += thresh/max_domain_fraction
             adjustment_made = True  # Adjustment was made
             
     return adjusted_values, adjustment_made

@@ -516,14 +516,18 @@ def pad_and_extend(fvar, config):
     Pad and extend data based on specified periodic boundary conditions.
 
     Args:
-        fvar:
+        fvar: np.array
+            2D array containing data for padding.
         config: dictionary
             Dictionary containing config parameters.
 
     Returns:
-        extended_data:
-        padded_x:
-        padded_y:
+        extended_data: np.array
+            extended 2D-array fvar.
+        padded_x: bool
+            True if the data was padded in the x-direction, False otherwise.
+        padded_y: bool
+            True if the data was padded in the y-direction, False otherwise.
     """
     ext_frac = config.get('extended_fraction', 1.0)
     pbc_direction = config.get('pbc_direction', 'both')
@@ -543,7 +547,16 @@ def pad_and_extend(fvar, config):
 
 def calc_extension(size, ext_frac):
     """
-    Calculate the extension size.
+    This function computes the number of elements to extend an array dimension by 
+    multiplying the dimension size by the specified extension fraction.
+
+    Args:
+        size: int
+            The original size of the dimension.
+        ext_frac: float
+            The fraction of the size used to determine the extension length.
+    Returns:
+        The computed extension size (int).
     """
     return int(size * ext_frac)
 
@@ -552,10 +565,14 @@ def cache_label_positions(segments):
     Cache the positions of labels in segments (features).
     
     Args:
-        segments:
+        segments: np.array
+            A 2D array where each element represents a label assigned to a segment 
+            (feature). The background is assumed to be represented by 0.
 
     Returns:
-        label_positions_cache:
+        label_positions_cache: dict
+            A dictionary mapping each label (non-zero) to a tuple of arrays containing 
+            the indices where the label occurs.
     """
     label_positions_cache = {}
     unique_labels = np.unique(segments)
@@ -567,17 +584,26 @@ def cache_label_positions(segments):
 
 def adjust_axis(segments, axis, original_shape, ext_frac):
     """
-    Adjust the segments (features) along a specified axis.
+    Adjust the segmented features along a specified axis based on periodic boundaries.
 
     Args:
-        segments:
-        axis:
-        original_shape:
-        ext_frac:
+        segments: np.array
+            A 2D array of segmented labels where features have been identified.
+        axis: int
+            The axis along which to adjust the segmentation. Use 0 for y-axis and 1 
+            for x-axis.
+        original_shape: tuple of ints
+            The shape of the original (unpadded) data array.
+        ext_frac: float
+            The extension fraction used to compute the extension size for padding.
 
     Returns:
-        segments:
-        adjusted:
+        segments: np.array
+            The adjusted segmentation array after cropping and rolling.
+        adjusted: bool
+            True if adjustments were made based on detected shared labels; 
+            False otherwise.
+
     """
     logger = logging.getLogger(__name__)
     ext_size = calc_extension(original_shape[axis], ext_frac)
@@ -643,13 +669,18 @@ def adjust_pbc_watershed(fvar, config):
     4. Adjust axis based on PBC direction. 
 
     Args:
-        fvar:
+        fvar: np.array
+            The original 2D data array to be segmented.
         config: dictionary
             Dictionary containing config parameters.
 
     Returns:
-        adjusted_segments:
-        param_dict:
+        adjusted_segments: np.array
+            The segmented features after applying watershed segmentation and adjustments 
+            based on PBC.
+        param_dict: dict
+            A dictionary of parameters returned by the watershed segmentation 
+            function.
     """
     ext_frac = config.get('extended_fraction', 1.0)
     pbc_direction = config.get('pbc_direction', 'both')

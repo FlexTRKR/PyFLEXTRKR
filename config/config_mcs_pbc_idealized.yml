@@ -4,9 +4,9 @@
 
 # Processing steps:
 # Maybe worth nesting these in sets of dictionaries
-run_idfeature : True
-run_tracksingle : True
-run_gettracks : True
+run_idfeature : False
+run_tracksingle : False
+run_gettracks : False
 run_trackstats : True
 run_identifymcs : True
 run_matchpf : True
@@ -37,7 +37,7 @@ databasename: 'MCS4_demo_rolled_' #_yrolled_' #'PBC_mcs_demo_v1_'  # Note: inclu
 # Input files directory
 clouddata_path: '/pscratch/sd/p/paccini/temp/sample_data/demo/'  #rolled_x/'
 # Working directory for the tracking data
-root_path: '/pscratch/sd/p/paccini/temp/output_tracking/tracking_mcs_idealized_demo_/'
+root_path: '/pscratch/sd/p/paccini/temp/output_tracking/tracking_mcs_idealized_demo_v2/'
 # Working sub-directory names
 tracking_path_name: 'tracking'
 stats_path_name: 'stats'
@@ -103,7 +103,8 @@ match_pixel_dt_thresh: 60.0  # seconds
 # Tracking parameters - periodic boundary conditions
 pbc_direction: 'both'    # options are 'x', 'y', 'both' and 'none'
 extended_fraction: 1    # Fraction to extend the domain (range: 0 to 1)
-domain_max: 1500    # @laurapaccini please modify this to be the fraction of the domain size for x & y separately
+# domain_max: 1500    # @laurapaccini please modify this to be the fraction of the domain size for x & y separately
+max_domain_fraction: 0.5
 
 # MCS Tb parameters
 mcs_tb_area_thresh: 40000  # [km^2] Tb area threshold
