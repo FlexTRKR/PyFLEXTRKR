@@ -16,15 +16,16 @@ from pyflextrkr.sl3d_func import run_sl3d
 from pyflextrkr.ft_utilities import get_timestamp_from_filename_single
 
 def idclouds_tbpf(
-    filename,
+    input_data,
     config,
 ):
     """
     Identifies convective cloud objects from infrared brightness temperature and precipitation data.
 
     Args:
-        filename: string
-            Input data filename
+        input_data: string or Xarray DataSet
+            For input_format=='netcdf': filename of the input data
+            For input_format=='zarr': Xarray DataSet
         config: dictionary
             Dictionary containing config parameters
 
@@ -34,10 +35,12 @@ def idclouds_tbpf(
     """
     np.set_printoptions(threshold=np.inf)
     logger = logging.getLogger(__name__)
-    logger.debug(f"Processing {filename}.")
+    logger.debug(f"Processing {input_data}.")
 
+    clouddata_path = config["clouddata_path"]
     databasename = config["databasename"]
     time_format = config["time_format"]
+    input_format = config.get("input_format", "netcdf")
     # Flag to handle a special case for 'gpmirimerg'
     clouddatasource = config['clouddatasource']
     # Set medfilt2d kernel_size, this determines the filter window dimension
@@ -92,46 +95,73 @@ def idclouds_tbpf(
     z_dimname = config.get('z_dimname', None)
 
     cloudid_outfile = None
-    logger.debug(filename)
 
     # Initialize optional variables
     sl3d_dict = None
     sl3d_attrs = None
 
-    # Read in Tb data using xarray
-    rawdata = xr.open_dataset(filename)
+    if input_format == "zarr":
+        import healpix as hp
+        # import easygems.healpix as egh
+        # import easygems.remap as egr
 
-    # Get dimension names from the file
-    dims_file = []
-    for key in rawdata.dims: dims_file.append(key)
-    # Find extra dimensions beyond [time, z, y, x]
-    dims_keep = [time_dimname, z_dimname, y_dimname, x_dimname]
-    dims_drop = list(set(dims_file) - set(dims_keep))
-    # Reorder Dataset dimensions
-    if z_dimname is not None:
-        # Drop extra dimensions, reorder to [time, z, y, x]
-        rawdata = rawdata.drop_dims(dims_drop).transpose(
-            time_dimname, z_dimname, y_dimname, x_dimname, missing_dims='ignore'
-        )
-    else:
-        # Drop extra dimensions, reorder to [time, y, x]
-        rawdata = rawdata.drop_dims(dims_drop).transpose(
-            time_dimname, y_dimname, x_dimname, missing_dims='ignore'
-        )
+        # Read landmask file to get target lat/lon grid
+        landmask_filename = config.get('landmask_filename', None)
+        dslm = xr.open_dataset(landmask_filename)
+        lon = dslm.lon.data
+        lat = dslm.lat.data
+        dslm.close()
 
-    # Handle no time coordinate in Dataset
-    if time_coordname not in rawdata:
-        logger.warning(f'No time coordinate: {time_coordname} found in input data')
-        logger.warning(f'Will estimate time from filename based on time_format in config: {time_format}')
-        # Get Timestamp from filename
-        file_timestamp = get_timestamp_from_filename_single(
-            filename, databasename, time_format=time_format,
+        # Find the HEALPix pixels that are closest to the target grid points
+        pix = xr.DataArray(
+            hp.ang2pix(input_data.crs.healpix_nside, *np.meshgrid(lon, lat), nest=True, lonlat=True),
+            coords=((y_dimname, lat), (x_dimname, lon)),
         )
-        # Add Timestamp coordinate to the Dataset
-        rawdata = rawdata.assign_coords({time_coordname:file_timestamp})
-        # Add time dimension to all variables in the Dataset
-        rawdata = xr.concat([rawdata], dim=time_dimname)
-        logger.debug(f'Added Timestamp: {file_timestamp} calculated from filename to the input data')
+        # Convert time coordinate to Pandas datetime
+        # Note this would change the calendar type of the original time coordinate
+        time_coord = input_data[time_coordname]
+        time_pd = pd.to_datetime(time_coord.dt.strftime("%Y-%m-%dT%H:%M:%S").item())
+        # Regrid variables, expand time dimension so the variable has dimensions [time, y, x]
+        olr = input_data[olr_varname].isel(cell=pix).expand_dims({time_dimname:[time_pd]})
+        pcp = input_data[pcp_varname].isel(cell=pix).expand_dims({time_dimname:[time_pd]})
+        # Combine DataArrays into a single Dataset
+        rawdata = xr.Dataset({olr_varname: olr, pcp_varname: pcp})
+
+    elif input_format == "netcdf":
+        # Read in data
+        rawdata = xr.open_dataset(input)
+
+        # Get dimension names from the file
+        dims_file = []
+        for key in rawdata.dims: dims_file.append(key)
+        # Find extra dimensions beyond [time, z, y, x]
+        dims_keep = [time_dimname, z_dimname, y_dimname, x_dimname]
+        dims_drop = list(set(dims_file) - set(dims_keep))
+        # Reorder Dataset dimensions
+        if z_dimname is not None:
+            # Drop extra dimensions, reorder to [time, z, y, x]
+            rawdata = rawdata.drop_dims(dims_drop).transpose(
+                time_dimname, z_dimname, y_dimname, x_dimname, missing_dims='ignore'
+            )
+        else:
+            # Drop extra dimensions, reorder to [time, y, x]
+            rawdata = rawdata.drop_dims(dims_drop).transpose(
+                time_dimname, y_dimname, x_dimname, missing_dims='ignore'
+            )
+
+        # Handle no time coordinate in Dataset
+        if time_coordname not in rawdata:
+            logger.warning(f'No time coordinate: {time_coordname} found in input data')
+            logger.warning(f'Will estimate time from filename based on time_format in config: {time_format}')
+            # Get Timestamp from filename
+            file_timestamp = get_timestamp_from_filename_single(
+                input, databasename, time_format=time_format,
+            )
+            # Add Timestamp coordinate to the Dataset
+            rawdata = rawdata.assign_coords({time_coordname:file_timestamp})
+            # Add time dimension to all variables in the Dataset
+            rawdata = xr.concat([rawdata], dim=time_dimname)
+            logger.debug(f'Added Timestamp: {file_timestamp} calculated from filename to the input data')
 
     # Get data coordinates
     lat = rawdata[y_coordname].data
@@ -151,6 +181,13 @@ def idclouds_tbpf(
         logger.critical(f"{y_coordname} dimension: {lat.ndim}")
         logger.critical("Tracking will now exit.")
         sys.exit()
+
+    # Make filename-like string for message printing
+    if isinstance(input_data, str):
+        filename = input_data
+    else:
+        time_str = time_decode.dt.strftime("%Y-%m-%d_%H:%M:%S").item()
+        filename = f"{clouddata_path}{databasename}: {time_str}"
 
     ##############################################################################
     # Subset input dataset within geolimits
@@ -195,7 +232,8 @@ def idclouds_tbpf(
 
 
     # Loop over each time
-    for tt in range(0, len(time_decode)):
+    ntimes = get_length(time_decode)
+    for tt in range(ntimes):
         # Process time variable
         iTime = time_decode[tt]
         # Convert to basetime (i.e., Epoch time)
@@ -292,7 +330,6 @@ def idclouds_tbpf(
                         [clouddata["final_convcold_cloudnumber"]]
                     )
 
-                    # import pdb; pdb.set_trace()
                     # Option to linkpf
                     if linkpf == 1:
 
@@ -322,7 +359,7 @@ def idclouds_tbpf(
                             # Replace values <=0 with 0 before smoothing
                             pcp_linkpf[pcp_linkpf <= 0] = 0
 
-                            if pbc_direction!='none':
+                            if pbc_direction != 'none':
                                 # Step 2: Extend and pad data
                                 pcp_linkpf_orig = np.copy(pcp_linkpf)
                                 pcp_linkpf, padded_x, padded_y = pad_and_extend(pcp_linkpf, config)
@@ -491,3 +528,9 @@ def idclouds_tbpf(
                     "No data within specified geolimit range."
                 )
     return cloudid_outfile
+
+def get_length(var):
+    try:
+        return len(var)
+    except TypeError:
+        return 1
