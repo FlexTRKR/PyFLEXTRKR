@@ -51,7 +51,7 @@ def trackstats_driver(config):
     #Get PBC condition
     pbc_direction = config.get('pbc_direction', "none")
     # domain_max = config.get('domain_max', "none")
-    max_domain_fraction = config.get('max_domain_fraction', 0.5)
+    pbc_max_domain_fraction = config.get('pbc_max_domain_fraction', 0.5)
 
     # Set output filename
     trackstats_outfile = f"{stats_path}{trackstats_filebase}{startdate}_{enddate}.nc"
@@ -97,11 +97,11 @@ def trackstats_driver(config):
 
     if pbc_direction != 'none':
         if feature_type == "radar_cells":
-            thresh_x = max_domain_fraction*len(x_coords)
-            thresh_y = max_domain_fraction*len(y_coords)
+            thresh_x = pbc_max_domain_fraction*len(x_coords)
+            thresh_y = pbc_max_domain_fraction*len(y_coords)
         else:
-            thresh_x = max_domain_fraction*nx*dx
-            thresh_y = max_domain_fraction*ny*dy
+            thresh_x = pbc_max_domain_fraction*nx*dx
+            thresh_y = pbc_max_domain_fraction*ny*dy
 
     #########################################################################################
     # loop over files. Calculate statistics and organize matrices by tracknumber and cloud
@@ -370,7 +370,7 @@ def trackstats_driver(config):
     #########################################################################################
     # Adjust lat,lon positions for PBC
     if pbc_direction != 'none':
-        adjust_positions_for_tracks(out_dict, thresh_x,thresh_y, max_domain_fraction, feature_type)
+        adjust_positions_for_tracks(out_dict, thresh_x,thresh_y, pbc_max_domain_fraction, feature_type)
         # Add attributes for the new variable
         out_dict_attrs['pbc_flag'] = {
             "long_name": "Flag indicating if position adjustment was applied due to PBC",
@@ -391,7 +391,7 @@ def trackstats_driver(config):
     return trackstats_outfile
 
 
-def adjust_positions_for_tracks(out_dict, thresh_x,thresh_y, max_domain_fraction, feature_type):
+def adjust_positions_for_tracks(out_dict, thresh_x,thresh_y, pbc_max_domain_fraction, feature_type):
     """
     Adjust mean latitude and longitude for tracks to ensure continuity
     across periodic boundaries, while preserving sparse matrix structure.
@@ -401,7 +401,7 @@ def adjust_positions_for_tracks(out_dict, thresh_x,thresh_y, max_domain_fraction
             Dictionary containing the output variables with tracks and times.
         thresh_x, thresh_y: float
             The maximum value for each axis of the domain.
-        max_domain_fraction: float
+        pbc_max_domain_fraction: float
             Fraction of the domain to determine the threshold for adjustment.
         feature_type: string
             Name of feature type.
@@ -439,7 +439,7 @@ def adjust_positions_for_tracks(out_dict, thresh_x,thresh_y, max_domain_fraction
             thresh = thresh_x  # Default case.
         
         # Adjust positions for the variable and collect adjustment flags
-        adjustment_flags = adjust_sparse_positions(data, indptr, thresh, max_domain_fraction)
+        adjustment_flags = adjust_sparse_positions(data, indptr, thresh, pbc_max_domain_fraction)
         
         # Reconstruct the sparse matrix with adjusted data
         out_dict[var_name] = csr_matrix((data, indices, indptr), shape=sparse_matrix.shape)
@@ -454,7 +454,7 @@ def adjust_positions_for_tracks(out_dict, thresh_x,thresh_y, max_domain_fraction
     out_dict['pbc_flag'] = overall_flag.astype(np.int32)
 
 
-def adjust_sparse_positions(data, indptr, thresh, max_domain_fraction):
+def adjust_sparse_positions(data, indptr, thresh, pbc_max_domain_fraction):
     """
     Adjust the positions in the sparse data array in-place to ensure continuity
     across periodic boundaries.
@@ -466,7 +466,7 @@ def adjust_sparse_positions(data, indptr, thresh, max_domain_fraction):
             Index pointer array for the sparse matrix.
         thresh: float
             The maximum value for each axis of the domain.
-        max_domain_fraction: float
+        pbc_max_domain_fraction: float
             Fraction of the domain to determine the threshold for adjustment.
 
     Returns:
@@ -485,14 +485,14 @@ def adjust_sparse_positions(data, indptr, thresh, max_domain_fraction):
         # Replace zeros with NaNs if necessary
         track_values = np.where(track_values != 0, track_values, np.nan)
         # Adjust positions and collect adjustment flag
-        adjusted_values, adjustment_made = adjust_position_continuous_simple(track_values, thresh, max_domain_fraction)
+        adjusted_values, adjustment_made = adjust_position_continuous_simple(track_values, thresh, pbc_max_domain_fraction)
         # Update the data array in-place
         data[start:end] = adjusted_values
         # Record the adjustment flag for this track
         adjustment_flag[i] = adjustment_made
     return adjustment_flag
 
-def adjust_position_continuous_simple(values, thresh, max_domain_fraction):
+def adjust_position_continuous_simple(values, thresh, pbc_max_domain_fraction):
     """
     Adjust positions in a 1D array to ensure continuity across periodic boundaries.
 
@@ -501,7 +501,7 @@ def adjust_position_continuous_simple(values, thresh, max_domain_fraction):
             Array of position values for a track.
         thresh: float
             The maximum value for each axis of the domain.
-        max_domain_fraction: float
+        pbc_max_domain_fraction: float
             Fraction of the domain to determine the threshold for adjustment.
 
     Returns:
@@ -518,10 +518,10 @@ def adjust_position_continuous_simple(values, thresh, max_domain_fraction):
             continue
         diff = adjusted_values[i] - adjusted_values[i - 1]
         if diff > thresh:
-            adjusted_values[i:] -= thresh/max_domain_fraction
+            adjusted_values[i:] -= thresh/pbc_max_domain_fraction
             adjustment_made = True  # Adjustment was made
         elif diff < -thresh:
-            adjusted_values[i:] += thresh/max_domain_fraction
+            adjusted_values[i:] += thresh/pbc_max_domain_fraction
             adjustment_made = True  # Adjustment was made
             
     return adjusted_values, adjustment_made

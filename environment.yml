@@ -22,4 +22,4 @@ dependencies:
   - seaborn
   - scikit-learn
   - ffmpeg
-  - xesmf
+  - xesmf>=0.8

@@ -529,7 +529,7 @@ def pad_and_extend(fvar, config):
         padded_y: bool
             True if the data was padded in the y-direction, False otherwise.
     """
-    ext_frac = config.get('extended_fraction', 1.0)
+    ext_frac = config.get('pbc_extended_fraction', 1.0)
     pbc_direction = config.get('pbc_direction', 'both')
     pad_x, pad_y = (0, 0), (0, 0)
     padded_x = padded_y = False
@@ -582,7 +582,7 @@ def cache_label_positions(segments):
             label_positions_cache[label] = label_positions
     return label_positions_cache
 
-def adjust_axis(segments, axis, original_shape, ext_frac):
+def adjust_axis(segments, axis, original_shape, ext_frac, config):
     """
     Adjust the segmented features along a specified axis based on periodic boundaries.
 
@@ -596,6 +596,8 @@ def adjust_axis(segments, axis, original_shape, ext_frac):
             The shape of the original (unpadded) data array.
         ext_frac: float
             The extension fraction used to compute the extension size for padding.
+        config: dictionary
+            Dictionary containing config parameters
 
     Returns:
         segments: np.array
@@ -606,6 +608,13 @@ def adjust_axis(segments, axis, original_shape, ext_frac):
 
     """
     logger = logging.getLogger(__name__)
+    pixel_radius = config.get('pixel_radius')
+    area_thresh = config.get('area_thresh')
+    # Calculate feature width threshold (in pixels) proportional to minimum area of objects defined in config
+    # If there are objects with width > width_thresh, the algorithm will keep searching to refine the position to crop
+    # until it reaches the edge of the extended domain.
+    size_factor = 3     # adjustable multiplier factor
+    width_thresh = size_factor * int(2 * np.sqrt(area_thresh / np.pi) / pixel_radius)
     ext_size = calc_extension(original_shape[axis], ext_frac)
     adjusted = False
     label_positions_cache = cache_label_positions(segments)
@@ -618,11 +627,11 @@ def adjust_axis(segments, axis, original_shape, ext_frac):
         top_slice = segments[:ext_size, :]
         middle_slice = segments[ext_size:ext_size + original_shape[0], :]
         shared_labels = np.intersect1d(top_slice[-1, :], middle_slice[0, :])
+    # Remove 0 (background) from shared labels
+    shared_labels = shared_labels[shared_labels != 0]
 
     if shared_labels.size > 0 and not np.all(shared_labels == 0):
         for label in shared_labels:
-            if label == 0:
-                continue
             # Verify if the label spans the middle slice in Y direction
             if np.all(middle_slice == label):
                 logger.warning(f"Full-domain spanning feature detected in axis {axis} with label {label}.")
@@ -633,11 +642,14 @@ def adjust_axis(segments, axis, original_shape, ext_frac):
             
             # Iteratively refine min_pos using cache
             while True:
+                # Find all labels at the current min_pos slice
                 current_labels = segments[min_pos, :] if axis == 0 else segments[:, min_pos]
                 non_zero_labels = current_labels[current_labels != 0]
-                unique_labels = np.unique(non_zero_labels)
-                # If position includes multiple labels, refine min_pos
-                if unique_labels.size > 1:
+                unique_labels, unique_npix = np.unique(non_zero_labels, return_counts=True)
+                max_unique_npix = np.max(unique_npix)
+                # If position includes multiple labels and the largest width > width_thresh, 
+                # keep searching to refine min_pos
+                if (unique_labels.size > 1) and (max_unique_npix > width_thresh):
                     min_positions = [np.min(label_positions_cache[ul][axis]) for ul in unique_labels]
                     new_min_pos = min(min_positions)
                     if new_min_pos == min_pos:
@@ -682,7 +694,7 @@ def adjust_pbc_watershed(fvar, config):
             A dictionary of parameters returned by the watershed segmentation 
             function.
     """
-    ext_frac = config.get('extended_fraction', 1.0)
+    ext_frac = config.get('pbc_extended_fraction', 1.0)
     pbc_direction = config.get('pbc_direction', 'both')
     # Step 2: Extend and pad data
     extended_data, padded_x, padded_y = pad_and_extend(fvar, config)
@@ -709,7 +721,7 @@ def call_adjust_axis(extended_segments, fvar, config, padded_x, padded_y):
         extended_segments: np.ndarray()
             Adjusted segments according to periodic boundary considerations.
     """
-    ext_frac = config.get('extended_fraction', 1.0)
+    ext_frac = config.get('pbc_extended_fraction', 1.0)
     pbc_direction = config.get('pbc_direction', 'both')
     #   Initialize adjustment flags
     x_adjusted, y_adjusted = False, False
@@ -717,9 +729,9 @@ def call_adjust_axis(extended_segments, fvar, config, padded_x, padded_y):
     
     # Adjust each specified axis (X and/or Y)
     if pbc_direction in ['x', 'both']:
-        extended_segments, x_adjusted = adjust_axis(extended_segments, 1, original_shape, ext_frac)
+        extended_segments, x_adjusted = adjust_axis(extended_segments, 1, original_shape, ext_frac, config)
     if pbc_direction in ['y', 'both']:
-        extended_segments, y_adjusted = adjust_axis(extended_segments, 0, original_shape, ext_frac)
+        extended_segments, y_adjusted = adjust_axis(extended_segments, 0, original_shape, ext_frac, config)
         
     # Restore to the original structure in non-adjusted dimensions
     if padded_x and not x_adjusted:

@@ -4,7 +4,7 @@ import xarray as xr
 import pandas as pd
 import dask
 from dask.distributed import wait
-from pyflextrkr.ft_utilities import subset_files_timerange
+from pyflextrkr.ft_utilities import subset_files_timerange, convert_to_cftime
 
 def idfeature_driver(config):
     """
@@ -46,10 +46,7 @@ def idfeature_driver(config):
 
     if input_format == "zarr":
 
-        # import healpix as hp
-        # import easygems.healpix as egh
-        # import easygems.remap as egr
-    
+        # Get precipitation data info from config
         precipdata_path = config["precipdata_path"]
         precipdata_basename = config["precipdata_basename"]
         start_date = config["startdate"]
@@ -134,17 +131,3 @@ def idfeature_driver(config):
     logger.info('Done with features from raw data.')
     return
 
-def convert_to_cftime(datetime, calendar):
-    import cftime
-    if calendar == 'noleap':
-        return cftime.DatetimeNoLeap(datetime.year, datetime.month, datetime.day, datetime.hour, datetime.minute)
-    elif calendar == 'gregorian':
-        return cftime.DatetimeGregorian(datetime.year, datetime.month, datetime.day, datetime.hour, datetime.minute)
-    elif calendar == 'proleptic_gregorian':
-        return cftime.DatetimeProlepticGregorian(datetime.year, datetime.month, datetime.day, datetime.hour, datetime.minute)
-    elif calendar == 'standard':
-        return cftime.DatetimeGregorian(datetime.year, datetime.month, datetime.day, datetime.hour, datetime.minute)
-    elif calendar == '360_day':
-        return cftime.Datetime360Day(datetime.year, datetime.month, datetime.day, datetime.hour, datetime.minute)
-    else:
-        raise ValueError(f"Unsupported calendar type: {calendar}")

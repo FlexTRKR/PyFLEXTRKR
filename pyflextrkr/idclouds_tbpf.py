@@ -102,8 +102,6 @@ def idclouds_tbpf(
 
     if input_format == "zarr":
         import healpix as hp
-        # import easygems.healpix as egh
-        # import easygems.remap as egr
 
         # Read landmask file to get target lat/lon grid
         landmask_filename = config.get('landmask_filename', None)
@@ -512,6 +510,7 @@ def idclouds_tbpf(
                             pf_link_area_thresh=pf_link_area_thresh,
                             sl3d_dict=sl3d_dict,
                             sl3d_attrs=sl3d_attrs,
+                            pbc_direction=pbc_direction,
                         )
                         logger.info(f"{cloudid_outfile}")
 

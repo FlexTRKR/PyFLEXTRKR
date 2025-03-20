@@ -3,28 +3,27 @@
 # Tracking uses collocated Tb + Precipitation
 
 # Processing steps:
-run_preprocess: False
 run_idfeature : True
 run_tracksingle : True
-run_gettracks : False
-run_trackstats : False
-run_identifymcs : False
-run_matchpf : False
-run_robustmcs : False
-run_mapfeature : False
-run_speed : False
+run_gettracks : True
+run_trackstats : True
+run_identifymcs : True
+run_matchpf : True
+run_robustmcs : True
+run_mapfeature : True
+run_speed : True
 run_regrid_mask: False
 
 # Parallel processing set up
 # run_parallel: 1 (local cluster), 2 (Dask MPI)
-run_parallel: 1
+run_parallel: 2
 nprocesses : 128  # Number of processors to use if run_parallel=1
 dask_tmp_dir: '/tmp'  # Dask temporary directory if run_parallel=1
 timeout: 360  # [seconds] Dask timeout limit
 
 # Start/end date and time
-startdate: '20200810.0000'
-enddate: '20200815.0000'
+startdate: '20200801.0000'
+enddate: '20200901.0000'
 
 # Specify tracking input data date/time string format
 # This is the preprocessed file that contains Tb & rainrate
@@ -94,11 +93,14 @@ pf_smooth_window:  5  # Smoothing window for identifying PF
 pf_dbz_thresh:  3  # [dBZ] for reflectivity, or [mm/h] for rainrate
 pf_link_area_thresh:  648.0  # [km^2]
 
-# Tracking parameters - periodic boundary conditions
-pbc_direction: 'x'    # options are 'x', 'y', 'both' and 'none'
-extended_fraction: 0.1    # Fraction to extend the domain (range: 0 to 1)
-# Fraction of the domain to wrap feature position crossing the boundary between two time steps (range: 0 to 1)
-max_domain_fraction: 0.5
+# Periodic boundary conditions
+pbc_direction: 'x'    # (options: 'x', 'y', 'both', 'none')
+# Fraction to extend the domain to label features at the periodic boundary
+pbc_extended_fraction: 0.1    # (range: 0 to 1)
+# Fraction of the domain to wrap feature position 
+# If feature center movement between two time steps > max_domain_fraction * domain size,
+# the feature position will be wrapped to the other side of the domain
+pbc_max_domain_fraction: 0.5    # (range: 0 to 1)
 
 # Tracking parameters
 othresh: 0.5  # overlap fraction threshold. Clouds that overlap more than this between times are tracked.
