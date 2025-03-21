@@ -1,12 +1,12 @@
 ---
-# MCS tracking configuration file for SAAG WRF regridded to GPM IMERG
+# MCS tracking configuration file for idealized data with periodic boundary conditions (PBC)
 # Tracking uses collocated Tb + Precipitation
 
 # Processing steps:
 # Maybe worth nesting these in sets of dictionaries
-run_idfeature : False
-run_tracksingle : False
-run_gettracks : False
+run_idfeature : True
+run_tracksingle : True
+run_gettracks : True
 run_trackstats : True
 run_identifymcs : True
 run_matchpf : True
@@ -14,12 +14,11 @@ run_robustmcs : True
 run_mapfeature : True
 run_speed: True
 run_regrid_mask: False
-run_preprocess: False
 
 # Parallel processing set up
 # run_parallel: 1 (local cluster), 2 (Dask MPI)
-run_parallel: 1
-nprocesses : 8  # Number of processors to use if run_parallel=1
+run_parallel: 0
+nprocesses : 4  # Number of processors to use if run_parallel=1
 dask_tmp_dir: '/tmp'  # Dask temporary directory if run_parallel=1
 timeout: 360  # [seconds] Dask timeout limit
 
@@ -33,6 +32,7 @@ enddate: '20200103.0000'
 # E.g., databasename2018-11-01_01:15:00 --> yyyy-mo-dd_hh:mm:ss
 time_format: 'yyyy-mo-dd_hh-mm-ss'
 databasename: 'MCS4_demo_rolled_' #_yrolled_' #'PBC_mcs_demo_v1_'  # Note: include all strings before the time (including "_", ".")
+input_format: 'netcdf'
 
 # Input files directory
 clouddata_path: '/pscratch/sd/p/paccini/temp/sample_data/demo/'  #rolled_x/'
@@ -100,11 +100,14 @@ trackstats_dense_netcdf: 1
 # Minimum time difference threshold to match track stats with cloudid files
 match_pixel_dt_thresh: 60.0  # seconds
 
-# Tracking parameters - periodic boundary conditions
-pbc_direction: 'both'    # options are 'x', 'y', 'both' and 'none'
-extended_fraction: 1    # Fraction to extend the domain (range: 0 to 1)
-# domain_max: 1500    # @laurapaccini please modify this to be the fraction of the domain size for x & y separately
-max_domain_fraction: 0.5
+# Periodic boundary conditions
+pbc_direction: 'both'    # (options: 'x', 'y', 'both', 'none')
+# Fraction to extend the domain to label features at the periodic boundary
+pbc_extended_fraction: 1    # (range: 0 to 1)
+# Fraction of the domain to wrap feature position 
+# If feature center movement between two time steps > max_domain_fraction * domain size,
+# the feature position will be wrapped to the other side of the domain
+pbc_max_domain_fraction: 0.5    # (range: 0 to 1)
 
 # MCS Tb parameters
 mcs_tb_area_thresh: 40000  # [km^2] Tb area threshold

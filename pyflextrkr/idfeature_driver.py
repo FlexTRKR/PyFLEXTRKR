@@ -44,7 +44,7 @@ def idfeature_driver(config):
         logger.critical("Tracking will now exit.")
         sys.exit()
 
-    if input_format == "zarr":
+    if input_format.lower() == "zarr":
 
         # Get precipitation data info from config
         precipdata_path = config["precipdata_path"]
@@ -96,7 +96,7 @@ def idfeature_driver(config):
         else:
             sys.exit('Valid parallelization flag not provided')
 
-    elif input_format == "netcdf":
+    elif input_format.lower() == "netcdf":
 
         time_format = config["time_format"]
 

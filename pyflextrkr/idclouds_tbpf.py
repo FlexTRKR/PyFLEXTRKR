@@ -100,7 +100,8 @@ def idclouds_tbpf(
     sl3d_dict = None
     sl3d_attrs = None
 
-    if input_format == "zarr":
+    # Zarr format (assumes HEALPix for now)
+    if input_format.lower() == "zarr":
         import healpix as hp
 
         # Read landmask file to get target lat/lon grid
@@ -125,9 +126,10 @@ def idclouds_tbpf(
         # Combine DataArrays into a single Dataset
         rawdata = xr.Dataset({olr_varname: olr, pcp_varname: pcp})
 
-    elif input_format == "netcdf":
+    # NetCDF format
+    elif input_format.lower() == "netcdf":
         # Read in data
-        rawdata = xr.open_dataset(input)
+        rawdata = xr.open_dataset(input_data)
 
         # Get dimension names from the file
         dims_file = []
