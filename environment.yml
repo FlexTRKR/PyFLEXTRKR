@@ -2,24 +2,26 @@ name: pyflextrkr
 channels:
   - conda-forge
 dependencies:
-  - python>=3.10
-  - numpy>=1.17
-  - matplotlib>=3
-  - xarray>=0.14
-  - pandas>=0.25
-  - scipy>=1.4
-  - netcdf4>=1.5
-  - pytz>=2019
-  - cartopy>=0.17
-  - dask>=2.9
-  - scikit-image>=0.22
-  - joblib>=0.14
-  - ipython>7.0
-  - pip
+  - python==3.12.*
   - astropy
+  - cartopy
   - colorcet
   - colormath
-  - seaborn
-  - scikit-learn
+  - dask
   - ffmpeg
+  - healpix
+  - ipython
+  - joblib
+  - matplotlib
+  - netcdf4
+  - numpy
+  - pandas
+  - pip
+  - pytz
+  - scikit-image>=0.22
+  - scikit-learn
+  - scipy>=1.4
+  - seaborn
+  - xarray>=2025.1.2
   - xesmf>=0.8
+  - zarr

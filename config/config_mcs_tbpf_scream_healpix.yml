@@ -19,10 +19,10 @@ run_regrid_mask: False
 run_parallel: 2
 nprocesses : 128  # Number of processors to use if run_parallel=1
 dask_tmp_dir: '/tmp'  # Dask temporary directory if run_parallel=1
-timeout: 360  # [seconds] Dask timeout limit
+timeout: 600  # [seconds] Dask timeout limit
 
 # Start/end date and time
-startdate: '20200801.0000'
+startdate: '20190901.0000'
 enddate: '20200901.0000'
 
 # Specify tracking input data date/time string format

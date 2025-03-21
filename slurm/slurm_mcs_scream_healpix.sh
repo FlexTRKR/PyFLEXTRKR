@@ -1,12 +1,12 @@
 #!/bin/bash
 #SBATCH -A m1867
 #SBATCH -J screamhealpix
-#SBATCH -p debug
+#SBATCH --qos=regular
 #SBATCH --nodes=5
 #SBATCH --ntasks-per-node=128   # 128 workers per node (1 worker per core)
 #SBATCH --cpus-per-task=1       # 1 CPU per worker
 #SBATCH -C cpu
-#SBATCH --time=00:30:00
+#SBATCH --time=06:00:00
 #SBATCH --exclusive
 #SBATCH --mail-user=zhe.feng@pnnl.gov
 #SBATCH --mail-type=END
@@ -28,11 +28,11 @@ scheduler_file=$SCRATCH/scheduler_${random_str}.json
 rm -f $scheduler_file
 
 module load python
-source activate /global/homes/f/feng045/envs/pyflex-dev
+source activate /global/common/software/m1867/python/pyflex-dev
 
 # Set environment variables for timeouts globally
-DASK_DISTRIBUTED__COMM__TIMEOUTS__CONNECT=3600s \
-DASK_DISTRIBUTED__COMM__TIMEOUTS__TCP=3600s \
+export DASK_DISTRIBUTED__COMM__TIMEOUTS__CONNECT=3600s
+export DASK_DISTRIBUTED__COMM__TIMEOUTS__TCP=3600s
 
 # Start Dask Scheduler
 dask scheduler \
@@ -58,9 +58,13 @@ srun --ntasks=$ntasks --ntasks-per-node=$SLURM_NTASKS_PER_NODE \
      --nthreads 1 \
      --memory-limit auto &
 
+# Wait a bit to ensure workers have started
+sleep 10
+
 # Run Python
-cd /global/homes/f/feng045/program/PyFLEXTRKR-dev
-python ./runscripts/run_mcs_tbpf_mcsmip.py ./config/config_mcs_tbpf_scream_healpix.yml $scheduler_file
+python /global/homes/f/feng045/program/PyFLEXTRKR-dev/runscripts/run_mcs_tbpf_mcsmip.py \
+    /global/homes/f/feng045/program/PyFLEXTRKR-dev/config/config_mcs_tbpf_scream_healpix.yml \
+    $scheduler_file
 
 # Clean up the scheduler
 echo "Cleaning up scheduler..."

@@ -33,7 +33,6 @@ if __name__ == '__main__':
     mcstbmap_outpath = 'mcstracking_tb'     # Output directory for Tb-only MCS
     alltrackmap_outpath = 'ccstracking'     # Output directory for all Tb tracks
 
-
     ################################################################################################
     # Parallel processing options
     if config['run_parallel'] == 1:
@@ -48,10 +47,15 @@ if __name__ == '__main__':
         # Dask scheduler
         # Get the scheduler filename from input argument
         scheduler_file = sys.argv[2]
-        timeout = config.get("timeout", 120)
-        client = Client(scheduler_file=scheduler_file)
-        # client.wait_for_workers(n_workers=n_workers, timeout=timeout)
-        client.run(setup_logging)
+        timeout = config.get("timeout", 600)
+        logger.info(f"Connecting to Dask scheduler at {scheduler_file} with timeout {timeout}")
+        try:
+            client = Client(scheduler_file=scheduler_file, timeout=timeout)
+            client.run(setup_logging)
+            logger.info("Successfully connected to Dask scheduler")
+        except Exception as e:
+            logger.error(f"Failed to connect to Dask scheduler: {e}")
+            sys.exit(1)
     else:
         logger.info(f"Running in serial.")
 
