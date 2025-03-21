@@ -1,6 +1,6 @@
 import numpy as np
 import os, fnmatch, sys, glob
-import datetime, calendar, time
+import datetime, calendar, time, cftime
 from pytz import utc
 import yaml
 import xarray as xr
@@ -174,8 +174,8 @@ def get_basetime_from_filename(
 
     # Add basetime character counts to get the actual date/time string positions
     yyyy_idx = nleadingchar + yyyy_idx
-    mo_idx = nleadingchar + mo_idx
-    dd_idx = nleadingchar + dd_idx
+    mo_idx = nleadingchar + mo_idx if (mo_idx != -1) else None
+    dd_idx = nleadingchar + dd_idx if (dd_idx != -1) else None
     hh_idx = nleadingchar + hh_idx if (hh_idx != -1) else None
     mm_idx = nleadingchar + mm_idx if (mm_idx != -1) else None
     ss_idx = nleadingchar + ss_idx if (ss_idx != -1) else None
@@ -183,8 +183,8 @@ def get_basetime_from_filename(
     # Loop over each file
     for ii, ifile in enumerate(filenames):
         year = ifile[yyyy_idx:yyyy_idx+4]
-        month = ifile[mo_idx:mo_idx+2]
-        day = ifile[dd_idx:dd_idx+2]
+        month = ifile[mo_idx:mo_idx+2] if (mo_idx is not None) else '01'
+        day = ifile[dd_idx:dd_idx+2] if (dd_idx is not None) else '01'
         # If hour, minute, second is not in time_format, assume 0
         hour = ifile[hh_idx:hh_idx+2] if (hh_idx is not None) else '00'
         minute = ifile[mm_idx:mm_idx+2] if (mm_idx is not None) else '00'
@@ -352,6 +352,32 @@ def get_timestamp_from_filename_single(
         file_timestamp = np.nan
     return file_timestamp
 
+def convert_to_cftime(datetime, calendar):
+    """
+    Convert a pandas.Timestamp object to a cftime object based on the calendar type.
+
+    Args:
+        datetime: pandas.Timestamp
+            Timestamp object to convert.
+        calendar: str
+            Calendar type.
+
+    Returns:
+        cftime object.
+    """
+    if calendar == 'noleap':
+        return cftime.DatetimeNoLeap(datetime.year, datetime.month, datetime.day, datetime.hour, datetime.minute)
+    elif calendar == 'gregorian':
+        return cftime.DatetimeGregorian(datetime.year, datetime.month, datetime.day, datetime.hour, datetime.minute)
+    elif calendar == 'proleptic_gregorian':
+        return cftime.DatetimeProlepticGregorian(datetime.year, datetime.month, datetime.day, datetime.hour, datetime.minute)
+    elif calendar == 'standard':
+        return cftime.DatetimeGregorian(datetime.year, datetime.month, datetime.day, datetime.hour, datetime.minute)
+    elif calendar == '360_day':
+        return cftime.Datetime360Day(datetime.year, datetime.month, datetime.day, datetime.hour, datetime.minute)
+    else:
+        raise ValueError(f"Unsupported calendar type: {calendar}")
+    
 def subset_ds_geolimit(
         ds_in,
         config,

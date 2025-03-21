@@ -1,7 +1,9 @@
+import logging
 import numpy as np
 from collections import deque
 from skimage.segmentation import watershed
 from skimage.feature import peak_local_max
+from scipy.ndimage import label
 
 def sort_renumber(
     labelcell_number2d,
@@ -507,3 +509,400 @@ def skimage_watershed(fvar, config):
     var_number = watershed(-fvar, markers, mask=Pmask, watershed_line=True, compactness=compa)
 
     return var_number, param_dict
+
+
+def pad_and_extend(fvar, config):
+    """
+    Pad and extend data based on specified periodic boundary conditions.
+
+    Args:
+        fvar: np.array
+            2D array containing data for padding.
+        config: dictionary
+            Dictionary containing config parameters.
+
+    Returns:
+        extended_data: np.array
+            extended 2D-array fvar.
+        padded_x: bool
+            True if the data was padded in the x-direction, False otherwise.
+        padded_y: bool
+            True if the data was padded in the y-direction, False otherwise.
+    """
+    ext_frac = config.get('pbc_extended_fraction', 1.0)
+    pbc_direction = config.get('pbc_direction', 'both')
+    pad_x, pad_y = (0, 0), (0, 0)
+    padded_x = padded_y = False
+
+    if pbc_direction in ['x', 'both']:
+        pad_x = (calc_extension(fvar.shape[1], ext_frac),) * 2
+        padded_x = True
+    if pbc_direction in ['y', 'both']:
+        pad_y = (calc_extension(fvar.shape[0], ext_frac),) * 2
+        padded_y = True
+
+    extended_data = np.pad(fvar, pad_width=(pad_y, pad_x), mode='wrap')
+    
+    return extended_data, padded_x, padded_y
+
+def calc_extension(size, ext_frac):
+    """
+    This function computes the number of elements to extend an array dimension by 
+    multiplying the dimension size by the specified extension fraction.
+
+    Args:
+        size: int
+            The original size of the dimension.
+        ext_frac: float
+            The fraction of the size used to determine the extension length.
+    Returns:
+        The computed extension size (int).
+    """
+    return int(size * ext_frac)
+
+def cache_label_positions(segments):
+    """
+    Cache the positions of labels in segments (features).
+    
+    Args:
+        segments: np.array
+            A 2D array where each element represents a label assigned to a segment 
+            (feature). The background is assumed to be represented by 0.
+
+    Returns:
+        label_positions_cache: dict
+            A dictionary mapping each label (non-zero) to a tuple of arrays containing 
+            the indices where the label occurs.
+    """
+    label_positions_cache = {}
+    unique_labels = np.unique(segments)
+    for label in unique_labels:
+        if label != 0:  # Ignore background
+            label_positions = np.where(segments == label)
+            label_positions_cache[label] = label_positions
+    return label_positions_cache
+
+def adjust_axis(segments, axis, original_shape, ext_frac, config):
+    """
+    Adjust the segmented features along a specified axis based on periodic boundaries.
+
+    Args:
+        segments: np.array
+            A 2D array of segmented labels where features have been identified.
+        axis: int
+            The axis along which to adjust the segmentation. Use 0 for y-axis and 1 
+            for x-axis.
+        original_shape: tuple of ints
+            The shape of the original (unpadded) data array.
+        ext_frac: float
+            The extension fraction used to compute the extension size for padding.
+        config: dictionary
+            Dictionary containing config parameters
+
+    Returns:
+        segments: np.array
+            The adjusted segmentation array after cropping and rolling.
+        adjusted: bool
+            True if adjustments were made based on detected shared labels; 
+            False otherwise.
+
+    """
+    logger = logging.getLogger(__name__)
+    pixel_radius = config.get('pixel_radius')
+    area_thresh = config.get('area_thresh')
+    # Calculate feature width threshold (in pixels) proportional to minimum area of objects defined in config
+    # If there are objects with width > width_thresh, the algorithm will keep searching to refine the position to crop
+    # until it reaches the edge of the extended domain.
+    size_factor = 3     # adjustable multiplier factor
+    width_thresh = size_factor * int(2 * np.sqrt(area_thresh / np.pi) / pixel_radius)
+    ext_size = calc_extension(original_shape[axis], ext_frac)
+    adjusted = False
+    label_positions_cache = cache_label_positions(segments)
+    
+    if axis == 1:  # X-axis
+        left_slice = segments[:, :ext_size]
+        middle_slice = segments[:, ext_size:ext_size + original_shape[1]]
+        shared_labels = np.intersect1d(left_slice[:, -1], middle_slice[:, 0])     
+    elif axis == 0:  # Y-axis
+        top_slice = segments[:ext_size, :]
+        middle_slice = segments[ext_size:ext_size + original_shape[0], :]
+        shared_labels = np.intersect1d(top_slice[-1, :], middle_slice[0, :])
+    # Remove 0 (background) from shared labels
+    shared_labels = shared_labels[shared_labels != 0]
+
+    if shared_labels.size > 0 and not np.all(shared_labels == 0):
+        for label in shared_labels:
+            # Verify if the label spans the middle slice in Y direction
+            if np.all(middle_slice == label):
+                logger.warning(f"Full-domain spanning feature detected in axis {axis} with label {label}.")
+                continue
+            adjusted = True
+            # Start with initial min_pos for the label
+            min_pos = np.min(label_positions_cache[label][axis])
+            
+            # Iteratively refine min_pos using cache
+            while True:
+                # Find all labels at the current min_pos slice
+                current_labels = segments[min_pos, :] if axis == 0 else segments[:, min_pos]
+                non_zero_labels = current_labels[current_labels != 0]
+                unique_labels, unique_npix = np.unique(non_zero_labels, return_counts=True)
+                max_unique_npix = np.max(unique_npix)
+                # If position includes multiple labels and the largest width > width_thresh, 
+                # keep searching to refine min_pos
+                if (unique_labels.size > 1) and (max_unique_npix > width_thresh):
+                    min_positions = [np.min(label_positions_cache[ul][axis]) for ul in unique_labels]
+                    new_min_pos = min(min_positions)
+                    if new_min_pos == min_pos:
+                        break
+                    min_pos = new_min_pos
+                else:
+                    break
+        # Calculate cropping and rolling adjustments
+        if axis == 1:
+            dx = ext_size - min_pos
+            segments = segments[:, min_pos:ext_size + original_shape[1] - dx]
+            segments = np.roll(segments, shift=-dx, axis=1)
+        elif axis == 0:
+            dy = ext_size - min_pos
+            segments = segments[min_pos:ext_size + original_shape[0] - dy, :]
+            segments = np.roll(segments, shift=-dy, axis=0)
+        
+    else:
+        logger.debug(f"No shared labels found in axis {axis}.")
+    return segments, adjusted
+
+def adjust_pbc_watershed(fvar, config):
+    """
+    Process data to handle PBC when identifying features using watershed segmentation.
+    Steps:
+    1. Reads parameters related to boundary conditions from config file. 
+    2. Extends and pads data.
+    3. Apply watershed segmentation .
+    4. Adjust axis based on PBC direction. 
+
+    Args:
+        fvar: np.array
+            The original 2D data array to be segmented.
+        config: dictionary
+            Dictionary containing config parameters.
+
+    Returns:
+        adjusted_segments: np.array
+            The segmented features after applying watershed segmentation and adjustments 
+            based on PBC.
+        param_dict: dict
+            A dictionary of parameters returned by the watershed segmentation 
+            function.
+    """
+    ext_frac = config.get('pbc_extended_fraction', 1.0)
+    pbc_direction = config.get('pbc_direction', 'both')
+    # Step 2: Extend and pad data
+    extended_data, padded_x, padded_y = pad_and_extend(fvar, config)
+    # Step 3: Apply watershed segmentation
+    extended_segments, param_dict = skimage_watershed(extended_data, config)
+    # Step 4: Adjust axis based on PBC direction
+    adjusted_segments = call_adjust_axis(extended_segments,fvar,config, padded_x, padded_y)
+
+    return adjusted_segments, param_dict
+
+def call_adjust_axis(extended_segments, fvar, config, padded_x, padded_y):
+    """
+    Process data to adjust axis based on periodic boundary directions. 
+
+    Args:
+        extended_segments: np.ndarray()
+            2D numpy array of the extended and padded feature data.
+        fvar: np.ndarray()
+            2D numpy array of the original feature data.
+        config: dictionary
+            Dictionary containing config parameters.
+
+    Returns:
+        extended_segments: np.ndarray()
+            Adjusted segments according to periodic boundary considerations.
+    """
+    ext_frac = config.get('pbc_extended_fraction', 1.0)
+    pbc_direction = config.get('pbc_direction', 'both')
+    #   Initialize adjustment flags
+    x_adjusted, y_adjusted = False, False
+    original_shape = fvar.shape
+    
+    # Adjust each specified axis (X and/or Y)
+    if pbc_direction in ['x', 'both']:
+        extended_segments, x_adjusted = adjust_axis(extended_segments, 1, original_shape, ext_frac, config)
+    if pbc_direction in ['y', 'both']:
+        extended_segments, y_adjusted = adjust_axis(extended_segments, 0, original_shape, ext_frac, config)
+        
+    # Restore to the original structure in non-adjusted dimensions
+    if padded_x and not x_adjusted:
+        crop_start_x = calc_extension(original_shape[1], ext_frac)
+        extended_segments = extended_segments[:, crop_start_x:crop_start_x + original_shape[1]]
+
+    if padded_y and not y_adjusted:
+        crop_start_y = calc_extension(original_shape[0], ext_frac)
+        extended_segments = extended_segments[crop_start_y:crop_start_y + original_shape[0], :]
+
+    return extended_segments
+
+def circular_mean(values, domain_min, domain_max):
+    """
+    Compute the circular mean of values in a periodic domain.
+    
+    Args:
+        values: np.ndarray()
+            Array of positions
+        domain_min: float
+            Minimum value of the domain (e.g., 0 or -180)
+        domain_max: float
+            Maximum value of the domain (e.g., 100 or 180)
+
+    Returns:
+        Mean position in the original domain range
+    """
+
+    # Convert to [0, 1] range within the domain
+    domain_range = domain_max - domain_min
+    normalized_values = (values - domain_min) / domain_range * 2 * np.pi  # Convert to radians
+
+    # Compute the circular mean using trigonometry
+    mean_angle = np.arctan2(np.nanmean(np.sin(normalized_values)), np.nanmean(np.cos(normalized_values)))
+
+    # Convert back to original domain
+    mean_value = (mean_angle / (2 * np.pi) * domain_range) + domain_min
+
+    # Ensure the mean value stays within the original domain
+    return (mean_value - domain_min) % domain_range + domain_min
+
+#-----------------------------------------------------------------------
+def get_cloud_boundary(icloudlocationx, icloudlocationy, xdim, ydim):
+    """
+    Get the boundary indices of a cloud feature.
+
+    Args:
+        icloudlocationx: numpy array
+            Cloud location indices in x-direction.
+        icloudlocationy: numpy array
+            Cloud location indices in y-direction.
+        xdim: int
+            Full pixel image dimension in x-direction.
+        ydim: int
+            Full pixel image dimension in y-direction.
+
+    Returns:
+        maxx: int
+        maxy: int
+        minx: int
+        miny: int
+    """
+    # buffer = 10
+    buffer = 0
+    miny = np.nanmin(icloudlocationy)
+    if miny <= 10:
+        miny = 0
+    else:
+        miny = miny - buffer
+    maxy = np.nanmax(icloudlocationy)
+    if maxy >= ydim - 10:
+        maxy = ydim
+    else:
+        maxy = maxy + buffer + 1
+    minx = np.nanmin(icloudlocationx)
+    if minx <= 10:
+        minx = 0
+    else:
+        minx = minx - buffer
+    maxx = np.nanmax(icloudlocationx)
+    if maxx >= xdim - 10:
+        maxx = xdim
+    else:
+        maxx = maxx + buffer + 1
+    return maxx, maxy, minx, miny
+
+#-----------------------------------------------------------------------
+def find_max_indices_to_roll(mask_map, xdim, ydim):
+    """
+    Find the indices to roll the data to avoid periodic boundary condition.
+
+    Args:
+        mask_map: numpy array
+            Cloudnumber 2D mask.
+        xdim: int
+            x dimension of domain.
+        ydim: int
+            y dimension of domain.
+
+    Returns:
+        shift_x_right: int
+            Number of indices to shift right.
+        shift_y_top: int
+            Number of indices to shift top.
+    """
+    # Label the connected pixels
+    label_mask, num_cld = label(mask_map)
+    # Count number of pixels for each labeled cloud
+    uniq_labels, npix = np.unique(label_mask, return_counts=True)
+    # Exclude 0 (background)
+    _idx = uniq_labels > 0
+    uniq_labels = uniq_labels[_idx]
+    npix = npix[_idx]
+    # Loop over each labeled cloud to find their min/max positions
+    xmax_left = []                       
+    xmin_right = []
+    ymax_bottom = []
+    ymin_top = []
+    for cc in uniq_labels:
+        _y, _x = np.array(np.where(label_mask == cc))
+        _maxx, _maxy, _minx, _miny = get_cloud_boundary(_x, _y, xdim, ydim)
+        if _minx == 0:  # Feature touching left boundary
+            xmax_left.append(_maxx)
+        if _maxx == xdim:  # Feature touching right boundary
+            xmin_right.append(_minx)
+        if _miny == 0:  # Feature touching bottom boundary
+            ymax_bottom.append(_maxy)
+        if _maxy == ydim:  # Feature touching top boundary
+            ymin_top.append(_miny)
+
+    # Find max indices to roll
+    # shift_x_left = np.max(xmax_left) if (len(xmax_left) > 0) else 0
+    shift_x_right = (xdim - np.min(xmin_right)) if (len(xmin_right) > 0) else 0
+    # shift_y_bottom = np.max(ymax_bottom) if (len(ymax_bottom) > 0) else 0
+    shift_y_top = (ydim - np.min(ymin_top)) if (len(ymin_top) > 0) else 0
+
+    return (shift_x_right, shift_y_top)
+
+#-----------------------------------------------------------------------
+def subset_roll_map(data_array, shift_x_right, shift_y_top, xdim, ydim, fillval=0):
+    """
+    Subset and roll the data array to avoid periodic boundary condition.
+
+    Args:
+        data_array: numpy array
+            2D data array (dimensions: [y,x]).
+        shift_x_right: int
+            Number of indices to shift right.
+        shift_y_top: int
+            Number of indices to shift top.
+        xdim: int
+            x dimension of domain.
+        ydim: int
+            y dimension of domain.
+        fillval: float, default=0
+            Fill value in data_array to exclude.
+
+    Returns:
+        out_data_array: numpy array
+            2D subsetted and rolled data array.
+    """
+    # Roll array to avoid periodic boundary condition
+    # In X direction (axis 1): roll to the right (positive shift) by shift_x_right
+    # In Y direction (axis 0): roll to the top (positive shift) by shift_y_top
+    data_array_rolled = np.roll(
+        data_array, shift=(np.abs(shift_y_top), np.abs(shift_x_right)), axis=(0,1),
+    )
+    # Find valid values
+    _y, _x = np.where((~np.isnan(data_array_rolled)) & (data_array_rolled != fillval))
+    # Get data boundary
+    _maxx, _maxy, _minx, _miny = get_cloud_boundary(_x, _y, xdim, ydim)
+    # Subset data array
+    out_data_array = data_array_rolled[_miny:_maxy, _minx:_maxx]
+    return out_data_array

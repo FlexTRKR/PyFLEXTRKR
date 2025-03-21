@@ -122,6 +122,8 @@ def write_cloudid_tb(
         gattr_dict["pf_dbz_thresh"] = kwargs["pf_dbz_thresh"]
     if "pf_link_area_thresh" in kwargs:
         gattr_dict["pf_link_area_thresh"] = kwargs["pf_link_area_thresh"]
+    if "pbc_direction" in kwargs:
+        gattr_dict["pbc_direction"] = kwargs["pbc_direction"]
 
     # Define xarray dataset
     ds_out = xr.Dataset(var_dict, coords=coord_dict, attrs=gattr_dict)

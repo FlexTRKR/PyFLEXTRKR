@@ -11,20 +11,21 @@ from pyflextrkr import netcdf_io as net
 from pyflextrkr.ftfunctions import olr_to_tb
 from pyflextrkr.futyan3 import futyan3
 from pyflextrkr.label_and_grow_cold_clouds import label_and_grow_cold_clouds
-from pyflextrkr.ftfunctions import sort_renumber, sort_renumber2vars, link_pf_tb
+from pyflextrkr.ftfunctions import sort_renumber, sort_renumber2vars, link_pf_tb, pad_and_extend, call_adjust_axis 
 from pyflextrkr.sl3d_func import run_sl3d
 from pyflextrkr.ft_utilities import get_timestamp_from_filename_single
 
 def idclouds_tbpf(
-    filename,
+    input_data,
     config,
 ):
     """
     Identifies convective cloud objects from infrared brightness temperature and precipitation data.
 
     Args:
-        filename: string
-            Input data filename
+        input_data: string or Xarray DataSet
+            For input_format=='netcdf': filename of the input data
+            For input_format=='zarr': Xarray DataSet
         config: dictionary
             Dictionary containing config parameters
 
@@ -34,10 +35,12 @@ def idclouds_tbpf(
     """
     np.set_printoptions(threshold=np.inf)
     logger = logging.getLogger(__name__)
-    logger.debug(f"Processing {filename}.")
+    logger.debug(f"Processing {input_data}.")
 
+    clouddata_path = config["clouddata_path"]
     databasename = config["databasename"]
     time_format = config["time_format"]
+    input_format = config.get("input_format", "netcdf")
     # Flag to handle a special case for 'gpmirimerg'
     clouddatasource = config['clouddatasource']
     # Set medfilt2d kernel_size, this determines the filter window dimension
@@ -49,6 +52,10 @@ def idclouds_tbpf(
     # minimum and maximum brightness temperature thresholds. data outside of this range is filtered
     mintb_thresh = config['absolutetb_threshs'][0]
     maxtb_thresh = config['absolutetb_threshs'][1]
+
+    # Periodic boundary conditions 
+    pbc_direction  = config.get('pbc_direction', 'none') 
+
     # Get Tb thresholds
     thresh_core = config['cloudtb_core']
     thresh_cold = config['cloudtb_cold']
@@ -88,46 +95,73 @@ def idclouds_tbpf(
     z_dimname = config.get('z_dimname', None)
 
     cloudid_outfile = None
-    logger.debug(filename)
 
     # Initialize optional variables
     sl3d_dict = None
     sl3d_attrs = None
 
-    # Read in Tb data using xarray
-    rawdata = xr.open_dataset(filename)
+    # Zarr format (assumes HEALPix for now)
+    if input_format.lower() == "zarr":
+        import healpix as hp
 
-    # Get dimension names from the file
-    dims_file = []
-    for key in rawdata.dims: dims_file.append(key)
-    # Find extra dimensions beyond [time, z, y, x]
-    dims_keep = [time_dimname, z_dimname, y_dimname, x_dimname]
-    dims_drop = list(set(dims_file) - set(dims_keep))
-    # Reorder Dataset dimensions
-    if z_dimname is not None:
-        # Drop extra dimensions, reorder to [time, z, y, x]
-        rawdata = rawdata.drop_dims(dims_drop).transpose(
-            time_dimname, z_dimname, y_dimname, x_dimname, missing_dims='ignore'
-        )
-    else:
-        # Drop extra dimensions, reorder to [time, y, x]
-        rawdata = rawdata.drop_dims(dims_drop).transpose(
-            time_dimname, y_dimname, x_dimname, missing_dims='ignore'
-        )
+        # Read landmask file to get target lat/lon grid
+        landmask_filename = config.get('landmask_filename', None)
+        dslm = xr.open_dataset(landmask_filename)
+        lon = dslm.lon.data
+        lat = dslm.lat.data
+        dslm.close()
 
-    # Handle no time coordinate in Dataset
-    if time_coordname not in rawdata:
-        logger.warning(f'No time coordinate: {time_coordname} found in input data')
-        logger.warning(f'Will estimate time from filename based on time_format in config: {time_format}')
-        # Get Timestamp from filename
-        file_timestamp = get_timestamp_from_filename_single(
-            filename, databasename, time_format=time_format,
+        # Find the HEALPix pixels that are closest to the target grid points
+        pix = xr.DataArray(
+            hp.ang2pix(input_data.crs.healpix_nside, *np.meshgrid(lon, lat), nest=True, lonlat=True),
+            coords=((y_dimname, lat), (x_dimname, lon)),
         )
-        # Add Timestamp coordinate to the Dataset
-        rawdata = rawdata.assign_coords({time_coordname:file_timestamp})
-        # Add time dimension to all variables in the Dataset
-        rawdata = xr.concat([rawdata], dim=time_dimname)
-        logger.debug(f'Added Timestamp: {file_timestamp} calculated from filename to the input data')
+        # Convert time coordinate to Pandas datetime
+        # Note this would change the calendar type of the original time coordinate
+        time_coord = input_data[time_coordname]
+        time_pd = pd.to_datetime(time_coord.dt.strftime("%Y-%m-%dT%H:%M:%S").item())
+        # Regrid variables, expand time dimension so the variable has dimensions [time, y, x]
+        olr = input_data[olr_varname].isel(cell=pix).expand_dims({time_dimname:[time_pd]})
+        pcp = input_data[pcp_varname].isel(cell=pix).expand_dims({time_dimname:[time_pd]})
+        # Combine DataArrays into a single Dataset
+        rawdata = xr.Dataset({olr_varname: olr, pcp_varname: pcp})
+
+    # NetCDF format
+    elif input_format.lower() == "netcdf":
+        # Read in data
+        rawdata = xr.open_dataset(input_data)
+
+        # Get dimension names from the file
+        dims_file = []
+        for key in rawdata.dims: dims_file.append(key)
+        # Find extra dimensions beyond [time, z, y, x]
+        dims_keep = [time_dimname, z_dimname, y_dimname, x_dimname]
+        dims_drop = list(set(dims_file) - set(dims_keep))
+        # Reorder Dataset dimensions
+        if z_dimname is not None:
+            # Drop extra dimensions, reorder to [time, z, y, x]
+            rawdata = rawdata.drop_dims(dims_drop).transpose(
+                time_dimname, z_dimname, y_dimname, x_dimname, missing_dims='ignore'
+            )
+        else:
+            # Drop extra dimensions, reorder to [time, y, x]
+            rawdata = rawdata.drop_dims(dims_drop).transpose(
+                time_dimname, y_dimname, x_dimname, missing_dims='ignore'
+            )
+
+        # Handle no time coordinate in Dataset
+        if time_coordname not in rawdata:
+            logger.warning(f'No time coordinate: {time_coordname} found in input data')
+            logger.warning(f'Will estimate time from filename based on time_format in config: {time_format}')
+            # Get Timestamp from filename
+            file_timestamp = get_timestamp_from_filename_single(
+                input, databasename, time_format=time_format,
+            )
+            # Add Timestamp coordinate to the Dataset
+            rawdata = rawdata.assign_coords({time_coordname:file_timestamp})
+            # Add time dimension to all variables in the Dataset
+            rawdata = xr.concat([rawdata], dim=time_dimname)
+            logger.debug(f'Added Timestamp: {file_timestamp} calculated from filename to the input data')
 
     # Get data coordinates
     lat = rawdata[y_coordname].data
@@ -147,6 +181,13 @@ def idclouds_tbpf(
         logger.critical(f"{y_coordname} dimension: {lat.ndim}")
         logger.critical("Tracking will now exit.")
         sys.exit()
+
+    # Make filename-like string for message printing
+    if isinstance(input_data, str):
+        filename = input_data
+    else:
+        time_str = time_decode.dt.strftime("%Y-%m-%d_%H:%M:%S").item()
+        filename = f"{clouddata_path}{databasename}: {time_str}"
 
     ##############################################################################
     # Subset input dataset within geolimits
@@ -191,7 +232,8 @@ def idclouds_tbpf(
 
 
     # Loop over each time
-    for tt in range(0, len(time_decode)):
+    ntimes = get_length(time_decode)
+    for tt in range(ntimes):
         # Process time variable
         iTime = time_decode[tt]
         # Convert to basetime (i.e., Epoch time)
@@ -245,6 +287,7 @@ def idclouds_tbpf(
                 # Determine number of missing data
                 missingcount = np.count_nonzero(np.isnan(out_ir))
                 ny, nx = np.shape(out_ir)
+
                 # Proceed if fraction of missing data does not exceed threshold
                 if np.divide(missingcount, (ny * nx)) < miss_thresh:
                     ######################################################
@@ -258,6 +301,7 @@ def idclouds_tbpf(
                             mincoldcorepix,
                             smoothwindowdimensions,
                             warmanvilexpansion,
+                            config
                         )
                     elif cloudidmethod == "futyan3":
                         clouddata = futyan3(
@@ -271,14 +315,15 @@ def idclouds_tbpf(
                         logger.critical(f"ERROR: Unknown cloudidmethod: {cloudidmethod}")
                         logger.critical("Tracking will now exit.")
                         sys.exit()
+                    
 
                     ######################################################
                     # Separate output into the separate variables
                     final_nclouds = np.array([clouddata["final_nclouds"]])
-                    final_ncorepix = clouddata["final_ncorepix"]
-                    final_ncoldpix = clouddata["final_ncoldpix"]
+                    # final_ncorepix = clouddata["final_ncorepix"] not used
+                    # final_ncoldpix = clouddata["final_ncoldpix"] not used
                     final_ncorecoldpix = clouddata["final_ncorecoldpix"]
-                    final_nwarmpix = clouddata["final_nwarmpix"]
+                    # final_nwarmpix = clouddata["final_nwarmpix"] not used
                     final_cloudtype = np.array([clouddata["final_cloudtype"]])
                     final_cloudnumber = np.array([clouddata["final_cloudnumber"]])
                     final_convcold_cloudnumber = np.array(
@@ -313,19 +358,35 @@ def idclouds_tbpf(
 
                             # Replace values <=0 with 0 before smoothing
                             pcp_linkpf[pcp_linkpf <= 0] = 0
-                            # Smooth pcp_linkpf using convolve filter (handles NaN)
-                            kernel = Box2DKernel(pf_smooth_window)
-                            pcp_s = convolve(
-                                np.squeeze(pcp_linkpf), kernel, 
-                                boundary="extend", nan_treatment="interpolate", preserve_nan=True,
-                            )
-                            # Smooth PF variable, then label PF exceeding threshold
-                            # pcp_s = filters.uniform_filter(
-                            #     np.squeeze(pcp_linkpf),
-                            #     size=pf_smooth_window,
-                            #     mode="nearest",
-                            # )
-                            pf_number, npf = label(pcp_s >= pf_dbz_thresh)
+
+                            if pbc_direction != 'none':
+                                # Step 2: Extend and pad data
+                                pcp_linkpf_orig = np.copy(pcp_linkpf)
+                                pcp_linkpf, padded_x, padded_y = pad_and_extend(pcp_linkpf, config)
+                                # Smooth pcp_linkpf using convolve filter (handles NaN)
+                                kernel = Box2DKernel(pf_smooth_window)
+                                pcp_s = convolve(
+                                    np.squeeze(pcp_linkpf), kernel, 
+                                    boundary="extend", nan_treatment="interpolate", preserve_nan=True,
+                                )
+                                # Label precipitation features on extended array
+                                pf_number, npf = label(pcp_s >= pf_dbz_thresh)
+                                # Adjust axis and restore to original structure
+                                pf_number = call_adjust_axis(pf_number, pcp_linkpf_orig, config, padded_x, padded_y)
+                            else:
+                                # Smooth pcp_linkpf using convolve filter (handles NaN)
+                                kernel = Box2DKernel(pf_smooth_window)
+                                pcp_s = convolve(
+                                    np.squeeze(pcp_linkpf), kernel, 
+                                    boundary="extend", nan_treatment="interpolate", preserve_nan=True,
+                                )
+                                # Smooth PF variable, then label PF exceeding threshold
+                                # pcp_s = filters.uniform_filter(
+                                #     np.squeeze(pcp_linkpf),
+                                #     size=pf_smooth_window,
+                                #     mode="nearest",
+                                # )
+                                pf_number, npf = label(pcp_s >= pf_dbz_thresh)
 
                             # Convert PF area threshold to number of pixels
                             min_npix = np.ceil(
@@ -451,6 +512,7 @@ def idclouds_tbpf(
                             pf_link_area_thresh=pf_link_area_thresh,
                             sl3d_dict=sl3d_dict,
                             sl3d_attrs=sl3d_attrs,
+                            pbc_direction=pbc_direction,
                         )
                         logger.info(f"{cloudid_outfile}")
 
@@ -467,3 +529,9 @@ def idclouds_tbpf(
                     "No data within specified geolimit range."
                 )
     return cloudid_outfile
+
+def get_length(var):
+    try:
+        return len(var)
+    except TypeError:
+        return 1

@@ -10,9 +10,10 @@ from pyflextrkr.gettracks import gettracknumbers
 from pyflextrkr.trackstats_driver import trackstats_driver
 from pyflextrkr.identifymcs import identifymcs_tb
 from pyflextrkr.matchtbpf_driver import match_tbpf_tracks
-from pyflextrkr.robustmcspf import define_robust_mcs_pf
+from pyflextrkr.robustmcspf_saag import define_robust_mcs_pf
 from pyflextrkr.mapfeature_driver import mapfeature_driver
 from pyflextrkr.movement_speed import movement_speed
+from pyflextrkr.regrid_tracking_mask import regrid_tracking_mask
 
 if __name__ == '__main__':
 
@@ -43,15 +44,18 @@ if __name__ == '__main__':
         client = Client(cluster)
         client.run(setup_logging)
     elif config['run_parallel'] == 2:
-        # Dask-MPI
+        # Dask scheduler
         # Get the scheduler filename from input argument
         scheduler_file = sys.argv[2]
-        n_workers = int(sys.argv[3])
-        timeout = config.get("timeout", 120)
-        # scheduler_file = os.path.join(os.environ["SCRATCH"], "scheduler.json")
-        client = Client(scheduler_file=scheduler_file)
-        client.wait_for_workers(n_workers=n_workers, timeout=timeout)
-        client.run(setup_logging)
+        timeout = config.get("timeout", 600)
+        logger.info(f"Connecting to Dask scheduler at {scheduler_file} with timeout {timeout}")
+        try:
+            client = Client(scheduler_file=scheduler_file, timeout=timeout)
+            client.run(setup_logging)
+            logger.info("Successfully connected to Dask scheduler")
+        except Exception as e:
+            logger.error(f"Failed to connect to Dask scheduler: {e}")
+            sys.exit(1)
     else:
         logger.info(f"Running in serial.")
 
@@ -95,3 +99,7 @@ if __name__ == '__main__':
     # Step 9 - Movement speed calculation
     if config['run_speed']:
         movement_speed(config)
+
+    # Step 10 - Regrid tracking mask to native resolution
+    if config['run_regrid_mask']:
+        regrid_tracking_mask(config)

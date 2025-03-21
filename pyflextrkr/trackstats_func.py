@@ -4,6 +4,7 @@ import xarray as xr
 import sys
 import logging
 import warnings
+from pyflextrkr.ftfunctions import circular_mean
 
 def calc_stats_singlefile(
         tracknumbers,
@@ -47,6 +48,7 @@ def calc_stats_singlefile(
     terrain_file = config.get("terrain_file", None)
     rangemask_varname = config.get("rangemask_varname", 'None')
     feature_varname = config.get("feature_varname", "feature_number")
+    pbc_direction = config.get("pbc_direction", "none")
 
     # Only process file if that file contains a track
     if np.nanmax(tracknumbers) > 0:
@@ -63,6 +65,13 @@ def calc_stats_singlefile(
         longitude = ds["longitude"].values
         nx = ds.sizes["lon"]
         ny = ds.sizes["lat"]
+        # Get domain coordinate size information
+        lon_range = np.ptp(longitude)  # Total range of longitude values
+        lat_range = np.ptp(latitude)   # Total range of latitude values
+        longitude_min = np.nanmin(longitude)
+        longitude_max = np.nanmax(longitude)
+        latitude_min = np.nanmin(latitude)
+        latitude_max = np.nanmax(latitude)
         # file_cloudnumber = ds["cloudnumber"].squeeze().values
         file_corecold_cloudnumber = ds[feature_varname].squeeze().values
         file_basetime = ds["base_time"].squeeze()
@@ -73,6 +82,12 @@ def calc_stats_singlefile(
             # Convert x,y units to [km]
             x_coords = ds["x"] / 1000.
             y_coords = ds["y"] / 1000.
+            # Get domain coordinate size information
+            x_coords_min = np.nanmin(x_coords)
+            x_coords_max = np.nanmax(x_coords)
+            y_coords_min = np.nanmin(y_coords)
+            y_coords_max = np.nanmax(y_coords)
+            # Get variables
             file_dbz = ds[ref_varname].squeeze().values
             file_conv_core = ds["conv_core"].squeeze().values
             file_conv_mask = ds["conv_mask"].squeeze().values
@@ -206,15 +221,27 @@ def calc_stats_singlefile(
             corecold_npix, corecold_indices = get_loc_indices(
                 cloudnumber1d_uniq, cloudnumber1d_counts,
                 ast_corecoldarea, cumcounts_corecoldarea,
-                cloudnumber_map, nx, ny,
+                cloudnumber_map, nx, ny
             )
 
             if corecold_npix > 0:
                 out_area[itrack] = corecold_npix * pixel_radius ** 2
                 corecold_lat = latitude[corecold_indices[0], corecold_indices[1]]
                 corecold_lon = longitude[corecold_indices[0], corecold_indices[1]]
-                out_meanlon[itrack] = np.nanmean(corecold_lon)
-                out_meanlat[itrack] = np.nanmean(corecold_lat)
+
+                if pbc_direction in ['x', 'both']:
+                    mean_lon = circular_mean(corecold_lon, longitude_min, longitude_max)
+                else:
+                    mean_lon = np.nanmean(corecold_lon)
+
+                if pbc_direction in ['y', 'both']:
+                    mean_lat = circular_mean(corecold_lat, latitude_min, latitude_max)
+                else:
+                    mean_lat = np.nanmean(corecold_lat)
+                
+                # Store the calculated mean positions
+                out_meanlon[itrack] = mean_lon
+                out_meanlat[itrack] = mean_lat
 
                 # Calculate feature specific statistics
                 # Satellite Tb
@@ -246,7 +273,6 @@ def calc_stats_singlefile(
 
                     # iy_min, iy_max = np.min(corecold_indices[0]), np.max(corecold_indices[0])
                     # ix_min, ix_max = np.min(corecold_indices[1]), np.max(corecold_indices[1])
-                    # import pdb; pdb.set_trace()
 
                 # Calculate feature specific statistics
                 # Radar cells
@@ -278,16 +304,34 @@ def calc_stats_singlefile(
                     cell_x = x_coords[corecold_indices[1]]
 
                     # Core center location
-                    out_core_meanlat[itrack] = np.nanmean(core_lat)
-                    out_core_meanlon[itrack] = np.nanmean(core_lon)
-                    out_core_mean_y[itrack] = np.nanmean(core_y)
-                    out_core_mean_x[itrack] = np.nanmean(core_x)
+                    if pbc_direction in ['x', 'both']:
+                        out_core_meanlon[itrack] = circular_mean(core_lon, longitude_min, longitude_max)
+                        out_core_mean_x[itrack] = circular_mean(core_x, x_coords_min, x_coords_max)
+                    else:
+                        out_core_meanlon[itrack] = np.nanmean(core_lon)
+                        out_core_mean_x[itrack] = np.nanmean(core_x)
+                    
+                    if pbc_direction in ['y', 'both']:
+                        out_core_meanlat[itrack] = circular_mean(core_lat, latitude_min, latitude_max)
+                        out_core_mean_y[itrack] = circular_mean(core_y, y_coords_min, y_coords_max)
+                    else:
+                        out_core_meanlat[itrack] = np.nanmean(core_lat)                    
+                        out_core_mean_y[itrack] = np.nanmean(core_y)                    
 
                     # Cell center location
-                    out_cell_meanlat[itrack] = np.nanmean(cell_lat)
-                    out_cell_meanlon[itrack] = np.nanmean(cell_lon)
-                    out_cell_mean_y[itrack] = np.nanmean(cell_y)
-                    out_cell_mean_x[itrack] = np.nanmean(cell_x)
+                    if pbc_direction in ['x', 'both']:
+                        out_cell_meanlon[itrack] = circular_mean(cell_lon, longitude_min, longitude_max)
+                        out_cell_mean_x[itrack] = circular_mean(cell_x, x_coords_min, x_coords_max)
+                    else:
+                        out_cell_meanlon[itrack] = np.nanmean(cell_lon)
+                        out_cell_mean_x[itrack] = np.nanmean(cell_x)
+
+                    if pbc_direction in ['y', 'both']:
+                        out_cell_meanlat[itrack] = circular_mean(cell_lat, latitude_min, latitude_max)
+                        out_cell_mean_y[itrack] = circular_mean(cell_y, y_coords_min, y_coords_max)
+                    else:
+                        out_cell_meanlat[itrack] = np.nanmean(cell_lat)                    
+                        out_cell_mean_y[itrack] = np.nanmean(cell_y)                        
 
                     out_core_area[itrack] = core_npix * pixel_radius ** 2
                     out_cell_area[itrack] = corecold_npix * pixel_radius ** 2
@@ -404,12 +448,10 @@ def calc_stats_singlefile(
         out_dict = None
         out_dict_attrs = None
 
-    # import pdb; pdb.set_trace()
     return (out_dict, out_dict_attrs)
 
 
-
-
+################################################################################
 
 def define_base_vars_dict(file_basetime, fillval, fillval_f, numtracks, out_area, out_basetime, out_cloudnumber,
                           out_meanlat, out_meanlon, out_mergenumber, out_splitnumber, out_status,
@@ -787,6 +829,7 @@ def get_loc_indices(
     """
     # Find index of pre-sorted cloudnumber matching the current cloud
     idx = np.where(cloudnumber1d_uniq == cloudnumber_map)[0]
+
     if len(idx) > 0:
         corecold_npix = cloudnumber1d_counts[idx]
 
@@ -807,6 +850,8 @@ def get_loc_indices(
                 ast_cloudarea[0: cumcounts_cloudarea[idx][0]],
                 (ny, nx),
             )
+        
+
     else:
         corecold_npix = 0
         indices = None
@@ -1014,11 +1059,9 @@ def get_track_startend_status(
                     else:
                         logger.debug(f"Merge time occur after track ends??")
                 else:
-                    # import pdb; pdb.set_trace()
                     logger.debug(
                         f"Error: track {itrack} has no matching time in the track it merges with!"
                     )
-                    # import pdb; pdb.set_trace()
                     sys.exit(itrack)
 
             # If start split tracknumber exists, this track starts from a split

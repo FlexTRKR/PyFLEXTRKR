@@ -11,6 +11,7 @@ from scipy.interpolate import interp1d
 import dask
 from dask.distributed import wait
 from pyflextrkr.ft_utilities import subset_files_timerange
+from pyflextrkr.ftfunctions import find_max_indices_to_roll, subset_roll_map
 
 def movement_speed(
         config,
@@ -216,7 +217,10 @@ def movement_of_feature_fft(
     tracknumber = config["track_number_for_speed"]
     track_field = config["track_field_for_speed"]
     min_size_thresh = config["min_size_thresh_for_speed"]
-    # storm_buffer = None
+    # Parameters for handling perdiodic boundary condition
+    pbc_direction = config.get("pbc_direction", "none")
+    max_feature_frac_x = 0.95   # Max fraction of domain size for a feature in x-direction
+    max_feature_frac_y = 0.95   # Max fraction of domain size for a feature in y-direction
 
     logger = logging.getLogger(__name__)
     logger.debug("Starting Storm File: %s" % filepairs[0])
@@ -235,6 +239,8 @@ def movement_of_feature_fft(
     tracknumber_2 = dset2.variables[tracknumber][:].squeeze()
     field_1 = dset1.variables[track_field][:].squeeze()
     field_2 = dset2.variables[track_field][:].squeeze()
+    # Get dimensions of data
+    ydim, xdim = np.shape(field_1)
 
     # Loop over each track number
     for track_number in np.arange(0, ntracks):
@@ -253,15 +259,37 @@ def movement_of_feature_fft(
                 masked_field_1 = field_1[ymin:ymax, xmin:xmax].copy()
                 masked_field_2 = field_2[ymin:ymax, xmin:xmax].copy()
 
+                # Replace data outside of the current track mask area or NaN with 0
                 masked_field_1[tracknumber_1[ymin:ymax, xmin:xmax] != track_number_pix] = 0
                 masked_field_1[np.isnan(masked_field_1)] = 0
 
                 masked_field_2[tracknumber_2[ymin:ymax, xmin:xmax] != track_number_pix] = 0
                 masked_field_2[np.isnan(masked_field_2)] = 0
+
+                # Check feature boundary span
+                # If boundary span > X fraction of domain, and periodic boundary condition is set,
+                # roll the data such that the feature does not span across the domain boundary
+                if (((xmax - xmin) >= xdim * max_feature_frac_x) or \
+                    ((ymax - ymin) >= ydim * max_feature_frac_y)) and \
+                    (pbc_direction != 'none'):
+                    # Make a mask of valid values for both fields
+                    masked_fields = (np.abs(masked_field_1) > 0) | (np.abs(masked_field_2) > 0)
+                    # Find the indices to roll the array to avoid periodic boundary condition
+                    shift_x_right, shift_y_top = find_max_indices_to_roll(
+                        masked_fields, xdim, ydim,
+                    )
+                    # Roll arrays to avoid periodic boundary condition
+                    masked_field_1 = subset_roll_map(
+                        masked_field_1, shift_x_right, shift_y_top, xdim, ydim, fillval=0,
+                    )
+                    masked_field_2 = subset_roll_map(
+                        masked_field_2, shift_x_right, shift_y_top, xdim, ydim, fillval=0,
+                    )
             else:
                 masked_field_1 = field_1.copy()
                 masked_field_2 = field_2.copy()
 
+                # Replace data outside of the current track mask area or NaN with 0
                 masked_field_1[tracknumber_1 != track_number_pix] = 0
                 masked_field_1[np.isnan(masked_field_1)] = 0
 
