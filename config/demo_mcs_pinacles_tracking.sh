@@ -9,16 +9,14 @@
 ###############################################################################################
 
 # Specify start/end datetime
-start_date='1970-01-20T00' #'2000-01-15T00' #'2000-01-26T00' #
+start_date='1970-02-11T00' #'2000-01-15T00' #'2000-01-26T00' #
 end_date='1970-02-16T00' #'2000-02-08T00' #'2000-01-28T00' #
 # Plotting map domain (lonmin lonmax latmin latmax)
-# map_extent='0. 6. 0. 6.'
 map_extent='0. 600. 0. 600.'  # (xmin xmax ymin ymax)
-# map_extent='0. 300. 0. 300.'  # (xmin xmax ymin ymax)
 run_parallel=1
 
 # Specify directory for the demo data
-dir_demo='/pscratch/sd/p/paccini/temp/output_tracking/tracking_cloud_rain_pbc_600x600_v2' #tracking_cloud_rain_pbc_300x300/' #tracking_cloud_rain_pbc_final_3' #tracking_cloud_rain_pbc_150x150/'
+dir_demo='/pscratch/sd/p/paccini/temp/output_tracking/tracking_cloud_rain_pbc_600x600_review' #tracking_cloud_rain_pbc_300x300/' #tracking_cloud_rain_pbc_final_3' #tracking_cloud_rain_pbc_150x150/'
 quicklook_dir=${dir_demo}'/quicklooks_trackpaths/'
 animation_dir=${dir_demo}'/animations/'
 animation_filename=${animation_dir}mcs_tracking_${start_date}_${end_date}.mp4
@@ -28,8 +26,7 @@ mkdir -p ${quicklook_dir}
 mkdir -p ${animation_dir}
 
 # Example config file name
-# config_file='/global/cfs/cdirs/wcm_code/lpaccini/PyFLEXTRKR-dev/config/config_mcs_pinacles_example.yml'
-config_file='/global/cfs/cdirs/wcm_code/lpaccini/PyFLEXTRKR-dev/config/config_mcs_pinacles_example_600x600.yml'
+config_file='config_mcs_pinacles_example.yml'
 
 # Activate PyFLEXTRKR conda environment
 # echo 'Activating PyFLEXTRKR environment ...'
@@ -37,12 +34,12 @@ config_file='/global/cfs/cdirs/wcm_code/lpaccini/PyFLEXTRKR-dev/config/config_mc
 
 Run tracking
 echo 'Running PyFLEXTRKR ...'
-python /global/cfs/cdirs/wcm_code/lpaccini/PyFLEXTRKR-dev/runscripts/run_mcs_tbpf_saag.py ${config_file}
+python ../runscripts/run_mcs_tbpf_saag.py ${config_file}
 echo 'Tracking is done.'
 
 # Make quicklook plots
 echo 'Making quicklook plots ...'
-python /global/cfs/cdirs/wcm_code/lpaccini/PyFLEXTRKR-dev/Analysis/plot_subset_tbpf_tracks_pinacles_pbc.py -s ${start_date} -e ${end_date} -c ${config_file} \
+python ../Analysis/plot_subset_tbpf_tracks_pinacles_pbc.py -s ${start_date} -e ${end_date} -c ${config_file} \
     -p ${run_parallel} --output ${quicklook_dir} \
     --extent "${map_extent}" --subset 0
 echo 'View quicklook plots here: '${quicklook_dir}
