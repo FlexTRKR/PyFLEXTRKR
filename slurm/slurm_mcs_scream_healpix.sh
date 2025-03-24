@@ -6,7 +6,7 @@
 #SBATCH --ntasks-per-node=128   # 128 workers per node (1 worker per core)
 #SBATCH --cpus-per-task=1       # 1 CPU per worker
 #SBATCH -C cpu
-#SBATCH --time=06:00:00
+#SBATCH --time=12:00:00
 #SBATCH --exclusive
 #SBATCH --mail-user=zhe.feng@pnnl.gov
 #SBATCH --mail-type=END

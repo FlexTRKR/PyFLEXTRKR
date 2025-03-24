@@ -32,7 +32,9 @@ time_format: 'yyyy-mo-dd_hh:mm'
 databasename:  'tb_rainrate_'
 
 # Input files directory
-clouddata_path: '/pscratch/sd/f/feng045/SAAG/mcs_memory_speed_test/tb_pcp/'
+# Download the input data from the following link: 
+# https://portal.nersc.gov/project/m1867/PyFLEXTRKR/sample_data/tb_pcp/saag_mcs_memory_speed_test.tar.gz
+clouddata_path: '/pscratch/sd/f/feng045/SAAG/mcs_memory_speed_test/input/'
 # Working directory for the tracking data
 root_path: '/pscratch/sd/f/feng045/SAAG/mcs_memory_speed_test/'
 # Working sub-directory names
@@ -41,7 +43,7 @@ stats_path_name: 'stats'
 pixel_path_name: 'mcstracking'
 
 # Land mask file
-landmask_filename: '/pscratch/sd/f/feng045/SAAG/mcs_memory_speed_test/IMERG_landmask_saag.nc'
+landmask_filename: '/pscratch/sd/f/feng045/SAAG/mcs_memory_speed_test/input/IMERG_landmask_saag.nc'
 landmask_varname: 'landseamask'
 landmask_x_dimname: 'lon'
 landmask_y_dimname: 'lat'

@@ -101,5 +101,5 @@ if __name__ == '__main__':
         movement_speed(config)
 
     # Step 10 - Regrid tracking mask to native resolution
-    if config['run_regrid_mask']:
+    if config.get('run_regrid_mask', False):
         regrid_tracking_mask(config)

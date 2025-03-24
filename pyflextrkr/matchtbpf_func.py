@@ -216,13 +216,25 @@ def matchtbpf_singlefile(
                         sub_rainrate = np.copy(rainrate_map[miny:maxy, minx:maxx])
                         sub_lon = np.copy(lon_map[miny:maxy, minx:maxx])
                         sub_lat = np.copy(lat_map[miny:maxy, minx:maxx])
-                        # Roll rainrate to avoid periodic boundary condition
-                        sub_rainrate_map = subset_roll_map(
-                            sub_rainrate, shift_x_right, shift_y_top, xdim, ydim,
-                        )
-                        lon_roll = subset_roll_map(sub_lon, shift_x_right, shift_y_top, xdim, ydim)
-                        lat_roll = subset_roll_map(sub_lat, shift_x_right, shift_y_top, xdim, ydim)
-                        roll_flag = True
+                        # Check sub_rainrate array size and 
+                        # make sure there are pixels above the rainrate threshold
+                        if (sub_rainrate.size > 0) and \
+                            (sub_rainrate.shape[0] > 0) and \
+                            (sub_rainrate.shape[1] > 0) and \
+                            (np.any(sub_rainrate > pf_rr_thres)):
+                            # Roll rainrate to avoid periodic boundary condition
+                            sub_rainrate_map = subset_roll_map(
+                                sub_rainrate, shift_x_right, shift_y_top, xdim, ydim,
+                            )
+                            lon_roll = subset_roll_map(sub_lon, shift_x_right, shift_y_top, xdim, ydim)
+                            lat_roll = subset_roll_map(sub_lat, shift_x_right, shift_y_top, xdim, ydim)
+                            roll_flag = True
+                        else:
+                            sub_rainrate_map = sub_rainrate
+                            shift_x_right = 0
+                            shift_y_top = 0
+                            lon_roll = sub_lon
+                            lat_roll = sub_lat
                     else:
                         # Isolate region over the cloud shield
                         sub_rainrate_map = np.copy(rainrate_map[miny:maxy, minx:maxx])
