@@ -36,9 +36,9 @@ databasename: 'MCS4_demo_rolled_' #_yrolled_' #'PBC_mcs_demo_v1_'  # Note: inclu
 input_format: 'netcdf'
 
 # Input files directory
-clouddata_path: '/pscratch/sd/p/paccini/temp/sample_data/demo/'  #rolled_x/'
+clouddata_path: '/pscratch/sd/f/feng045/demo/mcs_tbpf/idealized/periodic_boundary/input/'  #rolled_x/'
 # Working directory for the tracking data
-root_path: '/pscratch/sd/p/paccini/temp/output_tracking/tracking_mcs_idealized_demo_v2/'
+root_path: '/pscratch/sd/f/feng045/demo/mcs_tbpf/idealized/periodic_boundary/'
 # Working sub-directory names
 tracking_path_name: 'tracking'
 stats_path_name: 'stats'
@@ -158,24 +158,15 @@ min_size_thresh_for_speed: 20 # [km] Min PF major axis length to calculate movem
 max_speed_thresh: 50  # [m/s] Speeds larger than this will be replaced by temporal filter
 
 # MCSMIP standardized outputs (Zarr)
-# mcsmask_filebase: 'mcs_mask_latlon_'
+# Flags to convert Zarr output
+create_mask_zarr: True
+create_tbpr_zarr: True
+create_full_zarr: False
+overwrite_zarr: True  # Overwrite existing Zarr files
 # Zarr chunk sizes (default: 'auto')
 chunksize_time: 'auto'  # time
 chunksize_lat: 'auto'  # y
 chunksize_lon: 'auto'  # x
-# # Variables to include in Zarr output
-# zarr_var_list:
-#   - tb
-#   - precipitation
-#   - cloudtracknumber
-# Variable renaming mapping for Zarr output
-# # For no renaming, comment out zarr_var_rename
-# zarr_var_rename:
-#   cloudtracknumber: mcs_mask
-
-create_mask_zarr: False
-create_tbpr_zarr: True
-
 # Zarr output presets - configure different outputs
 zarr_output_presets:
   mask:
@@ -193,12 +184,8 @@ zarr_output_presets:
       - tb
       - precipitation
     var_rename: {}
-    
-  raw:
-    out_filebase: 'raw_data_'
-    var_list:
-      - cloudtracknumber
-      - tb
-      - precipitation
-    # No renaming for raw data
-    var_rename: {}
+
+  full:
+    out_filebase: 'mcs_full_'
+    # No var_list needed - all variables will be included
+    var_rename: {}  # Optional - add any renaming if needed

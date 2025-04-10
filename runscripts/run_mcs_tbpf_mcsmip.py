@@ -103,11 +103,15 @@ if __name__ == '__main__':
 
     # Step 10 - Convert MCS mask files to Zarr
     if config.get('run_convert_to_zarr', False):
+        # Mask only
         if config.get('create_mask_zarr', False):
             convert_mask_to_zarr(config, output_preset='mask')
-
+        # tb + precipitation
         if config.get('create_tbpr_zarr', False):
             convert_mask_to_zarr(config, output_preset='tbpr')
+        # All variables
+        # if config.get('create_full_zarr', False):
+        #     convert_mask_to_zarr(config, output_preset='full')
 
     # Step 10 - Regrid tracking mask to native resolution
     if config.get('run_regrid_mask', False):

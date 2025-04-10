@@ -165,17 +165,34 @@ min_size_thresh_for_speed: 20 # [km] Min PF major axis length to calculate movem
 max_speed_thresh: 50  # [m/s]
 
 # MCSMIP standardized outputs (Zarr)
-mcsmask_filebase: 'mcs_mask_latlon_'
+# Flags to convert Zarr output
+create_mask_zarr: True
+create_tbpr_zarr: True
+create_full_zarr: False
+overwrite_zarr: True  # Overwrite existing Zarr files
 # Zarr chunk sizes (default: 'auto')
 chunksize_time: 24  # time
 chunksize_lat: 240  # y
 chunksize_lon: 600  # x
-# Variables to include in Zarr output
-zarr_var_list:
-  - tb
-  - precipitation
-  - cloudtracknumber
-# Variable renaming mapping for Zarr output
-# For no renaming, comment out zarr_var_rename
-zarr_var_rename:
-  cloudtracknumber: mcs_mask
+# Zarr output presets - configure different outputs
+zarr_output_presets:
+  mask:
+    out_filebase: 'mcs_mask_latlon_'
+    # Variables to include in Zarr output
+    var_list:
+      - cloudtracknumber
+    # Variable renaming mapping for Zarr output
+    var_rename:
+      cloudtracknumber: mcs_mask
+    
+  tbpr:
+    out_filebase: 'tb_pr_'
+    var_list:
+      - tb
+      - precipitation
+    var_rename: {}
+
+  full:
+    out_filebase: 'mcs_full_'
+    # No var_list needed - all variables will be included
+    var_rename: {}  # Optional - add any renaming if needed

@@ -14,7 +14,7 @@ def convert_mask_to_zarr(config, output_preset='mask'):
             Dictionary containing config parameters
         output_preset: string
             The preset name to determine output configuration
-            Options: 'mask', 'full', or any custom preset defined in config
+            Options: 'mask', 'tbpr', 'full', or any custom preset defined in config
 
     Returns:
         out_zarr: string
@@ -51,7 +51,6 @@ def convert_mask_to_zarr(config, output_preset='mask'):
     
     # Get out_filebase - use preset-specific if available, otherwise use default
     out_filebase = preset_config.get("out_filebase", "mcs_mask_latlon_")
-    # import pdb; pdb.set_trace()
     
     # Build output filename
     out_zarr = f"{outpath}{out_filebase}{startdate}_{enddate}.zarr"
@@ -71,15 +70,40 @@ def convert_mask_to_zarr(config, output_preset='mask'):
     # Required coordinate variables
     required_vars = ["time", "lat", "lon"]
     
-    # Get additional variables from preset config if available, otherwise from main config
-    if "var_list" in preset_config:
+    # Special case for "full" preset - include all variables
+    if output_preset == 'full':
+        # Will be populated with all dataset variables later
+        config_vars = []
+        logger.info("Using 'full' preset: all variables will be included")        
+    # Normal case - get variables from preset config or main config
+    elif "var_list" in preset_config:
         config_vars = preset_config["var_list"]
     else:
-        config_vars = config.get("zarr_var_list", ["tracknumber"])
+        config_vars = ["tracknumber"]
     
     if isinstance(config_vars, str):
         config_vars = [config_vars]  # Convert string to list if needed
     
+    # Find input files
+    file_list = sorted(glob.glob(f"{pixeltracking_outpath}{pixeltracking_filebase}*.nc"))
+    logger.info(f"Number of input files: {len(file_list)}")
+
+    # Open as a lazy dataset
+    ds = xr.open_mfdataset(
+        file_list,
+        combine="by_coords",
+        parallel=parallel,
+        chunks={},  # Defer chunking to to_zarr()
+    )
+    logger.info(f"Finished reading input files.")
+    
+    # For 'full' preset, include all variables from the dataset
+    if output_preset == 'full':
+        # Get all variable names, excluding any internal/hidden variables
+        all_vars = list(ds.data_vars)
+        logger.info(f"Full preset: found {len(all_vars)} variables in dataset")
+        config_vars = all_vars
+
     # Combine required vars with config vars, ensuring no duplicates
     keep_var_list = list(set(required_vars + config_vars))
     logger.info(f"Variables to include in Zarr output: {keep_var_list}")
@@ -95,22 +119,13 @@ def convert_mask_to_zarr(config, output_preset='mask'):
     else:
         logger.info("No variable renaming will be performed")
 
-    # Find input files
-    file_list = sorted(glob.glob(f"{pixeltracking_outpath}{pixeltracking_filebase}*.nc"))
-    logger.info(f"Number of input files: {len(file_list)}")
-
-    # Open as a lazy dataset
-    ds = xr.open_mfdataset(
-        file_list,
-        combine="by_coords",
-        parallel=parallel,
-        chunks={},  # Defer chunking to to_zarr()
-    )
-    logger.info(f"Finished reading input files.")
-
     # Filter and rename variables
-    # First, identify which variables to keep
-    variables_to_keep = [v for v in keep_var_list if v in ds.variables]
+    # For 'full' preset, we already have all variables from the dataset
+    if output_preset == 'full':
+        variables_to_keep = keep_var_list
+    else:
+        # Otherwise, identify which variables to keep from those requested
+        variables_to_keep = [v for v in keep_var_list if v in ds.variables]
     
     # Create a rename dictionary containing only the variables that exist in dataset
     active_renames = {k: v for k, v in rename_dict.items() if k in variables_to_keep}
