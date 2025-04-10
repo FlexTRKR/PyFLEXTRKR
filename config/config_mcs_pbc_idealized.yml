@@ -4,15 +4,16 @@
 
 # Processing steps:
 # Maybe worth nesting these in sets of dictionaries
-run_idfeature : True
-run_tracksingle : True
-run_gettracks : True
-run_trackstats : True
-run_identifymcs : True
-run_matchpf : True
-run_robustmcs : True
-run_mapfeature : True
-run_speed: True
+run_idfeature : False
+run_tracksingle : False
+run_gettracks : False
+run_trackstats : False
+run_identifymcs : False
+run_matchpf : False
+run_robustmcs : False
+run_mapfeature : False
+run_speed: False
+run_convert_to_zarr: True
 run_regrid_mask: False
 
 # Parallel processing set up
@@ -155,3 +156,49 @@ track_number_for_speed: "pcptracknumber"
 track_field_for_speed: 'precipitation'
 min_size_thresh_for_speed: 20 # [km] Min PF major axis length to calculate movement
 max_speed_thresh: 50  # [m/s] Speeds larger than this will be replaced by temporal filter
+
+# MCSMIP standardized outputs (Zarr)
+# mcsmask_filebase: 'mcs_mask_latlon_'
+# Zarr chunk sizes (default: 'auto')
+chunksize_time: 'auto'  # time
+chunksize_lat: 'auto'  # y
+chunksize_lon: 'auto'  # x
+# # Variables to include in Zarr output
+# zarr_var_list:
+#   - tb
+#   - precipitation
+#   - cloudtracknumber
+# Variable renaming mapping for Zarr output
+# # For no renaming, comment out zarr_var_rename
+# zarr_var_rename:
+#   cloudtracknumber: mcs_mask
+
+create_mask_zarr: False
+create_tbpr_zarr: True
+
+# Zarr output presets - configure different outputs
+zarr_output_presets:
+  mask:
+    out_filebase: 'mcs_mask_latlon_'
+    # Variables to include in Zarr output
+    var_list:
+      - cloudtracknumber
+    # Variable renaming mapping for Zarr output
+    var_rename:
+      cloudtracknumber: mcs_mask
+    
+  tbpr:
+    out_filebase: 'tb_pr_'
+    var_list:
+      - tb
+      - precipitation
+    var_rename: {}
+    
+  raw:
+    out_filebase: 'raw_data_'
+    var_list:
+      - cloudtracknumber
+      - tb
+      - precipitation
+    # No renaming for raw data
+    var_rename: {}

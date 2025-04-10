@@ -13,6 +13,7 @@ from pyflextrkr.matchtbpf_driver import match_tbpf_tracks
 from pyflextrkr.robustmcspf_saag import define_robust_mcs_pf
 from pyflextrkr.mapfeature_driver import mapfeature_driver
 from pyflextrkr.movement_speed import movement_speed
+from pyflextrkr.convert_to_zarr import convert_mask_to_zarr
 from pyflextrkr.regrid_tracking_mask import regrid_tracking_mask
 
 if __name__ == '__main__':
@@ -100,6 +101,20 @@ if __name__ == '__main__':
     if config['run_speed']:
         movement_speed(config)
 
+    # Step 10 - Convert MCS mask files to Zarr
+    if config.get('run_convert_to_zarr', False):
+        if config.get('create_mask_zarr', False):
+            convert_mask_to_zarr(config, output_preset='mask')
+
+        if config.get('create_tbpr_zarr', False):
+            convert_mask_to_zarr(config, output_preset='tbpr')
+
     # Step 10 - Regrid tracking mask to native resolution
     if config.get('run_regrid_mask', False):
         regrid_tracking_mask(config)
+
+    # Clean up resources
+    if config.get('run_parallel', 0) >= 1:
+        logger.info("Shutting down Dask client...")
+        client.close()
+        logger.info("Dask client shutdown complete.")

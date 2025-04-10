@@ -3,20 +3,21 @@
 # Tracking uses collocated Tb + Precipitation
 
 # Processing steps:
-run_idfeature : True
-run_tracksingle : True
-run_gettracks : True
-run_trackstats : True
-run_identifymcs : True
-run_matchpf : True
-run_robustmcs : True
-run_mapfeature : True
-run_speed : True
+run_idfeature : False
+run_tracksingle : False
+run_gettracks : False
+run_trackstats : False
+run_identifymcs : False
+run_matchpf : False
+run_robustmcs : False
+run_mapfeature : False
+run_speed : False
+run_convert_to_zarr: True
 run_regrid_mask: False
 
 # Parallel processing set up
 # run_parallel: 1 (local cluster), 2 (Dask MPI)
-run_parallel: 2
+run_parallel: 1
 nprocesses : 128  # Number of processors to use if run_parallel=1
 dask_tmp_dir: '/tmp'  # Dask temporary directory if run_parallel=1
 timeout: 600  # [seconds] Dask timeout limit
@@ -162,3 +163,19 @@ track_number_for_speed: "pcptracknumber"
 track_field_for_speed: 'precipitation'
 min_size_thresh_for_speed: 20 # [km] Min PF major axis length to calculate movement
 max_speed_thresh: 50  # [m/s]
+
+# MCSMIP standardized outputs (Zarr)
+mcsmask_filebase: 'mcs_mask_latlon_'
+# Zarr chunk sizes (default: 'auto')
+chunksize_time: 24  # time
+chunksize_lat: 240  # y
+chunksize_lon: 600  # x
+# Variables to include in Zarr output
+zarr_var_list:
+  - tb
+  - precipitation
+  - cloudtracknumber
+# Variable renaming mapping for Zarr output
+# For no renaming, comment out zarr_var_rename
+zarr_var_rename:
+  cloudtracknumber: mcs_mask
