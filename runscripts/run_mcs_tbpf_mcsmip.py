@@ -14,7 +14,7 @@ from pyflextrkr.robustmcspf_saag import define_robust_mcs_pf
 from pyflextrkr.mapfeature_driver import mapfeature_driver
 from pyflextrkr.movement_speed import movement_speed
 from pyflextrkr.convert_to_zarr import convert_mask_to_zarr
-from pyflextrkr.regrid_tracking_mask import regrid_tracking_mask
+from pyflextrkr.remap_healpix import remap_mask_to_healpix
 
 if __name__ == '__main__':
 
@@ -36,7 +36,8 @@ if __name__ == '__main__':
 
     ################################################################################################
     # Parallel processing options
-    if config['run_parallel'] == 1:
+    run_parallel = config.get('run_parallel', 0)
+    if run_parallel == 1:
         # Set Dask temporary directory for workers
         dask_tmp_dir = config.get("dask_tmp_dir", "./")
         dask.config.set({'temporary-directory': dask_tmp_dir})
@@ -44,7 +45,7 @@ if __name__ == '__main__':
         cluster = LocalCluster(n_workers=config['nprocesses'], threads_per_worker=1)
         client = Client(cluster)
         client.run(setup_logging)
-    elif config['run_parallel'] == 2:
+    elif run_parallel == 2:
         # Dask scheduler
         # Get the scheduler filename from input argument
         scheduler_file = sys.argv[2]
@@ -61,35 +62,35 @@ if __name__ == '__main__':
         logger.info(f"Running in serial.")
 
     # Step 1 - Identify features
-    if config['run_idfeature']:
+    if config.get('run_idfeature', False):
         idfeature_driver(config)
 
     # Step 2 - Link features in time adjacent files
-    if config['run_tracksingle']:
+    if config.get('run_tracksingle', False):
         tracksingle_driver(config)
 
     # Step 3 - Track features through the entire dataset
-    if config['run_gettracks']:
+    if config.get('run_gettracks', False):
         tracknumbers_filename = gettracknumbers(config)
 
     # Step 4 - Calculate track statistics
-    if config['run_trackstats']:
+    if config.get('run_trackstats', False):
         trackstats_filename = trackstats_driver(config)
 
     # Step 5 - Identify MCS using Tb
-    if config['run_identifymcs']:
+    if config.get('run_identifymcs', False):
         mcsstats_filename = identifymcs_tb(config)
 
     # Step 6 - Match PF to MCS
-    if config['run_matchpf']:
+    if config.get('run_matchpf', False):
         pfstats_filename = match_tbpf_tracks(config)
 
     # Step 7 - Identify robust MCS
-    if config['run_robustmcs']:
+    if config.get('run_robustmcs', False):
         robustmcsstats_filename = define_robust_mcs_pf(config)
 
     # Step 8 - Map tracking to pixel files
-    if config['run_mapfeature']:
+    if config.get('run_mapfeature', False):
         # Map robust MCS track numbers to pixel files (default)
         mapfeature_driver(config, trackstats_filebase=mcsrobust_filebase)
         # Map Tb-only MCS track numbers to pixel files (provide outpath_basename keyword)
@@ -98,7 +99,7 @@ if __name__ == '__main__':
         # mapfeature_driver(config, trackstats_filebase=trackstats_filebase, outpath_basename=alltrackmap_outpath)
 
     # Step 9 - Movement speed calculation
-    if config['run_speed']:
+    if config.get('run_speed', False):
         movement_speed(config)
 
     # Step 10 - Convert MCS mask files to Zarr
@@ -113,12 +114,12 @@ if __name__ == '__main__':
         # if config.get('create_full_zarr', False):
         #     convert_mask_to_zarr(config, output_preset='full')
 
-    # Step 10 - Regrid tracking mask to native resolution
-    if config.get('run_regrid_mask', False):
-        regrid_tracking_mask(config)
+    # Step 11 - Remap MCS mask to HEALPix grid
+    if config.get('run_remap_healpix', False):
+        remap_mask_to_healpix(config)
 
     # Clean up resources
-    if config.get('run_parallel', 0) >= 1:
+    if run_parallel >= 1:
         logger.info("Shutting down Dask client...")
         client.close()
         logger.info("Dask client shutdown complete.")

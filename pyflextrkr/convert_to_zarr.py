@@ -62,9 +62,12 @@ def convert_mask_to_zarr(config, output_preset='mask'):
         return out_zarr
     
     # Get chunk size from config
-    chunksize_time = preset_config.get("chunksize_time", config.get("chunksize_time", "auto"))
-    chunksize_lat = preset_config.get("chunksize_lat", config.get("chunksize_lat", "auto"))
-    chunksize_lon = preset_config.get("chunksize_lon", config.get("chunksize_lon", "auto"))
+    # chunksize_time = preset_config.get("chunksize_time", config.get("chunksize_time", "auto"))
+    # chunksize_lat = preset_config.get("chunksize_lat", config.get("chunksize_lat", "auto"))
+    # chunksize_lon = preset_config.get("chunksize_lon", config.get("chunksize_lon", "auto"))
+    chunksize_time = config.get("chunksize_time", "auto")
+    chunksize_lat = config.get("chunksize_lat", "auto")
+    chunksize_lon = config.get("chunksize_lon", "auto")
     
     # Output variable list
     # Required coordinate variables
@@ -160,12 +163,27 @@ def convert_mask_to_zarr(config, output_preset='mask'):
     
     # Compute the task, with progress reporting
     if client:
-        future = client.compute(write_task)
-        progress_message = "Writing to Zarr (this may take a while)..."
-        logger.info(progress_message)
+        from dask.distributed import progress
+
+        # Temporarily increase log level for the distributed shuffle module to suppress warnings
+        shuffle_logger = logging.getLogger("distributed.shuffle._scheduler_plugin")
+        original_level = shuffle_logger.level
+        shuffle_logger.setLevel(logging.ERROR)  # Only show errors, not warnings
         
-        # Wait for computation to complete
-        future.result()
+        try:
+            # Compute with progress tracking
+            future = client.compute(write_task)
+            logger.info("Writing to Zarr (this may take a while)...")
+            progress(future)  # Shows a progress bar in notebooks or detailed progress in terminals
+            
+            result = future.result()
+            logger.info("Zarr write completed successfully")
+        except Exception as e:
+            logger.error(f"Zarr write failed: {str(e)}")
+            raise
+        finally:
+            # Restore original logging level when done
+            shuffle_logger.setLevel(original_level)
     else:
         # Compute locally if no client
         write_task.compute()

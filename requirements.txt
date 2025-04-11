@@ -21,4 +21,4 @@ seaborn
 setuptools
 xarray>=2025.1.2
 xesmf>=0.8
-zarr
+zarr<3.0.0
