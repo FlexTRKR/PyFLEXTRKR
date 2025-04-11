@@ -4,20 +4,20 @@
 
 # Processing steps:
 run_idfeature : True
-run_tracksingle : False
-run_gettracks : False
-run_trackstats : False
-run_identifymcs : False
-run_matchpf : False
-run_robustmcs : False
-run_mapfeature : False
-run_speed : False
-run_convert_to_zarr: False
-run_remap_healpix: False
+run_tracksingle : True
+run_gettracks : True
+run_trackstats : True
+run_identifymcs : True
+run_matchpf : True
+run_robustmcs : True
+run_mapfeature : True
+run_speed : True
+run_convert_to_zarr: True
+run_remap_healpix: True
 
 # Parallel processing set up
 # run_parallel: 1 (local cluster), 2 (Dask MPI)
-run_parallel: 0
+run_parallel: 2
 nprocesses : 128  # Number of processors to use if run_parallel=1
 dask_tmp_dir: '/tmp'  # Dask temporary directory if run_parallel=1
 timeout: 3600  # [seconds] Dask timeout limit
@@ -31,16 +31,16 @@ enddate: '20200901.0000'
 # E.g., databasename20181101.011503.nc --> yyyymodd.hhmmss
 # E.g., databasename2018-11-01_01:15:00 --> yyyy-mo-dd_hh:mm:ss
 time_format: 'yyyymoddhh'
-databasename:  'scream2D_hrly_rlut_hp10_v6'
-precipdata_basename: 'scream2D_hrly_pr_hp10_v6'
-hp_zoomlev: '10'
+databasename:  'scream2D_hrly_rlut_hp9_v6'
+precipdata_basename: 'scream2D_hrly_pr_hp9_v6'
+hp_zoomlev: '9'  # HEALPix zoom level
 input_format: 'zarr'  # 'zarr' or 'netcdf'
 
 # Input files directory
 clouddata_path: '/pscratch/sd/w/wcmca1/scream-cess-healpix/'
 precipdata_path: '/pscratch/sd/w/wcmca1/scream-cess-healpix/'
 # Working directory for the tracking data
-root_path: '/pscratch/sd/w/wcmca1/scream-cess-healpix/mcs_tracking/'
+root_path: '/pscratch/sd/w/wcmca1/scream-cess-healpix/mcs_tracking_hp9/'
 # Working sub-directory names
 tracking_path_name: 'tracking'
 stats_path_name: 'stats'

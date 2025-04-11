@@ -62,9 +62,6 @@ def convert_mask_to_zarr(config, output_preset='mask'):
         return out_zarr
     
     # Get chunk size from config
-    # chunksize_time = preset_config.get("chunksize_time", config.get("chunksize_time", "auto"))
-    # chunksize_lat = preset_config.get("chunksize_lat", config.get("chunksize_lat", "auto"))
-    # chunksize_lon = preset_config.get("chunksize_lon", config.get("chunksize_lon", "auto"))
     chunksize_time = config.get("chunksize_time", "auto")
     chunksize_lat = config.get("chunksize_lat", "auto")
     chunksize_lon = config.get("chunksize_lon", "auto")

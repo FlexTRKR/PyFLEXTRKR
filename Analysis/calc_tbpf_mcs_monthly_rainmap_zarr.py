@@ -6,10 +6,8 @@ import sys, os
 import xarray as xr
 import pandas as pd
 import time
-import logging
-from pyflextrkr.ft_utilities import load_config, setup_logging
+from pyflextrkr.ft_utilities import load_config
 from dask.distributed import Client, LocalCluster, progress
-from dask.diagnostics import ProgressBar
 
 def process_month_chunked(month_ds, chunk_days=5):
     """Process one month of data in time chunks to reduce memory pressure"""
@@ -76,10 +74,6 @@ if __name__ == "__main__":
     config_file = sys.argv[1]
     start_datetime = sys.argv[2]
     end_datetime = sys.argv[3]
-
-    # Set the logging message level
-    setup_logging()
-    logger = logging.getLogger(__name__)
 
     # Set up a local Dask cluster optimized for large memory node
     # For HPC with 128 CPUs and 512GB memory
@@ -154,12 +148,12 @@ if __name__ == "__main__":
         delayed_result = client.submit(process_month_chunked, month_ds, chunk_days=chunk_days)
         delayed_results.append(delayed_result)
     
-    # Enable the progress bar
-    with ProgressBar():
-        results = client.gather(delayed_results)
-
-    # Gather all results
-    # results = client.gather(delayed_results)
+    # Clear line and show progress tracking
+    print("\nTracking progress of all months processing in parallel:")
+    progress(delayed_results)
+    
+    # Gather results (will wait for completion)
+    results = client.gather(delayed_results)
 
     # Prepare data for output dataset
     times = [r['time'] for r in results]
