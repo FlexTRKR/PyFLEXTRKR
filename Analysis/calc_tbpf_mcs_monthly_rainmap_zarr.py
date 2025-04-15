@@ -1,15 +1,55 @@
 """
 Calculate monthly total, MCS precipitation amount and frequency within a period, save output to a netCDF file.
+
+Usage: python calc_tbpf_mcs_monthly_rainmap_zarr.py -c CONFIG.yml -s STARTDATE -e ENDDATE
+Optional arguments:
+--nworkers N (number of Dask workers)
+--threads T (threads per worker)
+--memory M (memory limit per worker, e.g. '40GB')
+--chunk_days N (days per processing chunk)
+--pcp_thresh P (precipitation threshold in mm/h)
 """
 import numpy as np
 import sys, os
 import xarray as xr
 import pandas as pd
 import time
+import psutil
+import argparse
 from pyflextrkr.ft_utilities import load_config
 from dask.distributed import Client, LocalCluster, progress
 
-def process_month_chunked(month_ds, chunk_days=5):
+def parse_cmd_args():
+    # Define and retrieve the command-line arguments...
+    parser = argparse.ArgumentParser(
+        description="Calculate monthly MCS precipitation statistics."
+    )
+    parser.add_argument("-c", "--config", help="yaml config file for tracking", required=True)
+    parser.add_argument("-s", "--start", help="first time to process, format=YYYY-mm-ddTHH", required=True)
+    parser.add_argument("-e", "--end", help="last time to process, format=YYYY-mm-ddTHH", required=True)
+    parser.add_argument("--nworkers", help="number of Dask workers", type=int, default=12)
+    parser.add_argument("--threads", help="threads per worker", type=int, default=10)
+    # parser.add_argument("--memory", help="memory limit per worker, e.g. '40GB'", default='40GB')
+    parser.add_argument("--memory", help="memory limit per worker, e.g. '40GB' (default: auto)", default=None)
+    parser.add_argument("--chunk_days", help="number of days to process in each chunk", type=int, default=5)
+    parser.add_argument("--pcp_thresh", help="precipitation threshold in mm/h", type=float, default=2.0)
+    args = parser.parse_args()
+
+    # Put arguments in a dictionary
+    args_dict = {
+        'config_file': args.config,
+        'start_datetime': args.start,
+        'end_datetime': args.end,
+        'n_workers': args.nworkers,
+        'threads_per_worker': args.threads,
+        'memory_limit': args.memory,
+        'chunk_days': args.chunk_days,
+        'pcp_thresh': args.pcp_thresh,
+    }
+
+    return args_dict
+
+def process_month_chunked(month_ds, chunk_days=5, pcp_thresh=2.0):
     """Process one month of data in time chunks to reduce memory pressure"""
     # Current month's time value for output
     out_time = month_ds.time[0]
@@ -68,20 +108,40 @@ def process_month_chunked(month_ds, chunk_days=5):
         'mcspcpct': mcspcpct_sum
     }
 
+def get_memory_usage():
+    """Get current memory usage in a human-readable format"""
+    process = psutil.Process(os.getpid())
+    memory_info = process.memory_info()
+    # Convert to GB
+    memory_gb = memory_info.rss / (1024 ** 3)
+    return memory_gb
+
+def format_time(seconds):
+    """Format time in seconds to hours, minutes, seconds"""
+    hours = int(seconds // 3600)
+    minutes = int((seconds % 3600) // 60)
+    seconds = int(seconds % 60)
+    return f"{hours:02d}:{minutes:02d}:{seconds:02d}"
+
+
 if __name__ == "__main__":
+    # Start timing
+    start_time = time.time()
+    initial_memory = get_memory_usage()
+    print(f"Initial memory usage: {initial_memory:.2f} GB")
 
-    # Get inputs from command line
-    config_file = sys.argv[1]
-    start_datetime = sys.argv[2]
-    end_datetime = sys.argv[3]
+    # Get the command-line arguments
+    args_dict = parse_cmd_args()
+    config_file = args_dict.get('config_file')
+    start_datetime = args_dict.get('start_datetime')
+    end_datetime = args_dict.get('end_datetime')
+    n_workers = args_dict.get('n_workers')
+    threads_per_worker = args_dict.get('threads_per_worker')
+    memory_limit = args_dict.get('memory_limit')
+    chunk_days = args_dict.get('chunk_days')
+    pcp_thresh = args_dict.get('pcp_thresh')
 
-    # Set up a local Dask cluster optimized for large memory node
-    # For HPC with 128 CPUs and 512GB memory
-    n_workers = 12  # Use fewer workers with more memory each
-    threads_per_worker = 10  # Use more threads per worker (12×10=120 cores total)
-    memory_limit = '40GB'  # Each worker gets 40GB (12×40GB = 480GB total)
-    chunk_days = 5  # Number of days to process in each chunk
-
+    # Set up a local Dask cluster for parallel processing
     cluster = LocalCluster(
         n_workers=n_workers, 
         threads_per_worker=threads_per_worker,
@@ -90,9 +150,6 @@ if __name__ == "__main__":
     )
     client = Client(cluster)
     print(client)
-
-    # Rain rate threshold to compute MCS precipitation frequency
-    pcp_thresh = 2.0  # [mm/h]
 
     # Load configuration file
     config = load_config(config_file)
@@ -145,7 +202,7 @@ if __name__ == "__main__":
     for month_start, month_ds in monthly_groups:
         print(f"Processing month: {pd.Timestamp(month_start).strftime('%Y-%m')}")
         # Submit the processing job to the dask cluster
-        delayed_result = client.submit(process_month_chunked, month_ds, chunk_days=chunk_days)
+        delayed_result = client.submit(process_month_chunked, month_ds, chunk_days=chunk_days, pcp_thresh=pcp_thresh)
         delayed_results.append(delayed_result)
     
     # Clear line and show progress tracking
@@ -214,6 +271,20 @@ if __name__ == "__main__":
     dsout.to_netcdf(path=output_filename, mode='w', format='NETCDF4', 
                     unlimited_dims='time', encoding=encoding)
     print(f'Done: {output_filename}')
+
+    # Calculate and print timing and memory usage
+    end_time = time.time()
+    final_memory = get_memory_usage()
+    elapsed_time = end_time - start_time
+    memory_change = final_memory - initial_memory
+    
+    print("\n" + "="*50)
+    print(f"Performance Summary:")
+    print(f"  Total execution time: {format_time(elapsed_time)} (HH:MM:SS)")
+    print(f"  Initial memory usage: {initial_memory:.2f} GB")
+    print(f"  Final memory usage:   {final_memory:.2f} GB")
+    print(f"  Memory change:        {memory_change:.2f} GB")
+    print("="*50)
 
     # Close the dask client
     client.close()

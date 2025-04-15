@@ -5,7 +5,167 @@ import time
 import logging
 import dask.array as da
 import healpix as hp
-from pyflextrkr.ft_utilities import setup_logging
+from pyflextrkr.ft_utilities import setup_logging   
+
+def remap_mask_to_healpix(config):
+    """
+    Remap mask data from lat/lon grid to HEALPix grid.
+
+    Args:
+        config: dictionary
+                Dictionary containing config parameters
+
+    Returns:
+        out_zarr: string
+            Zarr store path.
+    """
+    # Set the logging message level
+    setup_logging()
+    logger = logging.getLogger(__name__)
+
+    start_time = time.time()
+    logger.info(f"Remap to HEALPix started ...")
+
+    # Get client if available
+    try:
+        from dask.distributed import get_client
+        client = get_client()
+        parallel = True
+        logger.info(f"Using existing Dask client with {len(client.scheduler_info()['workers'])} workers")
+    except ValueError:
+        logger.warning("No Dask client found, continuing without explicit client")
+        client = None
+        parallel = False
+
+    # Get config parameters
+    pixeltracking_outpath = config.get("pixeltracking_outpath")
+    clouddata_path = config.get("clouddata_path")
+    databasename = config.get("databasename")
+    hp_zoomlev = config.get("hp_zoomlev")
+    startdate = config.get("startdate")
+    enddate = config.get("enddate")
+    outpath = os.path.dirname(os.path.normpath(pixeltracking_outpath)) + "/"
+    # Get preset-specific configuration
+    presets = config.get("zarr_output_presets", {})
+    in_mask_filebase = presets.get("mask", {}).get("out_filebase", "mcs_mask_latlon_")
+    # Input mask Zarr store
+    in_mask_dir = f"{outpath}{in_mask_filebase}{startdate}_{enddate}.zarr"
+    # Input HEALPix Zarr store
+    in_hp_dir = f"{clouddata_path}{databasename}.zarr"
+
+    # Build output filename
+    out_mask_filebase = presets.get("healpix", {}).get("out_filebase", "mcs_mask_hp")
+    out_zarr = f"{outpath}{out_mask_filebase}{hp_zoomlev}_{startdate}_{enddate}.zarr"
+
+    # Check if output exists and should be overwritten
+    overwrite = config.get("overwrite_zarr", True)
+    if os.path.exists(out_zarr) and not overwrite:
+        logger.warning(f"Zarr store already exists at {out_zarr} and overwrite=False. Skipping.")
+        return out_zarr
+
+    # Check intput mask file
+    if os.path.exists(in_mask_dir) is False:
+        logger.error(f"Input mask file {in_mask_dir} does not exist. Skipping remap.")
+        return out_zarr
+    if os.path.exists(in_hp_dir) is False:
+        logger.error(f"Input HEALPix file {in_hp_dir} does not exist. Skipping remap.")
+        return out_zarr
+    
+    # Get chunk size from config
+    chunksize_time = config.get("chunksize_time", "auto")
+    chunksize_cell = config.get("chunksize_cell", "auto")
+    
+    # Read mask data
+    mask_chunks = {"time": min(100, chunksize_time), "lat": "auto", "lon": "auto"}
+    ds_mask = xr.open_dataset(in_mask_dir, engine='zarr', chunks=mask_chunks)
+
+    # Modify mask grid for remapping
+    ds_mask = prepare_grid_for_analysis(ds_mask)
+
+    # Read HEALPix zarr file
+    ds_hp = xr.open_dataset(in_hp_dir)
+
+    # Make remap lat/lon for HEALPix
+    remap_lons, remap_lats = hp.pix2ang(
+        ds_hp.crs.healpix_nside, ds_hp.cell, nest=ds_hp.crs.healpix_order, lonlat=True,
+    )
+    remap_lons = remap_lons % 360
+    # Convert to DataArray
+    lon_hp = xr.DataArray(remap_lons, dims="cell", coords={"cell":ds_hp.cell})
+    lat_hp = xr.DataArray(remap_lats, dims="cell", coords={"cell":ds_hp.cell})
+
+    # Remap DataSet to HEALPix
+    dsout_hp = ds_mask.sel(
+        lon=lon_hp, lat=lat_hp, method="nearest",
+    )
+
+    # Optimize cell chunking for HEALPix grid
+    chunksize_cell = optimize_healpix_chunks(ds_hp, chunksize_cell, logger)
+
+    # Make time chunks more even if needed
+    if isinstance(chunksize_time, (int, float)) and chunksize_time != 'auto':
+        total_times = dsout_hp.sizes['time']
+        chunks = total_times // chunksize_time
+        if chunks * chunksize_time < total_times:
+            # We have a remainder - try to make chunks more even
+            if total_times % chunks == 0:
+                chunksize_time = total_times // chunks
+            elif total_times % (chunks + 1) == 0:
+                chunksize_time = total_times // (chunks + 1)
+                
+    # Set proper chunking
+    chunked_ds = dsout_hp.chunk({
+        "time": chunksize_time, 
+        "cell": chunksize_cell, 
+    })
+
+    # Report dataset size and chunking info
+    logger.info(f"Dataset dimensions: {dict(chunked_ds.sizes)}")
+    logger.info(f"Chunking scheme: time={chunksize_time}, cell={chunksize_cell}")
+    # import pdb; pdb.set_trace()
+    # Create a delayed task for Zarr writing
+    logger.info(f"Starting Zarr write to: {out_zarr}")
+    write_task = chunked_ds.to_zarr(
+        out_zarr,
+        mode="w",        
+        consolidated=True,  # Enable for better performance when reading
+        compute=False      # Create a delayed task
+    )
+
+    # Compute the task, with progress reporting
+    if client:
+        from dask.distributed import progress
+        import psutil
+        
+        # Get cluster state information before processing
+        memory_usage = client.run(lambda: psutil.Process().memory_info().rss / 1e9)
+        logger.info(f"Current memory usage across workers (GB): {memory_usage}")
+        
+        # Compute with progress tracking
+        future = client.compute(write_task)
+        logger.info("Writing to Zarr (this may take a while)...")
+        progress(future)  # Shows a progress bar in notebooks or detailed progress in terminals
+        
+        try:
+            result = future.result()
+            logger.info("Zarr write completed successfully")
+        except Exception as e:
+            logger.error(f"Zarr write failed: {str(e)}")
+            raise
+    else:
+        # Compute locally if no client
+        write_task.compute()
+    
+    logger.info(f"Remap complete: {out_zarr}")
+
+    end_time = time.time()
+    elapsed_time = end_time - start_time
+    hours, rem = divmod(elapsed_time, 3600)
+    minutes, seconds = divmod(rem, 60)
+    logger.info(f"Remap completed in {int(hours):02}:{int(minutes):02}:{int(seconds):02} (hh:mm:ss).")
+
+    return out_zarr
+
 
 def prepare_grid_for_analysis(ds, var_name='mcs_mask', lon_dim='lon', lat_dim='lat',
                              target_lat_range=None, lat_spacing=None, fill_value=0):
@@ -176,148 +336,79 @@ def prepare_grid_for_analysis(ds, var_name='mcs_mask', lon_dim='lon', lat_dim='l
         return expanded_ds
     else:
         return expanded_da
-    
 
-def remap_mask_to_healpix(config):
+def optimize_healpix_chunks(ds_hp, chunksize_cell='auto', logger=None):
     """
-    Remap mask data from lat/lon grid to HEALPix grid.
-
-    Args:
-        config: dictionary
-                Dictionary containing config parameters
-
+    Optimize chunking for HEALPix grids based on their hierarchical structure.
+    
+    Parameters:
+    -----------
+    ds_hp : xarray.Dataset
+        HEALPix dataset containing cell dimension and crs attributes
+    chunksize_cell : int or 'auto', optional
+        Requested chunk size or 'auto' for automatic optimization
+    logger : logging.Logger, optional
+        Logger for debug information
+        
     Returns:
-        out_zarr: string
-            Zarr store path.
+    --------
+    int
+        Optimized chunk size for the cell dimension
     """
-    # Set the logging message level
-    setup_logging()
-    logger = logging.getLogger(__name__)
-
-    start_time = time.time()
-    logger.info(f"Remap to HEALPix started ...")
-
-    # Get client if available
-    try:
-        from dask.distributed import get_client
-        client = get_client()
-        parallel = True
-        logger.info(f"Using existing Dask client with {len(client.scheduler_info()['workers'])} workers")
-    except ValueError:
-        logger.warning("No Dask client found, continuing without explicit client")
-        client = None
-        parallel = False
-
-    # Get config parameters
-    pixeltracking_outpath = config.get("pixeltracking_outpath")
-    clouddata_path = config.get("clouddata_path")
-    databasename = config.get("databasename")
-    hp_zoomlev = config.get("hp_zoomlev")
-    startdate = config.get("startdate")
-    enddate = config.get("enddate")
-    outpath = os.path.dirname(os.path.normpath(pixeltracking_outpath)) + "/"
-    # Get preset-specific configuration
-    presets = config.get("zarr_output_presets", {})
-    in_mask_filebase = presets.get("mask", {}).get("out_filebase", "mcs_mask_latlon_")
-    # Input mask Zarr store
-    in_mask_dir = f"{outpath}{in_mask_filebase}{startdate}_{enddate}.zarr"
-    # Input HEALPix Zarr store
-    in_hp_dir = f"{clouddata_path}{databasename}.zarr"
-
-    # Build output filename
-    out_mask_filebase = presets.get("healpix", {}).get("out_filebase", "mcs_mask_hp")
-    out_zarr = f"{outpath}{out_mask_filebase}{hp_zoomlev}_{startdate}_{enddate}.zarr"
-
-    # Check if output exists and should be overwritten
-    overwrite = config.get("overwrite_zarr", True)
-    if os.path.exists(out_zarr) and not overwrite:
-        logger.warning(f"Zarr store already exists at {out_zarr} and overwrite=False. Skipping.")
-        return out_zarr
-
-    # Check intput mask file
-    if os.path.exists(in_mask_dir) is False:
-        logger.error(f"Input mask file {in_mask_dir} does not exist. Skipping remap.")
-        return out_zarr
-    if os.path.exists(in_hp_dir) is False:
-        logger.error(f"Input HEALPix file {in_hp_dir} does not exist. Skipping remap.")
-        return out_zarr
     
-    # Get chunk size from config
-    chunksize_time = config.get("chunksize_time", "auto")
-    chunksize_cell = config.get("chunksize_cell", "auto")
+    # Get the total cell count
+    total_cells = ds_hp.sizes['cell']
     
-    # Read mask data
-    mask_chunks = {"time": min(100, chunksize_time), "lat": "auto", "lon": "auto"}
-    ds_mask = xr.open_dataset(in_mask_dir, engine='zarr', chunks=mask_chunks)
-
-    # Modify mask grid for remapping
-    ds_mask = prepare_grid_for_analysis(ds_mask)
-
-    # Read HEALPix zarr file
-    ds_hp = xr.open_dataset(in_hp_dir)
-
-    # Make remap lat/lon for HEALPix
-    remap_lons, remap_lats = hp.pix2ang(
-        ds_hp.crs.healpix_nside, ds_hp.cell, nest=ds_hp.crs.healpix_order, lonlat=True,
-    )
-    remap_lons = remap_lons % 360
-    # Convert to DataArray
-    lon_hp = xr.DataArray(remap_lons, dims="cell", coords={"cell":ds_hp.cell})
-    lat_hp = xr.DataArray(remap_lats, dims="cell", coords={"cell":ds_hp.cell})
-
-    # Remap DataSet to HEALPix
-    dsout_hp = ds_mask.sel(
-        lon=lon_hp, lat=lat_hp, method="nearest",
-    )
-
-    # Set proper chunking
-    chunked_ds = dsout_hp.chunk({
-        "time": chunksize_time, 
-        "cell": chunksize_cell, 
-    })
-    # Report dataset size and chunking info
-    logger.info(f"Dataset dimensions: {dict(chunked_ds.sizes)}")
-    logger.info(f"Chunking scheme: time={chunksize_time}, cell={chunksize_cell}")
-
-    # Create a delayed task for Zarr writing
-    logger.info(f"Starting Zarr write to: {out_zarr}")
-    write_task = chunked_ds.to_zarr(
-        out_zarr,
-        mode="w",        
-        consolidated=True,  # Enable for better performance when reading
-        compute=False      # Create a delayed task
-    )
-
-    # Compute the task, with progress reporting
-    if client:
-        from dask.distributed import progress
-        import psutil
-        
-        # Get cluster state information before processing
-        memory_usage = client.run(lambda: psutil.Process().memory_info().rss / 1e9)
-        logger.info(f"Current memory usage across workers (GB): {memory_usage}")
-        
-        # Compute with progress tracking
-        future = client.compute(write_task)
-        logger.info("Writing to Zarr (this may take a while)...")
-        progress(future)  # Shows a progress bar in notebooks or detailed progress in terminals
-        
-        try:
-            result = future.result()
-            logger.info("Zarr write completed successfully")
-        except Exception as e:
-            logger.error(f"Zarr write failed: {str(e)}")
-            raise
+    # If a specific chunk size is requested (not 'auto'), return it directly
+    if chunksize_cell != 'auto' and isinstance(chunksize_cell, (int, float)):
+        return int(chunksize_cell)
+    
+    # Get the HEALPix nside parameter if available
+    nside = getattr(ds_hp.crs, 'healpix_nside', None)
+    if nside is None:
+        # Estimate nside based on cell count (12 * nside^2 = total cells)
+        nside = int(np.sqrt(total_cells / 12))
+    
+    if logger:
+        logger.info(f"Total HEALPix cells: {total_cells}, estimated nside: {nside}")
+    
+    # For very small grids: divide into 12 chunks (one per base face)
+    if total_cells <= 12288:
+        chunksize_cell = max(1, total_cells // 12)
     else:
-        # Compute locally if no client
-        write_task.compute()
+        # For larger grids, create chunks based on nested HEALPix structure
+        base_face_size = total_cells // 12
+        
+        # Try to keep chunks around 262144 cells (good balance for most systems)
+        target_chunk_size = 262144
+        
+        if base_face_size <= target_chunk_size:
+            chunksize_cell = base_face_size
+        else:
+            # Find a divisor of base_face_size that creates chunks close to target size
+            # Focus on powers of 4 since HEALPix has quad-tree structure
+            for divisor in [2, 4, 8, 16, 32, 64, 128, 256]:
+                if base_face_size // divisor <= target_chunk_size:
+                    chunksize_cell = base_face_size // divisor
+                    break
+            else:
+                # If no good divisor found, use a power of 4 near target size
+                power = max(1, int(np.log(target_chunk_size) / np.log(4)))
+                chunksize_cell = 4**power
     
-    logger.info(f"Remap complete: {out_zarr}")
-
-    end_time = time.time()
-    elapsed_time = end_time - start_time
-    hours, rem = divmod(elapsed_time, 3600)
-    minutes, seconds = divmod(rem, 60)
-    logger.info(f"Remap completed in {int(hours):02}:{int(minutes):02}:{int(seconds):02} (hh:mm:ss).")
-
-    return out_zarr
+    # Ensure chunk size isn't too small
+    chunksize_cell = max(chunksize_cell, 4096)
+    
+    # Ensure chunk size divides evenly or leaves a smaller final chunk
+    # Adjust if needed to ensure Zarr compatibility
+    if total_cells % chunksize_cell > 0:
+        # Try to find a divisor close to our calculated chunk size
+        for factor in range(chunksize_cell, chunksize_cell // 2, -1):
+            if total_cells % factor == 0:
+                chunksize_cell = factor
+                break
+    
+    if logger:
+        logger.info(f"Optimized HEALPix chunk size: {chunksize_cell}")
+        
+    return int(chunksize_cell)
