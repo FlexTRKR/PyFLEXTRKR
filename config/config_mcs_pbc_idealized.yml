@@ -13,7 +13,7 @@ run_matchpf : True
 run_robustmcs : True
 run_mapfeature : True
 run_speed: True
-run_regrid_mask: False
+run_convert_to_zarr: True
 
 # Parallel processing set up
 # run_parallel: 1 (local cluster), 2 (Dask MPI)
@@ -35,9 +35,9 @@ databasename: 'MCS4_demo_rolled_' #_yrolled_' #'PBC_mcs_demo_v1_'  # Note: inclu
 input_format: 'netcdf'
 
 # Input files directory
-clouddata_path: '/pscratch/sd/p/paccini/temp/sample_data/demo/'  #rolled_x/'
+clouddata_path: '/pscratch/sd/f/feng045/demo/mcs_tbpf/idealized/periodic_boundary/input/'  #rolled_x/'
 # Working directory for the tracking data
-root_path: '/pscratch/sd/p/paccini/temp/output_tracking/tracking_mcs_idealized_demo_v2/'
+root_path: '/pscratch/sd/f/feng045/demo/mcs_tbpf/idealized/periodic_boundary/'
 # Working sub-directory names
 tracking_path_name: 'tracking'
 stats_path_name: 'stats'
@@ -155,3 +155,36 @@ track_number_for_speed: "pcptracknumber"
 track_field_for_speed: 'precipitation'
 min_size_thresh_for_speed: 20 # [km] Min PF major axis length to calculate movement
 max_speed_thresh: 50  # [m/s] Speeds larger than this will be replaced by temporal filter
+
+# MCSMIP standardized outputs (Zarr)
+# Flags to convert Zarr output
+create_mask_zarr: True
+create_tbpr_zarr: True
+create_full_zarr: False
+overwrite_zarr: True  # Overwrite existing Zarr files
+# Zarr chunk sizes (default: 'auto')
+chunksize_time: 'auto'  # time
+chunksize_lat: 'auto'  # y
+chunksize_lon: 'auto'  # x
+# Zarr output presets - configure different outputs
+zarr_output_presets:
+  mask:
+    out_filebase: 'mcs_mask_latlon_'
+    # Variables to include in Zarr output
+    var_list:
+      - cloudtracknumber
+    # Variable renaming mapping for Zarr output
+    var_rename:
+      cloudtracknumber: mcs_mask
+    
+  tbpr:
+    out_filebase: 'tb_pr_'
+    var_list:
+      - tb
+      - precipitation
+    var_rename: {}
+
+  full:
+    out_filebase: 'mcs_full_'
+    # No var_list needed - all variables will be included
+    var_rename: {}  # Optional - add any renaming if needed

@@ -1,6 +1,6 @@
 #!/bin/bash
 #SBATCH -A m1867
-#SBATCH -J screamhealpix
+#SBATCH -J screamhp9
 #SBATCH --qos=regular
 #SBATCH --nodes=5
 #SBATCH --ntasks-per-node=128   # 128 workers per node (1 worker per core)
@@ -63,7 +63,7 @@ sleep 10
 
 # Run Python
 python /global/homes/f/feng045/program/PyFLEXTRKR-dev/runscripts/run_mcs_tbpf_mcsmip.py \
-    /global/homes/f/feng045/program/PyFLEXTRKR-dev/config/config_mcs_tbpf_scream_healpix.yml \
+    /global/homes/f/feng045/program/PyFLEXTRKR-dev/config/config_mcs_tbpf_scream_healpix9.yml \
     $scheduler_file
 
 # Clean up the scheduler
