@@ -5,6 +5,7 @@ import sys
 import xarray as xr
 import logging
 from pyflextrkr.ft_utilities import load_sparse_trackstats
+from pyflextrkr.smooth_trajectory import smooth_trajectory
 
 def identifymcs_tb(config):
     """
@@ -34,6 +35,7 @@ def identifymcs_tb(config):
     timegap = config["mcs_tb_gap"]
     tracks_dimname = config["tracks_dimname"]
     times_dimname = config["times_dimname"]
+    max_speed_ms = config.get("max_speed_thresh", 50)  # m/s
     tracks_idx_varname = f"{tracks_dimname}_indices"
     times_idx_varname = f"{times_dimname}_indices"
     fillval = config["fillval"]
@@ -43,6 +45,9 @@ def identifymcs_tb(config):
     np.set_printoptions(threshold=np.inf)
     logger = logging.getLogger(__name__)
     logger.info("Identifying MCS based on Tb statistics")
+
+    # Convert max speed threshold from m/s to km/h
+    max_speed_kmh = max_speed_ms * 3.6
 
     # Output stats file name
     statistics_outfile = f"{stats_path}{mcstbstats_filebase}{startdate}_{enddate}.nc"
@@ -70,8 +75,6 @@ def identifymcs_tb(config):
     basetime = sparse_dict["base_time"]
     cloudnumbers = sparse_dict["cloudnumber"]
     track_status = sparse_dict["track_status"]
-
-    # import pdb; pdb.set_trace()
 
     logger.info(f"Number of tracks to process: {ntracks_all}")
     logger.debug(f"MCS CCS area threshold: {mcs_tb_area_thresh}")
@@ -277,9 +280,7 @@ def identifymcs_tb(config):
     # Define 2D Xarray dataset
     ds_2d = xr.Dataset(varlist, coords=coordlist)
     # Subset MCS tracks from 1D dataset
-    # Note: the tracks_dimname cannot be used here as Xarray does not seem to have
-    # a method to select data with a string variable
-    ds_1d = ds_1d.sel(tracks=trackidx_mcs)
+    ds_1d = ds_1d.sel({tracks_dimname: trackidx_mcs})
     # Replace tracks coordinate
     ds_1d[tracks_dimname] = tracks_coord
     # Merge 1D & 2D datasets
@@ -291,6 +292,44 @@ def identifymcs_tb(config):
         "end_merge_tracknumber", "end_merge_timeindex",
     ]
     dsout = dsout.drop_vars(drop_vars_list)
+
+    # Run smoothing on the trajectory
+    lon_smooth = np.full((nmcs, max_trackduration), fillval_f, dtype=np.float32)
+    lat_smooth = np.full((nmcs, max_trackduration), fillval_f, dtype=np.float32)
+    for itrack in tracks_coord:
+        lon_0 = dsout['meanlon'][itrack].values
+        lat_0 = dsout['meanlat'][itrack].values
+        lon_s, lat_s = smooth_trajectory(lon_0, lat_0, max_speed_kmh=max_speed_kmh, time_step_h=time_resolution)
+        lon_smooth[itrack, :] = lon_s
+        lat_smooth[itrack, :] = lat_s
+
+    # Convert to Xarray DataArray
+    lon_smooth = xr.DataArray(
+        lon_smooth,
+        dims=[tracks_dimname, times_dimname],
+        coords={tracks_dimname: tracks_coord, times_dimname: times_coord},
+    )
+    lat_smooth = xr.DataArray(
+        lat_smooth,
+        dims=[tracks_dimname, times_dimname],
+        coords={tracks_dimname: tracks_coord, times_dimname: times_coord},
+    )
+    # Add smoothed variables to the dataset
+    dsout['meanlon_smooth'] = lon_smooth
+    dsout['meanlat_smooth'] = lat_smooth
+    # Add attributes to the new variables
+    dsout['meanlon_smooth'].attrs = {
+        "long_name": "Smoothed longitude of a feature",
+        "units": "degrees_east",
+        "_FillValue": fillval_f,
+        "comments": f"Smoothed using a maximum speed threshold of {max_speed_kmh} km/h",
+    }
+    dsout['meanlat_smooth'].attrs = {
+        "long_name": "Smoothed latitude of a feature",
+        "units": "degrees_north",
+        "_FillValue": fillval_f,
+        "comments": f"Smoothed using a maximum speed threshold of {max_speed_kmh} km/h",
+    }
 
     # Create a flag for MCS status
     ccs_area = dsout['core_area'].data + dsout['cold_area'].data
