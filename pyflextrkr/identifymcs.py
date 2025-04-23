@@ -35,7 +35,7 @@ def identifymcs_tb(config):
     timegap = config["mcs_tb_gap"]
     tracks_dimname = config["tracks_dimname"]
     times_dimname = config["times_dimname"]
-    max_speed_ms = config.get("max_speed_thresh", 50)  # m/s
+    max_speed_ms = config.get("max_speed_for_trajectory_smoothing", 50)  # m/s
     tracks_idx_varname = f"{tracks_dimname}_indices"
     times_idx_varname = f"{times_dimname}_indices"
     fillval = config["fillval"]
