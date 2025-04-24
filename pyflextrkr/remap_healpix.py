@@ -5,6 +5,7 @@ import time
 import logging
 import dask.array as da
 import healpix as hp
+import intake
 from pyflextrkr.ft_utilities import setup_logging   
 
 def remap_mask_to_healpix(config):
@@ -30,18 +31,17 @@ def remap_mask_to_healpix(config):
     try:
         from dask.distributed import get_client
         client = get_client()
-        parallel = True
         logger.info(f"Using existing Dask client with {len(client.scheduler_info()['workers'])} workers")
     except ValueError:
         logger.warning("No Dask client found, continuing without explicit client")
         client = None
-        parallel = False
 
     # Get config parameters
     pixeltracking_outpath = config.get("pixeltracking_outpath")
-    clouddata_path = config.get("clouddata_path")
-    databasename = config.get("databasename")
-    hp_zoomlev = config.get("hp_zoomlev")
+    catalog_file = config.get("catalog_file")
+    catalog_source = config.get("catalog_source")
+    catalog_params = config.get("catalog_params", {})
+    hp_zoomlev = catalog_params.get("zoom")
     startdate = config.get("startdate")
     enddate = config.get("enddate")
     outpath = os.path.dirname(os.path.normpath(pixeltracking_outpath)) + "/"
@@ -50,8 +50,6 @@ def remap_mask_to_healpix(config):
     in_mask_filebase = presets.get("mask", {}).get("out_filebase", "mcs_mask_latlon_")
     # Input mask Zarr store
     in_mask_dir = f"{outpath}{in_mask_filebase}{startdate}_{enddate}.zarr"
-    # Input HEALPix Zarr store
-    in_hp_dir = f"{clouddata_path}{databasename}.zarr"
 
     # Build output filename
     out_mask_filebase = presets.get("healpix", {}).get("out_filebase", "mcs_mask_hp")
@@ -67,8 +65,8 @@ def remap_mask_to_healpix(config):
     if os.path.exists(in_mask_dir) is False:
         logger.error(f"Input mask file {in_mask_dir} does not exist. Skipping remap.")
         return out_zarr
-    if os.path.exists(in_hp_dir) is False:
-        logger.error(f"Input HEALPix file {in_hp_dir} does not exist. Skipping remap.")
+    if os.path.isfile(catalog_file) is False:
+        logger.error(f"Catalog file {catalog_file} does not exist. Skipping remap.")
         return out_zarr
     
     # Get chunk size from config
@@ -82,8 +80,10 @@ def remap_mask_to_healpix(config):
     # Modify mask grid for remapping
     ds_mask = prepare_grid_for_analysis(ds_mask)
 
-    # Read HEALPix zarr file
-    ds_hp = xr.open_dataset(in_hp_dir)
+    # Load the catalog
+    in_catalog = intake.open_catalog(catalog_file)
+    # Get the DataSet from the catalog
+    ds_hp = in_catalog[catalog_source](**catalog_params).to_dask()
 
     # Make remap lat/lon for HEALPix
     remap_lons, remap_lats = hp.pix2ang(

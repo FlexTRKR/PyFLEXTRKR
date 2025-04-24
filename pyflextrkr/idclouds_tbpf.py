@@ -107,8 +107,8 @@ def idclouds_tbpf(
         # Read landmask file to get target lat/lon grid
         landmask_filename = config.get('landmask_filename', None)
         dslm = xr.open_dataset(landmask_filename)
-        lon = dslm.lon.data
-        lat = dslm.lat.data
+        lon = dslm.lon.values
+        lat = dslm.lat.values
         dslm.close()
 
         # Find the HEALPix pixels that are closest to the target grid points
@@ -120,11 +120,14 @@ def idclouds_tbpf(
         # Note this would change the calendar type of the original time coordinate
         time_coord = input_data[time_coordname]
         time_pd = pd.to_datetime(time_coord.dt.strftime("%Y-%m-%dT%H:%M:%S").item())
-        # Regrid variables, expand time dimension so the variable has dimensions [time, y, x]
-        olr = input_data[olr_varname].isel(cell=pix).expand_dims({time_dimname:[time_pd]})
-        pcp = input_data[pcp_varname].isel(cell=pix).expand_dims({time_dimname:[time_pd]})
-        # Combine DataArrays into a single Dataset
-        rawdata = xr.Dataset({olr_varname: olr, pcp_varname: pcp})
+        # Remap DataSet to lat/lon grid, expand time dimension so it has dimensions [time, y, x]
+        rawdata = input_data.isel(cell=pix).expand_dims({time_dimname:[time_pd]})
+
+        # # Remap variables, expand time dimension so the variable has dimensions [time, y, x]
+        # olr = input_data[olr_varname].isel(cell=pix).expand_dims({time_dimname:[time_pd]})
+        # pcp = input_data[pcp_varname].isel(cell=pix).expand_dims({time_dimname:[time_pd]})
+        # # Combine DataArrays into a single Dataset
+        # rawdata = xr.Dataset({olr_varname: olr, pcp_varname: pcp})
 
     # NetCDF format
     elif input_format.lower() == "netcdf":
@@ -164,8 +167,8 @@ def idclouds_tbpf(
             logger.debug(f'Added Timestamp: {file_timestamp} calculated from filename to the input data')
 
     # Get data coordinates
-    lat = rawdata[y_coordname].data
-    lon = rawdata[x_coordname].data
+    lat = rawdata[y_coordname].values
+    lon = rawdata[x_coordname].values
     time_decode = rawdata[time_coordname]
 
     # Check coordinate dimensions
@@ -210,8 +213,8 @@ def idclouds_tbpf(
     # Subset dataset
     rawdata = rawdata[subset_dict]
     # Get lat/lon coordinates again
-    lat = rawdata[y_coordname].data
-    lon = rawdata[x_coordname].data
+    lat = rawdata[y_coordname].values
+    lon = rawdata[x_coordname].values
     # Check coordinate dimensions
     if (lat.ndim == 1) | (lon.ndim == 1):
         # Mesh 1D coordinate into 2D
@@ -223,13 +226,12 @@ def idclouds_tbpf(
 
     # Convert OLR to Tb if olr2tb flag is set
     if olr2tb is True:
-        olr = rawdata[olr_varname].data
+        olr = rawdata[olr_varname].values
         original_ir = olr_to_tb(olr)
     else:
         # Read Tb from data
-        original_ir = rawdata[tb_varname].data
-    rawdata.close()
-
+        original_ir = rawdata[tb_varname].values
+    # rawdata.close()
 
     # Loop over each time
     ntimes = get_length(time_decode)
@@ -337,7 +339,7 @@ def idclouds_tbpf(
                         if final_nclouds > 0:
 
                             # Convert precipitation factor to unit [mm/hour]
-                            pcp = rawdata[pcp_varname].data * pcp_convert_factor
+                            pcp = rawdata[pcp_varname].values * pcp_convert_factor
 
                             # For 'gpmirimerg', precipitation is averaged to 1-hourly
                             # and put in first time dimension
@@ -359,8 +361,9 @@ def idclouds_tbpf(
                             # Replace values <=0 with 0 before smoothing
                             pcp_linkpf[pcp_linkpf <= 0] = 0
 
+                            # Check piriodic boundary conditions
                             if pbc_direction != 'none':
-                                # Step 2: Extend and pad data
+                                # Extend and pad data
                                 pcp_linkpf_orig = np.copy(pcp_linkpf)
                                 pcp_linkpf, padded_x, padded_y = pad_and_extend(pcp_linkpf, config)
                                 # Smooth pcp_linkpf using convolve filter (handles NaN)
