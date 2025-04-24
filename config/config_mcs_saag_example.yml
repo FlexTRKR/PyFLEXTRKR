@@ -152,3 +152,4 @@ track_number_for_speed: "pcptracknumber"
 track_field_for_speed: 'precipitation'
 min_size_thresh_for_speed: 20 # [km] Min PF major axis length to calculate movement
 max_speed_thresh: 50  # [m/s]
+max_speed_for_trajectory_smoothing: 40  # [m/s] Max speed for smoothing lat/lon (only for visualization)
