@@ -26,19 +26,28 @@ timeout: 3600  # [seconds] Dask timeout limit
 startdate: '20190901.0000'
 enddate: '20200901.0000'
 
+# HEALPix parameters
+catalog_file: '/global/cfs/cdirs/m4549/scream-cess-healpix/scream_catalog.yaml'
+catalog_source: 'scream2D_hrly'
+# Catalog parameters, can have multiple entries
+catalog_params:
+  zoom: 9
+#  time: 'PT1H'
+olr_varname: 'rlut'  # OLR variable name
+pcp_varname: 'pr'   # Precipitation variable name
+pcp_convert_factor: 3600000.  # Convert precipitation flux from [m/s] to [mm/h]
+input_format: 'zarr'  # 'zarr' or 'netcdf'
+
 # Specify tracking input data date/time string format
 # This is the preprocessed file that contains Tb & rainrate
 # E.g., databasename20181101.011503.nc --> yyyymodd.hhmmss
 # E.g., databasename2018-11-01_01:15:00 --> yyyy-mo-dd_hh:mm:ss
 time_format: 'yyyymoddhh'
-databasename:  'scream2D_hrly_rlut_hp9_v6'
-precipdata_basename: 'scream2D_hrly_pr_hp9_v6'
-hp_zoomlev: '9'  # HEALPix zoom level
-input_format: 'zarr'  # 'zarr' or 'netcdf'
+databasename: ''  # This is not used for HEALPix data
 
 # Input files directory
-clouddata_path: '/pscratch/sd/w/wcmca1/scream-cess-healpix/'
-precipdata_path: '/pscratch/sd/w/wcmca1/scream-cess-healpix/'
+clouddata_path: ''  # Not needed for catalog data
+# precipdata_path: '/pscratch/sd/w/wcmca1/scream-cess-healpix/' # Not needed for catalog data
 # Working directory for the tracking data
 root_path: '/pscratch/sd/w/wcmca1/scream-cess-healpix/mcs_tracking_hp9/'
 # Working sub-directory names
@@ -60,9 +69,6 @@ pixel_radius:  10.0  # [km] Spatial resolution of the input data
 datatimeresolution: 1.0  # [hour] Temporal resolution of the input data
 # Variable names in the input data
 olr2tb: True
-olr_varname: 'rlut'
-pcp_varname: 'pr'
-pcp_convert_factor: 3600000.  # Convert precipitation flux from [m/s] to [mm/h]
 clouddatasource: 'model'
 time_dimname: 'time'
 x_dimname: 'lon'
