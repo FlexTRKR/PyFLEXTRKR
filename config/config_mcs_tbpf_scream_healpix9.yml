@@ -17,7 +17,7 @@ run_remap_healpix: True
 
 # Parallel processing set up
 # run_parallel: 1 (local cluster), 2 (Dask MPI)
-run_parallel: 1
+run_parallel: 0
 nprocesses : 128  # Number of processors to use if run_parallel=1
 dask_tmp_dir: '/tmp'  # Dask temporary directory if run_parallel=1
 timeout: 3600  # [seconds] Dask timeout limit
@@ -27,7 +27,9 @@ startdate: '20190901.0000'
 enddate: '20200901.0000'
 
 # HEALPix parameters
-catalog_file: '/global/cfs/cdirs/m4549/scream-cess-healpix/scream_catalog.yaml'
+# catalog_file: '/global/cfs/cdirs/m4581/gsharing/scream-cess-healpix/main.yaml'
+catalog_file: 'https://digital-earths-global-hackathon.github.io/catalog/catalog.yaml'
+catalog_location: 'NERSC'
 catalog_source: 'scream2D_hrly'
 # Catalog parameters, can have multiple entries
 catalog_params:

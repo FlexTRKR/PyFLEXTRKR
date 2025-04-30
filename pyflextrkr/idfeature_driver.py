@@ -49,6 +49,7 @@ def idfeature_driver(config):
 
         # Get catalog info from config
         catalog_file = config["catalog_file"]
+        catalog_location = config["catalog_location"]
         catalog_source = config["catalog_source"]
         catalog_params = config.get("catalog_params", {})
         olr_varname = config['olr_varname']
@@ -57,7 +58,7 @@ def idfeature_driver(config):
         end_date = config["enddate"]
 
         # Load the catalog
-        in_catalog = intake.open_catalog(catalog_file)
+        in_catalog = intake.open_catalog(catalog_file)[catalog_location]
         # Get the DataSet from the catalog
         ds = in_catalog[catalog_source](**catalog_params).to_dask()
 
