@@ -8,6 +8,7 @@ dependencies:
   - colorcet
   - colormath
   - dask
+  - easygems
   - ffmpeg
   - healpix
   - intake==0.7.0
