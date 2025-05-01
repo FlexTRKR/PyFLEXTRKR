@@ -90,7 +90,7 @@ def remap_mask_to_healpix(config):
     
     # Read mask data
     mask_chunks = {"time": min(100, chunksize_time), "lat": "auto", "lon": "auto"}
-    ds_mask = xr.open_dataset(in_mask_dir, engine='zarr', chunks=mask_chunks)
+    ds_mask = xr.open_dataset(in_mask_dir, engine='zarr', chunks=mask_chunks, mask_and_scale=False)
 
     # Load the HEALPix catalog
     in_catalog = intake.open_catalog(catalog_file)[catalog_location]
@@ -105,9 +105,10 @@ def remap_mask_to_healpix(config):
     lat_hp = ds_hp.lat.assign_coords(cell=ds_hp.cell, lat_hp=lambda da: da)
 
     # Remap DataSet to HEALPix
+    fill_value = 0
     dsout_hp = ds_mask.pipe(fix_coords).sel(
         lon=lon_hp, lat=lat_hp, method="nearest",
-    ).where(partial(is_valid, tolerance=0.1))
+    ).where(partial(is_valid, tolerance=0.1), fill_value)
     
     # Drop lat/lon coordinates (not needed in HEALPix)
     dsout_hp = dsout_hp.drop_vars(["lat_hp", "lon_hp", "lat", "lon"])
