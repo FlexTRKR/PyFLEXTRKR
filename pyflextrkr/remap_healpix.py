@@ -91,13 +91,17 @@ def remap_mask_to_healpix(config):
     # Read mask data
     mask_chunks = {"time": min(100, chunksize_time), "lat": "auto", "lon": "auto"}
     ds_mask = xr.open_dataset(in_mask_dir, engine='zarr', chunks=mask_chunks, mask_and_scale=False)
+    # Make a flag for mask longitude sign
+    signed_lon = True if np.min(ds_mask["lon"]) < 0 else False
+    logger.info(f"Mask lon coordinate has negative values: {signed_lon}")
 
     # Load the HEALPix catalog
     in_catalog = intake.open_catalog(catalog_file)[catalog_location]
     # Get the DataSet from the catalog
     ds_hp = in_catalog[catalog_source](**catalog_params).to_dask()
     # Add lat/lon coordinates to the DataSet
-    ds_hp = ds_hp.pipe(egh.attach_coords)
+    # Set signed_lon=True for matching lat/lon DataSet with longitude -180 to +180
+    ds_hp = ds_hp.pipe(partial(egh.attach_coords, signed_lon=signed_lon))
 
     # Assign extra coordinates (lon_hp, lat_hp) to the HEALPix coordinates
     # This is needed for limiting the extrapolation during remapping
@@ -109,7 +113,7 @@ def remap_mask_to_healpix(config):
     dsout_hp = ds_mask.pipe(fix_coords).sel(
         lon=lon_hp, lat=lat_hp, method="nearest",
     ).where(partial(is_valid, tolerance=0.1), fill_value)
-    
+   
     # Drop lat/lon coordinates (not needed in HEALPix)
     dsout_hp = dsout_hp.drop_vars(["lat_hp", "lon_hp", "lat", "lon"])
     # Update globle attributes
@@ -184,11 +188,11 @@ def remap_mask_to_healpix(config):
     return out_zarr
 
 
-def fix_coords(ds, lat_dim="lat", lon_dim="lon"):
+def fix_coords(ds, lat_dim="lat", lon_dim="lon", roll=False):
     """
     Fix coordinates in a dataset:
-    1. Convert longitude from -180/+180 to 0-360 range
-    2. Roll dataset to start at longitude 0
+    1. Convert longitude from -180/+180 to 0-360 range (optional)
+    2. Roll dataset to start at longitude 0 (optional)
     3. Ensure coordinates are in ascending order
     
     Parameters:
@@ -199,22 +203,25 @@ def fix_coords(ds, lat_dim="lat", lon_dim="lon"):
         Name of latitude dimension, default "lat"
     lon_dim : str, optional
         Name of longitude dimension, default "lon"
+    roll : bool, optional, default=False
+        If True, convert longitude from -180/+180 to 0-360, and roll the dataset to start at longitude 0
         
     Returns:
     --------
     xarray.Dataset or xarray.DataArray
         Dataset with fixed coordinates
     """
-    # Find where longitude crosses from negative to positive (approx. where lon=0)
-    lon_0_index = (ds[lon_dim] < 0).sum().item()
-    
-    # Create indexers for the roll
-    lon_indices = np.roll(np.arange(ds.sizes[lon_dim]), -lon_0_index)
-    
-    # Roll dataset and convert longitudes to 0-360 range
-    ds = ds.isel({lon_dim: lon_indices})
-    lon360 = xr.where(ds[lon_dim] < 0, ds[lon_dim] + 360, ds[lon_dim])
-    ds = ds.assign_coords({lon_dim: lon360})
+    if roll:
+        # Find where longitude crosses from negative to positive (approx. where lon=0)
+        lon_0_index = (ds[lon_dim] < 0).sum().item()
+        
+        # Create indexers for the roll
+        lon_indices = np.roll(np.arange(ds.sizes[lon_dim]), -lon_0_index)
+        
+        # Roll dataset and convert longitudes to 0-360 range
+        ds = ds.isel({lon_dim: lon_indices})
+        lon360 = xr.where(ds[lon_dim] < 0, ds[lon_dim] + 360, ds[lon_dim])
+        ds = ds.assign_coords({lon_dim: lon360})
     
     # Ensure latitude and longitude are in ascending order if needed
     if np.all(np.diff(ds[lat_dim].values) < 0):
