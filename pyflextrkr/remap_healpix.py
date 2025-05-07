@@ -44,19 +44,26 @@ def remap_mask_to_healpix(config):
     catalog_location = config["catalog_location"]
     catalog_source = config.get("catalog_source")
     catalog_params = config.get("catalog_params", {})
-    hp_zoomlev = catalog_params.get("zoom")
+    catalog_zoom = catalog_params.get("zoom")
     startdate = config.get("startdate")
     enddate = config.get("enddate")
     outpath = os.path.dirname(os.path.normpath(pixeltracking_outpath)) + "/"
     # Get preset-specific configuration
     presets = config.get("zarr_output_presets", {})
+    hp_zoom = presets.get("healpix", {}).get("zoom", catalog_zoom)
+    hp_version = presets.get("healpix", {}).get("version", "v1")
     in_mask_filebase = presets.get("mask", {}).get("out_filebase", "mcs_mask_latlon_")
+    # Update catalog_params to match desired hp zoom level from preset
+    # This gets the appropriate zoom level for remapping
+    if hp_zoom != catalog_zoom:
+        catalog_params["zoom"] = hp_zoom
     # Input mask Zarr store
     in_mask_dir = f"{outpath}{in_mask_filebase}{startdate}_{enddate}.zarr"
 
     # Build output filename
     out_mask_filebase = presets.get("healpix", {}).get("out_filebase", "mcs_mask_hp")
-    out_zarr = f"{outpath}{out_mask_filebase}{hp_zoomlev}_{startdate}_{enddate}.zarr"
+    # out_zarr = f"{outpath}{out_mask_filebase}{hp_zoom}_{startdate}_{enddate}.zarr"
+    out_zarr = f"{outpath}{out_mask_filebase}hp{hp_zoom}_{hp_version}.zarr"
 
     # Check if output exists and should be overwritten
     overwrite = config.get("overwrite_zarr", True)
@@ -118,7 +125,7 @@ def remap_mask_to_healpix(config):
     dsout_hp = dsout_hp.drop_vars(["lat_hp", "lon_hp", "lat", "lon"])
     # Update globle attributes
     dsout_hp.attrs['Title'] = f"Remapped {ds_mask.attrs['Title']} to HEALPix grid"
-    # dsout_hp.attrs['zoom'] = hp_zoomlev
+    dsout_hp.attrs['zoom'] = hp_zoom
 
     # Optimize cell chunking for HEALPix grid
     chunksize_cell = optimize_healpix_chunks(ds_hp, chunksize_cell, logger)
