@@ -3,17 +3,16 @@
 # Tracking uses collocated Tb + Precipitation
 
 # Processing steps:
-run_idfeature : False
-run_tracksingle : False
-run_gettracks : False
-run_trackstats : False
-run_identifymcs : False
-run_matchpf : False
-run_robustmcs : False
-run_mapfeature : False
-run_speed : False
-run_convert_to_zarr: False
-run_remap_healpix: True
+run_idfeature : False         # parallel
+run_tracksingle : False       # parallel
+run_gettracks : False         # serial
+run_trackstats : False        # parallel
+run_identifymcs : False       # serial
+run_matchpf : False           # parallel
+run_robustmcs : False         # serial
+run_mapfeature : False        # parallel
+run_speed : False             # parallel
+run_remap_healpix: True       # parallel
 
 # Parallel processing set up
 # run_parallel: 1 (local cluster), 2 (Dask MPI)
@@ -189,6 +188,7 @@ chunksize_cell: 'auto'  # HEALPix cell
 # Zarr output presets - configure different outputs
 zarr_output_presets:
   mask:
+    write: False
     out_filebase: 'mcs_mask_latlon_'
     # Variables to include in Zarr output
     var_list:
@@ -198,6 +198,7 @@ zarr_output_presets:
       cloudtracknumber: mcs_mask
     
   tbpr:
+    write: False
     out_filebase: 'tb_pr_'
     var_list:
       - tb
@@ -205,6 +206,7 @@ zarr_output_presets:
     var_rename: {}
 
   full:
+    write: False
     out_filebase: 'mcs_full_'
     # No var_list needed - all variables will be included
     var_rename: {}  # Optional - add any renaming if needed
@@ -212,5 +214,5 @@ zarr_output_presets:
   # Remap back to healpix
   healpix:
     out_filebase: 'scream2D_hrly_mcsmask_'
-    zoom: 6  # zoom level to remap
+    zoom: 9  # zoom level to remap
     version: 'v1'  # version in zarr filename
