@@ -13,8 +13,7 @@ from pyflextrkr.matchtbpf_driver import match_tbpf_tracks
 from pyflextrkr.robustmcspf_saag import define_robust_mcs_pf
 from pyflextrkr.mapfeature_driver import mapfeature_driver
 from pyflextrkr.movement_speed import movement_speed
-from pyflextrkr.convert_to_zarr import convert_mask_to_zarr
-from pyflextrkr.remap_healpix import remap_mask_to_healpix
+from pyflextrkr.remap_healpix_zarr import remap_to_healpix_zarr
 
 if __name__ == '__main__':
 
@@ -102,21 +101,9 @@ if __name__ == '__main__':
     if config.get('run_speed', False):
         movement_speed(config)
 
-    # Step 10 - Convert MCS mask files to Zarr
-    if config.get('run_convert_to_zarr', False):
-        # Mask only
-        if config.get('create_mask_zarr', False):
-            convert_mask_to_zarr(config, output_preset='mask')
-        # tb + precipitation
-        if config.get('create_tbpr_zarr', False):
-            convert_mask_to_zarr(config, output_preset='tbpr')
-        # All variables
-        # if config.get('create_full_zarr', False):
-        #     convert_mask_to_zarr(config, output_preset='full')
-
-    # Step 11 - Remap MCS mask to HEALPix grid
+    # Step 10 - Remap MCS mask to HEALPix grid
     if config.get('run_remap_healpix', False):
-        remap_mask_to_healpix(config)
+        remap_to_healpix_zarr(config)
 
     # Clean up resources
     if run_parallel >= 1:

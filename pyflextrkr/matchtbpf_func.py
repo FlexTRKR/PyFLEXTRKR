@@ -2,6 +2,7 @@ import numpy as np
 import os.path
 import sys
 import logging
+import warnings
 import xarray as xr
 from scipy.ndimage import label
 from skimage.measure import regionprops
@@ -305,16 +306,19 @@ def matchtbpf_singlefile(
                             logger.debug("PFs present, calculating statistics")
 
                             # Call function to calculate individual PF statistics
-                            pf_stats_dict = calc_pf_stats(
-                                fillval, fillval_f, heavy_rainrate_thresh,
-                                lat, lon, minx, miny, nmaxpf, numpf,
-                                pf_npix, pfnumberlabelmap, pixel_radius,
-                                subdimx, subdimy, sub_rainrate_map,
-                                roll_flag=roll_flag,
-                                lon_roll=lon_roll, lat_roll=lat_roll,
-                                lon_min=lon_min, lon_max=lon_max,
-                                lat_min=lat_min, lat_max=lat_max,
-                            )
+                            with warnings.catch_warnings():
+                                warnings.simplefilter("ignore", category=RuntimeWarning)
+                                
+                                pf_stats_dict = calc_pf_stats(
+                                    fillval, fillval_f, heavy_rainrate_thresh,
+                                    lat, lon, minx, miny, nmaxpf, numpf,
+                                    pf_npix, pfnumberlabelmap, pixel_radius,
+                                    subdimx, subdimy, sub_rainrate_map,
+                                    roll_flag=roll_flag,
+                                    lon_roll=lon_roll, lat_roll=lat_roll,
+                                    lon_min=lon_min, lon_max=lon_max,
+                                    lat_min=lat_min, lat_max=lat_max,
+                                )
 
                             # Save precipitation feature statisitcs
                             npf_save = pf_stats_dict["npf_save"]

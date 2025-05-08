@@ -17,13 +17,13 @@ run_remap_healpix: True       # parallel
 # Parallel processing set up
 # run_parallel: 1 (local cluster), 2 (Dask MPI)
 run_parallel: 1
-nprocesses : 128  # Number of processors to use if run_parallel=1
+nprocesses : 64  # Number of processors to use if run_parallel=1
 dask_tmp_dir: /tmp  # Dask temporary directory if run_parallel=1
 timeout: 3600  # [seconds] Dask timeout limit
 
 # Start/end date and time
-startdate: '20190801.0000'
-enddate: '20200901.0000'
+startdate: '20200201.0000'
+enddate: '20200203.0000'
 
 # HEALPix parameters
 # catalog_file: /global/cfs/cdirs/m4581/gsharing/scream-cess-healpix/main.yaml
@@ -32,7 +32,7 @@ catalog_location: NERSC
 catalog_source: scream2D_hrly
 # Catalog parameters, can have multiple entries
 catalog_params:
-  zoom: 9
+  zoom: 7
 #  time: PT1H
 olr_varname: rlut  # OLR variable name
 pcp_varname: pr   # Precipitation variable name
@@ -49,14 +49,14 @@ databasename: ''  # This is not used for HEALPix data
 # Input files directory
 clouddata_path: ''  # Not needed for catalog data
 # Working directory for the tracking data
-root_path: /pscratch/sd/w/wcmca1/scream-cess-healpix/mcs_tracking_hp9/
+root_path: /pscratch/sd/w/wcmca1/scream-cess-healpix/mcs_tracking_hp7/
 # Working sub-directory names
 tracking_path_name: tracking
 stats_path_name: stats
 pixel_path_name: mcstracking
 
-# Land mask file
-landmask_filename: /pscratch/sd/f/feng045/DYAMOND/maps/IMERG_landmask_180W-180E_60S-60N.nc
+# Land mask file (target lat/lon grid for converting HEALPix to lat/lon)
+landmask_filename: /pscratch/sd/f/feng045/DYAMOND/maps/IMERG_landmask_180W-180E_60S-60N_0.5deg.nc
 landmask_varname: landseamask
 landmask_x_dimname: lon
 landmask_y_dimname: lat
@@ -65,7 +65,7 @@ landmask_y_coordname: lat
 landfrac_thresh: [0, 90]  # Define the range of fraction for land (depends on what value is land the landmask file)
 
 # Input dataset structure
-pixel_radius:  10.0  # [km] Spatial resolution of the input data
+pixel_radius:  50.0  # [km] Spatial resolution of the input data
 datatimeresolution: 1.0  # [hour] Temporal resolution of the input data
 # Variable names in the input data
 olr2tb: True
@@ -82,8 +82,8 @@ y_coordname: lat
 feature_type: tb_pf
 
 # Cloud identification parameters
-mincoldcorepix:  4  # Minimum number of pixels for the cold core
-smoothwindowdimensions:  10  # Dimension of the Box2DKernel filter on Tb.
+mincoldcorepix:  1  # Minimum number of pixels for the cold core
+smoothwindowdimensions:  2  # Dimension of the Box2DKernel filter on Tb.
 medfiltsize: 5      # Window size to perform medfilt2d to fill missing Tb pixels, must be an odd number
 geolimits: [-60, -360, 60, 360] # [lat_min, lon_min, lat_max, lon_max] 4-element array to subset domain boundaries 
 area_thresh:  800  # [km^2] Minimum area to define a cloud
@@ -98,7 +98,7 @@ cloudidmethod: label_grow
 # Specific parameters to link cloud objects using PF
 linkpf:  1  # Set to 1 to turn on linkpf option; default: 0
 pf_smooth_window:  5  # Smoothing window for identifying PF
-pf_dbz_thresh:  3  # [dBZ] for reflectivity, or [mm/h] for rainrate
+pf_dbz_thresh:  1  # [dBZ] for reflectivity, or [mm/h] for rainrate
 pf_link_area_thresh:  648.0  # [km^2]
 
 # Periodic boundary conditions
@@ -139,11 +139,11 @@ mcs_pf_majoraxis_for_lifetime:  20  # [km] Minimum PF size to count PF lifetime
 mcs_pf_gap:  1  # [unitless] Allowable temporal gap in PF data for MCS characteristics
 
 # Specify rain rate parameters
-pf_rr_thres:  2.0  # [mm/hr] Rain rate threshold
+pf_rr_thres:  0.5  # [mm/hr] Rain rate threshold
 nmaxpf: 3  # Maximum number of precipitation features that can be within a cloud feature
 nmaxcore: 20  # Maximum number of convective cores that can be within a cloud feature
-pcp_thresh:  1.0  # Pixels with hourly precipitation larger than this will be labeled with track number
-heavy_rainrate_thresh:  10.0  # [mm/hr] Heavy rain rate threshold
+pcp_thresh:  0.5  # Pixels with hourly precipitation larger than this will be labeled with track number
+heavy_rainrate_thresh:  5.0  # [mm/hr] Heavy rain rate threshold
 mcs_min_rainvol_thresh: 20000   #  [km^2 mm/h] Min rain volumne threshold
 mcs_volrain_duration_thresh: 1.0   # [hour] Min volume rain threshold
 
@@ -196,9 +196,9 @@ zarr_output_presets:
     var_rename:
       cloudtracknumber: mcs_mask
       cloudnumber: ccs_mask
-    
+
   # Remap back to healpix
   healpix:
     out_filebase: scream2D_hrly_mcsmask_
-    zoom: 10  # zoom level to remap
+    zoom: 7  # zoom level to remap
     version: v1  # version in zarr filename

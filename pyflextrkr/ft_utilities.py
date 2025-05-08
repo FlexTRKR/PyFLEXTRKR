@@ -355,6 +355,7 @@ def get_timestamp_from_filename_single(
 def convert_to_cftime(datetime, calendar):
     """
     Convert a pandas.Timestamp object to a cftime object based on the calendar type.
+    Return pandas.Timestamp for standard calendars that don't need conversion.
 
     Args:
         datetime: pandas.Timestamp
@@ -365,14 +366,11 @@ def convert_to_cftime(datetime, calendar):
     Returns:
         cftime object.
     """
+    # Standard/Gregorian/Proleptic Gregorian calendars can often use pandas Timestamps directly
+    if calendar in ['proleptic_gregorian', 'gregorian', 'standard']:
+        return datetime
     if calendar == 'noleap':
         return cftime.DatetimeNoLeap(datetime.year, datetime.month, datetime.day, datetime.hour, datetime.minute)
-    elif calendar == 'gregorian':
-        return cftime.DatetimeGregorian(datetime.year, datetime.month, datetime.day, datetime.hour, datetime.minute)
-    elif calendar == 'proleptic_gregorian':
-        return cftime.DatetimeProlepticGregorian(datetime.year, datetime.month, datetime.day, datetime.hour, datetime.minute)
-    elif calendar == 'standard':
-        return cftime.DatetimeGregorian(datetime.year, datetime.month, datetime.day, datetime.hour, datetime.minute)
     elif calendar == '360_day':
         return cftime.Datetime360Day(datetime.year, datetime.month, datetime.day, datetime.hour, datetime.minute)
     else:

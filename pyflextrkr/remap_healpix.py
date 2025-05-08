@@ -4,8 +4,10 @@ import os
 import time
 import logging
 import dask.array as da
-import healpix as hp
 import intake
+import requests
+import easygems.healpix as egh
+from functools import partial
 from pyflextrkr.ft_utilities import setup_logging   
 
 def remap_mask_to_healpix(config):
@@ -39,21 +41,29 @@ def remap_mask_to_healpix(config):
     # Get config parameters
     pixeltracking_outpath = config.get("pixeltracking_outpath")
     catalog_file = config.get("catalog_file")
+    catalog_location = config["catalog_location"]
     catalog_source = config.get("catalog_source")
     catalog_params = config.get("catalog_params", {})
-    hp_zoomlev = catalog_params.get("zoom")
+    catalog_zoom = catalog_params.get("zoom")
     startdate = config.get("startdate")
     enddate = config.get("enddate")
     outpath = os.path.dirname(os.path.normpath(pixeltracking_outpath)) + "/"
     # Get preset-specific configuration
     presets = config.get("zarr_output_presets", {})
+    hp_zoom = presets.get("healpix", {}).get("zoom", catalog_zoom)
+    hp_version = presets.get("healpix", {}).get("version", "v1")
     in_mask_filebase = presets.get("mask", {}).get("out_filebase", "mcs_mask_latlon_")
+    # Update catalog_params to match desired hp zoom level from preset
+    # This gets the appropriate zoom level for remapping
+    if hp_zoom != catalog_zoom:
+        catalog_params["zoom"] = hp_zoom
     # Input mask Zarr store
     in_mask_dir = f"{outpath}{in_mask_filebase}{startdate}_{enddate}.zarr"
 
     # Build output filename
     out_mask_filebase = presets.get("healpix", {}).get("out_filebase", "mcs_mask_hp")
-    out_zarr = f"{outpath}{out_mask_filebase}{hp_zoomlev}_{startdate}_{enddate}.zarr"
+    # out_zarr = f"{outpath}{out_mask_filebase}{hp_zoom}_{startdate}_{enddate}.zarr"
+    out_zarr = f"{outpath}{out_mask_filebase}hp{hp_zoom}_{hp_version}.zarr"
 
     # Check if output exists and should be overwritten
     overwrite = config.get("overwrite_zarr", True)
@@ -65,7 +75,19 @@ def remap_mask_to_healpix(config):
     if os.path.exists(in_mask_dir) is False:
         logger.error(f"Input mask file {in_mask_dir} does not exist. Skipping remap.")
         return out_zarr
-    if os.path.isfile(catalog_file) is False:
+    # Check catalog file
+    if catalog_file.startswith(('http://', 'https://')):
+        # Handle URL case
+        try:
+            response = requests.head(catalog_file, timeout=10)
+            if response.status_code >= 400:
+                logger.error(f"Catalog URL {catalog_file} returned status code {response.status_code}. Skipping remap.")
+                return out_zarr
+        except requests.exceptions.RequestException as e:
+            logger.error(f"Error accessing catalog URL {catalog_file}: {str(e)}. Skipping remap.")
+            return out_zarr
+    elif os.path.isfile(catalog_file) is False:
+        # Handle local file case
         logger.error(f"Catalog file {catalog_file} does not exist. Skipping remap.")
         return out_zarr
     
@@ -75,29 +97,35 @@ def remap_mask_to_healpix(config):
     
     # Read mask data
     mask_chunks = {"time": min(100, chunksize_time), "lat": "auto", "lon": "auto"}
-    ds_mask = xr.open_dataset(in_mask_dir, engine='zarr', chunks=mask_chunks)
+    ds_mask = xr.open_dataset(in_mask_dir, engine='zarr', chunks=mask_chunks, mask_and_scale=False)
+    # Make a flag for mask longitude sign
+    signed_lon = True if np.min(ds_mask["lon"]) < 0 else False
+    logger.info(f"Mask lon coordinate has negative values: {signed_lon}")
 
-    # Modify mask grid for remapping
-    ds_mask = prepare_grid_for_analysis(ds_mask)
-
-    # Load the catalog
-    in_catalog = intake.open_catalog(catalog_file)
+    # Load the HEALPix catalog
+    in_catalog = intake.open_catalog(catalog_file)[catalog_location]
     # Get the DataSet from the catalog
     ds_hp = in_catalog[catalog_source](**catalog_params).to_dask()
+    # Add lat/lon coordinates to the DataSet
+    # Set signed_lon=True for matching lat/lon DataSet with longitude -180 to +180
+    ds_hp = ds_hp.pipe(partial(egh.attach_coords, signed_lon=signed_lon))
 
-    # Make remap lat/lon for HEALPix
-    remap_lons, remap_lats = hp.pix2ang(
-        ds_hp.crs.healpix_nside, ds_hp.cell, nest=ds_hp.crs.healpix_order, lonlat=True,
-    )
-    remap_lons = remap_lons % 360
-    # Convert to DataArray
-    lon_hp = xr.DataArray(remap_lons, dims="cell", coords={"cell":ds_hp.cell})
-    lat_hp = xr.DataArray(remap_lats, dims="cell", coords={"cell":ds_hp.cell})
+    # Assign extra coordinates (lon_hp, lat_hp) to the HEALPix coordinates
+    # This is needed for limiting the extrapolation during remapping
+    lon_hp = ds_hp.lon.assign_coords(cell=ds_hp.cell, lon_hp=lambda da: da)
+    lat_hp = ds_hp.lat.assign_coords(cell=ds_hp.cell, lat_hp=lambda da: da)
 
     # Remap DataSet to HEALPix
-    dsout_hp = ds_mask.sel(
+    fill_value = 0
+    dsout_hp = ds_mask.pipe(fix_coords).sel(
         lon=lon_hp, lat=lat_hp, method="nearest",
-    )
+    ).where(partial(is_valid, tolerance=0.1), fill_value)
+   
+    # Drop lat/lon coordinates (not needed in HEALPix)
+    dsout_hp = dsout_hp.drop_vars(["lat_hp", "lon_hp", "lat", "lon"])
+    # Update globle attributes
+    dsout_hp.attrs['Title'] = f"Remapped {ds_mask.attrs['Title']} to HEALPix grid"
+    dsout_hp.attrs['zoom'] = hp_zoom
 
     # Optimize cell chunking for HEALPix grid
     chunksize_cell = optimize_healpix_chunks(ds_hp, chunksize_cell, logger)
@@ -122,7 +150,7 @@ def remap_mask_to_healpix(config):
     # Report dataset size and chunking info
     logger.info(f"Dataset dimensions: {dict(chunked_ds.sizes)}")
     logger.info(f"Chunking scheme: time={chunksize_time}, cell={chunksize_cell}")
-    # import pdb; pdb.set_trace()
+
     # Create a delayed task for Zarr writing
     logger.info(f"Starting Zarr write to: {out_zarr}")
     write_task = chunked_ds.to_zarr(
@@ -166,6 +194,65 @@ def remap_mask_to_healpix(config):
 
     return out_zarr
 
+
+def fix_coords(ds, lat_dim="lat", lon_dim="lon", roll=False):
+    """
+    Fix coordinates in a dataset:
+    1. Convert longitude from -180/+180 to 0-360 range (optional)
+    2. Roll dataset to start at longitude 0 (optional)
+    3. Ensure coordinates are in ascending order
+    
+    Parameters:
+    -----------
+    ds : xarray.Dataset or xarray.DataArray
+        Dataset with lat/lon coordinates
+    lat_dim : str, optional
+        Name of latitude dimension, default "lat"
+    lon_dim : str, optional
+        Name of longitude dimension, default "lon"
+    roll : bool, optional, default=False
+        If True, convert longitude from -180/+180 to 0-360, and roll the dataset to start at longitude 0
+        
+    Returns:
+    --------
+    xarray.Dataset or xarray.DataArray
+        Dataset with fixed coordinates
+    """
+    if roll:
+        # Find where longitude crosses from negative to positive (approx. where lon=0)
+        lon_0_index = (ds[lon_dim] < 0).sum().item()
+        
+        # Create indexers for the roll
+        lon_indices = np.roll(np.arange(ds.sizes[lon_dim]), -lon_0_index)
+        
+        # Roll dataset and convert longitudes to 0-360 range
+        ds = ds.isel({lon_dim: lon_indices})
+        lon360 = xr.where(ds[lon_dim] < 0, ds[lon_dim] + 360, ds[lon_dim])
+        ds = ds.assign_coords({lon_dim: lon360})
+    
+    # Ensure latitude and longitude are in ascending order if needed
+    if np.all(np.diff(ds[lat_dim].values) < 0):
+        ds = ds.isel({lat_dim: slice(None, None, -1)})
+    if np.all(np.diff(ds[lon_dim].values) < 0):
+        ds = ds.isel({lon_dim: slice(None, None, -1)})
+    
+    return ds
+
+def is_valid(ds, tolerance=0.1):
+    """
+    Limit extrapolation distance to a certain tolerance.
+    This is useful for preventing extrapolation of regional data to global HEALPix grid.
+
+    Args:
+        ds (xarray.Dataset):
+            The dataset containing latitude and longitude coordinates.
+        tolerance (float): default=0.1
+            The maximum allowed distance in [degrees] for extrapolation.
+
+    Returns:
+        xarray.DataSet.
+    """
+    return (np.abs(ds.lat - ds.lat_hp) < tolerance) & (np.abs(ds.lon - ds.lon_hp) < tolerance)
 
 def prepare_grid_for_analysis(ds, var_name='mcs_mask', lon_dim='lon', lat_dim='lat',
                              target_lat_range=None, lat_spacing=None, fill_value=0):
