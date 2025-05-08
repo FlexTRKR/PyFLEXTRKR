@@ -3,67 +3,65 @@
 # Tracking uses collocated Tb + Precipitation
 
 # Processing steps:
-run_idfeature : False         # parallel
-run_tracksingle : False       # parallel
-run_gettracks : False         # serial
-run_trackstats : False        # parallel
-run_identifymcs : False       # serial
-run_matchpf : False           # parallel
-run_robustmcs : False         # serial
-run_mapfeature : False        # parallel
-run_speed : False             # parallel
+run_idfeature : True         # parallel
+run_tracksingle : True       # parallel
+run_gettracks : True         # serial
+run_trackstats : True        # parallel
+run_identifymcs : True       # serial
+run_matchpf : True           # parallel
+run_robustmcs : True         # serial
+run_mapfeature : True        # parallel
+run_speed : True             # parallel
 run_remap_healpix: True       # parallel
 
 # Parallel processing set up
 # run_parallel: 1 (local cluster), 2 (Dask MPI)
 run_parallel: 1
 nprocesses : 128  # Number of processors to use if run_parallel=1
-dask_tmp_dir: '/tmp'  # Dask temporary directory if run_parallel=1
+dask_tmp_dir: /tmp  # Dask temporary directory if run_parallel=1
 timeout: 3600  # [seconds] Dask timeout limit
 
 # Start/end date and time
-# startdate: '20190901.0000'
 startdate: '20190801.0000'
 enddate: '20200901.0000'
 
 # HEALPix parameters
-# catalog_file: '/global/cfs/cdirs/m4581/gsharing/scream-cess-healpix/main.yaml'
-catalog_file: 'https://digital-earths-global-hackathon.github.io/catalog/catalog.yaml'
-catalog_location: 'NERSC'
-catalog_source: 'scream2D_hrly'
+# catalog_file: /global/cfs/cdirs/m4581/gsharing/scream-cess-healpix/main.yaml
+catalog_file: https://digital-earths-global-hackathon.github.io/catalog/catalog.yaml
+catalog_location: NERSC
+catalog_source: scream2D_hrly
 # Catalog parameters, can have multiple entries
 catalog_params:
   zoom: 9
-#  time: 'PT1H'
-olr_varname: 'rlut'  # OLR variable name
-pcp_varname: 'pr'   # Precipitation variable name
+#  time: PT1H
+olr_varname: rlut  # OLR variable name
+pcp_varname: pr   # Precipitation variable name
 pcp_convert_factor: 3600000.  # Convert precipitation flux from [m/s] to [mm/h]
-input_format: 'zarr'  # 'zarr' or 'netcdf'
+input_format: zarr  # zarr or netcdf
 
 # Specify tracking input data date/time string format
 # This is the preprocessed file that contains Tb & rainrate
 # E.g., databasename20181101.011503.nc --> yyyymodd.hhmmss
 # E.g., databasename2018-11-01_01:15:00 --> yyyy-mo-dd_hh:mm:ss
-time_format: 'yyyymoddhh'
+time_format: yyyymoddhh
 databasename: ''  # This is not used for HEALPix data
 
 # Input files directory
 clouddata_path: ''  # Not needed for catalog data
-# precipdata_path: '/pscratch/sd/w/wcmca1/scream-cess-healpix/' # Not needed for catalog data
 # Working directory for the tracking data
-root_path: '/pscratch/sd/w/wcmca1/scream-cess-healpix/mcs_tracking_hp9/'
+root_path: /pscratch/sd/w/wcmca1/scream-cess-healpix/mcs_tracking_hp9/
 # Working sub-directory names
-tracking_path_name: 'tracking'
-stats_path_name: 'stats'
-pixel_path_name: 'mcstracking'
+tracking_path_name: tracking
+stats_path_name: stats
+pixel_path_name: mcstracking
 
 # Land mask file
-landmask_filename: '/pscratch/sd/f/feng045/DYAMOND/maps/IMERG_landmask_180W-180E_60S-60N.nc'
-landmask_varname: 'landseamask'
-landmask_x_dimname: 'lon'
-landmask_y_dimname: 'lat'
-landmask_x_coordname: 'lon'
-landmask_y_coordname: 'lat'
+landmask_filename: /pscratch/sd/f/feng045/DYAMOND/maps/IMERG_landmask_180W-180E_60S-60N.nc
+landmask_varname: landseamask
+landmask_x_dimname: lon
+landmask_y_dimname: lat
+landmask_x_coordname: lon
+landmask_y_coordname: lat
 landfrac_thresh: [0, 90]  # Define the range of fraction for land (depends on what value is land the landmask file)
 
 # Input dataset structure
@@ -71,17 +69,17 @@ pixel_radius:  10.0  # [km] Spatial resolution of the input data
 datatimeresolution: 1.0  # [hour] Temporal resolution of the input data
 # Variable names in the input data
 olr2tb: True
-clouddatasource: 'model'
-time_dimname: 'time'
-x_dimname: 'lon'
-y_dimname: 'lat'
-time_coordname: 'time'
-x_coordname: 'lon'
-y_coordname: 'lat'
+clouddatasource: model
+time_dimname: time
+x_dimname: lon
+y_dimname: lat
+time_coordname: time
+x_coordname: lon
+y_coordname: lat
 
 # Specify types of feature being tracked
 # This adds additional feature-specific statistics to be computed
-feature_type: 'tb_pf'
+feature_type: tb_pf
 
 # Cloud identification parameters
 mincoldcorepix:  4  # Minimum number of pixels for the cold core
@@ -96,7 +94,7 @@ cloudtb_warm:  261.0  # [K]
 cloudtb_cloud:  261.0  # [K]
 absolutetb_threshs: [160, 330]  # K [min, max] absolute Tb range allowed.
 warmanvilexpansion:  0  # Not working yet, set this to 0 for now
-cloudidmethod: 'label_grow'
+cloudidmethod: label_grow
 # Specific parameters to link cloud objects using PF
 linkpf:  1  # Set to 1 to turn on linkpf option; default: 0
 pf_smooth_window:  5  # Smoothing window for identifying PF
@@ -104,7 +102,7 @@ pf_dbz_thresh:  3  # [dBZ] for reflectivity, or [mm/h] for rainrate
 pf_link_area_thresh:  648.0  # [km^2]
 
 # Periodic boundary conditions
-pbc_direction: 'x'    # (options: 'x', 'y', 'both', 'none')
+pbc_direction: x    # (options: x, y, both, none)
 # Fraction to extend the domain to label features at the periodic boundary
 pbc_extended_fraction: 0.1    # (range: 0 to 1)
 # Fraction of the domain to wrap feature position 
@@ -150,26 +148,26 @@ mcs_min_rainvol_thresh: 20000   #  [km^2 mm/h] Min rain volumne threshold
 mcs_volrain_duration_thresh: 1.0   # [hour] Min volume rain threshold
 
 # Define tracked feature variable names
-feature_varname: 'feature_number'
-nfeature_varname: 'nfeatures'
-featuresize_varname: 'npix_feature'
+feature_varname: feature_number
+nfeature_varname: nfeatures
+featuresize_varname: npix_feature
 
 # Track statistics output file dimension names
-tracks_dimname: 'tracks'
-times_dimname: 'times'
-pf_dimname: 'nmaxpf'
+tracks_dimname: tracks
+times_dimname: times
+pf_dimname: nmaxpf
 fillval: -9999
 # MCS track stats file base names
-mcstbstats_filebase: 'mcs_tracks_'
-mcspfstats_filebase: 'mcs_tracks_pf_'
-mcsrobust_filebase: 'mcs_tracks_robust_'
-pixeltracking_filebase: 'mcstrack_'
-mcsfinal_filebase: 'mcs_tracks_final_'
+mcstbstats_filebase: mcs_tracks_
+mcspfstats_filebase: mcs_tracks_pf_
+mcsrobust_filebase: mcs_tracks_robust_
+pixeltracking_filebase: mcstrack_
+mcsfinal_filebase: mcs_tracks_final_
 
 # Feature movement speed parameters
 lag_for_speed: 1  # lag intervals between tracked features to calculate movement
-track_number_for_speed: "pcptracknumber"
-track_field_for_speed: 'precipitation'
+track_number_for_speed: pcptracknumber
+track_field_for_speed: precipitation
 min_size_thresh_for_speed: 20 # [km] Min PF major axis length to calculate movement
 max_speed_thresh: 50  # [m/s]
 max_speed_for_trajectory_smoothing: 40  # [m/s] Max speed for smoothing lat/lon (only for visualization)
@@ -180,39 +178,27 @@ create_mask_zarr: True
 create_tbpr_zarr: True
 create_full_zarr: False
 overwrite_zarr: True  # Overwrite existing Zarr files
-# Zarr chunk sizes (default: 'auto')
+# Zarr chunk sizes (default: auto)
 chunksize_time: 24  # time
 chunksize_lat: 240  # y
 chunksize_lon: 600  # x
-chunksize_cell: 'auto'  # HEALPix cell
+chunksize_cell: auto  # HEALPix cell
 # Zarr output presets - configure different outputs
 zarr_output_presets:
   mask:
     write: False
-    out_filebase: 'mcs_mask_latlon_'
+    out_filebase: mcs_mask_latlon_
     # Variables to include in Zarr output
     var_list:
       - cloudtracknumber
+      - cloudnumber
     # Variable renaming mapping for Zarr output
     var_rename:
       cloudtracknumber: mcs_mask
+      cloudnumber: ccs_mask
     
-  tbpr:
-    write: False
-    out_filebase: 'tb_pr_'
-    var_list:
-      - tb
-      - precipitation
-    var_rename: {}
-
-  full:
-    write: False
-    out_filebase: 'mcs_full_'
-    # No var_list needed - all variables will be included
-    var_rename: {}  # Optional - add any renaming if needed
-
   # Remap back to healpix
   healpix:
-    out_filebase: 'scream2D_hrly_mcsmask_'
-    zoom: 9  # zoom level to remap
-    version: 'v1'  # version in zarr filename
+    out_filebase: scream2D_hrly_mcsmask_
+    zoom: 10  # zoom level to remap
+    version: v1  # version in zarr filename
