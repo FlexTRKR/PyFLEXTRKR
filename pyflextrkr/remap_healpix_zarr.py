@@ -51,10 +51,8 @@ def remap_to_healpix_zarr(config):
     # Get preset-specific configuration
     presets = config.get("zarr_output_presets", {})
     preset_mask = presets.get("mask", {})
-    preset_tbpr = presets.get("tbpr", {})
     preset_healpix = presets.get("healpix", {})
     write_mask = preset_mask.get("write", False)
-    write_tbpr = preset_tbpr.get("write", False)
     
     # ---------- HEALPIX CONFIGURATION ----------
     catalog_file = config.get("catalog_file")
@@ -259,13 +257,17 @@ def remap_to_healpix_zarr(config):
     
     # Make sure coordinates are fixed before remapping
     ds = fix_coords(ds)
+
+    # Calculate appropriate tolerance based on zoom level
+    tolerance = calculate_healpix_tolerance(hp_zoom)
+    logger.info(f"Using HEALPix tolerance of {tolerance:.4f}° at zoom level {hp_zoom}")
     
     # Remap DataSet to HEALPix
     logger.info("Applying nearest neighbor remapping to HEALPix grid...")
     fill_value = 0
     dsout_hp = ds.sel(
         lon=lon_hp, lat=lat_hp, method="nearest",
-    ).where(partial(is_valid, tolerance=0.1), fill_value)
+    ).where(partial(is_valid, tolerance=tolerance), fill_value)
     
     # Drop lat/lon coordinates (not needed in HEALPix)
     dsout_hp = dsout_hp.drop_vars(["lat_hp", "lon_hp", "lat", "lon"])
@@ -422,6 +424,33 @@ def is_valid(ds, tolerance=0.1):
         xarray.DataSet.
     """
     return (np.abs(ds.lat - ds.lat_hp) < tolerance) & (np.abs(ds.lon - ds.lon_hp) < tolerance)
+
+
+def calculate_healpix_tolerance(zoom_level):
+    """
+    Calculate appropriate tolerance for is_valid function based on HEALPix zoom level.
+    Returns approximately one grid cell size in degrees.
+    
+    Args:
+        zoom_level (int): HEALPix zoom level
+        
+    Returns:
+        float: Tolerance in degrees
+    """
+    # Calculate nside from zoom level (nside = 2^zoom)
+    # nside determines HEALPix resolution - each increase in zoom doubles the resolution
+    nside = 2 ** zoom_level
+    
+    # Calculate approximate pixel size in degrees
+    # Mathematical derivation:
+    # - Sphere has total area of 4π steradians (= 4π × (180/π)² sq. degrees)
+    # - HEALPix divides sphere into 12 × nside² equal-area pixels
+    # - Each pixel has area = 4π × (180/π)² / (12 × nside²) sq. degrees
+    # - Linear size = √(pixel area) ≈ 58.6 / nside degrees
+    # This gives approximately the angular width of one HEALPix cell
+    pixel_size_degrees = 58.6 / nside
+    
+    return pixel_size_degrees
 
 
 def optimize_healpix_chunks(ds_hp, chunksize_cell='auto', logger=None):

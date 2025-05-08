@@ -1,0 +1,204 @@
+---
+# HEALPix MCS tracking configuration file
+# Tracking uses collocated Tb + Precipitation
+
+# Processing steps:
+run_idfeature : True         # parallel
+run_tracksingle : True       # parallel
+run_gettracks : True         # serial
+run_trackstats : True        # parallel
+run_identifymcs : True       # serial
+run_matchpf : True           # parallel
+run_robustmcs : True         # serial
+run_mapfeature : True        # parallel
+run_speed : True             # parallel
+run_remap_healpix: True       # parallel
+
+# Parallel processing set up
+# run_parallel: 1 (local cluster), 2 (Dask MPI)
+run_parallel: 1
+nprocesses : 64  # Number of processors to use if run_parallel=1
+dask_tmp_dir: /tmp  # Dask temporary directory if run_parallel=1
+timeout: 3600  # [seconds] Dask timeout limit
+
+# Start/end date and time
+startdate: '20200201.0000'
+enddate: '20200203.0000'
+
+# HEALPix parameters
+# catalog_file: /global/cfs/cdirs/m4581/gsharing/scream-cess-healpix/main.yaml
+catalog_file: https://digital-earths-global-hackathon.github.io/catalog/catalog.yaml
+catalog_location: NERSC
+catalog_source: scream2D_hrly
+# Catalog parameters, can have multiple entries
+catalog_params:
+  zoom: 7
+#  time: PT1H
+olr_varname: rlut  # OLR variable name
+pcp_varname: pr   # Precipitation variable name
+pcp_convert_factor: 3600000.  # Convert precipitation flux from [m/s] to [mm/h]
+input_format: zarr  # zarr or netcdf
+
+# Specify tracking input data date/time string format
+# This is the preprocessed file that contains Tb & rainrate
+# E.g., databasename20181101.011503.nc --> yyyymodd.hhmmss
+# E.g., databasename2018-11-01_01:15:00 --> yyyy-mo-dd_hh:mm:ss
+time_format: yyyymoddhh
+databasename: ''  # This is not used for HEALPix data
+
+# Input files directory
+clouddata_path: ''  # Not needed for catalog data
+# Working directory for the tracking data
+root_path: /pscratch/sd/w/wcmca1/scream-cess-healpix/mcs_tracking_hp7/
+# Working sub-directory names
+tracking_path_name: tracking
+stats_path_name: stats
+pixel_path_name: mcstracking
+
+# Land mask file (target lat/lon grid for converting HEALPix to lat/lon)
+landmask_filename: /pscratch/sd/f/feng045/DYAMOND/maps/IMERG_landmask_180W-180E_60S-60N_0.5deg.nc
+landmask_varname: landseamask
+landmask_x_dimname: lon
+landmask_y_dimname: lat
+landmask_x_coordname: lon
+landmask_y_coordname: lat
+landfrac_thresh: [0, 90]  # Define the range of fraction for land (depends on what value is land the landmask file)
+
+# Input dataset structure
+pixel_radius:  50.0  # [km] Spatial resolution of the input data
+datatimeresolution: 1.0  # [hour] Temporal resolution of the input data
+# Variable names in the input data
+olr2tb: True
+clouddatasource: model
+time_dimname: time
+x_dimname: lon
+y_dimname: lat
+time_coordname: time
+x_coordname: lon
+y_coordname: lat
+
+# Specify types of feature being tracked
+# This adds additional feature-specific statistics to be computed
+feature_type: tb_pf
+
+# Cloud identification parameters
+mincoldcorepix:  1  # Minimum number of pixels for the cold core
+smoothwindowdimensions:  2  # Dimension of the Box2DKernel filter on Tb.
+medfiltsize: 5      # Window size to perform medfilt2d to fill missing Tb pixels, must be an odd number
+geolimits: [-60, -360, 60, 360] # [lat_min, lon_min, lat_max, lon_max] 4-element array to subset domain boundaries 
+area_thresh:  800  # [km^2] Minimum area to define a cloud
+miss_thresh:  0.4  # Missing data fraction threshold. If missing data exceeds this, the time frame will be omitted.
+cloudtb_core:  225.0  # [K]
+cloudtb_cold:  241.0  # [K]
+cloudtb_warm:  261.0  # [K]
+cloudtb_cloud:  261.0  # [K]
+absolutetb_threshs: [160, 330]  # K [min, max] absolute Tb range allowed.
+warmanvilexpansion:  0  # Not working yet, set this to 0 for now
+cloudidmethod: label_grow
+# Specific parameters to link cloud objects using PF
+linkpf:  1  # Set to 1 to turn on linkpf option; default: 0
+pf_smooth_window:  5  # Smoothing window for identifying PF
+pf_dbz_thresh:  1  # [dBZ] for reflectivity, or [mm/h] for rainrate
+pf_link_area_thresh:  648.0  # [km^2]
+
+# Periodic boundary conditions
+pbc_direction: x    # (options: x, y, both, none)
+# Fraction to extend the domain to label features at the periodic boundary
+pbc_extended_fraction: 0.1    # (range: 0 to 1)
+# Fraction of the domain to wrap feature position 
+# If feature center movement between two time steps > max_domain_fraction * domain size,
+# the feature position will be wrapped to the other side of the domain
+pbc_max_domain_fraction: 0.5    # (range: 0 to 1)
+
+# Tracking parameters
+othresh: 0.5  # overlap fraction threshold. Clouds that overlap more than this between times are tracked.
+timegap: 3.1  # [hour] If missing data duration longer than this, tracking restarts
+nmaxlinks: 50  # Maximum number of clouds that any single cloud can be linked to
+maxnclouds:  3000  # Maximum number of clouds in one snapshot
+duration_range: [2, 650] # A vector [minlength,maxlength] to specify the duration range for the tracks
+# Flag to remove short-lived tracks [< min(duration_range)] that are not mergers/splits with other tracks
+# 0:keep all tracks; 1:remove short tracks
+remove_shorttracks: 1
+# Set this flag to 1 to write a dense (2D) trackstats netCDF file
+# Note that for datasets with lots of tracks, the memory consumption could be large
+trackstats_dense_netcdf: 1
+# Minimum time difference threshold to match track stats with cloudid files
+match_pixel_dt_thresh: 60.0  # seconds
+
+# MCS Tb parameters
+mcs_tb_area_thresh: 40000  # [km^2] Tb area threshold
+mcs_tb_duration_thresh:  4  # [hour] Tb minimum length of a mcs
+mcs_tb_split_duration:  12  # [hour] Tb tracks smaller or equal to this length will be included with the MCS splits from
+mcs_tb_merge_duration:  12  # [hour] Tb tracks smaller or equal to this length will be included with the MCS merges into
+mcs_tb_gap: 1  # [unitless] Allowable temporal gap in Tb data for MCS area threshold
+# MCS PF parameters
+mcs_pf_majoraxis_thresh:  0  # [km] MCS PF major axis length lower limit
+max_pf_majoraxis_thresh:  100000  # [km] MCS PF major axis length upper limit
+mcs_pf_durationthresh:  4  # [hour] PF minimum length of mcs
+mcs_pf_majoraxis_for_lifetime:  20  # [km] Minimum PF size to count PF lifetime
+mcs_pf_gap:  1  # [unitless] Allowable temporal gap in PF data for MCS characteristics
+
+# Specify rain rate parameters
+pf_rr_thres:  0.5  # [mm/hr] Rain rate threshold
+nmaxpf: 3  # Maximum number of precipitation features that can be within a cloud feature
+nmaxcore: 20  # Maximum number of convective cores that can be within a cloud feature
+pcp_thresh:  0.5  # Pixels with hourly precipitation larger than this will be labeled with track number
+heavy_rainrate_thresh:  5.0  # [mm/hr] Heavy rain rate threshold
+mcs_min_rainvol_thresh: 20000   #  [km^2 mm/h] Min rain volumne threshold
+mcs_volrain_duration_thresh: 1.0   # [hour] Min volume rain threshold
+
+# Define tracked feature variable names
+feature_varname: feature_number
+nfeature_varname: nfeatures
+featuresize_varname: npix_feature
+
+# Track statistics output file dimension names
+tracks_dimname: tracks
+times_dimname: times
+pf_dimname: nmaxpf
+fillval: -9999
+# MCS track stats file base names
+mcstbstats_filebase: mcs_tracks_
+mcspfstats_filebase: mcs_tracks_pf_
+mcsrobust_filebase: mcs_tracks_robust_
+pixeltracking_filebase: mcstrack_
+mcsfinal_filebase: mcs_tracks_final_
+
+# Feature movement speed parameters
+lag_for_speed: 1  # lag intervals between tracked features to calculate movement
+track_number_for_speed: pcptracknumber
+track_field_for_speed: precipitation
+min_size_thresh_for_speed: 20 # [km] Min PF major axis length to calculate movement
+max_speed_thresh: 50  # [m/s]
+max_speed_for_trajectory_smoothing: 40  # [m/s] Max speed for smoothing lat/lon (only for visualization)
+
+# MCSMIP standardized outputs (Zarr)
+# Flags to convert Zarr output
+create_mask_zarr: True
+create_tbpr_zarr: True
+create_full_zarr: False
+overwrite_zarr: True  # Overwrite existing Zarr files
+# Zarr chunk sizes (default: auto)
+chunksize_time: 24  # time
+chunksize_lat: 240  # y
+chunksize_lon: 600  # x
+chunksize_cell: auto  # HEALPix cell
+# Zarr output presets - configure different outputs
+zarr_output_presets:
+  mask:
+    write: False
+    out_filebase: mcs_mask_latlon_
+    # Variables to include in Zarr output
+    var_list:
+      - cloudtracknumber
+      - cloudnumber
+    # Variable renaming mapping for Zarr output
+    var_rename:
+      cloudtracknumber: mcs_mask
+      cloudnumber: ccs_mask
+
+  # Remap back to healpix
+  healpix:
+    out_filebase: scream2D_hrly_mcsmask_
+    zoom: 7  # zoom level to remap
+    version: v1  # version in zarr filename
