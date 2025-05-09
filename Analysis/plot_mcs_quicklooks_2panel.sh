@@ -6,7 +6,14 @@
 # Specify start/end datetime
 start_date='2019-01-20T00'
 end_date='2019-01-23T00'
+# Define domain map extent
+lon_min=90.0
+lon_max=140.0
+lat_min=-10.0
+lat_max=10.0
+# Panel orientation (horizontal:up/down, vertical:left/right)
 orientation='horizontal'
+# Run in parallel
 run_parallel=1
 # Tracking config file
 config_file='/global/homes/f/feng045/program/pyflex_config/config/config_imerg_mcs_tbpf_2019.yml'
@@ -20,10 +27,9 @@ time_format='yyyymodd_hhmm'
 code_name='/global/homes/f/feng045/program/PyFLEXTRKR-dev/Analysis/plot_subset_tbpf_mcs_tracks_demo.py'
 
 # Make quicklook plots
-# --extent specifies subset region: minlon maxlon minlat maxlat (cannot have decimals yet)
 echo 'Making quicklook plots ...'
 python ${code_name} -s ${start_date} -e ${end_date} -c ${config_file} \
-    --extent ${extent} 90 140 -10 10 \
+    --extent ${extent} ${lon_min} ${lon_max} ${lat_min} ${lat_max} \
     --subset 1 \
     --time_format ${time_format} \
     -o ${orientation} \
