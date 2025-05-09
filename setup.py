@@ -1,4 +1,15 @@
 import setuptools
+import os
+import re
+
+# Read version from _version.py
+with open(os.path.join('pyflextrkr', '_version.py'), 'r') as f:
+    version_file = f.read()
+    version_match = re.search(r"^__version__ = ['\"]([^'\"]*)['\"]", version_file, re.M)
+    if version_match:
+        version = version_match.group(1)
+    else:
+        raise RuntimeError("Unable to find version string.")
 
 with open("README.md", "r", encoding="utf-8") as fh:
     long_description = fh.read()
@@ -8,7 +19,7 @@ with open('requirements.txt') as f:
 
 setuptools.setup(
     name="pyflextrkr",
-    version="1.0.0",
+    version=version,
     author="Zhe Feng, Hannah Barnes, Joseph Hardin",
     author_email="zhe.feng@pnnl.gov",
     description="A Python package for atmospheric feature tracking.",
@@ -23,5 +34,11 @@ setuptools.setup(
         "Topic :: Scientific/Engineering :: Atmospheric Science"
     ],
     install_requires=required,
-    python_requires='>=3.6',
+    python_requires='>=3.10',
+    include_package_data=True,
+    project_urls={
+        "Bug Tracker": "https://github.com/FlexTRKR/PyFLEXTRKR/issues",
+        "Documentation": "https://github.com/FlexTRKR/PyFLEXTRKR",
+        "Source Code": "https://github.com/FlexTRKR/PyFLEXTRKR",
+    },
 )
