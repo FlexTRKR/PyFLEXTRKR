@@ -4,6 +4,7 @@ Calculate monthly total, MCS precipitation amount and frequency within a period,
 Usage: python calc_tbpf_mcs_monthly_rainmap_zarr.py -c CONFIG.yml -s STARTDATE -e ENDDATE
 Optional arguments:
 --zoom Z (HEALPix zoom level)
+--parallel (use parallel processing)
 --nworkers N (number of Dask workers)
 --threads T (threads per worker)
 --memory M (memory limit per worker, e.g. '40GB')
@@ -17,11 +18,19 @@ import pandas as pd
 import time
 import psutil
 import argparse
+import cftime
 import intake
 import requests
 import easygems.healpix as egh
 from pyflextrkr.ft_utilities import load_config, convert_cftime_to_standard
 from dask.distributed import Client, LocalCluster, progress
+import logging
+
+def setup_logging():
+    """
+    Set up the logging configuration
+    """
+    logging.basicConfig(format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO)
 
 def parse_cmd_args():
     # Define and retrieve the command-line arguments...
@@ -32,6 +41,7 @@ def parse_cmd_args():
     parser.add_argument("-s", "--start", help="first time to process, format=YYYY-mm-ddTHH", required=True)
     parser.add_argument("-e", "--end", help="last time to process, format=YYYY-mm-ddTHH", required=True)
     parser.add_argument("--zoom", help="HEALPix zoom level", type=int, default=None)
+    parser.add_argument("--parallel", help="use parallel processing", action="store_true")
     parser.add_argument("--nworkers", help="number of Dask workers", type=int, default=12)
     parser.add_argument("--threads", help="threads per worker", type=int, default=10)
     parser.add_argument("--memory", help="memory limit per worker, e.g. '40GB' (default: auto)", default=None)
@@ -45,6 +55,7 @@ def parse_cmd_args():
         'start_datetime': args.start,
         'end_datetime': args.end,
         'zoom': args.zoom,
+        'parallel': args.parallel,
         'n_workers': args.nworkers,
         'threads_per_worker': args.threads,
         'memory_limit': args.memory,
@@ -59,9 +70,36 @@ def process_month_chunked(month_ds, chunk_days=5, pcp_thresh=2.0):
     # Current month's time value for output
     out_time = month_ds.time[0]
     out_time_str = out_time.dt.strftime('%Y-%m').item()
+    _year = out_time.dt.year.item()
+    _month = out_time.dt.month.item()
+    _day = out_time.dt.day.item()
+    # Create standard datetime using pandas
+    std_time = pd.Timestamp(_year, _month, _day, 0, 0, 0)
     
     # Get total times in month
     ntimes = len(month_ds.time)
+    
+    # Detect time interval in hours
+    if ntimes > 1:
+        # Get the first two timestamps
+        time_values = month_ds.time.values
+        
+        # Calculate time interval in hours based on type
+        if isinstance(time_values[0], (cftime._cftime.DatetimeNoLeap, cftime._cftime.Datetime360Day)):
+            # For cftime objects
+            time_interval = (time_values[1] - time_values[0]).total_seconds() / 3600.0
+        else:
+            # For numpy datetime64 objects
+            time_interval = (pd.Timestamp(time_values[1]) - pd.Timestamp(time_values[0])).total_seconds() / 3600.0
+            
+        print(f"  Detected time interval: {time_interval:.1f} hours")
+    else:
+        # Default to 1 hour if only one timestamp
+        time_interval = 1.0
+        print(f"  Using default time interval: {time_interval:.1f} hours")
+    
+    # Calculate steps per day based on time interval
+    steps_per_day = 24.0 / time_interval
     
     # Initialize accumulators for summations
     totprecip_sum = None
@@ -70,10 +108,12 @@ def process_month_chunked(month_ds, chunk_days=5, pcp_thresh=2.0):
     mcspcpct_sum = None
     
     # Process in chunks of days to limit memory usage
-    step = chunk_days * 24  # hours
+    step = int(chunk_days * steps_per_day)  # Convert chunk_days to timesteps
     for start_idx in range(0, ntimes, step):
         end_idx = min(start_idx + step, ntimes)
-        print(f"  Processing days {start_idx//24 + 1}-{end_idx//24} of month {out_time_str}")
+        start_day = int(start_idx / steps_per_day) + 1
+        end_day = int(end_idx / steps_per_day)
+        print(f"  Processing days {start_day}-{end_day} of month {out_time_str}")
         
         # Extract chunk of data and compute immediately to free memory
         chunk_ds = month_ds.isel(time=slice(start_idx, end_idx)).compute()
@@ -82,9 +122,9 @@ def process_month_chunked(month_ds, chunk_days=5, pcp_thresh=2.0):
         mcs_mask = chunk_ds.mcs_mask
         precipitation = chunk_ds.precipitation
         
-        # Compute statistics for this chunk
-        chunk_mcsprecip = precipitation.where(mcs_mask > 0).sum(dim='time')
-        chunk_totprecip = precipitation.sum(dim='time')
+        # Compute statistics for this chunk - multiply by time_interval to get mm
+        chunk_mcsprecip = (precipitation.where(mcs_mask > 0) * time_interval).sum(dim='time')
+        chunk_totprecip = (precipitation * time_interval).sum(dim='time')
         chunk_mcscloudct = (mcs_mask > 0).sum(dim='time')
         chunk_mcspcpct = (precipitation.where(mcs_mask > 0) > pcp_thresh).sum(dim='time')
         
@@ -105,8 +145,9 @@ def process_month_chunked(month_ds, chunk_days=5, pcp_thresh=2.0):
         del chunk_mcsprecip, chunk_totprecip, chunk_mcscloudct, chunk_mcspcpct
     
     return {
-        'time': out_time,
+        'time': std_time,
         'ntimes': ntimes,
+        'time_interval': time_interval,
         'totprecip': totprecip_sum,
         'mcsprecip': mcsprecip_sum,
         'mcscloudct': mcscloudct_sum,
@@ -128,12 +169,151 @@ def format_time(seconds):
     seconds = int(seconds % 60)
     return f"{hours:02d}:{minutes:02d}:{seconds:02d}"
 
+def setup_dask_client(parallel, n_workers, threads_per_worker, memory_limit=None, logger=None):
+    """
+    Set up a Dask client for parallel processing
+    
+    Args:
+        parallel: bool
+            Whether to use parallel processing
+        n_workers: int
+            Number of workers for the Dask cluster
+        threads_per_worker: int
+            Number of threads per worker
+        memory_limit: str, optional
+            Memory limit for each worker (e.g. '40GB'). Use None for auto detection.
+        logger: logging.Logger, optional
+            Logger for status messages
+            
+    Returns:
+        dask.distributed.Client or None: Dask client if parallel is True, None otherwise
+    """
+    if logger is None:
+        logger = logging.getLogger(__name__)
+        
+    if not parallel:
+        logger.info("Running in sequential mode (parallel=False)")
+        return None
+    
+    memory_str = "auto" if memory_limit is None else memory_limit
+    logger.info(f"Setting up Dask cluster with {n_workers} workers, {threads_per_worker} threads per worker, {memory_str} memory")
+    
+    cluster = LocalCluster(
+        n_workers=n_workers,
+        threads_per_worker=threads_per_worker,
+        memory_limit=memory_limit,
+    )
+    client = Client(cluster)
+    logger.info(f"Dask dashboard: {client.dashboard_link}")
+    
+    return client
+
+def write_netcdf(results, ds, output_filename, zoom, pcp_thresh, logger=None):
+    """
+    Write monthly precipitation statistics to a NetCDF file.
+    
+    Args:
+        results: list
+            Results from process_month_chunked function
+        ds: xarray.Dataset
+            Original dataset with coordinates
+        output_filename: str
+            Output NetCDF file path
+        zoom: int
+            HEALPix zoom level
+        pcp_thresh: float
+            Precipitation threshold in mm/h
+        logger: logging.Logger, optional
+            Logger for status messages
+    """
+    if logger is None:
+        logger = logging.getLogger(__name__)
+    
+    logger.info(f'Preparing data for output file: {output_filename}')
+    
+    # Prepare data for output dataset
+    times = [r['time'] for r in results]
+    ntimes_values = [r['ntimes'] for r in results]
+    time_interval = results[0]['time_interval']
+    
+    totprecip_values = [r['totprecip'] for r in results]
+    mcsprecip_values = [r['mcsprecip'] for r in results]
+    mcscloudct_values = [r['mcscloudct'] for r in results]
+    mcspcpct_values = [r['mcspcpct'] for r in results]
+
+    # Create output variables
+    var_dict = {
+        'precipitation': (['time', 'cell'], np.stack([r.values for r in totprecip_values])),
+        'mcs_precipitation': (['time', 'cell'], np.stack([r.values for r in mcsprecip_values])),
+        'mcs_precipitation_count': (['time', 'cell'], np.stack([r.values for r in mcspcpct_values])),
+        'mcs_cloud_count': (['time', 'cell'], np.stack([r.values for r in mcscloudct_values])),
+        'ntimes': (['time'], np.array(ntimes_values)),
+    }
+    # Create coordinates
+    coord_dict = {
+        'time': times,
+        'cell': (['cell'], ds['cell'].values),
+        'lat': (['cell'], ds['lat'].values),
+        'lon': (['cell'], ds['lon'].values),
+    }
+    
+    # Add crs if available
+    if 'crs' in ds:
+        coord_dict['crs'] = ds['crs'].values
+    
+    # Create global attributes
+    gattr_dict = {
+        'Title': 'Monthly MCS precipitation statistics',
+        'contact': 'Zhe Feng, zhe.feng@pnnl.gov',
+        'created_on': time.ctime(time.time()),
+        'grid_type': 'HEALPix',
+        'zoom_level': zoom,
+        'time_interval': time_interval,
+        'precipitation_threshold': pcp_thresh,
+    }
+
+    # Create output dataset
+    dsout = xr.Dataset(var_dict, coords=coord_dict, attrs=gattr_dict)
+
+    # Add variable attributes
+    dsout['cell'].attrs['long_name'] = 'HEALPix cell index'
+    dsout['lon'].attrs['long_name'] = 'Longitude'
+    dsout['lon'].attrs['units'] = 'degree'
+    dsout['lat'].attrs['long_name'] = 'Latitude'
+    dsout['lat'].attrs['units'] = 'degree'
+    dsout['ntimes'].attrs['long_name'] = 'Number of hours during the month'
+    dsout['ntimes'].attrs['units'] = 'count'
+    dsout['precipitation'].attrs['long_name'] = 'Total precipitation'
+    dsout['precipitation'].attrs['units'] = 'mm'
+    dsout['mcs_precipitation'].attrs['long_name'] = 'MCS precipitation'
+    dsout['mcs_precipitation'].attrs['units'] = 'mm'
+    dsout['mcs_precipitation_count'].attrs['long_name'] = 'Number of hours MCS precipitation exceeds threshold'
+    dsout['mcs_precipitation_count'].attrs['units'] = 'hour'
+    dsout['mcs_cloud_count'].attrs['long_name'] = 'Number of hours MCS cloud is recorded'
+    dsout['mcs_cloud_count'].attrs['units'] = 'hour'
+
+    # Save the output file
+    fillvalue = np.nan
+    comp = dict(zlib=True, _FillValue=fillvalue, dtype='float32')
+    encoding = {var: comp for var in dsout.data_vars}
+
+    logger.info(f'Writing output file: {output_filename}')
+    dsout.to_netcdf(path=output_filename, mode='w', format='NETCDF4', 
+                    unlimited_dims='time', encoding=encoding)
+    logger.info(f'Successfully wrote: {output_filename}')
+    
+    return dsout
+
 
 if __name__ == "__main__":
+    # Set up logging
+    setup_logging()
+    logger = logging.getLogger(__name__)
+    
     # Start timing
     start_time = time.time()
     initial_memory = get_memory_usage()
-    print(f"Initial memory usage: {initial_memory:.2f} GB")
+    logger.info(f"Initial memory usage: {initial_memory:.2f} GB")
 
     # Get the command-line arguments
     args_dict = parse_cmd_args()
@@ -141,6 +321,7 @@ if __name__ == "__main__":
     start_datetime = args_dict.get('start_datetime')
     end_datetime = args_dict.get('end_datetime')
     zoom = args_dict.get('zoom')
+    parallel = args_dict.get('parallel')
     n_workers = args_dict.get('n_workers')
     threads_per_worker = args_dict.get('threads_per_worker')
     memory_limit = args_dict.get('memory_limit')
@@ -148,15 +329,8 @@ if __name__ == "__main__":
     pcp_thresh = args_dict.get('pcp_thresh')
 
     # Set up a local Dask cluster for parallel processing
-    cluster = LocalCluster(
-        n_workers=n_workers, 
-        threads_per_worker=threads_per_worker,
-        memory_limit=memory_limit,
-        local_directory='/tmp',
-    )
-    client = Client(cluster)
-    print(client)
-
+    client = setup_dask_client(parallel, n_workers, threads_per_worker, memory_limit, logger)
+    
     # Load configuration file
     config = load_config(config_file)
 
@@ -199,7 +373,6 @@ if __name__ == "__main__":
     # Output directory
     out_dir = f'{stats_outpath}monthly/'
     os.makedirs(out_dir, exist_ok=True)
-    # output_filename = f'{out_dir}monthly_mcs_rainmap.nc'
     output_filename = f'{out_dir}mcs_monthly_rainmap_hp{hp_zoom}_{sdatetime_str}_{edatetime_str}.nc'
 
     # Check catalog file availability
@@ -249,7 +422,7 @@ if __name__ == "__main__":
         ds_p = ds_p
 
     # Rename the variable and apply conversion factor
-    ds_p = ds_p.rename({'pr': 'precipitation'})
+    ds_p = ds_p.rename({pcp_varname: 'precipitation'})
     if pcp_convert_factor != 1:
         ds_p['precipitation'] = ds_p['precipitation'] * pcp_convert_factor
 
@@ -282,85 +455,20 @@ if __name__ == "__main__":
     # Use parallel processing
     delayed_results = []
     for month_start, month_ds in monthly_groups:
-        print(f"Processing month: {pd.Timestamp(month_start).strftime('%Y-%m')}")
+        logger.info(f"Processing month: {pd.Timestamp(month_start).strftime('%Y-%m')}")
         # Submit the processing job to the dask cluster
         delayed_result = client.submit(process_month_chunked, month_ds, chunk_days=chunk_days, pcp_thresh=pcp_thresh)
         delayed_results.append(delayed_result)
     
     # Clear line and show progress tracking
-    print("\nTracking progress of all months processing in parallel:")
+    logger.info("Tracking progress of all months processing in parallel:")
     progress(delayed_results)
     
     # Gather results (will wait for completion)
     results = client.gather(delayed_results)
 
-    # Prepare data for output dataset
-    times = [r['time'] for r in results]
-    ntimes_values = [r['ntimes'] for r in results]
-    totprecip_values = [r['totprecip'] for r in results]
-    mcsprecip_values = [r['mcsprecip'] for r in results]
-    mcscloudct_values = [r['mcscloudct'] for r in results]
-    mcspcpct_values = [r['mcspcpct'] for r in results]
-
-    #-------------------------------------------------------------------------------------------------
-    # Write output file
-    #-------------------------------------------------------------------------------------------------
-    # Create output variables
-    var_dict = {
-        'precipitation': (['time', 'cell'], np.stack([r.values for r in totprecip_values])),
-        'mcs_precipitation': (['time', 'cell'], np.stack([r.values for r in mcsprecip_values])),
-        'mcs_precipitation_count': (['time', 'cell'], np.stack([r.values for r in mcspcpct_values])),
-        'mcs_cloud_count': (['time', 'cell'], np.stack([r.values for r in mcscloudct_values])),
-        'ntimes': (['time'], np.array(ntimes_values)),
-    }
-    # Create coordinates
-    coord_dict = {
-        'time': (['time'], [t.values for t in times]),
-        'cell': (['cell'], ds['cell'].values),
-        'lat': (['cell'], ds['lat'].values),
-        'lon': (['cell'], ds['lon'].values),
-        'crs': ds['crs'].values,
-    }
-    # Create global attributes
-    gattr_dict = {
-        'Title': 'Monthly MCS precipitation statistics',
-        'contact':'Zhe Feng, zhe.feng@pnnl.gov',
-        'start_date': start_datetime,
-        'end_date': end_datetime,
-        'created_on': time.ctime(time.time()),
-        'grid_type': 'HEALPix',
-        'zoom_level': hp_zoom,
-    }
-
-    # Create output dataset
-    dsout = xr.Dataset(var_dict, coords=coord_dict, attrs=gattr_dict)
-
-    # Add variable attributes
-    dsout['cell'].attrs['long_name'] = 'HEALPix cell index'
-    dsout['lon'].attrs['long_name'] = 'Longitude'
-    dsout['lon'].attrs['units'] = 'degree'
-    dsout['lat'].attrs['long_name'] = 'Latitude'
-    dsout['lat'].attrs['units'] = 'degree'
-    dsout['ntimes'].attrs['long_name'] = 'Number of hours during the month'
-    dsout['ntimes'].attrs['units'] = 'count'
-    dsout['precipitation'].attrs['long_name'] = 'Total precipitation'
-    dsout['precipitation'].attrs['units'] = 'mm'
-    dsout['mcs_precipitation'].attrs['long_name'] = 'MCS precipitation'
-    dsout['mcs_precipitation'].attrs['units'] = 'mm'
-    dsout['mcs_precipitation_count'].attrs['long_name'] = 'Number of hours MCS precipitation is recorded'
-    dsout['mcs_precipitation_count'].attrs['units'] = 'hour'
-    dsout['mcs_cloud_count'].attrs['long_name'] = 'Number of hours MCS cloud is recorded'
-    dsout['mcs_cloud_count'].attrs['units'] = 'hour'
-
-    # Save the output file
-    fillvalue = np.nan
-    comp = dict(zlib=True, _FillValue=fillvalue, dtype='float32')
-    encoding = {var: comp for var in dsout.data_vars}
-
-    print(f'Writing output file ...')
-    dsout.to_netcdf(path=output_filename, mode='w', format='NETCDF4', 
-                    unlimited_dims='time', encoding=encoding)
-    print(f'Done: {output_filename}')
+    # Write output to NetCDF file
+    write_netcdf(results, ds, output_filename, hp_zoom, pcp_thresh, logger)
 
     # Calculate and print timing and memory usage
     end_time = time.time()
@@ -368,13 +476,13 @@ if __name__ == "__main__":
     elapsed_time = end_time - start_time
     memory_change = final_memory - initial_memory
     
-    print("\n" + "="*50)
-    print(f"Performance Summary:")
-    print(f"  Total execution time: {format_time(elapsed_time)} (HH:MM:SS)")
-    print(f"  Initial memory usage: {initial_memory:.2f} GB")
-    print(f"  Final memory usage:   {final_memory:.2f} GB")
-    print(f"  Memory change:        {memory_change:.2f} GB")
-    print("="*50)
+    logger.info("\n" + "="*50)
+    logger.info(f"Performance Summary:")
+    logger.info(f"  Total execution time: {format_time(elapsed_time)} (HH:MM:SS)")
+    logger.info(f"  Initial memory usage: {initial_memory:.2f} GB")
+    logger.info(f"  Final memory usage:   {final_memory:.2f} GB")
+    logger.info(f"  Memory change:        {memory_change:.2f} GB")
+    logger.info("="*50)
 
     # Close the dask client
     client.close()
