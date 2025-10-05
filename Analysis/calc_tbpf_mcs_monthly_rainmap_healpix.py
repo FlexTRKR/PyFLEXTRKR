@@ -419,13 +419,11 @@ if __name__ == "__main__":
         ds_p['time'] = standard_times
     else:
         print(f"Dataset already uses standard calendar: {calendar}")
-        ds_p = ds_p
 
     # Rename the variable and apply conversion factor
     ds_p = ds_p.rename({pcp_varname: 'precipitation'})
     if pcp_convert_factor != 1:
         ds_p['precipitation'] = ds_p['precipitation'] * pcp_convert_factor
-
 
     # Check mask directory (Zarr store)
     if not os.path.isdir(mask_file):
