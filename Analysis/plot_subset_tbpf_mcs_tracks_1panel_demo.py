@@ -1,16 +1,21 @@
 """
 Demonstrates ploting MCS tracks on Tb, precipitation snapshots for a subset domain.
 
->python plot_subset_tbpf_mcs_tracks_demo.py -s STARTDATE -e ENDDATE -c CONFIG.yml -o horizontal 
+>python plot_subset_tbpf_mcs_tracks_demo.py -s STARTDATE -e ENDDATE -c CONFIG.yaml 
 Optional arguments:
 -p 0 (serial), 1 (parallel)
---extent lonmin lonmax latmin latmax (subset domain boundary)
---subset 0 (no), 1 (yes) (subset data before plotting)
---figsize width height (figure size in inches)
---output output_directory (output figure directory)
---figbasename figure base name (output figure base name)
---trackstats_file MCS track stats file name (optional, if different from robust MCS track stats file)
---pixel_path Pixel-level tracknumber mask files directory (optional, if different from robust MCS pixel files)
+--workers <num_workers> (number of workers for parallel)
+--extent <lonmin lonmax latmin latmax> (subset domain boundary)
+--subset <0: no, 1: yes> (subset data before plotting)
+--figsize <width> <height> (figure size in inches)
+--figsize_x <width> (figure size width in inches, height auto-calculated to maintain aspect ratio)
+--figname_type <string> (figure naming convention, default: 'date_time', options: 'date_time', 'sequence')
+--output <output_directory> (output figure directory)
+--figbasename <figure_base_name> (output figure base name)
+--title_prefix <string> (Prefix string to add to figure title)
+--trackstats_file <MCS_track_stats_file_name> (optional, if different from robust MCS track stats file)
+--pixel_path <Pixel_level_tracknumber_mask_files_directory> (optional, if different from robust MCS pixel files)
+--time_format <Pixel_level_file_datetime_format> (optional, if different from robust MCS pixel files)
 
 Zhe Feng, PNNL
 contact: Zhe.Feng@pnnl.gov
@@ -26,7 +31,9 @@ import datetime
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
+import matplotlib.patches as mpatches
 import colorcet as cc
+from matplotlib.colors import ListedColormap
 import cartopy.crs as ccrs
 import cartopy.feature as cfeature
 from cartopy.mpl.ticker import LongitudeFormatter, LatitudeFormatter
@@ -49,14 +56,18 @@ def parse_cmd_args():
     parser.add_argument("-e", "--end", help="last time in time series to plot, format=YYYY-mm-ddTHH:MM:SS", required=True)
     parser.add_argument("-c", "--config", help="yaml config file for tracking", required=True)
     parser.add_argument("-p", "--parallel", help="flag to run in parallel (0:serial, 1:parallel)", type=int, default=0)
+    parser.add_argument("--workers", type=int, help="Number of Dask workers for parallel processing", default=4)
     parser.add_argument("--extent", nargs='+', help="map extent (lonmin, lonmax, latmin, latmax)", type=float, default=None)
     parser.add_argument("--subset", help="flag to subset data (0:no, 1:yes)", type=int, default=0)
     parser.add_argument("--figsize", nargs='+', help="figure size (width, height) in inches", type=float, default=None)
     parser.add_argument("--output", help="ouput directory", default=None)
     parser.add_argument("--figbasename", help="output figure base name", default="")
+    parser.add_argument("--figname_type", help="output figure name type", default="date_time")
+    parser.add_argument("--title_prefix", help="Prefix string to add to figure title", default="")
     parser.add_argument("--trackstats_file", help="MCS track stats file name", default=None)
     parser.add_argument("--pixel_path", help="Pixel-level tracknumer mask files directory", default=None)
     parser.add_argument("--time_format", help="Pixel-level file datetime format", default=None)
+    parser.add_argument("--figsize_x", type=float, help="figure size width in inches", default=10)
     args = parser.parse_args()
 
     # Put arguments in a dictionary
@@ -64,15 +75,19 @@ def parse_cmd_args():
         'start_datetime': args.start,
         'end_datetime': args.end,
         'run_parallel': args.parallel,
+        'workers': args.workers,
         'config_file': args.config,
         'extent': args.extent,
         'subset': args.subset,
         'figsize': args.figsize,
         'out_dir': args.output,
         'figbasename': args.figbasename,
+        'figname_type': args.figname_type,
+        'title_prefix': args.title_prefix,
         'trackstats_file': args.trackstats_file,
         'pixeltracking_path': args.pixel_path,
         'time_format': args.time_format,
+        'figsize_x': args.figsize_x,
     }
 
     return args_dict
@@ -88,8 +103,8 @@ def make_dilation_structure(dilate_radius, dx, dy):
         dx: float
             Grid spacing in x-direction [kilometer].
         dy: float
-            Grid spacing in y-direction [kilometer]. 
-    
+            Grid spacing in y-direction [kilometer].
+
     Returns:
         struc: np.array
             Dilation structure array.
@@ -127,8 +142,42 @@ def label_perimeter(tracknumber, dilationstructure):
     return tracknumber_perim
 
 #-----------------------------------------------------------------------
+def concat_cmaps(cmaps_list, ratios, discrete=256, trim_left=0.0, trim_right=0.0):
+    """
+    Concatenate multiple colormaps with optional trimming.
+    
+    Parameters:
+    -----------
+    cmaps_list : list
+        List of colormaps to concatenate
+    ratios : list
+        List of ratios for each colormap (should sum to 1.0)
+    discrete : int
+        Total number of discrete colors in the output
+    trim_left : float
+        Fraction to trim from the left (start) of each colormap (0.0 to 1.0)
+    trim_right : float
+        Fraction to trim from the right (end) of each colormap (0.0 to 1.0)
+    """
+    total_colors = discrete
+    all_colors = []
+    
+    for i, (cmap, ratio) in enumerate(zip(cmaps_list, ratios)):
+        n_colors = int(total_colors * ratio)
+        
+        # Calculate the range to sample from, accounting for trimming
+        start = trim_left
+        end = 1.0 - trim_right
+        
+        # Sample colors from the trimmed range
+        colors = cmap(np.linspace(start, end, n_colors))
+        all_colors.append(colors)
+    
+    return ListedColormap(np.vstack(all_colors))
+
+#-----------------------------------------------------------------------
 def truncate_colormap(cmap, minval=0.0, maxval=1.0, n=256):
-    """ 
+    """
     Truncate colormap.
     """
     new_cmap = mpl.colors.LinearSegmentedColormap.from_list(
@@ -150,7 +199,7 @@ def get_track_stats(trackstats_file, start_datetime, end_datetime, dt_thres):
             End datetime to subset tracks.
         dt_thres: timedelta
             A timedelta threshold to retain tracks.
-            
+
     Returns:
         track_dict: dictionary
             Dictionary containing track stats data.
@@ -168,20 +217,28 @@ def get_track_stats(trackstats_file, start_datetime, end_datetime, dt_thres):
     ntracks = len(idx)
     print(f'Number of tracks within input period: {ntracks}')
 
-    # Subset these tracks and put in a dictionary    
+    # Check if smoothed coordinates exist, otherwise use regular coordinates
+    if 'meanlon_smooth' in dss.variables and 'meanlat_smooth' in dss.variables:
+        track_ccs_lon = dss['meanlon_smooth'].isel(tracks=idx)
+        track_ccs_lat = dss['meanlat_smooth'].isel(tracks=idx)
+    else:
+        track_ccs_lon = dss['meanlon'].isel(tracks=idx)
+        track_ccs_lat = dss['meanlat'].isel(tracks=idx)
+
+    # Subset these tracks and put in a dictionary
     track_dict = {
         'ntracks': ntracks,
         'lifetime': dss['track_duration'].isel(tracks=idx) * time_res,
         'track_bt': dss['base_time'].isel(tracks=idx),
-        'track_ccs_lon': dss['meanlon'].isel(tracks=idx),
-        'track_ccs_lat': dss['meanlat'].isel(tracks=idx),
+        'track_ccs_lon': track_ccs_lon,
+        'track_ccs_lat': track_ccs_lat,
         'track_pf_lon': dss['pf_lon_centroid'].isel(tracks=idx, nmaxpf=0),
         'track_pf_lat': dss['pf_lat_centroid'].isel(tracks=idx, nmaxpf=0),
         'track_pf_diam': 2 * np.sqrt(dss['pf_area'].isel(tracks=idx, nmaxpf=0) / np.pi),
         'dt_thres': dt_thres,
         'time_res': time_res,
     }
-    
+
     return track_dict
 
 #-----------------------------------------------------------------------
@@ -198,12 +255,12 @@ def plot_map_2panels(pixel_dict, plot_info, map_info, track_dict):
             Dictionary containing map boundary info.
         track_dict: dictionary
             Dictionary containing tracking data variables.
-            
+
     Returns:
         fig: object
             Figure handle.
     """
-        
+
     # Get pixel data from dictionary
     lon = pixel_dict['lon']
     lat = pixel_dict['lat']
@@ -228,7 +285,7 @@ def plot_map_2panels(pixel_dict, plot_info, map_info, track_dict):
     cmaps = plot_info['cmaps']
     tb_alpha = plot_info['tb_alpha']
     pcp_alpha = plot_info['pcp_alpha']
-    titles = plot_info['titles'] 
+    titles = plot_info['titles']
     cblabels = plot_info['cblabels']
     cbticks = plot_info['cbticks']
     fontsize = plot_info['fontsize']
@@ -242,7 +299,8 @@ def plot_map_2panels(pixel_dict, plot_info, map_info, track_dict):
     pfdiam_scale = plot_info['pfdiam_scale']
     map_edgecolor = plot_info['map_edgecolor']
     map_resolution = plot_info['map_resolution']
-    timestr = plot_info['timestr']
+    # timestr = plot_info['timestr']
+    suptitle = plot_info['suptitle']
     figname = plot_info['figname']
     figsize = plot_info['figsize']
     dpi = plot_info['dpi']
@@ -252,10 +310,14 @@ def plot_map_2panels(pixel_dict, plot_info, map_info, track_dict):
     latv = map_info.get('latv', None)
     draw_border = map_info.get('draw_border', False)
     draw_state = map_info.get('draw_state', False)
-            
+    draw_river = map_info.get('draw_river', False)
+    river_color = map_info.get('river_color', 'gray')
+    box_lon = map_info.get('box_lon', None)
+    box_lat = map_info.get('box_lat', None)
+
     # Time difference matching pixel-time and track time
     dt_match = 1  # [min]
-    
+
     # Marker style for tracks
     marker_style = dict(edgecolor=trackpath_color, facecolor=trackpath_color, linestyle='-', marker='o')
 
@@ -271,6 +333,7 @@ def plot_map_2panels(pixel_dict, plot_info, map_info, track_dict):
     land = cfeature.NaturalEarthFeature('physical', 'land', map_resolution)
     borders = cfeature.NaturalEarthFeature('cultural', 'admin_0_boundary_lines_land', map_resolution)
     states = cfeature.NaturalEarthFeature('cultural', 'admin_1_states_provinces_lakes', map_resolution)
+    rivers = cfeature.NaturalEarthFeature('physical', 'rivers_lake_centerlines', map_resolution)
 
     # Set up figure
     mpl.rcParams['font.size'] = fontsize
@@ -279,36 +342,56 @@ def plot_map_2panels(pixel_dict, plot_info, map_info, track_dict):
 
     # Set GridSpec for left (plot) and right (colorbars)
     gs = gridspec.GridSpec(1, 2, height_ratios=[1], width_ratios=[1, 0.1])
-    gs.update(wspace=0.05, left=0.05, right=0.95, top=0.92, bottom=0.08)
+    gs.update(wspace=0.05, left=0.05, right=0.95, top=0.9, bottom=0.08)
     # Use GridSpecFromSubplotSpec for panel and colorbar
     gs_cb = gridspec.GridSpecFromSubplotSpec(1, 2, subplot_spec=gs[1], height_ratios=[1], width_ratios=[0.01,0.01], wspace=5)
     ax1 = plt.subplot(gs[0], projection=proj)
     cax1 = plt.subplot(gs_cb[0])
     cax2 = plt.subplot(gs_cb[1])
     # Figure title: time
-    fig.suptitle(timestr, fontsize=fontsize*1.4)
+    fig.suptitle(suptitle, fontsize=fontsize*1.5, fontweight='bold', y=0.99)
+
+    # Create separate rectangle patches for each axis
+    if box_lon is not None and box_lat is not None:
+        rect1 = mpatches.Rectangle(
+            xy=(min(box_lon), min(box_lat)),
+            width=max(box_lon) - min(box_lon),
+            height=max(box_lat) - min(box_lat),
+            linewidth=2,
+            edgecolor='firebrick',
+            transform=data_proj,  # Use data_proj instead of proj for consistency
+            zorder=4,
+            facecolor='none'  # Make it transparent
+        )
+        rect2 = mpatches.Rectangle(
+            xy=(min(box_lon), min(box_lat)),
+            width=max(box_lon) - min(box_lon),
+            height=max(box_lat) - min(box_lat),
+            linewidth=2,
+            edgecolor='firebrick',
+            transform=data_proj,  # Use data_proj instead of proj for consistency
+            zorder=4,
+            facecolor='none'  # Make it transparent
+        )
+    else:
+        rect1 = None
+        rect2 = None
 
     #################################################################
     # Tb Panel
     ax1 = plt.subplot(gs[0,0], projection=proj)
     ax1.set_extent(map_extent, crs=data_proj)
-    ax1.add_feature(land, facecolor='none', edgecolor=map_edgecolor, zorder=4)
+    ax1.add_feature(land, facecolor='none', edgecolor=map_edgecolor, linewidth=2, zorder=3)
     if draw_border == True:
-        ax1.add_feature(borders, edgecolor=map_edgecolor, facecolor='none', linewidth=0.8, zorder=4)
+        ax1.add_feature(borders, edgecolor=map_edgecolor, facecolor='none', linewidth=0.8, zorder=3)
     if draw_state == True:
-        ax1.add_feature(states, edgecolor=map_edgecolor, facecolor='none', linewidth=0.8, zorder=4)
+        ax1.add_feature(states, edgecolor=map_edgecolor, facecolor='none', linewidth=0.8, zorder=3)
+    if draw_river == True:
+        ax1.add_feature(rivers, edgecolor=river_color, facecolor='none', linewidth=0.5, zorder=3)
+    if rect1 is not None:
+        ax1.add_patch(rect1)
     ax1.set_aspect('auto', adjustable=None)
     ax1.set_title(titles['tb_title'], loc='left')
-    gl = ax1.gridlines(crs=data_proj, draw_labels=True, linestyle='--', linewidth=0.5)
-    gl.right_labels = False
-    gl.top_labels = False
-    if (lonv is not None) & (latv is not None):
-        gl.xlocator = mpl.ticker.FixedLocator(lonv)
-        gl.ylocator = mpl.ticker.FixedLocator(latv)
-    lon_formatter = LongitudeFormatter(zero_direction_label=True)
-    lat_formatter = LatitudeFormatter()        
-    ax1.xaxis.set_major_formatter(lon_formatter)
-    ax1.yaxis.set_major_formatter(lat_formatter)
 
     # Tb
     cmap = plt.get_cmap(cmaps['tb_cmap'])
@@ -331,6 +414,21 @@ def plot_map_2panels(pixel_dict, plot_info, map_info, track_dict):
     # Precipitation Colorbar
     cb2 = plt.colorbar(cf2, cax=cax2, label=cblabels['pcp_label'], ticks=cbticks['pcp_ticks'],
                        extend='both', orientation='vertical')
+    # Turn off minor ticks on colorbar
+    cb1.ax.minorticks_off()
+    cb2.ax.minorticks_off()
+    
+    # Add gridlines after plotting data for ax1
+    gl = ax1.gridlines(crs=data_proj, draw_labels=True, linestyle='--', linewidth=0.5, zorder=4)
+    gl.right_labels = False
+    gl.top_labels = False
+    if (lonv is not None) & (latv is not None):
+        gl.xlocator = mpl.ticker.FixedLocator(lonv)
+        gl.ylocator = mpl.ticker.FixedLocator(latv)
+    lon_formatter = LongitudeFormatter(zero_direction_label=True)
+    lat_formatter = LatitudeFormatter()
+    ax1.xaxis.set_major_formatter(lon_formatter)
+    ax1.yaxis.set_major_formatter(lat_formatter)
 
     #################################################################
     # Plot track centroids and paths
@@ -397,11 +495,11 @@ def plot_map_2panels(pixel_dict, plot_info, map_info, track_dict):
     canvas = FigureCanvas(fig)
     canvas.print_png(figname)
     fig.savefig(figname)
-    
+
     return fig
 
 #-----------------------------------------------------------------------
-def work_for_time_loop(datafile, track_dict, map_info, plot_info, config):
+def work_for_time_loop(datafile, track_dict, map_info, plot_info, config, ifile):
     """
     Work with a pixel-level file.
 
@@ -416,15 +514,17 @@ def work_for_time_loop(datafile, track_dict, map_info, plot_info, config):
             Directory name for figures.
         figbasename: string, optional, default=''
             Base name for figures.
-            
+
     Returns:
-        1: success.            
+        1: success.
     """
 
     map_extent = map_info.get('map_extent', None)
     perim_thick = plot_info.get('perim_thick')
     figdir = plot_info.get('figdir')
     figbasename = plot_info.get('figbasename')
+    figname_type = plot_info.get('figname_type')
+    title_prefix = plot_info.get('title_prefix', "")
 
     # Read pixel-level data
     ds = xr.open_dataset(datafile)
@@ -447,7 +547,6 @@ def work_for_time_loop(datafile, track_dict, map_info, plot_info, config):
 
     # Make a dilation structure
     dilationstructure = make_dilation_structure(perim_thick, pixel_radius, pixel_radius)
-    # import pdb; pdb.set_trace()
 
     # Get tracknumbers
     tn = ds['cloudtracknumber'].squeeze()
@@ -461,7 +560,7 @@ def work_for_time_loop(datafile, track_dict, map_info, plot_info, config):
         # Add to plot_info dictionary
         plot_info['levels']['tn_levels'] = tn_levels
 
-        # Subset pixel data within the map domain        
+        # Subset pixel data within the map domain
         if subset == 1:
             lonmin, lonmax = map_extent[0], map_extent[1]
             latmin, latmax = map_extent[2], map_extent[3]
@@ -480,12 +579,18 @@ def work_for_time_loop(datafile, track_dict, map_info, plot_info, config):
             lat_sub = ds['latitude']
         # Get object perimeters
         tn_perim = label_perimeter(tracknumber_sub.data, dilationstructure)
-        
+
         # Plotting variables
         fdatetime = pd.to_datetime(ds['time'].data.item()).strftime('%Y%m%d_%H%M%S')
         timestr = pd.to_datetime(ds['time'].data.item()).strftime('%Y-%m-%d %H:%M:%S UTC')
-        figname = f'{figdir}{figbasename}{fdatetime}.png'
-
+        if title_prefix != "":
+            suptitle = f"{title_prefix} | {timestr}"
+        else:
+            suptitle = f"{timestr}"
+        if figname_type == 'date_time':
+            figname = f'{figdir}{figbasename}{fdatetime}.png'
+        elif figname_type == 'sequence':
+            figname = f'{figdir}{figbasename}{"{:05d}".format(ifile+1)}.png'
         # Put pixel data in a dictionary
         pixel_dict = {
             'lon': lon_sub,
@@ -498,6 +603,7 @@ def work_for_time_loop(datafile, track_dict, map_info, plot_info, config):
         }
         plot_info['timestr'] = timestr
         plot_info['figname'] = figname
+        plot_info['suptitle'] = suptitle
 
         fig = plot_map_2panels(pixel_dict, plot_info, map_info, track_dict)
         plt.close(fig)
@@ -515,15 +621,19 @@ if __name__ == "__main__":
     start_datetime = args_dict.get('start_datetime')
     end_datetime = args_dict.get('end_datetime')
     run_parallel = args_dict.get('run_parallel')
+    n_workers = args_dict.get('workers')
     config_file = args_dict.get('config_file')
     map_extent = args_dict.get('extent')
     subset = args_dict.get('subset')
     figsize = args_dict.get('figsize')
     out_dir = args_dict.get('out_dir')
     figbasename = args_dict.get('figbasename')
+    figname_type = args_dict.get('figname_type')
+    title_prefix = args_dict.get('title_prefix')
     trackstats_file = args_dict.get('trackstats_file')
     pixeltracking_path = args_dict.get('pixeltracking_path')
     time_format = args_dict.get('time_format')
+    figsize_x = args_dict.get('figsize_x', 10)
 
     if time_format is None: time_format = "yyyymodd_hhmmss"
 
@@ -536,7 +646,7 @@ if __name__ == "__main__":
             lat_span = map_extent[3] - map_extent[2]
             fig_ratio_yx = lat_span / lon_span
 
-            figsize_x = 12
+            # figsize_x = 12
             figsize_y = figsize_x * fig_ratio_yx
             figsize_y = float("{:.2f}".format(figsize_y))  # round to 2 decimal digits
             figsize = [figsize_x, figsize_y]
@@ -586,11 +696,16 @@ if __name__ == "__main__":
         'map_central_lon': 180,
         'figsize': figsize,
         'figbasename': figbasename,
+        'figname_type': figname_type,
+        'title_prefix': title_prefix,
     }
 
     # Customize lat/lon labels
     lonv = None
     latv = None
+    # Box corner lat/lon (list: [min, max])
+    box_lon = None
+    box_lat = None
     # Put map info in a dictionary
     map_info = {
         'map_extent': map_extent,
@@ -599,6 +714,9 @@ if __name__ == "__main__":
         'latv': latv,
         'draw_border': False,
         'draw_state': False,
+        'draw_river': False,
+        'box_lon': box_lon,
+        'box_lat': box_lat,
     }
 
     # Create a timedelta threshold
@@ -617,7 +735,8 @@ if __name__ == "__main__":
     if pixeltracking_path is None:
         pixeltracking_path = config["pixeltracking_outpath"]
     pixeltracking_filebase = config["pixeltracking_filebase"]
-    n_workers = config["nprocesses"]
+    if n_workers is None:
+        n_workers = config["nprocesses"]
     pixel_radius = config["pixel_radius"]
 
     # Output figure directory
@@ -633,7 +752,7 @@ if __name__ == "__main__":
     # These are for searching pixel-level files
     start_basetime = pd.to_datetime(start_datetime).timestamp()
     end_basetime = pd.to_datetime(end_datetime).timestamp()
-    # Subtract start_datetime by TimeDelta to include tracks 
+    # Subtract start_datetime by TimeDelta to include tracks
     # that start before the start_datetime but may not have ended yet
     TimeDelta = pd.Timedelta(days=4)
     start_datetime_4stats = (pd.to_datetime(start_datetime) - TimeDelta).strftime('%Y-%m-%dT%H')
@@ -659,7 +778,7 @@ if __name__ == "__main__":
         for ifile in range(len(datafiles)):
             print(datafiles[ifile])
             result = work_for_time_loop(
-                datafiles[ifile], track_dict, map_info, plot_info, config,
+                datafiles[ifile], track_dict, map_info, plot_info, config, ifile,
             )
 
     # Parallel option
@@ -674,7 +793,7 @@ if __name__ == "__main__":
         for ifile in range(len(datafiles)):
             print(datafiles[ifile])
             result = dask.delayed(work_for_time_loop)(
-                datafiles[ifile], track_dict, map_info, plot_info, config,
+                datafiles[ifile], track_dict, map_info, plot_info, config, ifile,
             )
             results.append(result)
 

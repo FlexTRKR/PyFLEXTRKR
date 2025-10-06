@@ -120,14 +120,10 @@ def idclouds_tbpf(
         # Note this would change the calendar type of the original time coordinate
         time_coord = input_data[time_coordname]
         time_pd = pd.to_datetime(time_coord.dt.strftime("%Y-%m-%dT%H:%M:%S").item())
+        # Drop lat/lon coordinates from input_data to avoid conflicts during isel
+        input_data_dropped = input_data.drop_vars([y_coordname, x_coordname], errors='ignore')
         # Remap DataSet to lat/lon grid, expand time dimension so it has dimensions [time, y, x]
-        rawdata = input_data.isel(cell=pix).expand_dims({time_dimname:[time_pd]})
-
-        # # Remap variables, expand time dimension so the variable has dimensions [time, y, x]
-        # olr = input_data[olr_varname].isel(cell=pix).expand_dims({time_dimname:[time_pd]})
-        # pcp = input_data[pcp_varname].isel(cell=pix).expand_dims({time_dimname:[time_pd]})
-        # # Combine DataArrays into a single Dataset
-        # rawdata = xr.Dataset({olr_varname: olr, pcp_varname: pcp})
+        rawdata = input_data_dropped.isel(cell=pix).expand_dims({time_dimname:[time_pd]})
 
     # NetCDF format
     elif input_format.lower() == "netcdf":

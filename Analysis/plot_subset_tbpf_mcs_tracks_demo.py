@@ -1,17 +1,21 @@
 """
 Demonstrates ploting MCS tracks on Tb, precipitation snapshots for a subset domain.
 
->python plot_subset_tbpf_mcs_tracks_demo.py -s STARTDATE -e ENDDATE -c CONFIG.yml -o horizontal
+>python plot_subset_tbpf_mcs_tracks_demo.py -s STARTDATE -e ENDDATE -c CONFIG.yaml -o horizontal
 Optional arguments:
 -p 0 (serial), 1 (parallel)
---extent lonmin lonmax latmin latmax (subset domain boundary)
---subset 0 (no), 1 (yes) (subset data before plotting)
---figsize width height (figure size in inches)
---output output_directory (output figure directory)
---figbasename figure base name (output figure base name)
---figname_type figure name type (default: 'date_time', 'sequence': image00000.png)
---trackstats_file MCS track stats file name (optional, if different from robust MCS track stats file)
---pixel_path Pixel-level tracknumber mask files directory (optional, if different from robust MCS pixel files)
+--workers <num_workers> (number of workers for parallel)
+--extent <lonmin lonmax latmin latmax> (subset domain boundary)
+--subset <0: no, 1: yes> (subset data before plotting)
+--figsize <width> <height> (figure size in inches)
+--figsize_x <width> (figure size width in inches, height auto-calculated to maintain aspect ratio)
+--figname_type <string> (figure naming convention, default: 'date_time', options: 'date_time', 'sequence')
+--output <output_directory> (output figure directory)
+--figbasename <figure_base_name> (output figure base name)
+--title_prefix <string> (Prefix string to add to figure title)
+--trackstats_file <MCS_track_stats_file_name> (optional, if different from robust MCS track stats file)
+--pixel_path <Pixel_level_tracknumber_mask_files_directory> (optional, if different from robust MCS pixel files)
+--time_format <Pixel_level_file_datetime_format> (optional, if different from robust MCS pixel files)
 
 Zhe Feng, PNNL
 contact: Zhe.Feng@pnnl.gov
@@ -27,7 +31,9 @@ import datetime
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
-import colorcet as cc
+import matplotlib.patches as mpatches
+import colormaps
+from matplotlib.colors import ListedColormap
 import cartopy.crs as ccrs
 import cartopy.feature as cfeature
 from cartopy.mpl.ticker import LongitudeFormatter, LatitudeFormatter
@@ -51,15 +57,18 @@ def parse_cmd_args():
     parser.add_argument("-c", "--config", help="yaml config file for tracking", required=True)
     parser.add_argument("-o", "--orientation", help="panel orientation ('vertical' or 'horizontal')", required=True)
     parser.add_argument("-p", "--parallel", help="flag to run in parallel (0:serial, 1:parallel)", type=int, default=0)
+    parser.add_argument("--workers", type=int, help="Number of Dask workers for parallel processing", default=4)
     parser.add_argument("--extent", nargs='+', help="map extent (lonmin, lonmax, latmin, latmax)", type=float, default=None)
     parser.add_argument("--subset", help="flag to subset data (0:no, 1:yes)", type=int, default=0)
     parser.add_argument("--figsize", nargs='+', help="figure size (width, height) in inches", type=float, default=None)
     parser.add_argument("--output", help="ouput directory", default=None)
     parser.add_argument("--figbasename", help="output figure base name", default="")
     parser.add_argument("--figname_type", help="output figure name type", default="date_time")
+    parser.add_argument("--title_prefix", help="Prefix string to add to figure title", default="")
     parser.add_argument("--trackstats_file", help="MCS track stats file name", default=None)
     parser.add_argument("--pixel_path", help="Pixel-level tracknumer mask files directory", default=None)
     parser.add_argument("--time_format", help="Pixel-level file datetime format", default=None)
+    parser.add_argument("--figsize_x", type=float, help="figure size width in inches", default=10)
     args = parser.parse_args()
 
     # Put arguments in a dictionary
@@ -67,6 +76,7 @@ def parse_cmd_args():
         'start_datetime': args.start,
         'end_datetime': args.end,
         'run_parallel': args.parallel,
+        'workers': args.workers,
         'config_file': args.config,
         'panel_orientation': args.orientation,
         'extent': args.extent,
@@ -75,9 +85,11 @@ def parse_cmd_args():
         'out_dir': args.output,
         'figbasename': args.figbasename,
         'figname_type': args.figname_type,
+        'title_prefix': args.title_prefix,
         'trackstats_file': args.trackstats_file,
         'pixeltracking_path': args.pixel_path,
         'time_format': args.time_format,
+        'figsize_x': args.figsize_x,
     }
 
     return args_dict
@@ -132,6 +144,40 @@ def label_perimeter(tracknumber, dilationstructure):
     return tracknumber_perim
 
 #-----------------------------------------------------------------------
+def concat_cmaps(cmaps_list, ratios, discrete=256, trim_left=0.0, trim_right=0.0):
+    """
+    Concatenate multiple colormaps with optional trimming.
+    
+    Parameters:
+    -----------
+    cmaps_list : list
+        List of colormaps to concatenate
+    ratios : list
+        List of ratios for each colormap (should sum to 1.0)
+    discrete : int
+        Total number of discrete colors in the output
+    trim_left : float
+        Fraction to trim from the left (start) of each colormap (0.0 to 1.0)
+    trim_right : float
+        Fraction to trim from the right (end) of each colormap (0.0 to 1.0)
+    """
+    total_colors = discrete
+    all_colors = []
+    
+    for i, (cmap, ratio) in enumerate(zip(cmaps_list, ratios)):
+        n_colors = int(total_colors * ratio)
+        
+        # Calculate the range to sample from, accounting for trimming
+        start = trim_left
+        end = 1.0 - trim_right
+        
+        # Sample colors from the trimmed range
+        colors = cmap(np.linspace(start, end, n_colors))
+        all_colors.append(colors)
+    
+    return ListedColormap(np.vstack(all_colors))
+
+#-----------------------------------------------------------------------
 def truncate_colormap(cmap, minval=0.0, maxval=1.0, n=256):
     """
     Truncate colormap.
@@ -173,13 +219,21 @@ def get_track_stats(trackstats_file, start_datetime, end_datetime, dt_thres):
     ntracks = len(idx)
     print(f'Number of tracks within input period: {ntracks}')
 
+    # Check if smoothed coordinates exist, otherwise use regular coordinates
+    if 'meanlon_smooth' in dss.variables and 'meanlat_smooth' in dss.variables:
+        track_ccs_lon = dss['meanlon_smooth'].isel(tracks=idx)
+        track_ccs_lat = dss['meanlat_smooth'].isel(tracks=idx)
+    else:
+        track_ccs_lon = dss['meanlon'].isel(tracks=idx)
+        track_ccs_lat = dss['meanlat'].isel(tracks=idx)
+
     # Subset these tracks and put in a dictionary
     track_dict = {
         'ntracks': ntracks,
         'lifetime': dss['track_duration'].isel(tracks=idx) * time_res,
         'track_bt': dss['base_time'].isel(tracks=idx),
-        'track_ccs_lon': dss['meanlon'].isel(tracks=idx),
-        'track_ccs_lat': dss['meanlat'].isel(tracks=idx),
+        'track_ccs_lon': track_ccs_lon,
+        'track_ccs_lat': track_ccs_lat,
         'track_pf_lon': dss['pf_lon_centroid'].isel(tracks=idx, nmaxpf=0),
         'track_pf_lat': dss['pf_lat_centroid'].isel(tracks=idx, nmaxpf=0),
         'track_pf_diam': 2 * np.sqrt(dss['pf_area'].isel(tracks=idx, nmaxpf=0) / np.pi),
@@ -245,7 +299,8 @@ def plot_map_2panels(pixel_dict, plot_info, map_info, track_dict):
     pfdiam_scale = plot_info['pfdiam_scale']
     map_edgecolor = plot_info['map_edgecolor']
     map_resolution = plot_info['map_resolution']
-    timestr = plot_info['timestr']
+    # timestr = plot_info['timestr']
+    suptitle = plot_info['suptitle']
     figname = plot_info['figname']
     figsize = plot_info['figsize']
     dpi = plot_info['dpi']
@@ -256,6 +311,10 @@ def plot_map_2panels(pixel_dict, plot_info, map_info, track_dict):
     latv = map_info.get('latv', None)
     draw_border = map_info.get('draw_border', False)
     draw_state = map_info.get('draw_state', False)
+    draw_river = map_info.get('draw_river', False)
+    river_color = map_info.get('river_color', 'gray')
+    box_lon = map_info.get('box_lon', None)
+    box_lat = map_info.get('box_lat', None)
 
     # Time difference matching pixel-time and track time
     dt_match = 1  # [min]
@@ -275,6 +334,7 @@ def plot_map_2panels(pixel_dict, plot_info, map_info, track_dict):
     land = cfeature.NaturalEarthFeature('physical', 'land', map_resolution)
     borders = cfeature.NaturalEarthFeature('cultural', 'admin_0_boundary_lines_land', map_resolution)
     states = cfeature.NaturalEarthFeature('cultural', 'admin_1_states_provinces_lakes', map_resolution)
+    rivers = cfeature.NaturalEarthFeature('physical', 'rivers_lake_centerlines', map_resolution)
 
     # Set up figure
     mpl.rcParams['font.size'] = fontsize
@@ -295,29 +355,49 @@ def plot_map_2panels(pixel_dict, plot_info, map_info, track_dict):
         cax1 = plt.subplot(gs[0,1])
         cb_orientation = 'vertical'
     # Figure title: time
-    fig.suptitle(timestr, fontsize=fontsize*1.4)
+    fig.suptitle(suptitle, fontsize=fontsize*1.5, fontweight='bold', y=0.99)
+
+    # Create separate rectangle patches for each axis
+    if box_lon is not None and box_lat is not None:
+        rect1 = mpatches.Rectangle(
+            xy=(min(box_lon), min(box_lat)),
+            width=max(box_lon) - min(box_lon),
+            height=max(box_lat) - min(box_lat),
+            linewidth=2,
+            edgecolor='firebrick',
+            transform=data_proj,  # Use data_proj instead of proj for consistency
+            zorder=4,
+            facecolor='none'  # Make it transparent
+        )
+        rect2 = mpatches.Rectangle(
+            xy=(min(box_lon), min(box_lat)),
+            width=max(box_lon) - min(box_lon),
+            height=max(box_lat) - min(box_lat),
+            linewidth=2,
+            edgecolor='firebrick',
+            transform=data_proj,  # Use data_proj instead of proj for consistency
+            zorder=4,
+            facecolor='none'  # Make it transparent
+        )
+    else:
+        rect1 = None
+        rect2 = None
 
     #################################################################
     # Tb Panel
     ax1 = plt.subplot(gs[0,0], projection=proj)
     ax1.set_extent(map_extent, crs=data_proj)
-    ax1.add_feature(land, facecolor='none', edgecolor=map_edgecolor, zorder=3)
+    ax1.add_feature(land, facecolor='none', edgecolor=map_edgecolor, linewidth=2, zorder=3)
     if draw_border == True:
         ax1.add_feature(borders, edgecolor=map_edgecolor, facecolor='none', linewidth=0.8, zorder=3)
     if draw_state == True:
         ax1.add_feature(states, edgecolor=map_edgecolor, facecolor='none', linewidth=0.8, zorder=3)
+    if draw_river == True:
+        ax1.add_feature(rivers, edgecolor=river_color, facecolor='none', linewidth=0.5, zorder=3)
+    if rect1 is not None:
+        ax1.add_patch(rect1)
     ax1.set_aspect('auto', adjustable=None)
     ax1.set_title(titles['tb_title'], loc='left')
-    gl = ax1.gridlines(crs=data_proj, draw_labels=True, linestyle='--', linewidth=0.5)
-    gl.right_labels = False
-    gl.top_labels = False
-    if (lonv is not None) & (latv is not None):
-        gl.xlocator = mpl.ticker.FixedLocator(lonv)
-        gl.ylocator = mpl.ticker.FixedLocator(latv)
-    lon_formatter = LongitudeFormatter(zero_direction_label=True)
-    lat_formatter = LatitudeFormatter()
-    ax1.xaxis.set_major_formatter(lon_formatter)
-    ax1.yaxis.set_major_formatter(lat_formatter)
 
     cmap = plt.get_cmap(cmaps['tb_cmap'])
     norm = mpl.colors.BoundaryNorm(levels['tb_levels'], ncolors=cmap.N, clip=True)
@@ -335,18 +415,11 @@ def plot_map_2panels(pixel_dict, plot_info, map_info, track_dict):
     # Tb Colorbar
     cb1 = plt.colorbar(cf1, cax=cax1, label=cblabels['tb_label'], ticks=cbticks['tb_ticks'],
                        extend='both', orientation=cb_orientation)
+    # Turn off minor ticks on colorbar
+    cb1.ax.minorticks_off()
 
-    #################################################################
-    # Precipitation Panel
-    ax2.set_extent(map_extent, crs=data_proj)
-    ax2.add_feature(land, facecolor='none', edgecolor=map_edgecolor, zorder=3)
-    if draw_border == True:
-        ax2.add_feature(borders, edgecolor=map_edgecolor, facecolor='none', linewidth=0.8, zorder=3)
-    if draw_state == True:
-        ax2.add_feature(states, edgecolor=map_edgecolor, facecolor='none', linewidth=0.8, zorder=3)
-    ax2.set_aspect('auto', adjustable=None)
-    ax2.set_title(titles['pcp_title'], loc='left')
-    gl = ax2.gridlines(crs=data_proj, draw_labels=True, linestyle='--', linewidth=0.5)
+    # Add gridlines after plotting data for ax1
+    gl = ax1.gridlines(crs=data_proj, draw_labels=True, linestyle='--', linewidth=0.5, zorder=4)
     gl.right_labels = False
     gl.top_labels = False
     if (lonv is not None) & (latv is not None):
@@ -354,8 +427,23 @@ def plot_map_2panels(pixel_dict, plot_info, map_info, track_dict):
         gl.ylocator = mpl.ticker.FixedLocator(latv)
     lon_formatter = LongitudeFormatter(zero_direction_label=True)
     lat_formatter = LatitudeFormatter()
-    ax2.xaxis.set_major_formatter(lon_formatter)
-    ax2.yaxis.set_major_formatter(lat_formatter)
+    ax1.xaxis.set_major_formatter(lon_formatter)
+    ax1.yaxis.set_major_formatter(lat_formatter)
+
+    #################################################################
+    # Precipitation Panel
+    ax2.set_extent(map_extent, crs=data_proj)
+    ax2.add_feature(land, facecolor='none', edgecolor=map_edgecolor, linewidth=2, zorder=3)
+    if draw_border == True:
+        ax2.add_feature(borders, edgecolor=map_edgecolor, facecolor='none', linewidth=0.8, zorder=3)
+    if draw_state == True:
+        ax2.add_feature(states, edgecolor=map_edgecolor, facecolor='none', linewidth=0.8, zorder=3)
+    if draw_river == True:
+        ax2.add_feature(rivers, edgecolor=river_color, facecolor='none', linewidth=0.5, zorder=3)
+    if rect2 is not None:
+        ax2.add_patch(rect2)
+    ax2.set_aspect('auto', adjustable=None)
+    ax2.set_title(titles['pcp_title'], loc='left')
 
     # MCS track number mask
     cmap = plt.get_cmap(cmaps['tn_cmap'])
@@ -377,6 +465,20 @@ def plot_map_2panels(pixel_dict, plot_info, map_info, track_dict):
     cax2 = plt.subplot(gs[1,1])
     cb2 = plt.colorbar(cf2, cax=cax2, label=cblabels['pcp_label'], ticks=cbticks['pcp_ticks'],
                        extend='both', orientation=cb_orientation)
+    # Turn off minor ticks on colorbar
+    cb2.ax.minorticks_off()
+
+    # Add gridlines after plotting data for ax2
+    gl = ax2.gridlines(crs=data_proj, draw_labels=True, linestyle='--', linewidth=0.5, zorder=3)
+    gl.right_labels = False
+    gl.top_labels = False
+    if (lonv is not None) & (latv is not None):
+        gl.xlocator = mpl.ticker.FixedLocator(lonv)
+        gl.ylocator = mpl.ticker.FixedLocator(latv)
+    lon_formatter = LongitudeFormatter(zero_direction_label=True)
+    lat_formatter = LatitudeFormatter()
+    ax2.xaxis.set_major_formatter(lon_formatter)
+    ax2.yaxis.set_major_formatter(lat_formatter)
 
     #################################################################
     # Plot track centroids and paths
@@ -483,6 +585,7 @@ def work_for_time_loop(datafile, track_dict, map_info, plot_info, config, ifile)
     figdir = plot_info.get('figdir')
     figbasename = plot_info.get('figbasename')
     figname_type = plot_info.get('figname_type')
+    title_prefix = plot_info.get('title_prefix', "")
 
     # Read pixel-level data
     ds = xr.open_dataset(datafile)
@@ -505,7 +608,6 @@ def work_for_time_loop(datafile, track_dict, map_info, plot_info, config, ifile)
 
     # Make a dilation structure
     dilationstructure = make_dilation_structure(perim_thick, pixel_radius, pixel_radius)
-    # import pdb; pdb.set_trace()
 
     # Get tracknumbers
     tn = ds['cloudtracknumber'].squeeze()
@@ -542,6 +644,10 @@ def work_for_time_loop(datafile, track_dict, map_info, plot_info, config, ifile)
         # Plotting variables
         fdatetime = pd.to_datetime(ds['time'].data.item()).strftime('%Y%m%d_%H%M%S')
         timestr = pd.to_datetime(ds['time'].data.item()).strftime('%Y-%m-%d %H:%M:%S UTC')
+        if title_prefix != "":
+            suptitle = f"{title_prefix} | {timestr}"
+        else:
+            suptitle = f"{timestr}"
         if figname_type == 'date_time':
             figname = f'{figdir}{figbasename}{fdatetime}.png'
         elif figname_type == 'sequence':
@@ -558,6 +664,7 @@ def work_for_time_loop(datafile, track_dict, map_info, plot_info, config, ifile)
         }
         plot_info['timestr'] = timestr
         plot_info['figname'] = figname
+        plot_info['suptitle'] = suptitle
 
         fig = plot_map_2panels(pixel_dict, plot_info, map_info, track_dict)
         plt.close(fig)
@@ -575,6 +682,7 @@ if __name__ == "__main__":
     start_datetime = args_dict.get('start_datetime')
     end_datetime = args_dict.get('end_datetime')
     run_parallel = args_dict.get('run_parallel')
+    n_workers = args_dict.get('workers')
     config_file = args_dict.get('config_file')
     panel_orientation = args_dict.get('panel_orientation')
     map_extent = args_dict.get('extent')
@@ -583,9 +691,11 @@ if __name__ == "__main__":
     out_dir = args_dict.get('out_dir')
     figbasename = args_dict.get('figbasename')
     figname_type = args_dict.get('figname_type')
+    title_prefix = args_dict.get('title_prefix')
     trackstats_file = args_dict.get('trackstats_file')
     pixeltracking_path = args_dict.get('pixeltracking_path')
     time_format = args_dict.get('time_format')
+    figsize_x = args_dict.get('figsize_x', 10)
 
     if time_format is None: time_format = "yyyymodd_hhmmss"
 
@@ -598,28 +708,37 @@ if __name__ == "__main__":
             lat_span = map_extent[3] - map_extent[2]
             fig_ratio_yx = lat_span / lon_span
 
-            figsize_x = 8
+            # figsize_x = 10
             figsize_y = figsize_x * fig_ratio_yx * 2.1
             figsize_y = float("{:.2f}".format(figsize_y))  # round to 2 decimal digits
             figsize = [figsize_x, figsize_y]
         else:
             figsize = [10, 10]
+    print(f'Figure size (width, height) in inches: {figsize}')
 
     # Specify plotting info
     # Precipitation color levels
     pcp_levels = [2, 3, 4, 5, 6, 8, 10, 15, 20]
     pcp_ticks = pcp_levels
     # Tb color levels
-    tb_levels = np.arange(200, 320.1, 5)
-    tb_ticks = np.arange(200, 320.1, 10)
+    # tb_levels = np.arange(200, 320.1, 5)
+    # tb_ticks = np.arange(200, 320.1, 10)
+    tb_levels = np.arange(180, 315.1, 1)
+    tb_ticks = np.arange(180, 310.1, 10)
     levels = {'tb_levels': tb_levels, 'pcp_levels': pcp_levels}
     # Colorbar ticks & labels
     cbticks = {'tb_ticks': tb_ticks, 'pcp_ticks': pcp_ticks}
     cblabels = {'tb_label': 'Tb (K)', 'pcp_label': 'Precipitation (mm h$^{-1}$)'}
     # Colormap
-    tb_cmap = truncate_colormap(plt.get_cmap('turbo'), minval=0.05, maxval=0.95)#'jet'
+    # Create a customed Tb colormap by combining two colormaps
+    c1 = colormaps.GMT_wysiwygcont.reversed()
+    c2 = colormaps.gray.reversed()
+    # tb_cmap = concat_cmaps([c1, c2], [0.45, 0.55], discrete=135, trim_left=0.1, trim_right=0.1)
+    tb_cmap = concat_cmaps([c1, c2], [0.45, 0.55], trim_left=0.1, trim_right=0.1)
+    # tb_cmap = truncate_colormap(plt.get_cmap('turbo'), minval=0.05, maxval=0.95)
     pcp_cmap = truncate_colormap(plt.get_cmap('viridis'), minval=0.2, maxval=1.0)
-    tn_cmap = cc.cm["glasbey_light"]
+    tn_cmap = colormaps.cet_g_bw_minc_minl
+    # tn_cmap = cc.cm["glasbey_light"]
     # tn_cmap = cc.cm["glasbey"]
     cmaps = {'tb_cmap': tb_cmap, 'pcp_cmap': pcp_cmap, 'tn_cmap': tn_cmap}
     titles = {'tb_title': '(a) IR Brightness Temperature', 'pcp_title': '(b) Precipitation (Tracked MCSs Shaded)'}
@@ -647,11 +766,15 @@ if __name__ == "__main__":
         'figbasename': figbasename,
         'figname_type': figname_type,
         'panel_orientation': panel_orientation,
+        'title_prefix': title_prefix,
     }
 
     # Customize lat/lon labels
     lonv = None
     latv = None
+    # Box corner lat/lon (list: [min, max])
+    box_lon = None
+    box_lat = None
     # Put map info in a dictionary
     map_info = {
         'map_extent': map_extent,
@@ -661,6 +784,9 @@ if __name__ == "__main__":
         'panel_orientation': panel_orientation,
         'draw_border': False,
         'draw_state': False,
+        'draw_river': False,
+        'box_lon': box_lon,
+        'box_lat': box_lat,
     }
 
     # Create a timedelta threshold
@@ -679,7 +805,8 @@ if __name__ == "__main__":
     if pixeltracking_path is None:
         pixeltracking_path = config["pixeltracking_outpath"]
     pixeltracking_filebase = config["pixeltracking_filebase"]
-    n_workers = config["nprocesses"]
+    if n_workers is None:
+        n_workers = config["nprocesses"]
     pixel_radius = config["pixel_radius"]
 
     # Output figure directory

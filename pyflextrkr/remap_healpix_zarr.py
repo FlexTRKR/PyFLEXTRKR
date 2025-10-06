@@ -246,7 +246,7 @@ def remap_to_healpix_zarr(config):
         in_catalog = in_catalog[catalog_location]
     
     # Get the DataSet from the catalog
-    ds_hp = in_catalog[catalog_source](**catalog_params).to_dask()    
+    ds_hp = in_catalog[catalog_source](**catalog_params).to_dask()
     # Add lat/lon coordinates to the HEALPix DataSet
     ds_hp = ds_hp.pipe(partial(egh.attach_coords, signed_lon=signed_lon))
     
@@ -271,9 +271,10 @@ def remap_to_healpix_zarr(config):
     
     # Drop lat/lon coordinates (not needed in HEALPix)
     dsout_hp = dsout_hp.drop_vars(["lat_hp", "lon_hp", "lat", "lon"])
-    # Update globle attributes
+    # Update global attributes
     dsout_hp.attrs['Title'] = f"HEALPix remapped tracking mask data (zoom={hp_zoom})"
     dsout_hp.attrs['zoom'] = hp_zoom
+    dsout_hp.attrs["Created_on"] = time.ctime(time.time())
     
     # Optimize cell chunking for HEALPix grid
     chunksize_cell = optimize_healpix_chunks(ds_hp, chunksize_cell, logger)
