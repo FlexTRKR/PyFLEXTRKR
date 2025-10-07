@@ -56,7 +56,7 @@ def remap_to_healpix_zarr(config):
     
     # ---------- HEALPIX CONFIGURATION ----------
     catalog_file = config.get("catalog_file")
-    catalog_location = config.get("catalog_location", "")
+    catalog_location = config.get("catalog_location", None)
     catalog_source = config.get("catalog_source", "")
     catalog_params = config.get("catalog_params", {})
     catalog_zoom = catalog_params.get("zoom")
@@ -242,7 +242,7 @@ def remap_to_healpix_zarr(config):
     # Load the HEALPix catalog
     logger.info(f"Loading HEALPix catalog: {catalog_file}")
     in_catalog = intake.open_catalog(catalog_file)
-    if catalog_location:
+    if catalog_location is not None:
         in_catalog = in_catalog[catalog_location]
     
     # Get the DataSet from the catalog
