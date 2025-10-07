@@ -5,18 +5,18 @@
 # Processing steps:
 run_idfeature : True         # parallel
 run_tracksingle : True       # parallel
-run_gettracks : False         # serial
-run_trackstats : False        # parallel
-run_identifymcs : False       # serial
-run_matchpf : False           # parallel
-run_robustmcs : False         # serial
-run_mapfeature : False        # parallel
-run_speed : False             # parallel
-run_remap_healpix: False       # parallel
+run_gettracks : True         # serial
+run_trackstats : True        # parallel
+run_identifymcs : True       # serial
+run_matchpf : True           # parallel
+run_robustmcs : True         # serial
+run_mapfeature : True        # parallel
+run_speed : True             # parallel
+run_remap_healpix: True       # parallel
 
 # Parallel processing set up
 # run_parallel: 1 (local cluster), 2 (Dask MPI)
-run_parallel: 2
+run_parallel: 1
 nprocesses : 128  # Number of processors to use if run_parallel=1
 dask_tmp_dir: /tmp  # Dask temporary directory if run_parallel=1
 timeout: 3600  # [seconds] Dask timeout limit
@@ -199,6 +199,6 @@ zarr_output_presets:
     
   # Remap back to healpix
   healpix:
-    out_filebase: scream2D_hrly_mcsmask_
-    zoom: 6  # zoom level to remap
+    out_filebase: nicam_hrly_mcsmask_
+    zoom: 8  # zoom level to remap
     version: v1  # version in zarr filename

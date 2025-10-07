@@ -58,7 +58,6 @@ def idfeature_driver(config):
         end_date = config["enddate"]
 
         # Load the catalog
-        # in_catalog = intake.open_catalog(catalog_file)[catalog_location]
         logger.info(f"Loading HEALPix catalog: {catalog_file}")
         in_catalog = intake.open_catalog(catalog_file)
         if catalog_location is not None:

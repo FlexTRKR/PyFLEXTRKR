@@ -16,7 +16,7 @@ run_remap_healpix: True       # parallel
 
 # Parallel processing set up
 # run_parallel: 1 (local cluster), 2 (Dask MPI)
-run_parallel: 1
+run_parallel: 2
 nprocesses : 128  # Number of processors to use if run_parallel=1
 dask_tmp_dir: /tmp  # Dask temporary directory if run_parallel=1
 timeout: 3600  # [seconds] Dask timeout limit
@@ -49,7 +49,7 @@ databasename: ''  # This is not used for HEALPix data
 # Input files directory
 clouddata_path: ''  # Not needed for catalog data
 # Working directory for the tracking data
-root_path: /pscratch/sd/w/wcmca1/scream-cess-healpix/mcs_tracking_hp9/
+root_path: /pscratch/sd/w/wcmca1/hackathon/mcs/scream/
 # Working sub-directory names
 tracking_path_name: tracking
 stats_path_name: stats
@@ -200,5 +200,5 @@ zarr_output_presets:
   # Remap back to healpix
   healpix:
     out_filebase: scream2D_hrly_mcsmask_
-    zoom: 10  # zoom level to remap
+    zoom: 8  # zoom level to remap
     version: v1  # version in zarr filename
