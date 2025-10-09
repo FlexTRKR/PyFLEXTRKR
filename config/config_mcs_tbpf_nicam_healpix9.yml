@@ -22,7 +22,7 @@ dask_tmp_dir: /tmp  # Dask temporary directory if run_parallel=1
 timeout: 3600  # [seconds] Dask timeout limit
 
 # Start/end date and time
-startdate: '20190301.0000'
+startdate: '20200301.0000'
 enddate: '20210301.0000'
 
 # HEALPix parameters
