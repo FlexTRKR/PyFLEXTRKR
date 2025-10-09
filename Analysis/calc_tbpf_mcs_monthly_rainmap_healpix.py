@@ -23,7 +23,7 @@ import intake
 import requests
 import easygems.healpix as egh
 from pyflextrkr.ft_utilities import load_config, convert_cftime_to_standard
-from dask.distributed import Client, LocalCluster, progress
+from pyflextrkr.zarr_tools import setup_dask_client
 import logging
 
 def setup_logging():
@@ -43,7 +43,7 @@ def parse_cmd_args():
     parser.add_argument("--zoom", help="HEALPix zoom level", type=int, default=None)
     parser.add_argument("--parallel", help="use parallel processing", action="store_true")
     parser.add_argument("--nworkers", help="number of Dask workers", type=int, default=12)
-    parser.add_argument("--threads", help="threads per worker", type=int, default=10)
+    parser.add_argument("--threads", help="threads per worker", type=int, default=1)
     parser.add_argument("--memory", help="memory limit per worker, e.g. '40GB' (default: auto)", default=None)
     parser.add_argument("--chunk_days", help="number of days to process in each chunk", type=int, default=5)
     parser.add_argument("--pcp_thresh", help="precipitation threshold in mm/h", type=float, default=2.0)
@@ -169,44 +169,44 @@ def format_time(seconds):
     seconds = int(seconds % 60)
     return f"{hours:02d}:{minutes:02d}:{seconds:02d}"
 
-def setup_dask_client(parallel, n_workers, threads_per_worker, memory_limit=None, logger=None):
-    """
-    Set up a Dask client for parallel processing
+# def setup_dask_client(parallel, n_workers, threads_per_worker, memory_limit=None, logger=None):
+#     """
+#     Set up a Dask client for parallel processing
     
-    Args:
-        parallel: bool
-            Whether to use parallel processing
-        n_workers: int
-            Number of workers for the Dask cluster
-        threads_per_worker: int
-            Number of threads per worker
-        memory_limit: str, optional
-            Memory limit for each worker (e.g. '40GB'). Use None for auto detection.
-        logger: logging.Logger, optional
-            Logger for status messages
+#     Args:
+#         parallel: bool
+#             Whether to use parallel processing
+#         n_workers: int
+#             Number of workers for the Dask cluster
+#         threads_per_worker: int
+#             Number of threads per worker
+#         memory_limit: str, optional
+#             Memory limit for each worker (e.g. '40GB'). Use None for auto detection.
+#         logger: logging.Logger, optional
+#             Logger for status messages
             
-    Returns:
-        dask.distributed.Client or None: Dask client if parallel is True, None otherwise
-    """
-    if logger is None:
-        logger = logging.getLogger(__name__)
+#     Returns:
+#         dask.distributed.Client or None: Dask client if parallel is True, None otherwise
+#     """
+#     if logger is None:
+#         logger = logging.getLogger(__name__)
         
-    if not parallel:
-        logger.info("Running in sequential mode (parallel=False)")
-        return None
+#     if not parallel:
+#         logger.info("Running in sequential mode (parallel=False)")
+#         return None
     
-    memory_str = "auto" if memory_limit is None else memory_limit
-    logger.info(f"Setting up Dask cluster with {n_workers} workers, {threads_per_worker} threads per worker, {memory_str} memory")
+#     memory_str = "auto" if memory_limit is None else memory_limit
+#     logger.info(f"Setting up Dask cluster with {n_workers} workers, {threads_per_worker} threads per worker, {memory_str} memory")
     
-    cluster = LocalCluster(
-        n_workers=n_workers,
-        threads_per_worker=threads_per_worker,
-        memory_limit=memory_limit,
-    )
-    client = Client(cluster)
-    logger.info(f"Dask dashboard: {client.dashboard_link}")
+#     cluster = LocalCluster(
+#         n_workers=n_workers,
+#         threads_per_worker=threads_per_worker,
+#         memory_limit=memory_limit,
+#     )
+#     client = Client(cluster)
+#     logger.info(f"Dask dashboard: {client.dashboard_link}")
     
-    return client
+#     return client
 
 def write_netcdf(results, ds, output_filename, zoom, pcp_thresh, logger=None):
     """
@@ -305,7 +305,7 @@ def write_netcdf(results, ds, output_filename, zoom, pcp_thresh, logger=None):
     return dsout
 
 
-if __name__ == "__main__":
+def main():
     # Set up logging
     setup_logging()
     logger = logging.getLogger(__name__)
@@ -329,7 +329,8 @@ if __name__ == "__main__":
     pcp_thresh = args_dict.get('pcp_thresh')
 
     # Set up a local Dask cluster for parallel processing
-    client = setup_dask_client(parallel, n_workers, threads_per_worker, memory_limit, logger)
+    # client = setup_dask_client(parallel, n_workers, threads_per_worker, memory_limit, logger)
+    client = setup_dask_client(parallel=parallel, n_workers=n_workers, threads_per_worker=threads_per_worker, logger=logger)
     
     # Load configuration file
     config = load_config(config_file)
@@ -436,7 +437,8 @@ if __name__ == "__main__":
     # Find common time range
     common_times = sorted(set(ds_p['time'].values).intersection(set(ds_m['time'].values)))
     if not common_times:
-        print("No common time values between datasets!")
+        logger.warning("No common time values between datasets!")
+        return None
     else:
         # Select only the common times in both datasets
         ds_p_subset = ds_p.sel(time=common_times)
@@ -447,23 +449,34 @@ if __name__ == "__main__":
     print(f"Successfully merged datasets with {len(common_times)} common time points")
     
     # Group by month and apply the processing function
-    monthly_results = []
+    # monthly_results = []
     monthly_groups = ds.resample(time='1MS')
 
-    # Use parallel processing
-    delayed_results = []
-    for month_start, month_ds in monthly_groups:
-        logger.info(f"Processing month: {pd.Timestamp(month_start).strftime('%Y-%m')}")
-        # Submit the processing job to the dask cluster
-        delayed_result = client.submit(process_month_chunked, month_ds, chunk_days=chunk_days, pcp_thresh=pcp_thresh)
-        delayed_results.append(delayed_result)
-    
-    # Clear line and show progress tracking
-    logger.info("Tracking progress of all months processing in parallel:")
-    progress(delayed_results)
-    
-    # Gather results (will wait for completion)
-    results = client.gather(delayed_results)
+    # Check if client exists for parallel processing
+    if client is not None:
+        # Use parallel processing
+        delayed_results = []
+        for month_start, month_ds in monthly_groups:
+            logger.info(f"Processing month: {pd.Timestamp(month_start).strftime('%Y-%m')}")
+            # Submit the processing job to the dask cluster
+            delayed_result = client.submit(process_month_chunked, month_ds, chunk_days=chunk_days, pcp_thresh=pcp_thresh)
+            delayed_results.append(delayed_result)
+        
+        # Clear line and show progress tracking
+        logger.info("Tracking progress of all months processing in parallel:")
+        from dask.distributed import progress
+        progress(delayed_results)
+        
+        # Gather results (will wait for completion)
+        results = client.gather(delayed_results)
+    else:
+        # Serial processing
+        logger.info("Running in serial mode")
+        results = []
+        for month_start, month_ds in monthly_groups:
+            logger.info(f"Processing month: {pd.Timestamp(month_start).strftime('%Y-%m')}")
+            result = process_month_chunked(month_ds, chunk_days=chunk_days, pcp_thresh=pcp_thresh)
+            results.append(result)
 
     # Write output to NetCDF file
     write_netcdf(results, ds, output_filename, hp_zoom, pcp_thresh, logger)
@@ -482,5 +495,11 @@ if __name__ == "__main__":
     logger.info(f"  Memory change:        {memory_change:.2f} GB")
     logger.info("="*50)
 
-    # Close the dask client
-    client.close()
+    # Cleanup client
+    if client and parallel:
+        logger.info("Shutting down Dask client")
+        client.close()
+
+
+if __name__ == "__main__":
+    main()
