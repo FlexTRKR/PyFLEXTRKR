@@ -1,6 +1,7 @@
 ---
-# HEALPix MCS tracking configuration file
+# MCSMIP MCS tracking configuration file for IMERGv7
 # Tracking uses collocated Tb + Precipitation
+# Some additional HEALPix parameters are for km-scale hackathon 2025
 
 # Processing steps:
 run_idfeature : True         # parallel
@@ -12,7 +13,7 @@ run_matchpf : True           # parallel
 run_robustmcs : True         # serial
 run_mapfeature : True        # parallel
 run_speed : True             # parallel
-run_remap_healpix: True       # parallel
+run_remap_healpix: False       # parallel
 
 # Parallel processing set up
 # run_parallel: 1 (local cluster), 2 (Dask MPI)
@@ -22,34 +23,33 @@ dask_tmp_dir: /tmp  # Dask temporary directory if run_parallel=1
 timeout: 3600  # [seconds] Dask timeout limit
 
 # Start/end date and time
-startdate: '20200301.0000'
-enddate: '20210301.0000'
+startdate: '20190801.0000'
+enddate: '20200901.0000'
 
-# HEALPix parameters
-catalog_file: /global/homes/f/feng045/program/hackathon/catalog/NERSC/main.yaml
-# catalog_file: https://digital-earths-global-hackathon.github.io/catalog/catalog.yaml
-# catalog_location: 
-catalog_source: nicam_gl11_shifted
+# HEALPix parameters (only for remapping MCS masks back to HEALPix)
+# catalog_file: /global/cfs/cdirs/m4581/gsharing/scream-cess-healpix/main.yaml
+catalog_file: https://digital-earths-global-hackathon.github.io/catalog/catalog.yaml
+catalog_location: NERSC
+catalog_source: IR_IMERG
+# The SCREAM source is only used for remapping back to HEALPix, 
+# using the IR_IMERG HEALPix source is not remapping correctly because the grid is not global (60S-60N)
+# catalog_source: scream2D_hrly
 # Catalog parameters, can have multiple entries
 catalog_params:
   zoom: 9
-  time: PT1H
-olr_varname: rlut  # OLR variable name
-pcp_varname: pr   # Precipitation variable name
-pcp_convert_factor: 3600.  # Convert precipitation flux from [m/s] to [mm/h]
-input_format: zarr  # zarr or netcdf
 
 # Specify tracking input data date/time string format
 # This is the preprocessed file that contains Tb & rainrate
 # E.g., databasename20181101.011503.nc --> yyyymodd.hhmmss
 # E.g., databasename2018-11-01_01:15:00 --> yyyy-mo-dd_hh:mm:ss
 time_format: yyyymoddhh
-databasename: ''  # This is not used for HEALPix data
+databasename: merg_
+inptut_format: netcdf  # zarr or netcdf
 
 # Input files directory
-clouddata_path: ''  # Not needed for catalog data
+clouddata_path: /pscratch/sd/w/wcmca1/GPM/IR_IMERG_Combined_V07B/IMERGv7_2019-2021/
 # Working directory for the tracking data
-root_path: /pscratch/sd/w/wcmca1/hackathon/mcs/nicam_gl11/
+root_path: /pscratch/sd/w/wcmca1/hackathon/mcs/IMERGv7/
 # Working sub-directory names
 tracking_path_name: tracking
 stats_path_name: stats
@@ -68,14 +68,18 @@ landfrac_thresh: [0, 90]  # Define the range of fraction for land (depends on wh
 pixel_radius:  10.0  # [km] Spatial resolution of the input data
 datatimeresolution: 1.0  # [hour] Temporal resolution of the input data
 # Variable names in the input data
-olr2tb: True
-clouddatasource: model
+tb_varname: Tb
+pcp_varname: precipitation
+clouddatasource: gpmirimerg
 time_dimname: time
 x_dimname: lon
 y_dimname: lat
 time_coordname: time
 x_coordname: lon
 y_coordname: lat
+idclouds_hourly: 1  # 0:  No, 1:  Yes
+idclouds_minute: 00  # 0 or 30 min, which minute mark to use the Tb data
+idclouds_dt_thresh: 5  # [minute], time difference allowed between actual data and idclouds_minute
 
 # Specify types of feature being tracked
 # This adds additional feature-specific statistics to be computed
@@ -115,7 +119,7 @@ othresh: 0.5  # overlap fraction threshold. Clouds that overlap more than this b
 timegap: 3.1  # [hour] If missing data duration longer than this, tracking restarts
 nmaxlinks: 50  # Maximum number of clouds that any single cloud can be linked to
 maxnclouds:  3000  # Maximum number of clouds in one snapshot
-duration_range: [2, 650] # A vector [minlength,maxlength] to specify the duration range for the tracks
+duration_range: [2, 400] # A vector [minlength,maxlength] to specify the duration range for the tracks
 # Flag to remove short-lived tracks [< min(duration_range)] that are not mergers/splits with other tracks
 # 0:keep all tracks; 1:remove short tracks
 remove_shorttracks: 1
@@ -173,10 +177,6 @@ max_speed_thresh: 50  # [m/s]
 max_speed_for_trajectory_smoothing: 40  # [m/s] Max speed for smoothing lat/lon (only for visualization)
 
 # MCSMIP standardized outputs (Zarr)
-# Flags to convert Zarr output
-create_mask_zarr: True
-create_tbpr_zarr: True
-create_full_zarr: False
 overwrite_zarr: True  # Overwrite existing Zarr files
 # Zarr chunk sizes (default: auto)
 chunksize_time: 24  # time
@@ -199,6 +199,6 @@ zarr_output_presets:
     
   # Remap back to healpix
   healpix:
-    out_filebase: nicam_hrly_mcsmask_
+    out_filebase: IMERGv7_hrly_mcsmask_
     zoom: 8  # zoom level to remap
     version: v1  # version in zarr filename
