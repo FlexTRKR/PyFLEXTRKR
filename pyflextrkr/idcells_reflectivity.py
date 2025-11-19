@@ -796,10 +796,10 @@ def get_composite_reflectivity_generic(input_filename, config):
 
     else:
         # 2D composite reflectivity case
-        dbz_comp = dbz
-        dbz_lowlevel = dbz.copy()
+        dbz_comp = ds[reflectivity_varname].squeeze()
+        dbz_lowlevel = ds[reflectivity_varname].squeeze().copy()
         # Create fake 3D array for compatibility
-        dbz3d_filt = dbz.expand_dims(z_dimname, axis=0)
+        dbz3d_filt = dbz_comp.expand_dims(z_dimname, axis=0)
         height = np.zeros(1)
         mask_goodvalues = np.full((ny, nx), 1, dtype=int)
     

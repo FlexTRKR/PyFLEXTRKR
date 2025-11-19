@@ -136,8 +136,10 @@ dy: 4000  # meter
 x_dimname: "lon"
 y_dimname: "lat"
 z_dimname: "z"
-x_varname: "longitude"
-y_varname: "latitude"
+x_coordname: "longitude"
+y_coordname: "latitude"
+lon_coordname: "longitude"
+lat_coordname: "latitude"
 reflectivity_varname: 'REFL_COM'
 # Input data source: 'radar', 'wrf'
 input_source: 'wrf_composite'
