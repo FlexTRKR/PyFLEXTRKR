@@ -2,7 +2,7 @@
 # Example GoAmazon SIPAM radar cell tracking configuration file (4 km resolution)
 
 # Regrid input reflectivity
-run_regridreflectivity: True
+run_regridreflectivity: False
 # Identify features to track
 run_idfeature: True
 # Tracking steps to run
@@ -146,17 +146,22 @@ x_dimname: 'x0'
 y_dimname: 'y0'
 z_dimname: 'z0'
 time_dimname: 'time'
-x_varname: 'x0'
-y_varname: 'y0'
-z_varname: 'z0'
-lon_varname: 'lon0'
-lat_varname: 'lat0'
+x_coordname: 'x0'
+y_coordname: 'y0'
+z_coordname: 'z0'
+lon_coordname: 'lon0'
+lat_coordname: 'lat0'
+# Radar location variables produced by PyART gridding
 radar_lon_varname: 'origin_longitude'
 radar_lat_varname: 'origin_latitude'
 radar_alt_varname: 'alt'
+# Radar reflectivity variable name used for cell identification
 reflectivity_varname: 'DBZc'
 # Input data source: 'radar', 'wrf', 'wrf_regrid'
 input_source: 'radar'
+# The vertical coordinate type - 'pressure' or 'height'
+# If omitted, will auto-detect based on whether coordinate is increasing/decreasing
+z_coord_type: 'height'
 
 # Specify data structure
 datatimeresolution: 0.2     # hours
