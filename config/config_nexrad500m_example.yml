@@ -113,14 +113,22 @@ y_dimname: 'y'
 z_dimname: 'z'
 time_dimname: 'time'
 time_coordname: 'time'
-x_varname: 'x'
-y_varname: 'y'
-z_varname: 'z'
-lon_varname: 'point_longitude'
-lat_varname: 'point_latitude'
+x_coordname: 'x'
+y_coordname: 'y'
+z_coordname: 'z'
+lon_coordname: 'point_longitude'
+lat_coordname: 'point_latitude'
+# Radar location variables produced by PyART gridding
+radar_lon_varname: 'origin_longitude'
+radar_lat_varname: 'origin_latitude'
+radar_alt_varname: 'alt'
+# Radar reflectivity variable name used for cell identification
 reflectivity_varname: 'reflectivity'
 # Input data source: 'radar', 'wrf', 'wrf_regrid'
 input_source: 'radar'
+# The vertical coordinate type - 'pressure' or 'height'
+# If omitted, will auto-detect based on whether coordinate is increasing/decreasing
+z_coord_type: 'height'
 
 # Specify data structure
 datatimeresolution: 0.0833     # hours

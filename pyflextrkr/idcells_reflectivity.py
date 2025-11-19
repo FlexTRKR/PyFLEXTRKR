@@ -566,6 +566,8 @@ def get_composite_reflectivity_generic(input_filename, config):
     is_3d = config.get('is_3d', None)  # None = auto-detect
     z_coord_type = config.get('z_coord_type', None)  # None = auto-detect, 'height' or 'pressure'
     default_sfc_pressure = config.get('default_sfc_pressure', 1013.25)  # hPa, used when terrain_file=None and z_coord_type='pressure'
+    default_sfc_height = config.get('default_sfc_height', 0)  # meters, used when terrain_file=None and z_coord_type='height'
+    round_time_to_second = config.get('round_time_to_second', False)  # Flag to round time coordinate to nearest second
     
     # Read input file
     ds = xr.open_dataset(input_filename)
@@ -600,20 +602,17 @@ def get_composite_reflectivity_generic(input_filename, config):
     # Get time coordinate
     if time_coordname in ds.variables:
         time_coords = ds[time_coordname]
-        # Round to nearest second for consistency
-        if hasattr(time_coords.dt, 'round'):
+        # Round to nearest second if requested
+        if round_time_to_second and hasattr(time_coords.dt, 'round'):
             time_coords = time_coords.dt.round('s')
     else:
         time_coords = ds[time_dimname]
-        if hasattr(time_coords.dt, 'round'):
+        if round_time_to_second and hasattr(time_coords.dt, 'round'):
             time_coords = time_coords.dt.round('s')
-    
-    # Get reflectivity data
-    dbz = ds[reflectivity_varname].squeeze()
     
     # Auto-detect if data is 3D
     if is_3d is None:
-        is_3d = z_dimname in dbz.dims
+        is_3d = z_dimname in ds[reflectivity_varname].dims
     
     # Get spatial dimensions
     nx = ds.sizes[x_dimname]
@@ -718,13 +717,9 @@ def get_composite_reflectivity_generic(input_filename, config):
         else:
             logger.info(f"Using specified vertical coordinate type: {z_coord_type}")
         
-        # Handle height coordinate transformation (AGL to MSL if needed)
-        if radar_alt_varname in ds.variables:
-            z_agl = ds[z_dimname] + radar_alt
-            ds[z_dimname] = z_agl
-        
         # Get or create surface elevation
         if terrain_file is not None:
+            logger.info(f"Loading terrain file: {terrain_file}")
             dster = xr.open_dataset(terrain_file)
             dster = dster.assign_coords({
                 y_dimname: ds[y_coordname], 
@@ -743,14 +738,23 @@ def get_composite_reflectivity_generic(input_filename, config):
                 )
                 logger.info(f"No terrain file specified. Using default surface pressure: {default_sfc_pressure} hPa")
             else:
-                # For height coordinates, use zero elevation
+                # For height coordinates, use configured or default surface height
                 sfc_elev = xr.DataArray(
-                    np.zeros((ny, nx)),
+                    np.full((ny, nx), default_sfc_height),
                     coords={y_dimname: y_coords, x_dimname: x_coords},
                     dims=(y_dimname, x_dimname)
                 )
+                logger.info(f"No terrain file specified. Using default surface height: {default_sfc_height} m")
             mask_goodvalues = np.full((ny, nx), 1, dtype=int)
         
+        # Handle height coordinate transformation (AGL to MSL if needed)
+        if radar_alt_varname in ds.variables:
+            z_agl = ds[z_dimname] + radar_alt
+            ds[z_dimname] = z_agl
+        
+        # Get reflectivity data
+        dbz = ds[reflectivity_varname].squeeze()
+
         # Apply quality control filters (optional)
         # Check for normalized coherent power filtering
         if 'normalized_coherent_power' in ds.variables:
@@ -789,7 +793,7 @@ def get_composite_reflectivity_generic(input_filename, config):
         
         # Calculate low-level maximum reflectivity
         dbz_lowlevel = dbz3d_lowlevel.max(dim=z_dimname)
-        
+
     else:
         # 2D composite reflectivity case
         dbz_comp = dbz
@@ -1270,11 +1274,12 @@ def get_composite_reflectivity_csapr_cacti(input_filename, config):
     x_dimname = config.get('x_dimname', 'x')
     y_dimname = config.get('y_dimname', 'y')
     z_dimname = config.get('z_dimname', 'z')
-    x_varname = config['x_varname']
-    y_varname = config['y_varname']
-    z_varname = config['z_varname']
-    lon_varname = config['lon_varname']
-    lat_varname = config['lat_varname']
+    # Use new coordname parameters with backward compatibility to varname parameters
+    x_coordname = config.get('x_coordname', config.get('x_varname'))
+    y_coordname = config.get('y_coordname', config.get('y_varname'))
+    z_coordname = config.get('z_coordname', config.get('z_varname', z_dimname))
+    lon_coordname = config.get('lon_coordname', config.get('lon_varname', x_coordname))
+    lat_coordname = config.get('lat_coordname', config.get('lat_varname', y_coordname))
     reflectivity_varname = config['reflectivity_varname']
     fillval = config['fillval']
     terrain_file = config.get('terrain_file', None)
@@ -1295,15 +1300,15 @@ def get_composite_reflectivity_csapr_cacti(input_filename, config):
     time_coords = ds[time_coordname]
     # Get data coordinates and dimensions
     height = ds[z_dimname].squeeze().data
-    y_coords = ds[y_varname].data
-    x_coords = ds[x_varname].data
+    y_coords = ds[y_coordname].data
+    x_coords = ds[x_coordname].data
     # Below are variables produced by PyART gridding
     radar_lon = ds['origin_longitude']
     radar_lat = ds['origin_latitude']
     radar_alt = ds['alt'].squeeze()
     # Take the first vertical level from 3D lat/lon
-    grid_lon = ds[lon_varname].isel(z=0)
-    grid_lat = ds[lat_varname].isel(z=0)
+    grid_lon = ds[lon_coordname].isel(z=0)
+    grid_lat = ds[lat_coordname].isel(z=0)
 
     # Change radar height coordinate from AGL to MSL
     z_agl = ds[z_dimname] + radar_alt
@@ -1314,7 +1319,7 @@ def get_composite_reflectivity_csapr_cacti(input_filename, config):
     # Change terrain file dimension name to be consistent with radar file
     # dster = dster.rename({'latdim':y_dimname, 'londim':x_dimname})
     # Assign coordinate from radar file to the terrain file so they have the same coordinates
-    dster = dster.assign_coords({y_dimname: (ds[y_varname]), x_dimname: (ds[x_varname])})
+    dster = dster.assign_coords({y_dimname: (ds[y_coordname]), x_dimname: (ds[x_coordname])})
     sfc_elev = dster[elev_varname]
     # Create a good value mask
     # Use 110 km radius range mask as good value mask, make sure to convert boolean array to integer type
@@ -1335,9 +1340,9 @@ def get_composite_reflectivity_csapr_cacti(input_filename, config):
     # This NCP filter works well as a substitute
     dbz3d = dbz3d.where(ncp >= 0.5)
     # Filter reflectivity below certain elevation height
-    dbz3d_filt = dbz3d.where(ds[z_varname] > (sfc_elev + sfc_dz_min))
+    dbz3d_filt = dbz3d.where(ds[z_coordname] > (sfc_elev + sfc_dz_min))
     # Filter reflectivity outside the low-level
-    dbz3d_lowlevel = dbz3d.where((ds[z_varname] >= sfc_dz_min) & (ds[z_varname] <= sfc_dz_max))
+    dbz3d_lowlevel = dbz3d.where((ds[z_coordname] >= sfc_dz_min) & (ds[z_coordname] <= sfc_dz_max))
     # Get composite reflectivity
     dbz_comp = dbz3d_filt.max(dim=z_dimname)
     # Get low-level composite reflectivity
