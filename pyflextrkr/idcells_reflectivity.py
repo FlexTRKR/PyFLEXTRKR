@@ -507,11 +507,12 @@ def get_composite_reflectivity_generic(input_filename, config):
             
     Required config parameters:
         - reflectivity_varname: name of reflectivity variable
-        - x_varname, y_varname: coordinate variable names
+        - x_coordname, y_coordname: coordinate variable names (backward compatible with x_varname, y_varname)
         - x_dimname, y_dimname: dimension names
         - time_dimname (optional): time dimension name, default 'time'
         - z_dimname (optional): vertical dimension name, default 'z'
-        - z_varname (optional): vertical coordinate name
+        - z_coordname (optional): vertical coordinate name (backward compatible with z_varname)
+        - lon_coordname, lat_coordname (optional): lat/lon coordinate names (backward compatible with lon_varname, lat_varname)
         - dx, dy: grid spacing in meters
         - radar_sensitivity: minimum reflectivity threshold
         - sfc_dz_min, sfc_dz_max: height range for low-level reflectivity
@@ -547,11 +548,12 @@ def get_composite_reflectivity_generic(input_filename, config):
     x_dimname = config.get('x_dimname', 'x')
     y_dimname = config.get('y_dimname', 'y')
     z_dimname = config.get('z_dimname', 'z')
-    x_varname = config['x_varname']
-    y_varname = config['y_varname']
-    z_varname = config.get('z_varname', z_dimname)
-    lon_varname = config.get('lon_varname', x_varname)
-    lat_varname = config.get('lat_varname', y_varname)
+    # Use new coordname parameters with backward compatibility to varname parameters
+    x_coordname = config.get('x_coordname', config.get('x_varname'))
+    y_coordname = config.get('y_coordname', config.get('y_varname'))
+    z_coordname = config.get('z_coordname', config.get('z_varname', z_dimname))
+    lon_coordname = config.get('lon_coordname', config.get('lon_varname', x_coordname))
+    lat_coordname = config.get('lat_coordname', config.get('lat_varname', y_coordname))
     reflectivity_varname = config['reflectivity_varname']
     composite_reflectivity_varname = config.get('composite_reflectivity_varname', None)
     pass_varname = config.get('pass_varname', None)
@@ -573,6 +575,27 @@ def get_composite_reflectivity_generic(input_filename, config):
         if 'XTIME' in ds.variables:
             ds = ds.reset_coords(names='XTIME', drop=False)
         ds = ds.rename({'Time': time_dimname})
+    
+    # Get dimension names from the file
+    dims_file = []
+    for key in ds.dims: dims_file.append(key)
+    # Find extra dimensions beyond [time, z, y, x] or [time, y, x]
+    if z_dimname is not None:
+        dims_keep = [time_dimname, z_dimname, y_dimname, x_dimname]
+    else:
+        dims_keep = [time_dimname, y_dimname, x_dimname]
+    dims_drop = list(set(dims_file) - set(dims_keep))
+    # Reorder Dataset dimensions
+    if z_dimname is not None:
+        # Drop extra dimensions, reorder to [time, z, y, x]
+        ds = ds.drop_dims(dims_drop).transpose(
+            time_dimname, z_dimname, y_dimname, x_dimname, missing_dims='ignore'
+        )
+    else:
+        # Drop extra dimensions, reorder to [time, y, x]
+        ds = ds.drop_dims(dims_drop).transpose(
+            time_dimname, y_dimname, x_dimname, missing_dims='ignore'
+        )
     
     # Get time coordinate
     if time_coordname in ds.variables:
@@ -597,21 +620,21 @@ def get_composite_reflectivity_generic(input_filename, config):
     ny = ds.sizes[y_dimname]
     
     # Get x, y coordinates
-    if x_varname in ds.variables:
-        x_coords = ds[x_varname].data
+    if x_coordname in ds.variables:
+        x_coords = ds[x_coordname].data
     else:
         # Create x coordinate from dimension using dx from config
         x_coords = np.arange(0, nx) * dx
     
-    if y_varname in ds.variables:
-        y_coords = ds[y_varname].data
+    if y_coordname in ds.variables:
+        y_coords = ds[y_coordname].data
     else:
         # Create y coordinate from dimension using dy from config
         y_coords = np.arange(0, ny) * dy
     
     # Get grid lat/lon (can be 1D or 2D)
-    if lon_varname in ds.variables:
-        grid_lon = ds[lon_varname].squeeze()
+    if lon_coordname in ds.variables:
+        grid_lon = ds[lon_coordname].squeeze()
         # For 3D lat/lon, take first vertical level
         if z_dimname in grid_lon.dims:
             grid_lon = grid_lon.isel({z_dimname: 0})
@@ -623,8 +646,8 @@ def get_composite_reflectivity_generic(input_filename, config):
             dims=(y_dimname, x_dimname)
         )
     
-    if lat_varname in ds.variables:
-        grid_lat = ds[lat_varname].squeeze()
+    if lat_coordname in ds.variables:
+        grid_lat = ds[lat_coordname].squeeze()
         # For 3D lat/lon, take first vertical level
         if z_dimname in grid_lat.dims:
             grid_lat = grid_lat.isel({z_dimname: 0})
@@ -665,21 +688,21 @@ def get_composite_reflectivity_generic(input_filename, config):
     # Process 3D reflectivity data
     if is_3d:
         # Get vertical coordinate
-        if z_varname in ds.variables:
-            height = ds[z_varname].data
+        if z_coordname in ds.variables:
+            height = ds[z_coordname].data
         else:
             # Special case for WRF geopotential height
             if 'PH' in ds.variables and 'PHB' in ds.variables:
                 height = ((ds['PH'] + ds['PHB']).squeeze().data / 9.80665)
             else:
-                logger.warning(f"Vertical coordinate {z_varname} not found, using index")
+                logger.warning(f"Vertical coordinate {z_coordname} not found, using index")
                 height = np.arange(ds.sizes[z_dimname])
         
         # Auto-detect vertical coordinate type if not specified
         if z_coord_type is None:
             # Check if coordinate is monotonically increasing or decreasing
-            if z_varname in ds.variables:
-                z_vals = ds[z_varname].values
+            if z_coordname in ds.variables:
+                z_vals = ds[z_coordname].values
                 # For height: typically increases from surface (low) to top (high)
                 # For pressure: typically decreases from surface (high ~1000 hPa) to top (low ~0.1 hPa)
                 if z_vals[0] > z_vals[-1]:
@@ -704,8 +727,8 @@ def get_composite_reflectivity_generic(input_filename, config):
         if terrain_file is not None:
             dster = xr.open_dataset(terrain_file)
             dster = dster.assign_coords({
-                y_dimname: ds[y_varname], 
-                x_dimname: ds[x_varname]
+                y_dimname: ds[y_coordname], 
+                x_dimname: ds[x_coordname]
             })
             sfc_elev = dster[elev_varname]
             mask_goodvalues = dster[rangemask_varname].data.astype(int)
@@ -739,23 +762,23 @@ def get_composite_reflectivity_generic(input_filename, config):
             # For pressure coordinates: surface is high pressure, top is low pressure
             # Filter out levels below surface pressure (sfc_elev represents surface pressure)
             # Keep levels where pressure < surface pressure - sfc_dz_min
-            dbz3d_filt = dbz.where(ds[z_varname] < (sfc_elev - sfc_dz_min))
+            dbz3d_filt = dbz.where(ds[z_coordname] < (sfc_elev - sfc_dz_min))
             
             # Calculate low-level composite reflectivity
             # Low-level is defined as pressure range from (sfc - sfc_dz_max) to (sfc - sfc_dz_min)
             # This captures levels close to but above the surface
             dbz3d_lowlevel = dbz.where(
-                (ds[z_varname] >= (sfc_elev - sfc_dz_max)) & 
-                (ds[z_varname] <= (sfc_elev - sfc_dz_min))
+                (ds[z_coordname] >= (sfc_elev - sfc_dz_max)) & 
+                (ds[z_coordname] <= (sfc_elev - sfc_dz_min))
             )
         else:
             # For height coordinates: surface is low, top is high (traditional case)
             # Filter reflectivity below surface + minimum height
-            dbz3d_filt = dbz.where(ds[z_varname] > (sfc_elev + sfc_dz_min))
+            dbz3d_filt = dbz.where(ds[z_coordname] > (sfc_elev + sfc_dz_min))
             
             # Calculate low-level composite reflectivity
             dbz3d_lowlevel = dbz.where(
-                (ds[z_varname] >= sfc_dz_min) & (ds[z_varname] <= sfc_dz_max)
+                (ds[z_coordname] >= sfc_dz_min) & (ds[z_coordname] <= sfc_dz_max)
             )
         
         # Calculate composite reflectivity
