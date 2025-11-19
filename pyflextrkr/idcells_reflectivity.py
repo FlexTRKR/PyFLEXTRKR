@@ -77,273 +77,307 @@ def idcells_reflectivity(
         'CONVECTIVE': 4,
     }
 
-    # Get composite reflectivity
-    if input_source == 'radar':
-        comp_dict = get_composite_reflectivity_radar(
-            input_filename, config)
-    elif input_source == 'csapr_cacti':
-        comp_dict = get_composite_reflectivity_csapr_cacti(
-            input_filename, config)
-    elif input_source == 'wrf_composite':
-        comp_dict = get_composite_reflectivity_wrf_composite(
-            input_filename, config
-        )
-    elif input_source == 'wrf':
-        comp_dict = get_composite_reflectivity_wrf(
-            input_filename, config)
-    elif input_source == 'wrf_regrid':
-        comp_dict = get_composite_reflectivity_wrf_regrid(
-            input_filename, config)
-    else:
-        logger.error(f'Unknown input_source: {input_source}')
-        sys.exit()
+    # # Get composite reflectivity
+    # if input_source == 'radar':
+    #     comp_dict = get_composite_reflectivity_radar(
+    #         input_filename, config)
+    # elif input_source == 'csapr_cacti':
+    #     comp_dict = get_composite_reflectivity_csapr_cacti(
+    #         input_filename, config)
+    # elif input_source == 'wrf_composite':
+    #     comp_dict = get_composite_reflectivity_wrf_composite(
+    #         input_filename, config
+    #     )
+    # elif input_source == 'wrf':
+    #     comp_dict = get_composite_reflectivity_wrf(
+    #         input_filename, config)
+    # elif input_source == 'wrf_regrid':
+    #     comp_dict = get_composite_reflectivity_wrf_regrid(
+    #         input_filename, config)
+    # else:
+    #     logger.error(f'Unknown input_source: {input_source}')
+    #     sys.exit()
+    # Get composite reflectivity using generic function
+    # Note: The generic function replaces all input_source specific functions
+    # (radar, csapr_cacti, wrf, wrf_regrid, wrf_composite)
+    comp_dict = get_composite_reflectivity_generic(input_filename, config)
 
     # Subset domain
     if (geolimits is not None):
         comp_dict = subset_domain(comp_dict, geolimits, dx, dy)
+    
+    # Get time coordinate to check if we need to loop over multiple times
+    time_coords_all = comp_dict['time_coords']
+    ntimes = len(time_coords_all)
+    
+    # Loop over each time step
+    cloudid_outfiles = []
+    for itime in range(ntimes):
+        # Extract variables for this time step
+        if ntimes > 1:
+            # Select time slice for variables with time dimension
+            time_coords = time_coords_all.isel(time=itime)
+            dbz3d_filt = comp_dict['dbz3d_filt'].isel(time=itime)
+            dbz_comp = comp_dict['dbz_comp'].isel(time=itime)
+            dbz_lowlevel = comp_dict['dbz_lowlevel'].isel(time=itime)
+            refl = comp_dict['refl'][itime]
+        else:
+            # Single time: use as-is (backward compatible)
+            time_coords = time_coords_all
+            dbz3d_filt = comp_dict['dbz3d_filt']
+            dbz_comp = comp_dict['dbz_comp']
+            dbz_lowlevel = comp_dict['dbz_lowlevel']
+            refl = comp_dict['refl']
+        
+        # Get variables from dictionary (these don't have time dimension)
+        x_coords = comp_dict['x_coords']
+        y_coords = comp_dict['y_coords']
+        grid_lat = comp_dict['grid_lat']
+        grid_lon = comp_dict['grid_lon']
+        height = comp_dict['height']
+        mask_goodvalues = comp_dict['mask_goodvalues']
+        radar_lat = comp_dict['radar_lat']
+        radar_lon = comp_dict['radar_lon']
 
-    # Get variables from dictionary
-    x_coords = comp_dict['x_coords']
-    y_coords = comp_dict['y_coords']
-    dbz3d_filt = comp_dict['dbz3d_filt']
-    dbz_comp = comp_dict['dbz_comp']
-    dbz_lowlevel = comp_dict['dbz_lowlevel']
-    grid_lat = comp_dict['grid_lat']
-    grid_lon = comp_dict['grid_lon']
-    height = comp_dict['height']
-    mask_goodvalues = comp_dict['mask_goodvalues']
-    radar_lat = comp_dict['radar_lat']
-    radar_lon = comp_dict['radar_lon']
-    refl = comp_dict['refl']
-    time_coords = comp_dict['time_coords']
+        # Convert radii_expand from a list to a numpy array
+        radii_expand = np.array(radii_expand)
 
-    # Convert radii_expand from a list to a numpy array
-    radii_expand = np.array(radii_expand)
-
-    # Make step function for convective radius dilation
-    bkg_bin, conv_rad_bin = make_dilation_step_func(
-        mindBZuse,
-        dBZforMaxConvRadius,
-        bkg_refl_increment,
-        conv_rad_increment,
-        conv_rad_start,
-        maxConvRadius,
-    )
-
-    # Run Steiner classification
-    if return_diag == False:
-        convsf_steiner, \
-        core_steiner, \
-        core_dilate = mod_steiner_classification(
-            types_steiner, refl, mask_goodvalues, dx, dy,
-            bkg_rad=bkgrndRadius * 1000,
-            minZdiff=minZdiff,
-            absConvThres=absConvThres,
-            truncZconvThres=truncZconvThres,
-            weakEchoThres=weakEchoThres,
-            bkg_bin=bkg_bin,
-            conv_rad_bin=conv_rad_bin,
-            min_corearea=min_corearea,
-            min_cellarea=min_cellarea,
-            remove_smallcores=remove_smallcores,
-            remove_smallcells=remove_smallcells,
-            return_diag=return_diag,
-            convolve_method=convolve_method,
+        # Make step function for convective radius dilation
+        bkg_bin, conv_rad_bin = make_dilation_step_func(
+            mindBZuse,
+            dBZforMaxConvRadius,
+            bkg_refl_increment,
+            conv_rad_increment,
+            conv_rad_start,
+            maxConvRadius,
         )
 
-    if return_diag == True:
-        convsf_steiner, \
-        core_steiner, \
-        core_dilate, \
-        refl_bkg, \
-        peakedness, \
-        core_steiner_orig = mod_steiner_classification(
-            types_steiner, refl, mask_goodvalues, dx, dy,
-            bkg_rad=bkgrndRadius * 1000,
-            minZdiff=minZdiff,
-            absConvThres=absConvThres,
-            truncZconvThres=truncZconvThres,
-            weakEchoThres=weakEchoThres,
-            bkg_bin=bkg_bin,
-            conv_rad_bin=conv_rad_bin,
-            min_corearea=min_corearea,
-            min_cellarea=min_cellarea,
-            remove_smallcores=remove_smallcores,
-            remove_smallcells=remove_smallcells,
-            return_diag=return_diag,
-            convolve_method=convolve_method,
-        )
+        # Run Steiner classification
+        if return_diag == False:
+            convsf_steiner, \
+            core_steiner, \
+            core_dilate = mod_steiner_classification(
+                types_steiner, refl, mask_goodvalues, dx, dy,
+                bkg_rad=bkgrndRadius * 1000,
+                minZdiff=minZdiff,
+                absConvThres=absConvThres,
+                truncZconvThres=truncZconvThres,
+                weakEchoThres=weakEchoThres,
+                bkg_bin=bkg_bin,
+                conv_rad_bin=conv_rad_bin,
+                min_corearea=min_corearea,
+                min_cellarea=min_cellarea,
+                remove_smallcores=remove_smallcores,
+                remove_smallcells=remove_smallcells,
+                return_diag=return_diag,
+                convolve_method=convolve_method,
+            )
 
-    # Expand convective cell masks outward to a set of radii to
-    # increase the convective cell footprint for better tracking convective cells
-    core_expand, core_sorted = expand_conv_core(
-        core_dilate, radii_expand, dx, dy, min_corenpix=0)
+        if return_diag == True:
+            convsf_steiner, \
+            core_steiner, \
+            core_dilate, \
+            refl_bkg, \
+            peakedness, \
+            core_steiner_orig = mod_steiner_classification(
+                types_steiner, refl, mask_goodvalues, dx, dy,
+                bkg_rad=bkgrndRadius * 1000,
+                minZdiff=minZdiff,
+                absConvThres=absConvThres,
+                truncZconvThres=truncZconvThres,
+                weakEchoThres=weakEchoThres,
+                bkg_bin=bkg_bin,
+                conv_rad_bin=conv_rad_bin,
+                min_corearea=min_corearea,
+                min_cellarea=min_cellarea,
+                remove_smallcores=remove_smallcores,
+                remove_smallcells=remove_smallcells,
+                return_diag=return_diag,
+                convolve_method=convolve_method,
+            )
 
-    # Calculate echo-top heights for various reflectivity thresholds
-    shape_2d = refl.shape
-    if (input_source == 'radar') or \
-        (input_source == 'csapr_cacti') or \
-        (input_source == 'wrf_regrid'):
-        echotop10 = echotop_height(dbz3d_filt, height, z_dimname, shape_2d,
-                                   dbz_thresh=10, gap=echotop_gap, min_thick=0)
-        echotop20 = echotop_height(dbz3d_filt, height, z_dimname, shape_2d,
-                                   dbz_thresh=20, gap=echotop_gap, min_thick=0)
-        echotop30 = echotop_height(dbz3d_filt, height, z_dimname, shape_2d,
-                                   dbz_thresh=30, gap=echotop_gap, min_thick=0)
-        echotop40 = echotop_height(dbz3d_filt, height, z_dimname, shape_2d,
-                                   dbz_thresh=40, gap=echotop_gap, min_thick=0)
-        echotop50 = echotop_height(dbz3d_filt, height, z_dimname, shape_2d,
-                                   dbz_thresh=50, gap=echotop_gap, min_thick=0)
-    elif (input_source == 'wrf'):
-        echotop10 = echotop_height_wrf(dbz3d_filt, height, z_dimname, shape_2d,
+        # Expand convective cell masks outward to a set of radii to
+        # increase the convective cell footprint for better tracking convective cells
+        core_expand, core_sorted = expand_conv_core(
+            core_dilate, radii_expand, dx, dy, min_corenpix=0)
+
+        # Calculate echo-top heights for various reflectivity thresholds
+        shape_2d = refl.shape
+        if (input_source == 'radar') or \
+            (input_source == 'csapr_cacti') or \
+            (input_source == 'wrf_regrid'):
+            echotop10 = echotop_height(dbz3d_filt, height, z_dimname, shape_2d,
                                        dbz_thresh=10, gap=echotop_gap, min_thick=0)
-        echotop20 = echotop_height_wrf(dbz3d_filt, height, z_dimname, shape_2d,
+            echotop20 = echotop_height(dbz3d_filt, height, z_dimname, shape_2d,
                                        dbz_thresh=20, gap=echotop_gap, min_thick=0)
-        echotop30 = echotop_height_wrf(dbz3d_filt, height, z_dimname, shape_2d,
+            echotop30 = echotop_height(dbz3d_filt, height, z_dimname, shape_2d,
                                        dbz_thresh=30, gap=echotop_gap, min_thick=0)
-        echotop40 = echotop_height_wrf(dbz3d_filt, height, z_dimname, shape_2d,
+            echotop40 = echotop_height(dbz3d_filt, height, z_dimname, shape_2d,
                                        dbz_thresh=40, gap=echotop_gap, min_thick=0)
-        echotop50 = echotop_height_wrf(dbz3d_filt, height, z_dimname, shape_2d,
+            echotop50 = echotop_height(dbz3d_filt, height, z_dimname, shape_2d,
                                        dbz_thresh=50, gap=echotop_gap, min_thick=0)
-    elif ('composite' in input_source):
-        # For 'composite' reflectivity (2D) input source, skip echo-top height calculations
-        echotop10 = np.full(shape_2d, np.nan, dtype=np.float32)
-        echotop20 = np.full(shape_2d, np.nan, dtype=np.float32)
-        echotop30 = np.full(shape_2d, np.nan, dtype=np.float32)
-        echotop40 = np.full(shape_2d, np.nan, dtype=np.float32)
-        echotop50 = np.full(shape_2d, np.nan, dtype=np.float32)
+        elif (input_source == 'wrf'):
+            echotop10 = echotop_height_wrf(dbz3d_filt, height, z_dimname, shape_2d,
+                                           dbz_thresh=10, gap=echotop_gap, min_thick=0)
+            echotop20 = echotop_height_wrf(dbz3d_filt, height, z_dimname, shape_2d,
+                                           dbz_thresh=20, gap=echotop_gap, min_thick=0)
+            echotop30 = echotop_height_wrf(dbz3d_filt, height, z_dimname, shape_2d,
+                                           dbz_thresh=30, gap=echotop_gap, min_thick=0)
+            echotop40 = echotop_height_wrf(dbz3d_filt, height, z_dimname, shape_2d,
+                                           dbz_thresh=40, gap=echotop_gap, min_thick=0)
+            echotop50 = echotop_height_wrf(dbz3d_filt, height, z_dimname, shape_2d,
+                                           dbz_thresh=50, gap=echotop_gap, min_thick=0)
+        elif ('composite' in input_source):
+            # For 'composite' reflectivity (2D) input source, skip echo-top height calculations
+            echotop10 = np.full(shape_2d, np.nan, dtype=np.float32)
+            echotop20 = np.full(shape_2d, np.nan, dtype=np.float32)
+            echotop30 = np.full(shape_2d, np.nan, dtype=np.float32)
+            echotop40 = np.full(shape_2d, np.nan, dtype=np.float32)
+            echotop50 = np.full(shape_2d, np.nan, dtype=np.float32)
 
-    del dbz3d_filt
+        del dbz3d_filt
 
-    # Put all Steiner parameters in a dictionary
-    steiner_params = {
-        'dx': dx,
-        'dy': dy,
-        'absConvThres': absConvThres,
-        'minZdiff': minZdiff,
-        'truncZconvThres': truncZconvThres,
-        'mindBZuse': mindBZuse,
-        'dBZforMaxConvRadius': dBZforMaxConvRadius,
-        'conv_rad_increment': conv_rad_increment,
-        'conv_rad_start': conv_rad_start,
-        'bkg_refl_increment': bkg_refl_increment,
-        'maxConvRadius': maxConvRadius,
-        'weakEchoThres': weakEchoThres,
-        'bkgrndRadius': bkgrndRadius,
-        'min_corearea': min_corearea,
-        'echotop_gap': echotop_gap,
-        'sfc_dz_min': sfc_dz_min,
-        'sfc_dz_max': sfc_dz_max,
-    }
+        # Put all Steiner parameters in a dictionary
+        steiner_params = {
+            'dx': dx,
+            'dy': dy,
+            'absConvThres': absConvThres,
+            'minZdiff': minZdiff,
+            'truncZconvThres': truncZconvThres,
+            'mindBZuse': mindBZuse,
+            'dBZforMaxConvRadius': dBZforMaxConvRadius,
+            'conv_rad_increment': conv_rad_increment,
+            'conv_rad_start': conv_rad_start,
+            'bkg_refl_increment': bkg_refl_increment,
+            'maxConvRadius': maxConvRadius,
+            'weakEchoThres': weakEchoThres,
+            'bkgrndRadius': bkgrndRadius,
+            'min_corearea': min_corearea,
+            'echotop_gap': echotop_gap,
+            'sfc_dz_min': sfc_dz_min,
+            'sfc_dz_max': sfc_dz_max,
+        }
 
-    # Create variables needed for tracking
-    feature_mask = core_expand
-    # Count number of pixels for each feature
-    unique_num, npix_feature = np.unique(feature_mask, return_counts=True)
-    # Remove background (unique_num = 0)
-    npix_feature = npix_feature[(unique_num > 0)]
-    # Get number of features
-    nfeatures = np.nanmax(feature_mask)
+        # Create variables needed for tracking
+        feature_mask = core_expand
+        # Count number of pixels for each feature
+        unique_num, npix_feature = np.unique(feature_mask, return_counts=True)
+        # Remove background (unique_num = 0)
+        npix_feature = npix_feature[(unique_num > 0)]
+        # Get number of features
+        nfeatures = np.nanmax(feature_mask)
 
-    # Get date/time and make output filename
-    timestamp = time_coords[0]
-    # Convert to basetime (i.e., Epoch time)
-    # This is a more flexible way that can handle non-standard 360 day calendar
-    iTimestamp = pd.to_datetime(timestamp.dt.strftime("%Y-%m-%dT%H:%M:%S").item())
-    file_basetime = np.array([(iTimestamp - pd.Timestamp('1970-01-01T00:00:00')).total_seconds()])
-    # Convert to strings
-    file_datestring = timestamp.dt.strftime("%Y%m%d").item()
-    file_timestring = timestamp.dt.strftime("%H%M%S").item()
-    cloudid_outfile = (
-        config["tracking_outpath"] +
-        config["cloudid_filebase"] +
-        file_datestring +
-        "_" +
-        file_timestring +
-        ".nc"
-    )
-
-    # Put time and nfeatures in a numpy array so that they can be set with a time dimension
-    out_basetime = np.zeros(1, dtype=float)
-    out_basetime[0] = file_basetime
-
-    out_nfeatures = np.zeros(1, dtype=int)
-    out_nfeatures[0] = nfeatures
-
-    # Get passing variable DataSet from comp_dict
-    ds_pass = comp_dict.get('ds_pass', None)
-
-    # Write output into netcdf file
-    if return_diag == False:
-        write_radar_cellid(
-            cloudid_outfile,
-            out_basetime,
-            file_datestring,
-            file_timestring,
-            radar_lon,
-            radar_lat,
-            grid_lon,
-            grid_lat,
-            x_coords,
-            y_coords,
-            dbz_comp,
-            dbz_lowlevel,
-            input_filename,
-            sfc_dz_min,
-            convsf_steiner,
-            core_steiner,
-            core_sorted,
-            core_expand,
-            echotop10,
-            echotop20,
-            echotop30,
-            echotop40,
-            echotop50,
-            feature_mask,
-            npix_feature,
-            out_nfeatures,
-            config,
-            steiner_params=steiner_params,
-            ds_pass=ds_pass,
+        # Get date/time and make output filename
+        if ntimes > 1:
+            # For multiple times, access scalar timestamp
+            timestamp = time_coords
+        else:
+            # For single time, access as array
+            timestamp = time_coords[0]
+        # Convert to basetime (i.e., Epoch time)
+        # This is a more flexible way that can handle non-standard 360 day calendar
+        iTimestamp = pd.to_datetime(timestamp.dt.strftime("%Y-%m-%dT%H:%M:%S").item())
+        file_basetime = np.array([(iTimestamp - pd.Timestamp('1970-01-01T00:00:00')).total_seconds()])
+        # Convert to strings
+        file_datestring = timestamp.dt.strftime("%Y%m%d").item()
+        file_timestring = timestamp.dt.strftime("%H%M%S").item()
+        cloudid_outfile = (
+            config["tracking_outpath"] +
+            config["cloudid_filebase"] +
+            file_datestring +
+            "_" +
+            file_timestring +
+            ".nc"
         )
-    if return_diag == True:
-        write_radar_cellid(
-            cloudid_outfile,
-            out_basetime,
-            file_datestring,
-            file_timestring,
-            radar_lon,
-            radar_lat,
-            grid_lon,
-            grid_lat,
-            x_coords,
-            y_coords,
-            dbz_comp,
-            dbz_lowlevel,
-            input_filename,
-            sfc_dz_min,
-            convsf_steiner,
-            core_steiner,
-            core_sorted,
-            core_expand,
-            echotop10,
-            echotop20,
-            echotop30,
-            echotop40,
-            echotop50,
-            feature_mask,
-            npix_feature,
-            out_nfeatures,
-            config,
-            steiner_params=steiner_params,
-            refl_bkg=refl_bkg,
-            peakedness=peakedness,
-            core_steiner_orig=core_steiner_orig,
-            ds_pass=ds_pass,
-        )
-    logger.info(f"{cloudid_outfile}")
 
-    return cloudid_outfile
+        # Put time and nfeatures in a numpy array so that they can be set with a time dimension
+        out_basetime = np.zeros(1, dtype=float)
+        out_basetime[0] = file_basetime
+
+        out_nfeatures = np.zeros(1, dtype=int)
+        out_nfeatures[0] = nfeatures
+
+        # Get passing variable DataSet from comp_dict (select time if multiple times)
+        ds_pass = comp_dict.get('ds_pass', None)
+        if ds_pass is not None and ntimes > 1:
+            ds_pass = ds_pass.isel(time=itime)
+
+        # Write output into netcdf file
+        if return_diag == False:
+            write_radar_cellid(
+                cloudid_outfile,
+                out_basetime,
+                file_datestring,
+                file_timestring,
+                radar_lon,
+                radar_lat,
+                grid_lon,
+                grid_lat,
+                x_coords,
+                y_coords,
+                dbz_comp,
+                dbz_lowlevel,
+                input_filename,
+                sfc_dz_min,
+                convsf_steiner,
+                core_steiner,
+                core_sorted,
+                core_expand,
+                echotop10,
+                echotop20,
+                echotop30,
+                echotop40,
+                echotop50,
+                feature_mask,
+                npix_feature,
+                out_nfeatures,
+                config,
+                steiner_params=steiner_params,
+                ds_pass=ds_pass,
+            )
+        if return_diag == True:
+            write_radar_cellid(
+                cloudid_outfile,
+                out_basetime,
+                file_datestring,
+                file_timestring,
+                radar_lon,
+                radar_lat,
+                grid_lon,
+                grid_lat,
+                x_coords,
+                y_coords,
+                dbz_comp,
+                dbz_lowlevel,
+                input_filename,
+                sfc_dz_min,
+                convsf_steiner,
+                core_steiner,
+                core_sorted,
+                core_expand,
+                echotop10,
+                echotop20,
+                echotop30,
+                echotop40,
+                echotop50,
+                feature_mask,
+                npix_feature,
+                out_nfeatures,
+                config,
+                steiner_params=steiner_params,
+                refl_bkg=refl_bkg,
+                peakedness=peakedness,
+                core_steiner_orig=core_steiner_orig,
+                ds_pass=ds_pass,
+            )
+        logger.info(f"{cloudid_outfile}")
+        cloudid_outfiles.append(cloudid_outfile)
+
+    # Return list of output files (or single file for backward compatibility)
+    if ntimes == 1:
+        return cloudid_outfiles[0]
+    else:
+        return cloudid_outfiles
 
 #--------------------------------------------------------------------------------
 def subset_domain(comp_dict, geolimits, dx, dy):
@@ -385,21 +419,49 @@ def subset_domain(comp_dict, geolimits, dx, dy):
         buffer = 0
         latmin, latmax = geolimits[0]-buffer, geolimits[2]+buffer
         lonmin, lonmax = geolimits[1]-buffer, geolimits[3]+buffer
-        # Make a 2D mask
-        mask = ((grid_lon >= lonmin) & (grid_lon <= lonmax) & \
-                (grid_lat >= latmin) & (grid_lat <= latmax)).squeeze()
-        # Get y/x indices limits from the mask
-        y_idx, x_idx = np.where(mask == True)
-        xmin, xmax = np.min(x_idx), np.max(x_idx)
-        ymin, ymax = np.min(y_idx), np.max(y_idx)
-        # Subset variables
-        dbz3d_filt = dbz3d_filt[:, ymin:ymax+1, xmin:xmax+1]
-        dbz_comp = dbz_comp[ymin:ymax+1, xmin:xmax+1]
-        dbz_lowlevel = dbz_lowlevel[ymin:ymax+1, xmin:xmax+1]
+        
+        # Check if grid_lon and grid_lat are 1D or 2D
+        if grid_lon.ndim == 1 and grid_lat.ndim == 1:
+            # For 1D coordinates, find indices directly
+            lon_mask = (grid_lon >= lonmin) & (grid_lon <= lonmax)
+            lat_mask = (grid_lat >= latmin) & (grid_lat <= latmax)
+            x_idx = np.where(lon_mask)[0]
+            y_idx = np.where(lat_mask)[0]
+            if len(x_idx) == 0 or len(y_idx) == 0:
+                raise ValueError("No data points found within specified geolimits")
+            xmin, xmax = x_idx[0], x_idx[-1]
+            ymin, ymax = y_idx[0], y_idx[-1]
+            # Subset 1D coordinates
+            grid_lon = grid_lon[xmin:xmax+1]
+            grid_lat = grid_lat[ymin:ymax+1]
+        else:
+            # For 2D coordinates, create mask and find bounding box
+            mask = ((grid_lon >= lonmin) & (grid_lon <= lonmax) & \
+                    (grid_lat >= latmin) & (grid_lat <= latmax)).squeeze()
+            # Get y/x indices limits from the mask
+            y_idx, x_idx = np.where(mask == True)
+            if len(x_idx) == 0 or len(y_idx) == 0:
+                raise ValueError("No data points found within specified geolimits")
+            xmin, xmax = np.min(x_idx), np.max(x_idx)
+            ymin, ymax = np.min(y_idx), np.max(y_idx)
+            # Subset 2D coordinates
+            grid_lon = grid_lon[ymin:ymax+1, xmin:xmax+1]
+            grid_lat = grid_lat[ymin:ymax+1, xmin:xmax+1]
+        
+        # Subset variables (same for both 1D and 2D coordinates)
+        # Handle time dimension if present
+        if 'time' in dbz3d_filt.dims:
+            dbz3d_filt = dbz3d_filt[:, :, ymin:ymax+1, xmin:xmax+1]
+            dbz_comp = dbz_comp[:, ymin:ymax+1, xmin:xmax+1]
+            dbz_lowlevel = dbz_lowlevel[:, ymin:ymax+1, xmin:xmax+1]
+            refl = refl[:, ymin:ymax+1, xmin:xmax+1]
+        else:
+            dbz3d_filt = dbz3d_filt[:, ymin:ymax+1, xmin:xmax+1]
+            dbz_comp = dbz_comp[ymin:ymax+1, xmin:xmax+1]
+            dbz_lowlevel = dbz_lowlevel[ymin:ymax+1, xmin:xmax+1]
+            refl = refl[ymin:ymax+1, xmin:xmax+1]
         mask_goodvalues = mask_goodvalues[ymin:ymax+1, xmin:xmax+1]
-        refl = refl[ymin:ymax+1, xmin:xmax+1]
-        grid_lon = grid_lon[ymin:ymax+1, xmin:xmax+1]
-        grid_lat = grid_lat[ymin:ymax+1, xmin:xmax+1]
+        
         # Vertical coordinate
         if height.ndim > 1:
             height = height[:, ymin:ymax+1, xmin:xmax+1]
@@ -424,6 +486,326 @@ def subset_domain(comp_dict, geolimits, dx, dy):
     comp_dict['refl'] = refl
     comp_dict['time_coords'] = time_coords
 
+    return comp_dict
+
+#--------------------------------------------------------------------------------
+def get_composite_reflectivity_generic(input_filename, config):
+    """
+    Generic function to get composite reflectivity from various input sources.
+    
+    This function is agnostic to different input datasets, requiring only:
+    - time coordinate
+    - x, y coordinates (1D or 2D)
+    - z coordinate (optional, for 3D data)
+    - 2D or 3D radar reflectivity variable
+    
+    Args:
+        input_filename: string
+            Input data filename
+        config: dictionary
+            Dictionary containing config parameters
+            
+    Required config parameters:
+        - reflectivity_varname: name of reflectivity variable
+        - x_varname, y_varname: coordinate variable names
+        - x_dimname, y_dimname: dimension names
+        - time_dimname (optional): time dimension name, default 'time'
+        - z_dimname (optional): vertical dimension name, default 'z'
+        - z_varname (optional): vertical coordinate name
+        - dx, dy: grid spacing in meters
+        - radar_sensitivity: minimum reflectivity threshold
+        - sfc_dz_min, sfc_dz_max: height range for low-level reflectivity
+        - z_coord_type (optional): 'height' or 'pressure', default auto-detect
+          For pressure coordinates, sfc_dz_min/max are in hPa (surface is high pressure)
+        - default_sfc_pressure (optional): default surface pressure in hPa when terrain_file
+          is not provided and z_coord_type='pressure', default 1013.25 hPa
+        - composite_reflectivity_varname (optional): pre-computed composite reflectivity
+        - pass_varname (optional): list of additional variables to pass through
+        - is_3d (optional): flag to indicate if data is 3D, default auto-detect
+        
+    Returns:
+        comp_dict: dictionary
+            Dictionary containing standardized output variables
+    """
+    logger = logging.getLogger(__name__)
+    
+    # Get configuration parameters
+    radar_sensitivity = config['radar_sensitivity']
+    sfc_dz_min = config['sfc_dz_min']
+    sfc_dz_max = config['sfc_dz_max']
+    
+    # Check required grid spacing parameters
+    dx = config.get('dx', None)
+    dy = config.get('dy', None)
+    if dx is None:
+        raise ValueError("'dx' (grid spacing in x-direction) must be specified in config")
+    if dy is None:
+        raise ValueError("'dy' (grid spacing in y-direction) must be specified in config")
+    
+    time_dimname = config.get('time_dimname', 'time')
+    time_coordname = config.get('time_coordname', time_dimname)
+    x_dimname = config.get('x_dimname', 'x')
+    y_dimname = config.get('y_dimname', 'y')
+    z_dimname = config.get('z_dimname', 'z')
+    x_varname = config['x_varname']
+    y_varname = config['y_varname']
+    z_varname = config.get('z_varname', z_dimname)
+    lon_varname = config.get('lon_varname', x_varname)
+    lat_varname = config.get('lat_varname', y_varname)
+    reflectivity_varname = config['reflectivity_varname']
+    composite_reflectivity_varname = config.get('composite_reflectivity_varname', None)
+    pass_varname = config.get('pass_varname', None)
+    radar_lon_varname = config.get('radar_lon_varname', None)
+    radar_lat_varname = config.get('radar_lat_varname', None)
+    radar_alt_varname = config.get('radar_alt_varname', None)
+    terrain_file = config.get('terrain_file', None)
+    elev_varname = config.get('elev_varname', None)
+    rangemask_varname = config.get('rangemask_varname', None)
+    is_3d = config.get('is_3d', None)  # None = auto-detect
+    z_coord_type = config.get('z_coord_type', None)  # None = auto-detect, 'height' or 'pressure'
+    default_sfc_pressure = config.get('default_sfc_pressure', 1013.25)  # hPa, used when terrain_file=None and z_coord_type='pressure'
+    
+    # Read input file
+    ds = xr.open_dataset(input_filename)
+    
+    # Handle special WRF case: rename Time -> time, handle XTIME
+    if 'Time' in ds.dims and time_dimname == 'time':
+        if 'XTIME' in ds.variables:
+            ds = ds.reset_coords(names='XTIME', drop=False)
+        ds = ds.rename({'Time': time_dimname})
+    
+    # Get time coordinate
+    if time_coordname in ds.variables:
+        time_coords = ds[time_coordname]
+        # Round to nearest second for consistency
+        if hasattr(time_coords.dt, 'round'):
+            time_coords = time_coords.dt.round('s')
+    else:
+        time_coords = ds[time_dimname]
+        if hasattr(time_coords.dt, 'round'):
+            time_coords = time_coords.dt.round('s')
+    
+    # Get reflectivity data
+    dbz = ds[reflectivity_varname].squeeze()
+    
+    # Auto-detect if data is 3D
+    if is_3d is None:
+        is_3d = z_dimname in dbz.dims
+    
+    # Get spatial dimensions
+    nx = ds.sizes[x_dimname]
+    ny = ds.sizes[y_dimname]
+    
+    # Get x, y coordinates
+    if x_varname in ds.variables:
+        x_coords = ds[x_varname].data
+    else:
+        # Create x coordinate from dimension using dx from config
+        x_coords = np.arange(0, nx) * dx
+    
+    if y_varname in ds.variables:
+        y_coords = ds[y_varname].data
+    else:
+        # Create y coordinate from dimension using dy from config
+        y_coords = np.arange(0, ny) * dy
+    
+    # Get grid lat/lon (can be 1D or 2D)
+    if lon_varname in ds.variables:
+        grid_lon = ds[lon_varname].squeeze()
+        # For 3D lat/lon, take first vertical level
+        if z_dimname in grid_lon.dims:
+            grid_lon = grid_lon.isel({z_dimname: 0})
+    else:
+        # Create dummy grid_lon
+        grid_lon = xr.DataArray(
+            np.zeros((ny, nx)), 
+            coords={y_dimname: y_coords, x_dimname: x_coords},
+            dims=(y_dimname, x_dimname)
+        )
+    
+    if lat_varname in ds.variables:
+        grid_lat = ds[lat_varname].squeeze()
+        # For 3D lat/lon, take first vertical level
+        if z_dimname in grid_lat.dims:
+            grid_lat = grid_lat.isel({z_dimname: 0})
+    else:
+        # Create dummy grid_lat
+        grid_lat = xr.DataArray(
+            np.zeros((ny, nx)),
+            coords={y_dimname: y_coords, x_dimname: x_coords},
+            dims=(y_dimname, x_dimname)
+        )
+    
+    # Convert 1D grid_lon/grid_lat to 2D for compatibility with write_radar_cellid
+    if grid_lon.ndim == 1 and grid_lat.ndim == 1:
+        # Create 2D meshgrid from 1D coordinates
+        grid_lon_2d, grid_lat_2d = np.meshgrid(grid_lon.data, grid_lat.data)
+        grid_lon = xr.DataArray(
+            grid_lon_2d,
+            coords={y_dimname: y_coords, x_dimname: x_coords},
+            dims=(y_dimname, x_dimname)
+        )
+        grid_lat = xr.DataArray(
+            grid_lat_2d,
+            coords={y_dimname: y_coords, x_dimname: x_coords},
+            dims=(y_dimname, x_dimname)
+        )
+    
+    # Get radar location (if available)
+    if radar_lon_varname and radar_lon_varname in ds.variables:
+        radar_lon = ds[radar_lon_varname]
+        radar_lat = ds[radar_lat_varname]
+        radar_alt = ds[radar_alt_varname].squeeze() if radar_alt_varname in ds.variables else 0
+    else:
+        # Create fake radar lat/lon for model data
+        radar_lon = xr.DataArray(0, attrs={'long_name': 'Radar longitude'})
+        radar_lat = xr.DataArray(0, attrs={'long_name': 'Radar latitude'})
+        radar_alt = 0
+    
+    # Process 3D reflectivity data
+    if is_3d:
+        # Get vertical coordinate
+        if z_varname in ds.variables:
+            height = ds[z_varname].data
+        else:
+            # Special case for WRF geopotential height
+            if 'PH' in ds.variables and 'PHB' in ds.variables:
+                height = ((ds['PH'] + ds['PHB']).squeeze().data / 9.80665)
+            else:
+                logger.warning(f"Vertical coordinate {z_varname} not found, using index")
+                height = np.arange(ds.sizes[z_dimname])
+        
+        # Auto-detect vertical coordinate type if not specified
+        if z_coord_type is None:
+            # Check if coordinate is monotonically increasing or decreasing
+            if z_varname in ds.variables:
+                z_vals = ds[z_varname].values
+                # For height: typically increases from surface (low) to top (high)
+                # For pressure: typically decreases from surface (high ~1000 hPa) to top (low ~0.1 hPa)
+                if z_vals[0] > z_vals[-1]:
+                    z_coord_type = 'pressure'
+                    logger.info(f"Auto-detected vertical coordinate type: pressure (decreasing from {z_vals[0]:.2f} to {z_vals[-1]:.2f})")
+                else:
+                    z_coord_type = 'height'
+                    logger.info(f"Auto-detected vertical coordinate type: height (increasing from {z_vals[0]:.2f} to {z_vals[-1]:.2f})")
+            else:
+                # Default to height if cannot determine
+                z_coord_type = 'height'
+                logger.warning("Cannot auto-detect vertical coordinate type, defaulting to 'height'")
+        else:
+            logger.info(f"Using specified vertical coordinate type: {z_coord_type}")
+        
+        # Handle height coordinate transformation (AGL to MSL if needed)
+        if radar_alt_varname in ds.variables:
+            z_agl = ds[z_dimname] + radar_alt
+            ds[z_dimname] = z_agl
+        
+        # Get or create surface elevation
+        if terrain_file is not None:
+            dster = xr.open_dataset(terrain_file)
+            dster = dster.assign_coords({
+                y_dimname: ds[y_varname], 
+                x_dimname: ds[x_varname]
+            })
+            sfc_elev = dster[elev_varname]
+            mask_goodvalues = dster[rangemask_varname].data.astype(int)
+        else:
+            # Create default surface elevation/pressure
+            if z_coord_type == 'pressure':
+                # For pressure coordinates, use configured or default sea level pressure
+                sfc_elev = xr.DataArray(
+                    np.full((ny, nx), default_sfc_pressure),
+                    coords={y_dimname: y_coords, x_dimname: x_coords},
+                    dims=(y_dimname, x_dimname)
+                )
+                logger.info(f"No terrain file specified. Using default surface pressure: {default_sfc_pressure} hPa")
+            else:
+                # For height coordinates, use zero elevation
+                sfc_elev = xr.DataArray(
+                    np.zeros((ny, nx)),
+                    coords={y_dimname: y_coords, x_dimname: x_coords},
+                    dims=(y_dimname, x_dimname)
+                )
+            mask_goodvalues = np.full((ny, nx), 1, dtype=int)
+        
+        # Apply quality control filters (optional)
+        # Check for normalized coherent power filtering
+        if 'normalized_coherent_power' in ds.variables:
+            ncp = ds['normalized_coherent_power'].squeeze()
+            dbz = dbz.where(ncp >= 0.5)
+        
+        # Filter reflectivity based on vertical coordinate type
+        if z_coord_type == 'pressure':
+            # For pressure coordinates: surface is high pressure, top is low pressure
+            # Filter out levels below surface pressure (sfc_elev represents surface pressure)
+            # Keep levels where pressure < surface pressure - sfc_dz_min
+            dbz3d_filt = dbz.where(ds[z_varname] < (sfc_elev - sfc_dz_min))
+            
+            # Calculate low-level composite reflectivity
+            # Low-level is defined as pressure range from (sfc - sfc_dz_max) to (sfc - sfc_dz_min)
+            # This captures levels close to but above the surface
+            dbz3d_lowlevel = dbz.where(
+                (ds[z_varname] >= (sfc_elev - sfc_dz_max)) & 
+                (ds[z_varname] <= (sfc_elev - sfc_dz_min))
+            )
+        else:
+            # For height coordinates: surface is low, top is high (traditional case)
+            # Filter reflectivity below surface + minimum height
+            dbz3d_filt = dbz.where(ds[z_varname] > (sfc_elev + sfc_dz_min))
+            
+            # Calculate low-level composite reflectivity
+            dbz3d_lowlevel = dbz.where(
+                (ds[z_varname] >= sfc_dz_min) & (ds[z_varname] <= sfc_dz_max)
+            )
+        
+        # Calculate composite reflectivity
+        if composite_reflectivity_varname and composite_reflectivity_varname in ds.variables:
+            dbz_comp = ds[composite_reflectivity_varname].squeeze()
+        else:
+            dbz_comp = dbz3d_filt.max(dim=z_dimname)
+        
+        # Calculate low-level maximum reflectivity
+        dbz_lowlevel = dbz3d_lowlevel.max(dim=z_dimname)
+        
+    else:
+        # 2D composite reflectivity case
+        dbz_comp = dbz
+        dbz_lowlevel = dbz.copy()
+        # Create fake 3D array for compatibility
+        dbz3d_filt = dbz.expand_dims(z_dimname, axis=0)
+        height = np.zeros(1)
+        mask_goodvalues = np.full((ny, nx), 1, dtype=int)
+    
+    # Extract pass-through variables if requested
+    if pass_varname is not None:
+        pass_varname_set = set(ds.data_vars) & set(pass_varname)
+        ds_pass = ds[pass_varname_set] if pass_varname_set else None
+    else:
+        ds_pass = None
+
+    # Prepare reflectivity array for Steiner classification
+    refl = np.copy(dbz_comp.data)
+    # Replace values below radar sensitivity and NaN with sensitivity value
+    refl[(refl < radar_sensitivity) | np.isnan(refl)] = radar_sensitivity
+
+    # Return standardized dictionary
+    comp_dict = {
+        'x_coords': x_coords,
+        'y_coords': y_coords,
+        'dbz3d_filt': dbz3d_filt,
+        'dbz_comp': dbz_comp,
+        'dbz_lowlevel': dbz_lowlevel,
+        'grid_lat': grid_lat,
+        'grid_lon': grid_lon,
+        'height': height,
+        'mask_goodvalues': mask_goodvalues,
+        'radar_lat': radar_lat,
+        'radar_lon': radar_lon,
+        'refl': refl,
+        'time_coords': time_coords,
+        'ds_pass': ds_pass,
+    }
+    
     return comp_dict
 
 #--------------------------------------------------------------------------------
