@@ -141,8 +141,8 @@ y_coordname: "latitude"
 lon_coordname: "longitude"
 lat_coordname: "latitude"
 reflectivity_varname: 'REFL_COM'
-# Input data source: 'radar', 'wrf'
-input_source: 'wrf_composite'
+# Input data source: No longer needed!
+# input_source: 'wrf_composite'
 
 # Specify data structure
 datatimeresolution: 0.25     # hour

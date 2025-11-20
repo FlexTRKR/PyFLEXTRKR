@@ -157,8 +157,8 @@ radar_lat_varname: 'origin_latitude'
 radar_alt_varname: 'alt'
 # Radar reflectivity variable name used for cell identification
 reflectivity_varname: 'DBZc'
-# Input data source: 'radar', 'wrf', 'wrf_regrid'
-input_source: 'radar'
+# Input data source: No longer needed!
+# input_source: 'radar'
 # The vertical coordinate type - 'pressure' or 'height'
 # If omitted, will auto-detect based on whether coordinate is increasing/decreasing
 z_coord_type: 'height'

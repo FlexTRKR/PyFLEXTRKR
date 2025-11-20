@@ -7,7 +7,6 @@ from pyflextrkr.steiner_func import make_dilation_step_func
 from pyflextrkr.steiner_func import mod_steiner_classification
 from pyflextrkr.steiner_func import expand_conv_core
 from pyflextrkr.echotop_func import echotop_height
-from pyflextrkr.echotop_func import echotop_height_wrf
 from pyflextrkr.netcdf_io import write_radar_cellid
 
 def idcells_reflectivity(
@@ -52,11 +51,16 @@ def idcells_reflectivity(
     dy = config['dy']
     z_dimname = config.get('z_dimname', 'z')
     fillval = config['fillval']
-    input_source = config['input_source']
     geolimits = config.get('geolimits', None)
     convolve_method = config.get('convolve_method', 'ndimage')
     remove_smallcores = config.get('remove_smallcores', True)
     remove_smallcells = config.get('remove_smallcells', False)
+    
+    # Check if input_source is specified (deprecated parameter)
+    if 'input_source' in config:
+        logger.info("Note: 'input_source' parameter is no longer needed. "
+                   "The reflectivity reader function has been generalized and "
+                   "the echo-top height function is now unified to handle all input types.")
 
     # Set echo classification type values
     types_powell = {
@@ -101,6 +105,9 @@ def idcells_reflectivity(
     # Note: The generic function replaces all input_source specific functions
     # (radar, csapr_cacti, wrf, wrf_regrid, wrf_composite)
     comp_dict = get_composite_reflectivity_generic(input_filename, config)
+    
+    # Get is_3d flag from comp_dict
+    is_3d = comp_dict.get('is_3d', True)
 
     # Subset domain
     if (geolimits is not None):
@@ -203,9 +210,16 @@ def idcells_reflectivity(
 
         # Calculate echo-top heights for various reflectivity thresholds
         shape_2d = refl.shape
-        if (input_source == 'radar') or \
-            (input_source == 'csapr_cacti') or \
-            (input_source == 'wrf_regrid'):
+        if not is_3d:
+            # For 2D composite reflectivity input, skip echo-top height calculations
+            logger.info("Input data is 2D, skipping echo-top height calculations")
+            echotop10 = np.full(shape_2d, np.nan, dtype=np.float32)
+            echotop20 = np.full(shape_2d, np.nan, dtype=np.float32)
+            echotop30 = np.full(shape_2d, np.nan, dtype=np.float32)
+            echotop40 = np.full(shape_2d, np.nan, dtype=np.float32)
+            echotop50 = np.full(shape_2d, np.nan, dtype=np.float32)
+        else:
+            # Use unified echotop_height function (handles both 1D and 3D height arrays)
             echotop10 = echotop_height(dbz3d_filt, height, z_dimname, shape_2d,
                                        dbz_thresh=10, gap=echotop_gap, min_thick=0)
             echotop20 = echotop_height(dbz3d_filt, height, z_dimname, shape_2d,
@@ -216,24 +230,6 @@ def idcells_reflectivity(
                                        dbz_thresh=40, gap=echotop_gap, min_thick=0)
             echotop50 = echotop_height(dbz3d_filt, height, z_dimname, shape_2d,
                                        dbz_thresh=50, gap=echotop_gap, min_thick=0)
-        elif (input_source == 'wrf'):
-            echotop10 = echotop_height_wrf(dbz3d_filt, height, z_dimname, shape_2d,
-                                           dbz_thresh=10, gap=echotop_gap, min_thick=0)
-            echotop20 = echotop_height_wrf(dbz3d_filt, height, z_dimname, shape_2d,
-                                           dbz_thresh=20, gap=echotop_gap, min_thick=0)
-            echotop30 = echotop_height_wrf(dbz3d_filt, height, z_dimname, shape_2d,
-                                           dbz_thresh=30, gap=echotop_gap, min_thick=0)
-            echotop40 = echotop_height_wrf(dbz3d_filt, height, z_dimname, shape_2d,
-                                           dbz_thresh=40, gap=echotop_gap, min_thick=0)
-            echotop50 = echotop_height_wrf(dbz3d_filt, height, z_dimname, shape_2d,
-                                           dbz_thresh=50, gap=echotop_gap, min_thick=0)
-        elif ('composite' in input_source):
-            # For 'composite' reflectivity (2D) input source, skip echo-top height calculations
-            echotop10 = np.full(shape_2d, np.nan, dtype=np.float32)
-            echotop20 = np.full(shape_2d, np.nan, dtype=np.float32)
-            echotop30 = np.full(shape_2d, np.nan, dtype=np.float32)
-            echotop40 = np.full(shape_2d, np.nan, dtype=np.float32)
-            echotop50 = np.full(shape_2d, np.nan, dtype=np.float32)
 
         del dbz3d_filt
 
@@ -831,6 +827,7 @@ def get_composite_reflectivity_generic(input_filename, config):
         'refl': refl,
         'time_coords': time_coords,
         'ds_pass': ds_pass,
+        'is_3d': is_3d,
     }
     
     return comp_dict
