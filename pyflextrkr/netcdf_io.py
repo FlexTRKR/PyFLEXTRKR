@@ -228,6 +228,79 @@ def write_radar_cellid(
         config,
         **kwargs,
 ):
+    """
+    Writes radar cellid variables to netCDF file.
+
+    Args:
+        cloudid_outfile: str
+            Output cloudid netCDF file name.
+        file_basetime: np.array(float)
+            Base time in epoch seconds.
+        file_datestring: str
+            Date string in 'YYYYMMDD' format.
+        file_timestring: str
+            Time string in 'HHMM' format.
+        radar_lon: np.DataArray(float)
+            Radar longitude.
+        radar_lat: np.DataArray(float)
+            Radar latitude.
+        out_lon: np.DataArray(float)
+            Output longitude 2D array.
+        out_lat: np.DataArray(float)
+            Output latitude 2D array.
+        x_coords: np.array(float)
+            X coordinates array.
+        y_coords: np.array(float)
+            Y coordinates array.
+        dbz_comp: np.DataArray(float)
+            Composite reflectivity 2D array.
+        dbz_lowlevel: np.DataArray(float)
+            Low-level composite reflectivity 2D array.
+        reflectivity_file: str
+            Input reflectivity file name.
+        sfc_dz_min: float
+            Minimum height above surface for low-level reflectivity calculation.
+        convsf_steiner: np.DataArray(int)
+            Steiner convective/stratiform classification 2D array.
+        core_steiner: np.DataArray(int)
+            Steiner convective core mask 2D array.
+        core_sorted: np.DataArray(int)
+            Sorted convective core mask 2D array.
+        core_expand: np.DataArray(int)
+            Expanded convective core mask 2D array.
+        echotop10: np.ndarray(float)
+            10dBZ echo-top height 2D array.
+        echotop20: np.ndarray(float)
+            20dBZ echo-top height 2D array.
+        echotop30: np.ndarray(float)
+            30dBZ echo-top height 2D array.
+        echotop40: np.ndarray(float)
+            40dBZ echo-top height 2D array.
+        echotop50: np.ndarray(float)
+            50dBZ echo-top height 2D array.
+        feature_mask: np.ndarray(int)
+            Labeled feature number 2D array.
+        npix_feature: np.ndarray(int)
+            Number of pixels for each feature array.
+        nfeatures: int
+            Number of features.
+        config: dict
+            Configuration dictionary.
+        **kwargs: optional arguments
+            Expects these optional arguments:
+            refl_bkg: np.ndarray(float)
+                Steiner background reflectivity 3D array.
+            peakedness: np.ndarray(float)
+                Steiner peakedness 3D array.
+            core_steiner_orig: np.ndarray(int)
+                Original Steiner convective core mask 3D array.
+            ds_pass: xarray.Dataset
+                Additional dataset to pass through to output.
+    
+    Returns:
+        cloudid_outfile: str
+            Output cloudid netCDF file name.
+    """
     feature_varname = config.get("feature_varname", "feature_number")
     nfeature_varname = config.get("nfeature_varname", "nfeatures")
     featuresize_varname = config.get("featuresize_varname", "npix_feature")
