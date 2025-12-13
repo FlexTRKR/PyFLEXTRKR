@@ -337,6 +337,13 @@ def write_radar_cellid(
         'lat': (['lat'], np.squeeze(out_lat.data[:, 0])),
         'features': (['features'], np.arange(1, nfeatures + 1),),
     }
+    # Handle input file attribute for both netCDF string and Zarr Dataset
+    if isinstance(reflectivity_file, str):
+        input_file_attr = reflectivity_file
+    else:
+        # For Zarr/HEALPix input (xarray Dataset), create a descriptive string
+        input_file_attr = f"HEALPix Zarr Dataset (time: {reflectivity_file.time.values})"
+    
     # Output global attributes
     gattr_dict = {
         "Title": "Cloudid file from "
@@ -353,7 +360,7 @@ def write_radar_cellid(
         'Contact': 'Zhe Feng, zhe.feng@pnnl.gov',
         'Institution': 'Pacific Northwest National Laboratory',
         'Created_on': time.ctime(time.time()),
-        'Input_File': reflectivity_file,
+        'Input_File': input_file_attr,
     }
     # Check for optional keyword steiner_params
     if 'steiner_params' in kwargs:

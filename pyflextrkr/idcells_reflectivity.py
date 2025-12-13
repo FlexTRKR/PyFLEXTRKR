@@ -8,6 +8,7 @@ from pyflextrkr.steiner_func import mod_steiner_classification
 from pyflextrkr.steiner_func import expand_conv_core
 from pyflextrkr.echotop_func import echotop_height
 from pyflextrkr.netcdf_io import write_radar_cellid
+from pyflextrkr.hp_utilities import remap_healpix_to_latlon_grid
 
 def idcells_reflectivity(
     input_filename,
@@ -29,6 +30,7 @@ def idcells_reflectivity(
     np.set_printoptions(threshold=np.inf)
     logger = logging.getLogger(__name__)
 
+    input_format = config.get("input_format", "netcdf")
     absConvThres = config['absConvThres']
     minZdiff = config['minZdiff']
     truncZconvThres = config['truncZconvThres']
@@ -440,6 +442,26 @@ def subset_domain(comp_dict, geolimits, dx, dy):
         ny = ymax - ymin + 1
         x_coords = np.arange(0, nx) * dx
         y_coords = np.arange(0, ny) * dy
+        
+        # Subset ds_pass if it exists
+        ds_pass = comp_dict.get('ds_pass', None)
+        if ds_pass is not None:
+            # Subset all variables in ds_pass that have y and x dimensions
+            ds_pass_subset = {}
+            for var_name in ds_pass.data_vars:
+                var = ds_pass[var_name]
+                # Check if variable has spatial dimensions
+                if 'y' in var.dims and 'x' in var.dims:
+                    # Subset spatial dimensions
+                    if 'time' in var.dims:
+                        ds_pass_subset[var_name] = var[:, ymin:ymax+1, xmin:xmax+1]
+                    else:
+                        ds_pass_subset[var_name] = var[ymin:ymax+1, xmin:xmax+1]
+                else:
+                    # Keep variable as-is if no spatial dimensions
+                    ds_pass_subset[var_name] = var
+            # Recreate Dataset with subsetted variables
+            ds_pass = xr.Dataset(ds_pass_subset)
 
     # Update variables in the dictionary
     comp_dict['x_coords'] = x_coords
@@ -455,6 +477,7 @@ def subset_domain(comp_dict, geolimits, dx, dy):
     comp_dict['radar_lon'] = radar_lon
     comp_dict['refl'] = refl
     comp_dict['time_coords'] = time_coords
+    comp_dict['ds_pass'] = ds_pass
 
     return comp_dict
 
@@ -501,6 +524,7 @@ def get_composite_reflectivity_generic(input_filename, config):
     logger = logging.getLogger(__name__)
     
     # Get configuration parameters
+    input_format = config.get("input_format", "netcdf")
     radar_sensitivity = config['radar_sensitivity']
     sfc_dz_min = config['sfc_dz_min']
     sfc_dz_max = config['sfc_dz_max']
@@ -540,7 +564,26 @@ def get_composite_reflectivity_generic(input_filename, config):
     round_time_to_second = config.get('round_time_to_second', False)  # Flag to round time coordinate to nearest second
     
     # Read input file
-    ds = xr.open_dataset(input_filename)
+    if input_format == 'netcdf':
+        ds = xr.open_dataset(input_filename)
+    elif input_format == 'zarr':
+        ds_hp = input_filename
+    else:
+        logger.error(f'Unknown input_format: {input_format}')
+        sys.exit()
+
+    # Handle HEALPix format: remap to regular grid before proceeding
+    if input_format == 'zarr':
+        latlon_filename = config.get('latlon_filename', None)
+        if latlon_filename is None:
+            logger.error("For HEALPix zarr input, 'latlon_filename' must be specified in config")
+            sys.exit()
+        # Remap HEALPix to lat/lon grid
+        ds = remap_healpix_to_latlon_grid(
+            ds_hp,
+            latlon_filename,
+            config,
+        )
     
     # Handle special WRF case: rename Time -> time, handle XTIME
     if 'Time' in ds.dims and time_dimname == 'time':
@@ -583,7 +626,7 @@ def get_composite_reflectivity_generic(input_filename, config):
     # Auto-detect if data is 3D
     if is_3d is None:
         is_3d = z_dimname in ds[reflectivity_varname].dims
-    
+
     # Get spatial dimensions
     nx = ds.sizes[x_dimname]
     ny = ds.sizes[y_dimname]
@@ -642,7 +685,7 @@ def get_composite_reflectivity_generic(input_filename, config):
             coords={y_dimname: y_coords, x_dimname: x_coords},
             dims=(y_dimname, x_dimname)
         )
-    
+
     # Get radar location (if available)
     if radar_lon_varname and radar_lon_varname in ds.variables:
         radar_lon = ds[radar_lon_varname]

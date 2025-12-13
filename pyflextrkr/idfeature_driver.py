@@ -1,4 +1,5 @@
 import sys
+import glob
 import logging
 import xarray as xr
 import pandas as pd
@@ -45,33 +46,59 @@ def idfeature_driver(config):
 
     if input_format.lower() == "zarr":
 
-        import intake     # For catalogs
+        if "catalog_file" in config:
+            import intake     # For catalogs
 
-        # Get catalog info from config
-        catalog_file = config["catalog_file"]
-        catalog_location = config.get("catalog_location", None)
-        catalog_source = config["catalog_source"]
-        catalog_params = config.get("catalog_params", {})
-        olr_varname = config['olr_varname']
-        pcp_varname = config['pcp_varname']
-        start_date = config["startdate"]
-        end_date = config["enddate"]
+            # Get catalog info from config
+            catalog_file = config["catalog_file"]
+            catalog_location = config.get("catalog_location", None)
+            catalog_source = config["catalog_source"]
+            catalog_params = config.get("catalog_params", {})
+            olr_varname = config['olr_varname']
+            pcp_varname = config['pcp_varname']
+            start_date = config["startdate"]
+            end_date = config["enddate"]
 
-        # Load the catalog
-        logger.info(f"Loading HEALPix catalog: {catalog_file}")
-        in_catalog = intake.open_catalog(catalog_file)
-        if catalog_location is not None:
-            in_catalog = in_catalog[catalog_location]
+            # Load the catalog
+            logger.info(f"Loading HEALPix catalog: {catalog_file}")
+            in_catalog = intake.open_catalog(catalog_file)
+            if catalog_location is not None:
+                in_catalog = in_catalog[catalog_location]
 
-        # Get the DataSet from the catalog
-        ds = in_catalog[catalog_source](**catalog_params).to_dask()
+            # Get the DataSet from the catalog
+            ds = in_catalog[catalog_source](**catalog_params).to_dask()
+
+        else:
+            # Get HEALPix path and basename from config
+            healpix_path = config["healpix_path"]
+            healpix_basename = config["healpix_basename"]
+            start_date = config["startdate"]
+            end_date = config["enddate"]
+            pass_varname = config.get("pass_varname", None)
+
+            # TODO: make file search more robust
+            in_file = sorted(glob.glob(f"{healpix_path}{healpix_basename}*.zarr"))[0]
+            # Read in Zarr data directly
+            ds = xr.open_zarr(in_file)
+
+        # Make a list of required variables based on feature_type
+        if "tb_pf" in feature_type:
+            keep_vars = [olr_varname, pcp_varname]
+        elif "radar_cells" in feature_type:
+            reflectivity_varname = config["reflectivity_varname"]
+            if pass_varname is not None:
+                keep_vars = [reflectivity_varname] + list(pass_varname)
+            else:
+                keep_vars = [reflectivity_varname]
+        else:
+            # Keep all variables for other feature types
+            keep_vars = list(ds.data_vars)
 
         # Subset to keep only the required variables
         all_vars = list(ds.data_vars)
-        keep_vars = [olr_varname, pcp_varname]
         drop_vars = [var for var in all_vars if var not in keep_vars]
         ds = ds.drop_vars(drop_vars)
-
+        
         # Check the calendar type of the time coordinate
         calendar = ds['time'].dt.calendar
         # Convert start_date and end_date to pandas.Timestamp
