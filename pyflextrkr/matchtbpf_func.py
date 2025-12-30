@@ -267,10 +267,10 @@ def matchtbpf_singlefile(
 
                     # Calculate 95th percentile of rain rate
                     if nrainpix == 0:
-                        rainrate_p95[imatchcloud] = 0 
+                        rainrate_p95[imatchcloud] = np.nan 
                     else:
                     #  print (nrainpix)
-                        rainrate_p95[imatchcloud] = np.quantile(sub_rainrate_map[ipfy, ipfx], 0.95)
+                        rainrate_p95[imatchcloud] = np.nanquantile(sub_rainrate_map[ipfy, ipfx], 0.95)
                     #  print (np.quantile(sub_rainrate_map[ipfy, ipfx], 0.95))
                     
                     if nrainpix > 0:
