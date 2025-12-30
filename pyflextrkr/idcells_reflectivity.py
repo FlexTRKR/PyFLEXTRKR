@@ -162,48 +162,33 @@ def idcells_reflectivity(
         )
 
         # Run Steiner classification
-        if return_diag == False:
-            convsf_steiner, \
-            core_steiner, \
-            core_dilate = mod_steiner_classification(
-                types_steiner, refl, mask_goodvalues, dx, dy,
-                bkg_rad=bkgrndRadius * 1000,
-                minZdiff=minZdiff,
-                absConvThres=absConvThres,
-                truncZconvThres=truncZconvThres,
-                weakEchoThres=weakEchoThres,
-                bkg_bin=bkg_bin,
-                conv_rad_bin=conv_rad_bin,
-                min_corearea=min_corearea,
-                min_cellarea=min_cellarea,
-                remove_smallcores=remove_smallcores,
-                remove_smallcells=remove_smallcells,
-                return_diag=return_diag,
-                convolve_method=convolve_method,
-            )
-
-        if return_diag == True:
-            convsf_steiner, \
-            core_steiner, \
-            core_dilate, \
-            refl_bkg, \
-            peakedness, \
-            core_steiner_orig = mod_steiner_classification(
-                types_steiner, refl, mask_goodvalues, dx, dy,
-                bkg_rad=bkgrndRadius * 1000,
-                minZdiff=minZdiff,
-                absConvThres=absConvThres,
-                truncZconvThres=truncZconvThres,
-                weakEchoThres=weakEchoThres,
-                bkg_bin=bkg_bin,
-                conv_rad_bin=conv_rad_bin,
-                min_corearea=min_corearea,
-                min_cellarea=min_cellarea,
-                remove_smallcores=remove_smallcores,
-                remove_smallcells=remove_smallcells,
-                return_diag=return_diag,
-                convolve_method=convolve_method,
-            )
+        steiner_result = mod_steiner_classification(
+            types_steiner, refl, mask_goodvalues, dx, dy,
+            bkg_rad=bkgrndRadius * 1000,
+            minZdiff=minZdiff,
+            absConvThres=absConvThres,
+            truncZconvThres=truncZconvThres,
+            weakEchoThres=weakEchoThres,
+            bkg_bin=bkg_bin,
+            conv_rad_bin=conv_rad_bin,
+            min_corearea=min_corearea,
+            min_cellarea=min_cellarea,
+            remove_smallcores=remove_smallcores,
+            remove_smallcells=remove_smallcells,
+            return_diag=return_diag,
+            convolve_method=convolve_method,
+        )
+        
+        # Extract main outputs
+        convsf_steiner = steiner_result['sclass']
+        core_steiner = steiner_result['score']
+        core_dilate = steiner_result['score_dilate']
+        
+        # Extract diagnostic outputs if requested
+        if return_diag:
+            refl_bkg = steiner_result['refl_bkg']
+            peakedness = steiner_result['peakedness']
+            core_steiner_orig = steiner_result['score_orig']
 
         # Expand convective cell masks outward to a set of radii to
         # increase the convective cell footprint for better tracking convective cells

@@ -33,7 +33,7 @@ def remap_healpix_to_latlon_grid(ds_hp, latlon_filename, config):
     time_pd = pd.to_datetime(time_coord.dt.strftime("%Y-%m-%dT%H:%M:%S").item())
 
     # Read lat-lon grid file
-    ds_grid = xr.open_dataset(latlon_filename)
+    ds_grid = xr.open_dataset(latlon_filename, decode_timedelta=False)
 
     # Define the list of coordinates you want to keep
     coords_to_keep = [y_coordname, x_coordname]

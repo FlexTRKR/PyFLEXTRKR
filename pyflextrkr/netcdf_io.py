@@ -256,8 +256,8 @@ def write_radar_cellid(
             Composite reflectivity 2D array.
         dbz_lowlevel: np.DataArray(float)
             Low-level composite reflectivity 2D array.
-        reflectivity_file: str
-            Input reflectivity file name.
+        reflectivity_file: str or Xarray DataSet
+            Input reflectivity file name or Xarray DataSet.
         sfc_dz_min: float
             Minimum height above surface for low-level reflectivity calculation.
         convsf_steiner: np.DataArray(int)
