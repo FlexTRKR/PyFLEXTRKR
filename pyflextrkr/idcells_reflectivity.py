@@ -729,24 +729,39 @@ def get_composite_reflectivity_generic(input_filename, config):
             # Create default surface elevation/pressure
             if z_coord_type == 'pressure':
                 # For pressure coordinates, use configured or default sea level pressure
-                sfc_elev = xr.DataArray(
-                    np.full((ny, nx), default_sfc_pressure),
-                    coords={y_dimname: y_coords, x_dimname: x_coords},
-                    dims=(y_dimname, x_dimname)
-                )
+                if isinstance(x_coords, np.ndarray) and x_coords.ndim == 2:
+                    # For 2D coordinates, create with index dimensions only
+                    sfc_elev = xr.DataArray(
+                        np.full((ny, nx), default_sfc_pressure),
+                        dims=(y_dimname, x_dimname)
+                    )
+                else:
+                    sfc_elev = xr.DataArray(
+                        np.full((ny, nx), default_sfc_pressure),
+                        coords={y_dimname: y_coords, x_dimname: x_coords},
+                        dims=(y_dimname, x_dimname)
+                    )
                 logger.info(f"No terrain file specified. Using default surface pressure: {default_sfc_pressure} hPa")
             else:
                 # For height coordinates, use configured or default surface height
-                sfc_elev = xr.DataArray(
-                    np.full((ny, nx), default_sfc_height),
-                    coords={y_dimname: y_coords, x_dimname: x_coords},
-                    dims=(y_dimname, x_dimname)
-                )
+                if isinstance(x_coords, np.ndarray) and x_coords.ndim == 2:
+                    # For 2D coordinates, create with index dimensions only
+                    sfc_elev = xr.DataArray(
+                        np.full((ny, nx), default_sfc_height),
+                        dims=(y_dimname, x_dimname)
+                    )
+                else:
+                    sfc_elev = xr.DataArray(
+                        np.full((ny, nx), default_sfc_height),
+                        coords={y_dimname: y_coords, x_dimname: x_coords},
+                        dims=(y_dimname, x_dimname)
+                    )
                 logger.info(f"No terrain file specified. Using default surface height: {default_sfc_height} m")
             mask_goodvalues = np.full((ny, nx), 1, dtype=int)
         
         # Handle height coordinate transformation (AGL to MSL if needed)
         if radar_alt_varname in ds.variables:
+            logger.info(f"Converting vertical coordinate {z_coordname} from AGL to MSL using radar altitude: {radar_alt}")
             z_agl = ds[z_dimname] + radar_alt
             ds[z_dimname] = z_agl
         
@@ -812,6 +827,8 @@ def get_composite_reflectivity_generic(input_filename, config):
     refl = np.copy(dbz_comp.data)
     # Replace values below radar sensitivity and NaN with sensitivity value
     refl[(refl < radar_sensitivity) | np.isnan(refl)] = radar_sensitivity
+
+    # TODO: Add an option to overwrite composite reflectivity array (refl) with CAPPI
 
     # Return standardized dictionary
     comp_dict = {
