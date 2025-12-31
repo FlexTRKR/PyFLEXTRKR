@@ -699,21 +699,60 @@ def get_composite_reflectivity_generic(input_filename, config):
         if z_coord_type is None:
             # Check if coordinate is monotonically increasing or decreasing
             if z_coordname in ds.variables:
-                z_vals = ds[z_coordname].values
+                # Get a representative vertical profile for checking
+                if height.ndim == 1:
+                    z_profile = height
+                else:  # 3D: shape is [z, y, x]
+                    z_profile = height[:, 0, 0]
+                
                 # For height: typically increases from surface (low) to top (high)
                 # For pressure: typically decreases from surface (high ~1000 hPa) to top (low ~0.1 hPa)
-                if z_vals[0] > z_vals[-1]:
+                if z_profile[0] > z_profile[-1]:
                     z_coord_type = 'pressure'
-                    logger.info(f"Auto-detected vertical coordinate type: pressure (decreasing from {z_vals[0]:.2f} to {z_vals[-1]:.2f})")
+                    logger.info(f"Auto-detected vertical coordinate type: pressure (decreasing from {z_profile[0]:.2f} to {z_profile[-1]:.2f})")
                 else:
                     z_coord_type = 'height'
-                    logger.info(f"Auto-detected vertical coordinate type: height (increasing from {z_vals[0]:.2f} to {z_vals[-1]:.2f})")
+                    logger.info(f"Auto-detected vertical coordinate type: height (increasing from {z_profile[0]:.2f} to {z_profile[-1]:.2f})")
             else:
                 # Default to height if cannot determine
                 z_coord_type = 'height'
                 logger.warning("Cannot auto-detect vertical coordinate type, defaulting to 'height'")
         else:
             logger.info(f"Using specified vertical coordinate type: {z_coord_type}")
+        
+        # Standardize vertical coordinate direction for echo-top height calculations
+        # Height coordinates should increase from surface to top (e.g., 0, 500, 1000, ..., 20000 m)
+        # Pressure coordinates should decrease from surface to top (e.g., 1000, 950, 900, ..., 100 hPa)
+        
+        # Get a representative vertical profile for checking direction
+        if height.ndim == 1:
+            z_profile = height
+        else:  # 3D: shape is [z, y, x]
+            z_profile = height[:, 0, 0]
+        
+        # Check if vertical coordinate needs to be reversed
+        need_reverse = False
+        if z_coord_type == 'height':
+            # Height should increase with index (surface=low, top=high)
+            if z_profile[0] > z_profile[-1]:
+                logger.info(f"Reversing height coordinate to go from surface ({z_profile[0]:.2f} m) to top ({z_profile[-1]:.2f} m)")
+                need_reverse = True
+        elif z_coord_type == 'pressure':
+            # Pressure should decrease with index (surface=high, top=low)
+            if z_profile[0] < z_profile[-1]:
+                logger.info(f"Reversing pressure coordinate to go from surface ({z_profile[0]:.2f} hPa) to top ({z_profile[-1]:.2f} hPa)")
+                need_reverse = True
+        
+        # Reverse the entire dataset along z dimension if needed
+        if need_reverse:
+            # Flip height array
+            if height.ndim == 1:
+                height = height[::-1]
+            else:  # 3D
+                height = height[::-1, :, :]
+            
+            # Flip the entire dataset along z dimension to maintain consistency across all variables
+            ds = ds.isel({z_dimname: slice(None, None, -1)})
         
         # Get or create surface elevation
         if terrain_file is not None:
