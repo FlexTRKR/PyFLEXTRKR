@@ -1,15 +1,16 @@
 """
 Calculate monthly total, MCS precipitation amount and frequency within a period, save output to a netCDF file.
 
-Usage: python calc_tbpf_mcs_monthly_rainmap_zarr.py -c CONFIG.yml -s STARTDATE -e ENDDATE
+Usage: python calc_tbpf_mcs_monthly_rainmap_healpix.py -c CONFIG.yml -s STARTDATE -e ENDDATE
 Optional arguments:
 --zoom Z (HEALPix zoom level)
---parallel (use parallel processing)
---nworkers N (number of Dask workers)
---threads T (threads per worker)
---memory M (memory limit per worker, e.g. '40GB')
---chunk_days N (days per processing chunk)
---pcp_thresh P (precipitation threshold in mm/h)
+--chunk_days N (days per processing chunk, default: 5)
+--pcp_thresh P (precipitation threshold in mm/h, default: 2.0)
+
+Note: This code uses optimized serial processing which is faster than parallel for large HEALPix datasets
+due to sequential I/O patterns and avoidance of Dask graph serialization overhead.
+
+Author: Zhe Feng | zhe.feng@pnnl.gov
 """
 import numpy as np
 import sys, os
@@ -23,7 +24,6 @@ import intake
 import requests
 import easygems.healpix as egh
 from pyflextrkr.ft_utilities import load_config, convert_cftime_to_standard
-from dask.distributed import Client, LocalCluster, progress
 import logging
 
 def setup_logging():
@@ -35,18 +35,15 @@ def setup_logging():
 def parse_cmd_args():
     # Define and retrieve the command-line arguments...
     parser = argparse.ArgumentParser(
-        description="Calculate monthly MCS precipitation statistics."
+        description="Calculate monthly MCS precipitation statistics. "
+                    "Note: Serial processing is optimal for this workload."
     )
     parser.add_argument("-c", "--config", help="yaml config file for tracking", required=True)
     parser.add_argument("-s", "--start", help="first time to process, format=YYYY-mm-ddTHH", required=True)
     parser.add_argument("-e", "--end", help="last time to process, format=YYYY-mm-ddTHH", required=True)
     parser.add_argument("--zoom", help="HEALPix zoom level", type=int, default=None)
-    parser.add_argument("--parallel", help="use parallel processing", action="store_true")
-    parser.add_argument("--nworkers", help="number of Dask workers", type=int, default=12)
-    parser.add_argument("--threads", help="threads per worker", type=int, default=10)
-    parser.add_argument("--memory", help="memory limit per worker, e.g. '40GB' (default: auto)", default=None)
-    parser.add_argument("--chunk_days", help="number of days to process in each chunk", type=int, default=5)
-    parser.add_argument("--pcp_thresh", help="precipitation threshold in mm/h", type=float, default=2.0)
+    parser.add_argument("--chunk_days", help="number of days to process in each chunk (default: 5)", type=int, default=5)
+    parser.add_argument("--pcp_thresh", help="precipitation threshold in mm/h (default: 2.0)", type=float, default=2.0)
     args = parser.parse_args()
 
     # Put arguments in a dictionary
@@ -55,10 +52,6 @@ def parse_cmd_args():
         'start_datetime': args.start,
         'end_datetime': args.end,
         'zoom': args.zoom,
-        'parallel': args.parallel,
-        'n_workers': args.nworkers,
-        'threads_per_worker': args.threads,
-        'memory_limit': args.memory,
         'chunk_days': args.chunk_days,
         'pcp_thresh': args.pcp_thresh,
     }
@@ -66,7 +59,21 @@ def parse_cmd_args():
     return args_dict
 
 def process_month_chunked(month_ds, chunk_days=5, pcp_thresh=2.0):
-    """Process one month of data in time chunks to reduce memory pressure"""
+    """
+    Process one month of data in time chunks to reduce memory pressure
+
+    Args:
+        month_ds: xarray.Dataset
+            Dataset for one month
+        chunk_days: int, optional, default: 5
+            Number of days to process in each chunk
+        pcp_thresh: float, optional, default: 2.0
+            Precipitation threshold in mm/h to count MCS precipitation hours
+
+    Returns:
+        dict
+            Dictionary with monthly statistics
+    """
     # Current month's time value for output
     out_time = month_ds.time[0]
     out_time_str = out_time.dt.strftime('%Y-%m').item()
@@ -119,12 +126,12 @@ def process_month_chunked(month_ds, chunk_days=5, pcp_thresh=2.0):
         chunk_ds = month_ds.isel(time=slice(start_idx, end_idx)).compute()
         
         # Extract variables
-        mcs_mask = chunk_ds.mcs_mask
-        precipitation = chunk_ds.precipitation
-        
+        mcs_mask = chunk_ds['mcs_mask']
+        precipitation = chunk_ds['precipitation']
+
         # Compute statistics for this chunk - multiply by time_interval to get mm
-        chunk_mcsprecip = (precipitation.where(mcs_mask > 0) * time_interval).sum(dim='time')
         chunk_totprecip = (precipitation * time_interval).sum(dim='time')
+        chunk_mcsprecip = (precipitation.where(mcs_mask > 0) * time_interval).sum(dim='time')
         chunk_mcscloudct = (mcs_mask > 0).sum(dim='time')
         chunk_mcspcpct = (precipitation.where(mcs_mask > 0) > pcp_thresh).sum(dim='time')
         
@@ -168,45 +175,6 @@ def format_time(seconds):
     minutes = int((seconds % 3600) // 60)
     seconds = int(seconds % 60)
     return f"{hours:02d}:{minutes:02d}:{seconds:02d}"
-
-def setup_dask_client(parallel, n_workers, threads_per_worker, memory_limit=None, logger=None):
-    """
-    Set up a Dask client for parallel processing
-    
-    Args:
-        parallel: bool
-            Whether to use parallel processing
-        n_workers: int
-            Number of workers for the Dask cluster
-        threads_per_worker: int
-            Number of threads per worker
-        memory_limit: str, optional
-            Memory limit for each worker (e.g. '40GB'). Use None for auto detection.
-        logger: logging.Logger, optional
-            Logger for status messages
-            
-    Returns:
-        dask.distributed.Client or None: Dask client if parallel is True, None otherwise
-    """
-    if logger is None:
-        logger = logging.getLogger(__name__)
-        
-    if not parallel:
-        logger.info("Running in sequential mode (parallel=False)")
-        return None
-    
-    memory_str = "auto" if memory_limit is None else memory_limit
-    logger.info(f"Setting up Dask cluster with {n_workers} workers, {threads_per_worker} threads per worker, {memory_str} memory")
-    
-    cluster = LocalCluster(
-        n_workers=n_workers,
-        threads_per_worker=threads_per_worker,
-        memory_limit=memory_limit,
-    )
-    client = Client(cluster)
-    logger.info(f"Dask dashboard: {client.dashboard_link}")
-    
-    return client
 
 def write_netcdf(results, ds, output_filename, zoom, pcp_thresh, logger=None):
     """
@@ -305,7 +273,7 @@ def write_netcdf(results, ds, output_filename, zoom, pcp_thresh, logger=None):
     return dsout
 
 
-if __name__ == "__main__":
+def main():
     # Set up logging
     setup_logging()
     logger = logging.getLogger(__name__)
@@ -321,15 +289,9 @@ if __name__ == "__main__":
     start_datetime = args_dict.get('start_datetime')
     end_datetime = args_dict.get('end_datetime')
     zoom = args_dict.get('zoom')
-    parallel = args_dict.get('parallel')
-    n_workers = args_dict.get('n_workers')
-    threads_per_worker = args_dict.get('threads_per_worker')
-    memory_limit = args_dict.get('memory_limit')
     chunk_days = args_dict.get('chunk_days')
     pcp_thresh = args_dict.get('pcp_thresh')
 
-    # Set up a local Dask cluster for parallel processing
-    client = setup_dask_client(parallel, n_workers, threads_per_worker, memory_limit, logger)
     
     # Load configuration file
     config = load_config(config_file)
@@ -339,14 +301,14 @@ if __name__ == "__main__":
     pixel_path_name = config.get("pixel_path_name")
     # pixeltracking_outpath = config.get("pixeltracking_outpath")
     stats_outpath = config.get("stats_outpath")
-    startdate = config.get("startdate")
-    enddate = config.get("enddate")
+    # startdate = config.get("startdate")
+    # enddate = config.get("enddate")
     pcp_varname = config.get('pcp_varname')
     pcp_convert_factor = config.get('pcp_convert_factor', 1)
 
     # Get preset-specific configuration
     presets = config.get("zarr_output_presets", {})
-    preset_mask = presets.get("mask", {})
+    # preset_mask = presets.get("mask", {})
     preset_healpix = presets.get("healpix", {})
     
     # ---------- HEALPIX CONFIGURATION ----------
@@ -395,30 +357,41 @@ if __name__ == "__main__":
         print("Catalog file not specified in config. HEALPix remapping requires a catalog.")
         sys.exit('Code will exit now.')
     
-    # Load the HEALPix catalog
-    print(f"Loading HEALPix catalog: {catalog_file}")
-    in_catalog = intake.open_catalog(catalog_file)
-    if catalog_location:
-        in_catalog = in_catalog[catalog_location]
+    if catalog_source == "IR_IMERG":
+        # Special case for IMERG data (not in catalog yet)
+        dir_healpix = "/pscratch/sd/w/wcmca1/GPM/healpix/"
+        in_basename = f"IMERG_V7_"
+        time_res = "1H"
+        in_zarr = f"{dir_healpix}{in_basename}{time_res}_zoom{zoom}_20190101_20211231.zarr"
+        # Read IMERG dataset
+        logger.info(f"Loading IMERG dataset (NOT from catalog): {in_zarr}")
+        ds_p = xr.open_zarr(in_zarr, consolidated=True)
+        ds_p = ds_p.pipe(egh.attach_coords)
+    else:
+        # Load the HEALPix catalog
+        logger.info(f"Loading HEALPix catalog: {catalog_file}")
+        in_catalog = intake.open_catalog(catalog_file)
+        if catalog_location:
+            in_catalog = in_catalog[catalog_location]
 
-    # Get the DataSet from the catalog
-    ds_p = in_catalog[catalog_source](**catalog_params).to_dask()
-    # Add lat/lon coordinates to the HEALPix DataSet
-    ds_p = ds_p.pipe(egh.attach_coords)
+        # Get the DataSet from the catalog
+        ds_p = in_catalog[catalog_source](**catalog_params).to_dask()
+        # Add lat/lon coordinates to the HEALPix DataSet
+        ds_p = ds_p.pipe(egh.attach_coords)
+
     # Check the calendar type of the time coordinate
     calendar = ds_p['time'].dt.calendar
    
     # Convert ds_p time coordinate to standard calendar
     if calendar not in ['proleptic_gregorian', 'gregorian', 'standard']:
-        print(f"Converting ds_p's {calendar} calendar to proleptic_gregorian calendar")
+        logger.info(f"Converting ds_p's {calendar} calendar to proleptic_gregorian calendar")
         # Create new times with proleptic_gregorian calendar
         standard_times = convert_cftime_to_standard(ds_p['time'].values)
         
-        # Create a new dataset with standard calendar
-        # ds_p_converted = ds_p.copy()
+        # Update dataset with standard calendar
         ds_p['time'] = standard_times
     else:
-        print(f"Dataset already uses standard calendar: {calendar}")
+        logger.info(f"Dataset already uses standard calendar: {calendar}")
 
     # Rename the variable and apply conversion factor
     ds_p = ds_p.rename({pcp_varname: 'precipitation'})
@@ -427,43 +400,38 @@ if __name__ == "__main__":
 
     # Check mask directory (Zarr store)
     if not os.path.isdir(mask_file):
-        print(f'ERROR: Zarr store does not exist or is not a directory: {mask_file}')
+        logger.info(f'ERROR: Zarr store does not exist or is not a directory: {mask_file}')
         sys.exit('Code will exit now.')
 
     # Read mask Zarr store, subset times
-    ds_m = xr.open_zarr(mask_file).sel(time=slice(start_datetime, end_datetime))
+    ds_m = xr.open_zarr(mask_file, consolidated=True).sel(time=slice(start_datetime, end_datetime))
 
     # Find common time range
     common_times = sorted(set(ds_p['time'].values).intersection(set(ds_m['time'].values)))
     if not common_times:
-        print("No common time values between datasets!")
-    else:
-        # Select only the common times in both datasets
-        ds_p_subset = ds_p.sel(time=common_times)
-        ds_m_subset = ds_m.sel(time=common_times)
+        logger.warning("No common time values between datasets!")
+        return None
+    else:   
+        # Select only the common times in all datasets
+        pr = ds_p['precipitation'].sel(time=common_times)
+        ds = ds_m.sel(time=common_times)
+        # Add precipitation to the dataset
+        ds["precipitation"] = pr
 
-    # Merge the datasets
-    ds = xr.merge([ds_p_subset, ds_m_subset], combine_attrs='override')
-    print(f"Successfully merged datasets with {len(common_times)} common time points")
+    # Unify chunks
+    ds = ds.unify_chunks()
+    logger.info(f"Successfully merged datasets with {len(common_times)} common time points")
     
     # Group by month and apply the processing function
-    monthly_results = []
     monthly_groups = ds.resample(time='1MS')
 
-    # Use parallel processing
-    delayed_results = []
+    # Process months sequentially (optimal for large HEALPix data)
+    logger.info("Processing months sequentially (optimal for this workload)")
+    results = []
     for month_start, month_ds in monthly_groups:
         logger.info(f"Processing month: {pd.Timestamp(month_start).strftime('%Y-%m')}")
-        # Submit the processing job to the dask cluster
-        delayed_result = client.submit(process_month_chunked, month_ds, chunk_days=chunk_days, pcp_thresh=pcp_thresh)
-        delayed_results.append(delayed_result)
-    
-    # Clear line and show progress tracking
-    logger.info("Tracking progress of all months processing in parallel:")
-    progress(delayed_results)
-    
-    # Gather results (will wait for completion)
-    results = client.gather(delayed_results)
+        result = process_month_chunked(month_ds, chunk_days=chunk_days, pcp_thresh=pcp_thresh)
+        results.append(result)
 
     # Write output to NetCDF file
     write_netcdf(results, ds, output_filename, hp_zoom, pcp_thresh, logger)
@@ -482,5 +450,6 @@ if __name__ == "__main__":
     logger.info(f"  Memory change:        {memory_change:.2f} GB")
     logger.info("="*50)
 
-    # Close the dask client
-    client.close()
+
+if __name__ == "__main__":
+    main()

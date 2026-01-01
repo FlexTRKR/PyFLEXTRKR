@@ -88,10 +88,14 @@ def regrid_file(in_filename, in_basename, out_dir, out_basename, config):
 
     raw_dir = config['rawdata_path']
     raw_basename = config['rawdatabasename']
+    x_dimname = config['x_dimname']
+    y_dimname = config['y_dimname']
     x_varname = config['x_varname']
     y_varname = config['y_varname']
     regrid_ratio = config.get('regrid_ratio')
-    # 
+    geolimits = config.get('geolimits', None)
+
+    # Find raw input files
     raw_files = sorted(glob.glob(f'{raw_dir}{raw_basename}*'))
     if (len(raw_files) == 0):
         logger.critical(f"ERROR: No raw files found: {raw_dir}{raw_basename}*")
@@ -99,20 +103,22 @@ def regrid_file(in_filename, in_basename, out_dir, out_basename, config):
         logger.critical("Tracking will now exit.")
         sys.exit()
     else:
-        # Read raw input file
+        # Read original input file
         dso = xr.open_dataset(raw_files[0])
         # Get coordinates
         xcoord_orig = dso[x_varname].squeeze()
         ycoord_orig = dso[y_varname].squeeze()
         xcoord_attrs = xcoord_orig.attrs
         ycoord_attrs = ycoord_orig.attrs
+        nx_orig = dso.sizes[x_dimname]
+        ny_orig = dso.sizes[y_dimname]
         # Check coordinate dimensions
         if (xcoord_orig.ndim == 1) | (ycoord_orig.ndim == 1):
             # Mesh 1D coordinate into 2D
             xcoord_2d, ycoord_2d = np.meshgrid(xcoord_orig, ycoord_orig)
         elif (xcoord_orig.ndim == 2) | (ycoord_orig.ndim == 2):
-            xcoord_2d = xcoord_orig
-            ycoord_2d = ycoord_orig
+            xcoord_2d = xcoord_orig.data
+            ycoord_2d = ycoord_orig.data
         else:
             logger.critical("ERROR: Unexpected input data x, y coordinate dimensions.")
             logger.critical(f"{x_varname} dimension: {xcoord_orig.ndim}")
@@ -125,15 +131,55 @@ def regrid_file(in_filename, in_basename, out_dir, out_basename, config):
     time_coord = ds['time']
     ny, nx = ds.sizes['lat'], ds.sizes['lon']
     # Create a coordinate to mimic subsampling regrid_ratio:1 ratio of the full coordinate
-    # regrid_ratio = 5
-    xcoord = (np.linspace(2, nx*regrid_ratio+2, nx, endpoint=False, dtype=int))
-    ycoord = (np.linspace(2, ny*regrid_ratio+2, ny, endpoint=False, dtype=int))
+    # Check if regrid_ratio is an odd number
+    if regrid_ratio % 2 == 0:
+        logger.critical(f"ERROR: regrid_ratio {regrid_ratio} must be an odd number!")
+        logger.critical(f"Specified regrid_ratio in config file: {regrid_ratio}")
+        logger.critical("Tracking will now exit.")
+        sys.exit()
+    stride = int((regrid_ratio - 1) / 2)
+    xcoord = (np.linspace(stride, nx*regrid_ratio+stride, nx, endpoint=False, dtype=int))
+    ycoord = (np.linspace(stride, ny*regrid_ratio+stride, ny, endpoint=False, dtype=int))
+
     # Replace the input data coordinate
     ds = ds.assign_coords({'lat':ycoord, 'lon':xcoord})
 
-    # Create a full coordinate
-    xcoord_out = np.arange(0, nx*regrid_ratio, 1)
-    ycoord_out = np.arange(0, ny*regrid_ratio, 1)
+    # Create a full output coordinate
+    nx_out = nx*regrid_ratio
+    ny_out = ny*regrid_ratio
+    xcoord_out = np.arange(0, nx_out, 1)
+    ycoord_out = np.arange(0, ny_out, 1)
+
+    # Subset domain using [geolimits] to crop orignal coordinates to match the cell tracking domain subset
+    if (nx < nx_orig) | (ny < ny_orig):
+        buffer = 0
+        latmin, latmax = geolimits[0]-buffer, geolimits[2]+buffer
+        lonmin, lonmax = geolimits[1]-buffer, geolimits[3]+buffer
+        # Make a 2D mask
+        mask = ((dso[x_varname] >= lonmin) & (dso[x_varname] <= lonmax) & \
+                (dso[y_varname] >= latmin) & (dso[y_varname] <= latmax)).squeeze()
+        # Get y/x indices limits from the mask
+        y_idx, x_idx = np.where(mask == True)
+        xmin, xmax = np.min(x_idx), np.max(x_idx)
+        ymin, ymax = np.min(y_idx), np.max(y_idx)
+        ny_s = ymax - ymin + 1
+        nx_s = xmax - xmin + 1
+        # Check output coordinate dimensions against subset coordinate dimensions
+        if (nx_out != nx_s) | (ny_out != ny_s):
+            # Make ymax such that it matches ny_out
+            if (ny_out > ny_s):
+                ymax = ymin + ny_out - 1
+            else:
+                ymax = ymin + ny_s - 1
+            # Make xmax such that it matches nx_out
+            if (nx_out > nx_s):
+                xmax = xmin + nx_out - 1
+            else:
+                xmax = xmin + nx_s - 1                
+        # Subset coordinates
+        xcoord_2d = xcoord_2d[ymin:ymax+1, xmin:xmax+1]
+        ycoord_2d = ycoord_2d[ymin:ymax+1, xmin:xmax+1]
+
 
     # Get variables for regridding
     tracknumber = ds['tracknumber']
@@ -206,8 +252,8 @@ def regrid_file(in_filename, in_basename, out_dir, out_basename, config):
     # Define variable list
     var_dict = {
         "base_time": (["time"], time_coord.data, time_coord.attrs),
-        "longitude": (["lat", "lon"], xcoord_2d.data, xcoord_attrs),
-        "latitude": (["lat", "lon"], ycoord_2d.data, ycoord_attrs),
+        "longitude": (["lat", "lon"], xcoord_2d, xcoord_attrs),
+        "latitude": (["lat", "lon"], ycoord_2d, ycoord_attrs),
         # "nclouds": (["time"], ds['nclouds'].data, ds['nclouds'].attrs),
         "dbz_comp": (["time", "lat", "lon"], dbz_comp_out, dbz_comp.attrs),
         "dbz_lowlevel": (["time", "lat", "lon"], dbz_lowlevel_out, dbz_lowlevel.attrs),

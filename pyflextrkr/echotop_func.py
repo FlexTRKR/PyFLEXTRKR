@@ -51,7 +51,8 @@ def echotop_height(dbz3d, height, z_dimname, shape_2d, dbz_thresh, gap, min_thic
     dbz3d: np.DataArray(float)
         3D reflectivity array (Xarray DataArray), assumes in [z, y, x] order.
     height: np.array(float)
-        height array (1D)
+        height array (1D or 3D). For 1D, assumes vertical coordinate only.
+        For 3D, assumes in the same order as dbz3d [z, y, x] order.
     shape_2d: tuple 
         (Number of points on x-direction, Number of points on y-direction)
     nz: float
@@ -83,14 +84,22 @@ def echotop_height(dbz3d, height, z_dimname, shape_2d, dbz_thresh, gap, min_thic
     # Total number of points with clouds
     npix_cloud = len(xidx)
 
+    # Check if height is 1D or 3D
+    height_is_1d = height.ndim == 1
+
     # Loop over each point with clouds
     for il in range(0, npix_cloud):
         # Get the profile at location y, x
         idxcld = np.array(np.where(np.squeeze(cmask[:, yidx[il], xidx[il]]) == 1)[0])
         # Check if there is any clouds defined
         if len(idxcld) > 0:
+            # Get height profile: use 1D height directly or extract column from 3D height
+            if height_is_1d:
+                iheight = height
+            else:
+                iheight = height[:, yidx[il], xidx[il]]
             # Call calc_cloud_boundary to get cloud_base, cloud_top height
-            cb, ct = calc_cloud_boundary(height, idxcld, gap, min_thick)
+            cb, ct = calc_cloud_boundary(iheight, idxcld, gap, min_thick)
             # The first layer top (from bottom up) is the lowest layer echo-top height
             echotop[yidx[il], xidx[il]] = ct[0]
 
@@ -100,6 +109,10 @@ def echotop_height(dbz3d, height, z_dimname, shape_2d, dbz_thresh, gap, min_thic
 def echotop_height_wrf(dbz3d, height, z_dimname, shape_2d, dbz_thresh, gap, min_thick):
     """
     Calculates first layer echo-top height from bottom up for WRF.
+    
+    DEPRECATED: This function is kept for backward compatibility.
+    Use echotop_height() instead, which now handles both 1D and 3D height arrays.
+    
     ----------
     dbz3d: np.DataArray(float)
         3D reflectivity array (Xarray DataArray), assumes in [z, y, x] order.
@@ -121,31 +134,5 @@ def echotop_height_wrf(dbz3d, height, z_dimname, shape_2d, dbz_thresh, gap, min_
     echotop: np.ndarray(float)
         Echo-top height 2D array.
     """
-
-    # Create echo-top height array
-    echotop = np.full(shape_2d, np.nan, dtype=np.float32)
-
-    # Define binary cloud mask using reflectivity threshold
-    cloudmask = dbz3d > dbz_thresh
-    # Get numpy array for speed
-    cmask = cloudmask.squeeze().values
-
-    # Find 2D locations with clouds anywhere in the column
-    # Then get y, x indices of those cloudy points
-    yidx, xidx = np.where(cloudmask.max(dim=z_dimname).squeeze().values == 1)
-    # Total number of points with clouds
-    npix_cloud = len(xidx)
-
-    # Loop over each point with clouds
-    for il in range(0, npix_cloud):
-        # Get the profile at location y, x
-        idxcld = np.array(np.where(np.squeeze(cmask[:, yidx[il], xidx[il]]) == 1)[0])
-        iheight = height[:, yidx[il], xidx[il]]
-        # Check if there is any clouds defined
-        if len(idxcld) > 0:
-            # Call calc_cloud_boundary to get cloud_base, cloud_top height
-            cb, ct = calc_cloud_boundary(iheight, idxcld, gap, min_thick)
-            # The first layer top (from bottom up) is the lowest layer echo-top height
-            echotop[yidx[il], xidx[il]] = ct[0]
-
-    return echotop
+    # Call the unified echotop_height function
+    return echotop_height(dbz3d, height, z_dimname, shape_2d, dbz_thresh, gap, min_thick)

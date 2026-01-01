@@ -671,8 +671,17 @@ def mod_steiner_classification(
         # Replace cell array
         score_dilate = score_dilate_keep
 
-    # Return values
-    if (return_diag == False):
-        return sclass_new, score_keep, score_dilate
-    if (return_diag == True):
-        return sclass_new, score_keep, score_dilate, refl_bkg, peak, score
+    # Return values in a dictionary
+    result = {
+        'sclass': sclass_new,
+        'score': score_keep,
+        'score_dilate': score_dilate,
+    }
+    
+    # Add diagnostic fields if requested
+    if return_diag:
+        result['refl_bkg'] = refl_bkg
+        result['peakedness'] = peak
+        result['score_orig'] = score
+    
+    return result

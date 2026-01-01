@@ -10,6 +10,29 @@ import pandas as pd
 import dask
 from dask.distributed import wait
 
+def create_semi_symmetric_array(size):
+    """
+    Make a semi-symmetric array around 0 increment by 1
+
+    If the size is even, the array starts from -(size // 2) + 1 and goes up to start + size - 1 
+    (e.g., for size = 10, the array would be [-4, -3, -2, -1, 0, 1, 2, 3, 4, 5]). 
+    If the size is odd, the array starts from -(size // 2) and goes up to start + size - 1 
+    (e.g., for size = 9, the array would be [-4, -3, -2, -1, 0, 1, 2, 3, 4]).
+
+    Args:
+        size: int
+            Size of the array.
+
+    Returns:
+        np.array
+    """
+    if size % 2 == 0:
+        start = -(size // 2) + 1
+    else:
+        start = -(size // 2)
+    array = np.arange(start, start + size)
+    return array
+
 def regrid_lasso_reflectivity(config):
     """
     Driver to coarsen LASSO 3D reflectivity for tracking.
@@ -53,10 +76,10 @@ def regrid_lasso_reflectivity(config):
     for ifile in in_files:
         # Serial
         if run_parallel == 0:
-            result = regrid_file(ifile, in_basename, out_dir, out_basename)
+            result = regrid_file(ifile, in_basename, out_dir, out_basename, config)
         # Parallel
         elif run_parallel >= 1:
-            result = dask.delayed(regrid_file)(ifile, in_basename, out_dir, out_basename)
+            result = dask.delayed(regrid_file)(ifile, in_basename, out_dir, out_basename, config)
             results.append(result)
         else:
             sys.exit('Valid parallelization flag not provided')
@@ -107,7 +130,7 @@ def convolve_reflectivity(in_reflectivity, kernel):
     return out_reflectivity
 
 
-def regrid_file(in_filename, in_basename, out_dir, out_basename):
+def regrid_file(in_filename, in_basename, out_dir, out_basename, config):
     """
     Regrid a file containing reflectivity data.
 
@@ -118,38 +141,48 @@ def regrid_file(in_filename, in_basename, out_dir, out_basename):
             Output directory name.
         out_basename: string
             Output file basename.
+        config: dictionary
+            Dictionary containing config parameters.
     
     Returns:
         out_filename: string
             Output file name.
     """
     logger = logging.getLogger(__name__)
+    time_dimname = config.get('time_dimname', 'Time')
+    reflectivity_varname = config.get('reflectivity_varname', 'REFL_10CM')
+    x_varname = config.get('x_varname', 'XLONG')
+    y_varname = config.get('y_varname', 'XLAT')
+    z_varname = config.get('z_varname', 'HAMSL')
+    x_dimname = config.get('x_dimname', 'west_east')
+    y_dimname = config.get('y_dimname', 'south_north')
+    z_dimname = config.get('z_dimname', 'HAMSL')
+    dx = config['dx']
+    dy = config['dy']
+    regrid_ratio = config.get('regrid_ratio')
 
     # Read input data
     ds = xr.open_dataset(in_filename)
-    in_time = ds['Time']
-    REFL_10CM = ds['REFL_10CM'].squeeze()
-    # REFL_10CM_MAX = ds['REFL_10CM_MAX'].squeeze()
-    XLONG = ds['XLONG']
-    XLAT = ds['XLAT']
+    in_time = ds[time_dimname]
+    # Get variables
+    REFL = ds[reflectivity_varname].squeeze()
+    XLONG = ds[x_varname]
+    XLAT = ds[y_varname]
 
     # Make a kernel for weights
-    ratio = 5   # Must be odd number
-    start_idx = int((ratio-1) / 2)
-    kernel = np.zeros((ratio+1,ratio+1), dtype=int)
-    kernel[1:ratio, 1:ratio] = 1
+    start_idx = int((regrid_ratio-1) / 2)
+    kernel = np.zeros((regrid_ratio+1,regrid_ratio+1), dtype=int)
+    kernel[1:regrid_ratio, 1:regrid_ratio] = 1
 
     # Make a 3D kernel
     kernel3d = kernel[None,:,:]
     # Call convlution function
-    REFL_10CM_conv = convolve_reflectivity(REFL_10CM.data, kernel3d)
-    # REFL_10CM_MAX_conv = convolve_reflectivity(REFL_10CM_MAX.data, kernel)
+    REFL_conv = convolve_reflectivity(REFL.data, kernel3d)
 
     # Subsample every X grid points
-    REFL_10CM_reg = REFL_10CM_conv[:,start_idx::ratio,start_idx::ratio]
-    # REFL_10CM_MAX_reg = REFL_10CM_MAX_conv[start_idx::ratio,start_idx::ratio]
-    XLONG_reg = XLONG.data[start_idx::ratio,start_idx::ratio]
-    XLAT_reg = XLAT.data[start_idx::ratio,start_idx::ratio]
+    REFL_reg = REFL_conv[:,start_idx::regrid_ratio,start_idx::regrid_ratio]
+    XLONG_reg = XLONG.data[start_idx::regrid_ratio,start_idx::regrid_ratio]
+    XLAT_reg = XLAT.data[start_idx::regrid_ratio,start_idx::regrid_ratio]
 
     # Make output filename
     nleadingchar = len(f'{in_basename}')
@@ -158,10 +191,10 @@ def regrid_file(in_filename, in_basename, out_dir, out_basename):
     out_filename = f'{out_dir}{out_basename}{ftimestr}'
     
     # Make output coordinate
-    nz, ny, nx = REFL_10CM_reg.shape
+    nz, ny, nx = REFL_reg.shape
     # Create a coordinate to mimic subsampling ratio of the full coordinate
-    xcoord = (np.linspace(2, nx*ratio+2, nx, endpoint=False, dtype=int))
-    ycoord = (np.linspace(2, ny*ratio+2, ny, endpoint=False, dtype=int))
+    xcoord = create_semi_symmetric_array(nx) * dx
+    ycoord = create_semi_symmetric_array(ny) * dy
     xcoord_attrs = {
         'long_name': 'X-coordinate grid index',
     }
@@ -169,27 +202,30 @@ def regrid_file(in_filename, in_basename, out_dir, out_basename):
         'long_name': 'Y-coordinate grid index',
     }
 
-    # Define output variablesf
+    # Define output variables
+    # Array dimensions
+    dim4d = [time_dimname, z_dimname, y_dimname, x_dimname]
+    dim3d = [z_dimname, y_dimname, x_dimname]
+    dim2d = [y_dimname, x_dimname]
     var_dict = {
-        'XLONG': (['south_north', 'west_east'], XLONG_reg, XLONG.attrs),
-        'XLAT': (['south_north', 'west_east'], XLAT_reg, XLAT.attrs),
-        'REFL_10CM': (['Time', 'HAMSL', 'south_north', 'west_east'], np.expand_dims(REFL_10CM_reg, axis=0), REFL_10CM.attrs),
-        # 'REFL_10CM_MAX': (['Time', 'south_north', 'west_east'], np.expand_dims(REFL_10CM_MAX_reg, axis=0), REFL_10CM_MAX.attrs),
+        x_varname: (dim2d, XLONG_reg, XLONG.attrs),
+        y_varname: (dim2d, XLAT_reg, XLAT.attrs),
+        reflectivity_varname: (dim4d, np.expand_dims(REFL_reg, axis=0), REFL.attrs),
     }
     # Output coordinates
     coord_dict = {
-        'Time': (['Time'], in_time.data),
-        'HAMSL': (['HAMSL'], ds['HAMSL'].data, ds.HAMSL.attrs),
-        'south_north': (['south_north'], ycoord, ycoord_attrs),
-        'west_east': (['west_east'], xcoord, xcoord_attrs),
+        time_dimname: ([time_dimname], in_time.data),
+        z_varname: ([z_dimname], ds[z_varname].data, ds[z_varname].attrs),
+        y_dimname: ([y_dimname], ycoord, ycoord_attrs),
+        x_dimname: ([x_dimname], xcoord, xcoord_attrs),
     }
     # Output global attributes
     gattr_dict = {
-        'Title': 'Regrid reflectivity from LASSO',
+        'Title': 'Regridded reflectivity from LASSO',
         'SIMULATION_START_DATE': ds.attrs['SIMULATION_START_DATE'],
         'run_name': ds.attrs['run_name'],
-        'DX': ds.attrs['DX']*ratio,
-        'DY': ds.attrs['DY']*ratio,
+        'DX': ds.attrs['DX']*regrid_ratio,
+        'DY': ds.attrs['DY']*regrid_ratio,
         'Contact': 'Zhe Feng, zhe.feng@pnnl.gov',
         'Institution': 'Pacific Northwest National Laboratory',
         'Created_on': time.ctime(time.time()),
@@ -203,7 +239,7 @@ def regrid_file(in_filename, in_basename, out_dir, out_basename):
 
     # Write to netcdf file
     ds_out.to_netcdf(
-        path=out_filename, mode='w', format='NETCDF4', unlimited_dims='Time', encoding=encoding,
+        path=out_filename, mode='w', format='NETCDF4', unlimited_dims=time_dimname, encoding=encoding,
     )
     logger.info(f'{out_filename}')
     return out_filename 

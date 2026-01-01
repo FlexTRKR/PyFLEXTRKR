@@ -228,6 +228,79 @@ def write_radar_cellid(
         config,
         **kwargs,
 ):
+    """
+    Writes radar cellid variables to netCDF file.
+
+    Args:
+        cloudid_outfile: str
+            Output cloudid netCDF file name.
+        file_basetime: np.array(float)
+            Base time in epoch seconds.
+        file_datestring: str
+            Date string in 'YYYYMMDD' format.
+        file_timestring: str
+            Time string in 'HHMM' format.
+        radar_lon: np.DataArray(float)
+            Radar longitude.
+        radar_lat: np.DataArray(float)
+            Radar latitude.
+        out_lon: np.DataArray(float)
+            Output longitude 2D array.
+        out_lat: np.DataArray(float)
+            Output latitude 2D array.
+        x_coords: np.array(float)
+            X coordinates array.
+        y_coords: np.array(float)
+            Y coordinates array.
+        dbz_comp: np.DataArray(float)
+            Composite reflectivity 2D array.
+        dbz_lowlevel: np.DataArray(float)
+            Low-level composite reflectivity 2D array.
+        reflectivity_file: str or Xarray DataSet
+            Input reflectivity file name or Xarray DataSet.
+        sfc_dz_min: float
+            Minimum height above surface for low-level reflectivity calculation.
+        convsf_steiner: np.DataArray(int)
+            Steiner convective/stratiform classification 2D array.
+        core_steiner: np.DataArray(int)
+            Steiner convective core mask 2D array.
+        core_sorted: np.DataArray(int)
+            Sorted convective core mask 2D array.
+        core_expand: np.DataArray(int)
+            Expanded convective core mask 2D array.
+        echotop10: np.ndarray(float)
+            10dBZ echo-top height 2D array.
+        echotop20: np.ndarray(float)
+            20dBZ echo-top height 2D array.
+        echotop30: np.ndarray(float)
+            30dBZ echo-top height 2D array.
+        echotop40: np.ndarray(float)
+            40dBZ echo-top height 2D array.
+        echotop50: np.ndarray(float)
+            50dBZ echo-top height 2D array.
+        feature_mask: np.ndarray(int)
+            Labeled feature number 2D array.
+        npix_feature: np.ndarray(int)
+            Number of pixels for each feature array.
+        nfeatures: int
+            Number of features.
+        config: dict
+            Configuration dictionary.
+        **kwargs: optional arguments
+            Expects these optional arguments:
+            refl_bkg: np.ndarray(float)
+                Steiner background reflectivity 3D array.
+            peakedness: np.ndarray(float)
+                Steiner peakedness 3D array.
+            core_steiner_orig: np.ndarray(int)
+                Original Steiner convective core mask 3D array.
+            ds_pass: xarray.Dataset
+                Additional dataset to pass through to output.
+    
+    Returns:
+        cloudid_outfile: str
+            Output cloudid netCDF file name.
+    """
     feature_varname = config.get("feature_varname", "feature_number")
     nfeature_varname = config.get("nfeature_varname", "nfeatures")
     featuresize_varname = config.get("featuresize_varname", "npix_feature")
@@ -264,6 +337,13 @@ def write_radar_cellid(
         'lat': (['lat'], np.squeeze(out_lat.data[:, 0])),
         'features': (['features'], np.arange(1, nfeatures + 1),),
     }
+    # Handle input file attribute for both netCDF string and Zarr Dataset
+    if isinstance(reflectivity_file, str):
+        input_file_attr = reflectivity_file
+    else:
+        # For Zarr/HEALPix input (xarray Dataset), create a descriptive string
+        input_file_attr = f"HEALPix Zarr Dataset (time: {reflectivity_file.time.values})"
+    
     # Output global attributes
     gattr_dict = {
         "Title": "Cloudid file from "
@@ -280,7 +360,7 @@ def write_radar_cellid(
         'Contact': 'Zhe Feng, zhe.feng@pnnl.gov',
         'Institution': 'Pacific Northwest National Laboratory',
         'Created_on': time.ctime(time.time()),
-        'Input_File': reflectivity_file,
+        'Input_File': input_file_attr,
     }
     # Check for optional keyword steiner_params
     if 'steiner_params' in kwargs:

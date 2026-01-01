@@ -1,6 +1,7 @@
 astropy
 cartopy
 colorcet
+colormaps
 colormath
 dask
 easygems
