@@ -109,10 +109,15 @@ def idcells_reflectivity(
         y_coords = comp_dict['y_coords']
         grid_lat = comp_dict['grid_lat']
         grid_lon = comp_dict['grid_lon']
-        height = comp_dict['height']
         mask_goodvalues = comp_dict['mask_goodvalues']
         radar_lat = comp_dict['radar_lat']
         radar_lon = comp_dict['radar_lon']
+        
+        # Handle height coordinate (can be 1D, 3D, or 4D)
+        height = comp_dict['height']
+        if ntimes > 1 and height.ndim == 4:
+            # For 4D height [time, z, y, x], extract time slice
+            height = height[itime, :, :, :]
 
         # Convert radii_expand from a list to a numpy array
         radii_expand = np.array(radii_expand)
@@ -185,7 +190,6 @@ def idcells_reflectivity(
                                        dbz_thresh=50, gap=echotop_gap, min_thick=0)
 
         del dbz3d_filt
-
         # Put all Steiner parameters in a dictionary
         steiner_params = {
             'dx': dx,
@@ -385,9 +389,11 @@ def subset_domain(comp_dict, geolimits, dx, dy):
             refl = refl[ymin:ymax+1, xmin:xmax+1]
         mask_goodvalues = mask_goodvalues[ymin:ymax+1, xmin:xmax+1]
         
-        # Vertical coordinate
-        if height.ndim > 1:
+        # Vertical coordinate (handle 3D and 4D)
+        if height.ndim == 3:  # 3D: [z, y, x]
             height = height[:, ymin:ymax+1, xmin:xmax+1]
+        elif height.ndim == 4:  # 4D: [time, z, y, x]
+            height = height[:, :, ymin:ymax+1, xmin:xmax+1]
         # Horizontal coordinates
         nx = xmax - xmin + 1
         ny = ymax - ymin + 1
@@ -668,8 +674,10 @@ def get_composite_reflectivity_generic(input_filename, config):
                 # Get a representative vertical profile for checking
                 if height.ndim == 1:
                     z_profile = height
-                else:  # 3D: shape is [z, y, x]
+                elif height.ndim == 3:  # 3D: [z, y, x]
                     z_profile = height[:, 0, 0]
+                else:  # 4D: [time, z, y, x]
+                    z_profile = height[0, :, 0, 0]
                 
                 # For height: typically increases from surface (low) to top (high)
                 # For pressure: typically decreases from surface (high ~1000 hPa) to top (low ~0.1 hPa)
@@ -693,29 +701,33 @@ def get_composite_reflectivity_generic(input_filename, config):
         # Get a representative vertical profile for checking direction
         if height.ndim == 1:
             z_profile = height
-        else:  # 3D: shape is [z, y, x]
+        elif height.ndim == 3:  # 3D: [z, y, x]
             z_profile = height[:, 0, 0]
+        else:  # 4D: [time, z, y, x]
+            z_profile = height[0, :, 0, 0]
         
         # Check if vertical coordinate needs to be reversed
         need_reverse = False
         if z_coord_type == 'height':
             # Height should increase with index (surface=low, top=high)
             if z_profile[0] > z_profile[-1]:
-                logger.info(f"Reversing height coordinate to go from surface ({z_profile[0]:.2f} m) to top ({z_profile[-1]:.2f} m)")
+                logger.info(f"Reversing height coordinate to go from surface ({z_profile[-1]:.2f} m) to top ({z_profile[0]:.2f} m)")
                 need_reverse = True
         elif z_coord_type == 'pressure':
             # Pressure should decrease with index (surface=high, top=low)
             if z_profile[0] < z_profile[-1]:
-                logger.info(f"Reversing pressure coordinate to go from surface ({z_profile[0]:.2f} hPa) to top ({z_profile[-1]:.2f} hPa)")
+                logger.info(f"Reversing pressure coordinate to go from surface ({z_profile[-1]:.2f} hPa) to top ({z_profile[0]:.2f} hPa)")
                 need_reverse = True
         
         # Reverse the entire dataset along z dimension if needed
         if need_reverse:
-            # Flip height array
+            # Flip height array (handle 1D, 3D, and 4D)
             if height.ndim == 1:
                 height = height[::-1]
-            else:  # 3D
+            elif height.ndim == 3:  # 3D: [z, y, x]
                 height = height[::-1, :, :]
+            else:  # 4D: [time, z, y, x]
+                height = height[:, ::-1, :, :]
             
             # Flip the entire dataset along z dimension to maintain consistency across all variables
             ds = ds.isel({z_dimname: slice(None, None, -1)})
