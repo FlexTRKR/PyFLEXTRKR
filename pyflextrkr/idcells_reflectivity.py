@@ -647,7 +647,7 @@ def get_composite_reflectivity_generic(input_filename, config):
     if radar_lon_varname and radar_lon_varname in ds.variables:
         radar_lon = ds[radar_lon_varname]
         radar_lat = ds[radar_lat_varname]
-        radar_alt = ds[radar_alt_varname].squeeze() if radar_alt_varname in ds.variables else 0
+        radar_alt = ds[radar_alt_varname].squeeze().item() if radar_alt_varname in ds.variables else 0
     else:
         # Create fake radar lat/lon for model data
         radar_lon = xr.DataArray(0, attrs={'long_name': 'Radar longitude'})

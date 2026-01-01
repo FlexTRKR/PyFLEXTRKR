@@ -22,7 +22,7 @@ run_regridmask: False
 # run_parallel: 1 (local cluster), 2 (Dask MPI)
 run_parallel: 1
 nprocesses: 16  # Number of processors to use if run_parallel=1
-dask_tmp_dir: '/tmp'  # Dask temporary directory if run_parallel=1
+dask_tmp_dir: /tmp  # Dask temporary directory if run_parallel=1
 timeout: 360  # [seconds] Dask timeout limit
 
 # Start/end date and time
@@ -33,35 +33,35 @@ enddate: '20190126.0000'
 # This is the preprocessed file that contains Tb & rainrate
 # E.g., databasename20181101.011503.nc --> yyyymodd.hhmmss
 # E.g., databasename2018-11-01_01:15:00 --> yyyy-mo-dd_hh:mm:ss
-time_format: 'yyyymodd.hhmmss'
-rawdatabasename: 'taranis_corcsapr2cfrppiqcM1.c1.'
-databasename: 'taranis_corcsapr2cfrppiqc4000mM1.c1.'
+time_format: yyyymodd.hhmmss
+rawdatabasename: taranis_corcsapr2cfrppiqcM1.c1.
+databasename: taranis_corcsapr2cfrppiqc4000mM1.c1.
 
 # Raw input files directory
-rawdata_path: 'INPUT_DIR/'
-# rawdata_path: '/pscratch/sd/f/feng045/SAAG/hist/cell_tracking/csapr/taranis_corcsapr2cfrppiqcM1_gridded.c1/'
+rawdata_path: INPUT_DIR/
+# rawdata_path: /pscratch/sd/f/feng045/SAAG/hist/cell_tracking/csapr/taranis_corcsapr2cfrppiqcM1_gridded.c1/
 # Input files directory
-clouddata_path: 'INPUT_DIR/regrid/'
-# clouddata_path: '/pscratch/sd/f/feng045/SAAG/hist/cell_tracking/csapr/taranis_corcsapr2cfrppiqcM1_gridded.c1/regrid/'
+clouddata_path: INPUT_DIR/regrid/
+# clouddata_path: /pscratch/sd/f/feng045/SAAG/hist/cell_tracking/csapr/taranis_corcsapr2cfrppiqcM1_gridded.c1/regrid/
 # Working directory for the tracking data
-root_path: 'TRACK_DIR/'
-# root_path: '/pscratch/sd/f/feng045/SAAG/hist/cell_tracking/csapr/celltracking_4km/'
+root_path: TRACK_DIR/
+# root_path: /pscratch/sd/f/feng045/SAAG/hist/cell_tracking/csapr/celltracking_4km/
 # Working sub-directory names
-tracking_path_name: 'tracking'
-stats_path_name: 'stats'
-pixel_path_name: 'celltracking'
+tracking_path_name: tracking
+stats_path_name: stats
+pixel_path_name: celltracking
 
 # Terrain file
-# terrain_file: 'INPUT_DIR/CSAPR2_Taranis_Gridded_2500m.Terrain_RangeMask.nc'
-terrain_file: '/pscratch/sd/f/feng045/SAAG/hist/cell_tracking/csapr/maps/CSAPR2_Taranis_Gridded_4000m.Terrain_RangeMask.nc'
+# terrain_file: INPUT_DIR/CSAPR2_Taranis_Gridded_2500m.Terrain_RangeMask.nc
+terrain_file: /pscratch/sd/f/feng045/SAAG/hist/cell_tracking/csapr/maps/CSAPR2_Taranis_Gridded_4000m.Terrain_RangeMask.nc
 # Elevation variable to use in terrain file
-elev_varname: 'hgt'
+elev_varname: hgt
 # Range mask variable to use in terrain file
-rangemask_varname: 'mask110'
+rangemask_varname: mask110
 
 # Specify types of feature being tracked
 # This adds additional feature-specific statistics to be computed
-feature_type: 'radar_cells'
+feature_type: radar_cells
 
 # Regrid parameters
 regrid_ratio: 8
@@ -70,11 +70,11 @@ regrid_ratio: 8
 advection_field_threshold: 10    # radar reflectivity threshold [dBZ]
 advection_med_filt_len: 9         # median filter length for advection speed time seires [number of points]
 advection_max_movement_mps: 60    # maximum advection speed allowed [m/s]
-advection_mask_method: 'greater'  # masking method
+advection_mask_method: greater  # masking method
 advection_buffer: 6  # number of grid points around the edge of domain to buffer
 advection_size_threshold: 10  # number of min valid points to calculate advection
 advection_tiles: [1,1]   # number of tiles to calculate advection [y,x]
-advection_filename: 'advection_'
+advection_filename: advection_
 
 # Cell identification parameters
 # Parameter in Steiner
@@ -115,8 +115,8 @@ maxConvRadius: 8.0  # option6
 conv_rad_increment: 0.75  # option6
 # Background reflectivity step-function increment [dB]
 bkg_refl_increment: 5
-# Convolution method to calculate background reflectivity: 'ndimage' (default), 'signal' (FFT)
-convolve_method: 'ndimage'
+# Convolution method to calculate background reflectivity: ndimage (default), signal (FFT)
+convolve_method: ndimage
 # Define a set of radii for final step of convective cell expansion [km]
 # This is for the purpose of making the convective region larger for tracking convective cells
 radii_expand: [1,2,3,4,5,6,7,8]
@@ -144,32 +144,32 @@ return_diag: True
 # Radar file data dimensions and reflectivity variable name
 dx: 4000  # meter
 dy: 4000  # meter
-x_dimname: 'x'
-y_dimname: 'y'
-z_dimname: 'z'
-time_dimname: 'time'
-time_coordname: 'time'
-x_coordname: 'x'
-y_coordname: 'y'
-z_coordname: 'z'
-lon_coordname: 'point_longitude'
-lat_coordname: 'point_latitude'
+x_dimname: x
+y_dimname: y
+z_dimname: z
+time_dimname: time
+time_coordname: time
+x_coordname: x
+y_coordname: y
+z_coordname: z
+lon_coordname: point_longitude
+lat_coordname: point_latitude
 # Radar location variables produced by PyART gridding
-radar_lon_varname: 'origin_longitude'
-radar_lat_varname: 'origin_latitude'
-radar_alt_varname: 'alt'
+radar_lon_varname: origin_longitude
+radar_lat_varname: origin_latitude
+radar_alt_varname: alt
 # Radar reflectivity variable name used for cell identification
-reflectivity_varname: 'taranis_attenuation_corrected_reflectivity'
+reflectivity_varname: taranis_attenuation_corrected_reflectivity
 # Input data source: No longer needed!
-# input_source: 'csapr_cacti'
-# The vertical coordinate type - 'pressure' or 'height'
+# input_source: csapr_cacti
+# The vertical coordinate type - pressure or height
 # If omitted, will auto-detect based on whether coordinate is increasing/decreasing
-z_coord_type: 'height'
+z_coord_type: height
 
 # Specify data structure
 datatimeresolution: 0.25     # hours
 pixel_radius: 4.0      # km
-ref_varname: 'dbz_comp'
+ref_varname: dbz_comp
 
 # Tracking parameters
 timegap: 0.5           # hour
@@ -187,12 +187,12 @@ trackstats_dense_netcdf: 1
 match_pixel_dt_thresh: 60.0  # seconds
 
 # Define tracked feature variable names
-feature_varname: 'feature_number'
-nfeature_varname: 'nfeatures'
-featuresize_varname: 'npix_feature'
+feature_varname: feature_number
+nfeature_varname: nfeatures
+featuresize_varname: npix_feature
 
 # Track statistics output file dimension names
-tracks_dimname: 'tracks'
-times_dimname: 'times'
+tracks_dimname: tracks
+times_dimname: times
 fillval: -9999
-pixeltracking_filebase: 'celltracks_'
+pixeltracking_filebase: celltracks_
