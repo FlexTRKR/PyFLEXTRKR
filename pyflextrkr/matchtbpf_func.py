@@ -117,12 +117,15 @@ def matchtbpf_singlefile(
                 "total_rain",
                 "total_heavyrain",
                 "rainrate_heavyrain",
+                "rainrate_p95",
             ]
+            
             pf_npf = np.full(nmatchcloud, fillval, dtype=np.int16)
             pf_landfrac = np.full(nmatchcloud, fillval_f, dtype=float)
             total_rain = np.full(nmatchcloud, fillval_f, dtype=float)
             total_heavyrain = np.full(nmatchcloud, fillval_f, dtype=float)
             rainrate_heavyrain = np.full(nmatchcloud, fillval_f, dtype=float)
+            rainrate_p95 = np.full(nmatchcloud, fillval_f, dtype=float)
             pf_lon = np.full((nmatchcloud, nmaxpf), fillval_f, dtype=float)
             pf_lat = np.full((nmatchcloud, nmaxpf), fillval_f, dtype=float)
             pf_area = np.full((nmatchcloud, nmaxpf), fillval_f, dtype=float)
@@ -262,6 +265,14 @@ def matchtbpf_singlefile(
                     ipfy, ipfx = np.array(np.where(sub_rainrate_map > pf_rr_thres))
                     nrainpix = len(ipfy)
 
+                    # Calculate 95th percentile of rain rate
+                    if nrainpix == 0:
+                        rainrate_p95[imatchcloud] = np.nan 
+                    else:
+                    #  print (nrainpix)
+                        rainrate_p95[imatchcloud] = np.nanquantile(sub_rainrate_map[ipfy, ipfx], 0.95)
+                    #  print (np.quantile(sub_rainrate_map[ipfy, ipfx], 0.95))
+                    
                     if nrainpix > 0:
 
                         # Calculate fraction of PF over land
@@ -391,7 +402,9 @@ def matchtbpf_singlefile(
                 "total_rain": total_rain,
                 "total_heavyrain": total_heavyrain,
                 "rainrate_heavyrain": rainrate_heavyrain,
+                "rainrate_p95":rainrate_p95,
             }
+            
             out_dict_attrs = {
                 "pf_npf": {
                     "long_name": "Number of PF in the cloud",
@@ -510,6 +523,11 @@ def matchtbpf_singlefile(
                     "units": "mm/h",
                     "_FillValue": fillval_f,
                     "heavy_rainrate_threshold": heavy_rainrate_thresh,
+                },
+                "rainrate_p95":{
+                    "long_name": "95th percentile of rain rate under cold cloud shield",
+                    "units":'mm/h',
+                    "_FillValue": fillval_f,
                 },
                 "pf_lon_maxrainrate": {
                     "long_name": "Longitude with max rain rate",
