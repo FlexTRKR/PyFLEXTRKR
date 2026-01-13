@@ -1,5 +1,5 @@
 ---
-# MCS tracking configuration file for ERA5
+# MCS tracking configuration file for ERA5 (following MCSMIP protocol: https://doi.org/10.1029/2024JD042204)
 # Tracking uses collocated Tb + Precipitation
 
 # Processing steps:
@@ -133,23 +133,11 @@ nmaxpf: 3  # Maximum number of precipitation features that can be within a cloud
 
 nmaxcore: 20  # Maximum number of convective cores that can be within a cloud feature
 pcp_thresh:  0.5  # Pixels with hourly precipitation larger than this will be labeled with track number
+
+# Precipitation parameters that define an MCS (MCSMIP)
 heavy_rainrate_thresh:  5  # Heavy rain rate threshold [mm/hr]
 mcs_min_rainvol_thresh: 20000   #  [km^2 mm/h] Min rain volumne threshold
 mcs_volrain_duration_thresh: 1.0   # [hour] Min volume rain threshold
-
-# # MCS PF parameter coefficients [intercept, slope]
-# # These parameters are derived with pf_rr_thres:  0.5 mm/h
-# # Setting the slope parameter to 0 is equivalent to changing the thresholds to be independent of PF lifetime
-# # coefs_pf_area: [4960.52, 102.286]  # 3%
-# coefs_pf_area: [6567.88, 125.883]  # 5% [recommended]
-
-# # coefs_pf_rr: [ 1.535, 0.0104793]  # 3%
-# coefs_pf_rr: [1.68134, 0.012203]  # 5% [recommended]
-
-# # coefs_pf_skew: [0.23114, 0.0101002]    # 3%
-# coefs_pf_skew: [0.370187, 0.00992256]  # 5% [recommended]
-
-# coefs_pf_heavyratio:  [0, 0]  # Set to 0 to ignore this parameter
 
 # Define tracked feature variable names
 feature_varname: 'feature_number'
