@@ -365,7 +365,7 @@ def plot_map_2panels(pixel_dict, plot_info, map_info, track_dict):
     # Tb Panel
     ax1 = plt.subplot(gs[0,0], projection=proj)
     ax1.set_extent(map_extent, crs=data_proj)
-    ax1.add_feature(land, facecolor='none', edgecolor=map_edgecolor, zorder=3)
+    ax1.add_feature(land, facecolor='none', edgecolor=map_edgecolor, linewidth=2, zorder=3)
     if draw_border == True:
         ax1.add_feature(borders, edgecolor=map_edgecolor, facecolor='none', linewidth=0.8, zorder=3)
     if draw_state == True:
