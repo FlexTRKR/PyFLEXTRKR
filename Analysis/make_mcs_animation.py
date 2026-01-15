@@ -27,29 +27,31 @@ plot_type = "2panel"
 # Choose data type:
 # "tbpf": Brightness Temperature + Precipitation Features
 # "tbze": Brightness Temperature + Reflectivity
-data_type = "tbze"
+data_type = "tbpf"
 
 # Script parameters
-# start_date = "2006-06-24T00"
-# end_date = "2006-06-27T23"
-start_date = "2020-08-01T00"
-end_date = "2020-08-02T23"
+start_date = "2006-06-24T00"
+end_date = "2006-06-27T23"
+# start_date = "2020-08-01T00"
+# end_date = "2020-08-02T23"
 # Define domain map extent
-# lon_min = -22.0
-# lon_max = 48.0
-# lat_min = 0.0
-# lat_max = 25.0
-lon_min = -110.0
-lon_max = -70.0
-lat_min = 24.0
-lat_max = 50.0
+# Sahel domain
+lon_min = -22.0
+lon_max = 48.0
+lat_min = 0.0
+lat_max = 25.0
+# CONUS domain
+# lon_min = -110.0
+# lon_max = -70.0
+# lat_min = 24.0
+# lat_max = 50.0
 # 2-panel orientation (horizontal:up/down, vertical:left/right)
 orientation = 'horizontal'
 # Get start year from start_date
 start_year = str(start_date.split('-')[0])
 # Tracking config file
-# config_file = f"/global/homes/f/feng045/program/pyflex_config/config/config_imerg_mcs_tbpf_{start_year}.yml"
-config_file = f"/global/homes/f/feng045/program/PyFLEXTRKR-dev/config/config_wrf_mcs_tbradar_example_JFL_QY_07182025.yml"
+config_file = f"/global/homes/f/feng045/program/pyflex_config/config/config_imerg_mcs_tbpf_{start_year}.yml"
+# config_file = f"/global/homes/f/feng045/program/PyFLEXTRKR-dev/config/config_wrf_mcs_tbradar_example_JFL_QY_07182025.yml"
 
 parallel_mode = 1
 n_workers = 64
@@ -62,11 +64,16 @@ figsize_x = 12  # Width in inches (height is auto-calculated to maintain aspect 
 # Tracking pixel-level file time format
 time_format = 'yyyymodd_hhmm'
 # Title prefix for plots (added before date/time, can be an empty string)
-# title_prefix = 'GPM Tb+IMERGv06'
-title_prefix = 'CONUS404'
+title_prefix = 'GPM Tb+IMERGv06'
+# title_prefix = 'CONUS404'
 # Variable name for reflectivity to use in plotting (only for data_type='tbze')
 # Options: 'reflectivity_comp' (composite), 'reflectivity_lowlevel' (low-level)
 dbz_varname = 'reflectivity_lowlevel'
+
+# Map features to draw
+draw_border = True  # Draw country borders
+draw_state = False   # Draw state/province borders
+draw_river = False   # Draw rivers (only for tbpf)
 
 # Execution control options
 run_plotting = True   # Set to False to skip plotting and use existing PNG files
@@ -164,6 +171,12 @@ if run_plotting:
     # Add dbz variable name if specified (only for data_type='tbze')
     if data_type == "tbze" and dbz_varname is not None:
         cmd.extend(['--dbz_varname', dbz_varname])
+
+    # Add map feature drawing options
+    cmd.extend(['--draw_border', str(int(draw_border))])
+    cmd.extend(['--draw_state', str(int(draw_state))])
+    if data_type == "tbpf":
+        cmd.extend(['--draw_river', str(int(draw_river))])
 
     # # Add plot frequency if specified
     # if plot_freq is not None:

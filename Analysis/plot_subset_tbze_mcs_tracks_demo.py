@@ -67,6 +67,8 @@ def parse_cmd_args():
     parser.add_argument("--time_format", help="Pixel-level file datetime format", default=None)
     parser.add_argument("--figsize_x", type=float, help="figure size width in inches", default=10)
     parser.add_argument("--dbz_varname", help="Variable name for reflectivity in pixel-level files", default='reflectivity_comp')
+    parser.add_argument("--draw_border", type=int, help="Draw country borders (0:no, 1:yes)", default=0)
+    parser.add_argument("--draw_state", type=int, help="Draw state/province borders (0:no, 1:yes)", default=1)
     args = parser.parse_args()
 
     # Put arguments in a dictionary
@@ -88,6 +90,8 @@ def parse_cmd_args():
         'time_format': args.time_format,
         'figsize_x': args.figsize_x,
         'dbz_varname': args.dbz_varname,
+        'draw_border': args.draw_border,
+        'draw_state': args.draw_state,
     }
 
     return args_dict
@@ -638,6 +642,7 @@ def work_for_time_loop(datafile, track_dict, map_info, plot_info, config):
         tracknumber_sub = ds['cloudtracknumber'].squeeze()
         lon_sub = ds['longitude']
         lat_sub = ds['latitude']
+
     # Get object perimeters
     tn_perim = label_perimeter(tracknumber_sub.data, dilationstructure)
 
@@ -695,6 +700,8 @@ if __name__ == "__main__":
     time_format = args_dict.get('time_format')
     figsize_x = args_dict.get('figsize_x', 10)
     dbz_varname = args_dict.get('dbz_varname', 'reflectivity_comp')
+    draw_border = args_dict.get('draw_border', 0)
+    draw_state = args_dict.get('draw_state', 1)
 
     if time_format is None: time_format = "yyyymodd_hhmmss"
 
@@ -781,8 +788,8 @@ if __name__ == "__main__":
         'lonv': lonv,
         'latv': latv,
         'panel_orientation': panel_orientation,
-        'draw_border': False,
-        'draw_state': True,
+        'draw_border': bool(draw_border),
+        'draw_state': bool(draw_state),
     }
 
     # Create a timedelta threshold
