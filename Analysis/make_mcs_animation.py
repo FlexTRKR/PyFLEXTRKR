@@ -3,6 +3,7 @@
 Make MCS tracking animation
 - Call plotting script to generate PNG files
 - Options to make 1-panel or 2-panel plots
+- Options to plot Tb + Precipitation or Tb + Reflectivity
 - Create a video animation using FFmpeg
 
 Author: Zhe Feng | zhe.feng@pnnl.gov
@@ -18,30 +19,40 @@ import tempfile
 # Script parameters
 ###############################################################################################
 
-# Choose feature type: 
-# "1panel": Tb and Precipitation in the same panel
-# "2panel": Tb and Precipitation in separate panels
-plot_type = "1panel"
+# Choose panel layout:
+# "1panel": Tb and data overlaid in the same panel
+# "2panel": Tb and data in separate panels
+plot_type = "2panel"
+
+# Choose data type:
+# "tbpf": Brightness Temperature + Precipitation Features
+# "tbze": Brightness Temperature + Reflectivity
+data_type = "tbze"
 
 # Script parameters
 # start_date = "2006-06-24T00"
 # end_date = "2006-06-27T23"
-start_date = "2005-08-31T00"
-end_date = "2005-09-03T23"
+start_date = "2020-08-01T00"
+end_date = "2020-08-02T23"
 # Define domain map extent
-lon_min = -22.0
-lon_max = 48.0
-lat_min = 0.0
-lat_max = 25.0
+# lon_min = -22.0
+# lon_max = 48.0
+# lat_min = 0.0
+# lat_max = 25.0
+lon_min = -110.0
+lon_max = -70.0
+lat_min = 24.0
+lat_max = 50.0
 # 2-panel orientation (horizontal:up/down, vertical:left/right)
 orientation = 'horizontal'
 # Get start year from start_date
 start_year = str(start_date.split('-')[0])
 # Tracking config file
-config_file = f"/global/homes/f/feng045/program/pyflex_config/config/config_imerg_mcs_tbpf_{start_year}.yml"
+# config_file = f"/global/homes/f/feng045/program/pyflex_config/config/config_imerg_mcs_tbpf_{start_year}.yml"
+config_file = f"/global/homes/f/feng045/program/PyFLEXTRKR-dev/config/config_wrf_mcs_tbradar_example_JFL_QY_07182025.yml"
 
-parallel_mode = 0
-n_workers = 32
+parallel_mode = 1
+n_workers = 64
 figsize_x = 12  # Width in inches (height is auto-calculated to maintain aspect ratio)
 
 # Optional: Override time frequency for plotting (set to None to auto-calculate)
@@ -51,10 +62,14 @@ figsize_x = 12  # Width in inches (height is auto-calculated to maintain aspect 
 # Tracking pixel-level file time format
 time_format = 'yyyymodd_hhmm'
 # Title prefix for plots (added before date/time, can be an empty string)
-title_prefix = 'GPM Tb+IMERGv06'
+# title_prefix = 'GPM Tb+IMERGv06'
+title_prefix = 'CONUS404'
+# Variable name for reflectivity to use in plotting (only for data_type='tbze')
+# Options: 'reflectivity_comp' (composite), 'reflectivity_lowlevel' (low-level)
+dbz_varname = 'reflectivity_lowlevel'
 
 # Execution control options
-run_plotting = False   # Set to False to skip plotting and use existing PNG files
+run_plotting = True   # Set to False to skip plotting and use existing PNG files
 run_ffmpeg = True     # Set to False to skip animation creation (plotting only)
 
 # FFmpeg animation parameters
@@ -63,20 +78,41 @@ output_framerate = 10  # (frames per second) - video playback speed (lower value
 video_quality = 20     # CRF value (lower = better quality, range 0-51, 18-28 is good)
 output_width = 1920    # Output video width in pixels (height auto-calculated to maintain aspect ratio, set to None to keep original size)
 
-# Set paths and options based on feature type
-if plot_type == "1panel":
-    # 1-panel configuration
-    fig_basename = "mcs_tbpf_"
-    figdir = f"/global/cfs/cdirs/m1867/zfeng/gpm/sahel/quicklooks_{plot_type}/{start_year}/"
-    animation_dir = f"/global/cfs/cdirs/m1867/zfeng/gpm/sahel/animations_{plot_type}/"
-    plotting_code = "plot_subset_tbpf_mcs_tracks_1panel_demo.py"
-elif plot_type == "2panel":
-    # 2-panel configuration
-    fig_basename = "mcs_tbpf_"
-    # figdir = f"/pscratch/sd/f/feng045/waccem/mcs_global/quicklooks/2019/"
-    figdir = f"/global/cfs/cdirs/m1867/zfeng/gpm/sahel/quicklooks_{plot_type}/{start_year}/"
-    animation_dir = f"/global/cfs/cdirs/m1867/zfeng/gpm/sahel/animations_{plot_type}/"
-    plotting_code = "plot_subset_tbpf_mcs_tracks_demo.py"
+###############################################################################################
+# Determine plotting script and directories based on plot_type and data_type
+###############################################################################################
+
+# Validate inputs
+valid_plot_types = ["1panel", "2panel"]
+valid_data_types = ["tbpf", "tbze"]
+
+if plot_type not in valid_plot_types:
+    raise ValueError(f"Invalid plot_type: {plot_type}. Must be one of {valid_plot_types}")
+if data_type not in valid_data_types:
+    raise ValueError(f"Invalid data_type: {data_type}. Must be one of {valid_data_types}")
+
+# Determine the plotting script based on panel layout and data type
+script_mapping = {
+    ("1panel", "tbpf"): "plot_subset_tbpf_mcs_tracks_1panel_demo.py",
+    ("1panel", "tbze"): "plot_subset_tbze_mcs_tracks_1panel_demo.py",
+    ("2panel", "tbpf"): "plot_subset_tbpf_mcs_tracks_demo.py",
+    ("2panel", "tbze"): "plot_subset_tbze_mcs_tracks_demo.py",
+}
+plotting_code = script_mapping[(plot_type, data_type)]
+
+# Set figure basename based on data type
+fig_basename = f"mcs_{data_type}_"
+
+# Set output directories
+# Examples - customize these paths as needed:
+if data_type == "tbpf":
+    # Tb + Precipitation Features paths
+    figdir = f"/global/cfs/cdirs/m1867/zfeng/gpm/sahel/quicklooks_{plot_type}_{data_type}/{start_year}/"
+    animation_dir = f"/global/cfs/cdirs/m1867/zfeng/gpm/sahel/animations_{plot_type}_{data_type}/"
+elif data_type == "tbze":
+    # Tb + Reflectivity paths
+    figdir = f"/pscratch/sd/w/wcmca1/CONUS404/quicklooks_{plot_type}_{data_type}/{start_year}/"
+    animation_dir = f"/pscratch/sd/w/wcmca1/CONUS404/animations_{plot_type}_{data_type}/"
 
 # Animation parameters
 start_date_str = start_date.split('T')[0]  # Extract YYYY-MM-DD
@@ -89,6 +125,8 @@ animation_filename = f"{animation_dir}{fig_basename}{start_date_str}_{end_date_s
 
 print("Make MCS tracking animation")
 print(f"Plot type: {plot_type}")
+print(f"Data type: {data_type}")
+print(f"Plotting script: {plotting_code}")
 print(f"Date range: {start_date} to {end_date}")
 print(f"Execution mode: Plotting={'✅' if run_plotting else '❌'}, FFmpeg={'✅' if run_ffmpeg else '❌'}")
 
@@ -122,6 +160,10 @@ if run_plotting:
     # Add orientation argument only for 2-panel plotting (1-panel doesn't use it)
     if plot_type == "2panel":
         cmd.extend(['--orientation', str(orientation)])
+
+    # Add dbz variable name if specified (only for data_type='tbze')
+    if data_type == "tbze" and dbz_varname is not None:
+        cmd.extend(['--dbz_varname', dbz_varname])
 
     # # Add plot frequency if specified
     # if plot_freq is not None:
