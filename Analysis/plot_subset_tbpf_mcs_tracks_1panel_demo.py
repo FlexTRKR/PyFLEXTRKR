@@ -68,6 +68,9 @@ def parse_cmd_args():
     parser.add_argument("--pixel_path", help="Pixel-level tracknumer mask files directory", default=None)
     parser.add_argument("--time_format", help="Pixel-level file datetime format", default=None)
     parser.add_argument("--figsize_x", type=float, help="figure size width in inches", default=10)
+    parser.add_argument("--draw_border", type=int, help="Draw country borders (0:no, 1:yes)", default=0)
+    parser.add_argument("--draw_state", type=int, help="Draw state/province borders (0:no, 1:yes)", default=0)
+    parser.add_argument("--draw_river", type=int, help="Draw rivers (0:no, 1:yes)", default=0)
     args = parser.parse_args()
 
     # Put arguments in a dictionary
@@ -88,6 +91,9 @@ def parse_cmd_args():
         'pixeltracking_path': args.pixel_path,
         'time_format': args.time_format,
         'figsize_x': args.figsize_x,
+        'draw_border': args.draw_border,
+        'draw_state': args.draw_state,
+        'draw_river': args.draw_river,
     }
 
     return args_dict
@@ -634,6 +640,9 @@ if __name__ == "__main__":
     pixeltracking_path = args_dict.get('pixeltracking_path')
     time_format = args_dict.get('time_format')
     figsize_x = args_dict.get('figsize_x', 10)
+    draw_border = args_dict.get('draw_border', 0)
+    draw_state = args_dict.get('draw_state', 0)
+    draw_river = args_dict.get('draw_river', 0)
 
     if time_format is None: time_format = "yyyymodd_hhmmss"
 
@@ -652,6 +661,7 @@ if __name__ == "__main__":
             figsize = [figsize_x, figsize_y]
         else:
             figsize = [10, 10]
+    print(f'Figure size (width, height) in inches: {figsize}')
 
     # Specify plotting info
     # Precipitation color levels
@@ -712,9 +722,9 @@ if __name__ == "__main__":
         'subset': subset,
         'lonv': lonv,
         'latv': latv,
-        'draw_border': False,
-        'draw_state': False,
-        'draw_river': False,
+        'draw_border': bool(draw_border),
+        'draw_state': bool(draw_state),
+        'draw_river': bool(draw_river),
         'box_lon': box_lon,
         'box_lat': box_lat,
     }

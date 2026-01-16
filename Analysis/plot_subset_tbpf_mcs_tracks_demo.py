@@ -69,6 +69,9 @@ def parse_cmd_args():
     parser.add_argument("--pixel_path", help="Pixel-level tracknumer mask files directory", default=None)
     parser.add_argument("--time_format", help="Pixel-level file datetime format", default=None)
     parser.add_argument("--figsize_x", type=float, help="figure size width in inches", default=10)
+    parser.add_argument("--draw_border", type=int, help="Draw country borders (0:no, 1:yes)", default=0)
+    parser.add_argument("--draw_state", type=int, help="Draw state/province borders (0:no, 1:yes)", default=0)
+    parser.add_argument("--draw_river", type=int, help="Draw rivers (0:no, 1:yes)", default=0)
     args = parser.parse_args()
 
     # Put arguments in a dictionary
@@ -90,6 +93,9 @@ def parse_cmd_args():
         'pixeltracking_path': args.pixel_path,
         'time_format': args.time_format,
         'figsize_x': args.figsize_x,
+        'draw_border': args.draw_border,
+        'draw_state': args.draw_state,
+        'draw_river': args.draw_river,
     }
 
     return args_dict
@@ -586,6 +592,7 @@ def work_for_time_loop(datafile, track_dict, map_info, plot_info, config, ifile)
     figbasename = plot_info.get('figbasename')
     figname_type = plot_info.get('figname_type')
     title_prefix = plot_info.get('title_prefix', "")
+    pixel_radius = plot_info.get('pixel_radius')
 
     # Read pixel-level data
     ds = xr.open_dataset(datafile)
@@ -609,66 +616,111 @@ def work_for_time_loop(datafile, track_dict, map_info, plot_info, config, ifile)
     # Make a dilation structure
     dilationstructure = make_dilation_structure(perim_thick, pixel_radius, pixel_radius)
 
-    # Get tracknumbers
-    tn = ds['cloudtracknumber'].squeeze()
-    # Only plot if there is track in the frame
-    if (np.nanmax(tn) > 0):
-
-        # Tracknumber color levels for MCS masks (limit to 256 to fit in a colormap)
-        tracknumbers = track_dict['lifetime'].tracks.values
-        tn_nlev = np.min([len(tracknumbers), 256])
+    # Tracknumber color levels for MCS masks (limit to 256 to fit in a colormap)
+    tracknumbers = track_dict['lifetime'].tracks.values
+    tn_nlev = np.min([len(tracknumbers), 256])
+    if tn_nlev > 1:
         tn_levels = np.linspace(np.min(tracknumbers)+1, np.max(tracknumbers)+1, tn_nlev)
-        # Add to plot_info dictionary
-        plot_info['levels']['tn_levels'] = tn_levels
+    else:
+        # If only 1 track, add another level for color fill
+        tn_levels = np.linspace(np.min(tracknumbers)+1, np.max(tracknumbers)+2, tn_nlev+1)
+    # Add to plot_info dictionary
+    plot_info['levels']['tn_levels'] = tn_levels
 
-        # Subset pixel data within the map domain
-        if subset == 1:
-            lonmin, lonmax = map_extent[0], map_extent[1]
-            latmin, latmax = map_extent[2], map_extent[3]
-            mask = (ds['longitude'] >= lonmin) & (ds['longitude'] <= lonmax) & \
-                   (ds['latitude'] >= latmin) & (ds['latitude'] <= latmax)
-            tb_sub = ds['tb'].where(mask == True, drop=True).squeeze()
-            pcp_sub = ds['precipitation'].where(mask == True, drop=True).squeeze()
-            tracknumber_sub = ds['cloudtracknumber'].where(mask == True, drop=True).squeeze()
-            lon_sub = ds['longitude'].where(mask == True, drop=True)
-            lat_sub = ds['latitude'].where(mask == True, drop=True)
+    # Subset pixel data within the map domain
+    if subset == 1:
+        lonmin, lonmax = map_extent[0], map_extent[1]
+        latmin, latmax = map_extent[2], map_extent[3]
+        
+        # Use index slicing to subset - works for any 2D lat/lon grid without creating NaNs
+        lon_vals = ds['longitude'].values
+        lat_vals = ds['latitude'].values
+        
+        # Find all points within the domain
+        mask = ((lon_vals >= lonmin) & (lon_vals <= lonmax) & 
+                (lat_vals >= latmin) & (lat_vals <= latmax))
+        
+        # Find bounding box in index space
+        rows, cols = np.where(mask)
+        
+        if len(rows) > 0:
+            # Get the min/max indices, with small buffer to capture edge points
+            row_min = max(0, rows.min() - 1)
+            row_max = min(lon_vals.shape[0], rows.max() + 2)
+            col_min = max(0, cols.min() - 1)
+            col_max = min(lon_vals.shape[1], cols.max() + 2)
+            
+            # Get dimension names (e.g., y/x, south_north/west_east, lat/lon, etc.)
+            spatial_dims = [d for d in ds['tb'].dims if d not in ['time', 'times']]
+            
+            if len(spatial_dims) >= 2:
+                dim_y, dim_x = spatial_dims[-2], spatial_dims[-1]
+                
+                # Subset using index slicing - maintains rectangular structure, no NaNs
+                tb_sub = ds['tb'].isel({dim_y: slice(row_min, row_max), 
+                                        dim_x: slice(col_min, col_max)}).squeeze()
+                pcp_sub = ds['precipitation'].isel({dim_y: slice(row_min, row_max),
+                                                     dim_x: slice(col_min, col_max)}).squeeze()
+                tracknumber_sub = ds['cloudtracknumber'].isel({dim_y: slice(row_min, row_max),
+                                                                dim_x: slice(col_min, col_max)}).squeeze()
+                lon_sub = ds['longitude'].isel({dim_y: slice(row_min, row_max),
+                                                 dim_x: slice(col_min, col_max)})
+                lat_sub = ds['latitude'].isel({dim_y: slice(row_min, row_max),
+                                               dim_x: slice(col_min, col_max)})
+                print(f"Subset domain: rows [{row_min}:{row_max}], cols [{col_min}:{col_max}]")
+            else:
+                print("Warning: Could not determine spatial dimensions. Using full dataset.")
+                tb_sub = ds['tb'].squeeze()
+                pcp_sub = ds['precipitation'].squeeze()
+                tracknumber_sub = ds['cloudtracknumber'].squeeze()
+                lon_sub = ds['longitude']
+                lat_sub = ds['latitude']
         else:
+            print("Warning: No data found in specified domain. Using full dataset.")
             tb_sub = ds['tb'].squeeze()
             pcp_sub = ds['precipitation'].squeeze()
             tracknumber_sub = ds['cloudtracknumber'].squeeze()
             lon_sub = ds['longitude']
             lat_sub = ds['latitude']
-        # Get object perimeters
-        tn_perim = label_perimeter(tracknumber_sub.data, dilationstructure)
+    else:
+        tb_sub = ds['tb'].squeeze()
+        pcp_sub = ds['precipitation'].squeeze()
+        tracknumber_sub = ds['cloudtracknumber'].squeeze()
+        lon_sub = ds['longitude']
+        lat_sub = ds['latitude']
+    
+    # Get object perimeters
+    tn_perim = label_perimeter(tracknumber_sub.data, dilationstructure)
 
-        # Plotting variables
-        fdatetime = pd.to_datetime(ds['time'].data.item()).strftime('%Y%m%d_%H%M%S')
-        timestr = pd.to_datetime(ds['time'].data.item()).strftime('%Y-%m-%d %H:%M:%S UTC')
-        if title_prefix != "":
-            suptitle = f"{title_prefix} | {timestr}"
-        else:
-            suptitle = f"{timestr}"
-        if figname_type == 'date_time':
-            figname = f'{figdir}{figbasename}{fdatetime}.png'
-        elif figname_type == 'sequence':
-            figname = f'{figdir}{figbasename}{"{:05d}".format(ifile+1)}.png'
-        # Put pixel data in a dictionary
-        pixel_dict = {
-            'lon': lon_sub,
-            'lat': lat_sub,
-            'tb': tb_sub,
-            'pcp': pcp_sub,
-            'tracknumber': tracknumber_sub,
-            'tracknumber_perim': tn_perim,
-            'pixel_bt': pixel_bt,
-        }
-        plot_info['timestr'] = timestr
-        plot_info['figname'] = figname
-        plot_info['suptitle'] = suptitle
+    # Plotting variables
+    fdatetime = pd.to_datetime(ds['time'].data.item()).strftime('%Y%m%d_%H%M%S')
+    timestr = pd.to_datetime(ds['time'].data.item()).strftime('%Y-%m-%d %H:%M:%S UTC')
+    if title_prefix != "":
+        suptitle = f"{title_prefix} | {timestr}"
+    else:
+        suptitle = f"{timestr}"
+    if figname_type == 'date_time':
+        figname = f'{figdir}{figbasename}{fdatetime}.png'
+    elif figname_type == 'sequence':
+        figname = f'{figdir}{figbasename}{"{:05d}".format(ifile+1)}.png'
+    
+    # Put pixel data in a dictionary
+    pixel_dict = {
+        'lon': lon_sub,
+        'lat': lat_sub,
+        'tb': tb_sub,
+        'pcp': pcp_sub,
+        'tracknumber': tracknumber_sub,
+        'tracknumber_perim': tn_perim,
+        'pixel_bt': pixel_bt,
+    }
+    plot_info['timestr'] = timestr
+    plot_info['figname'] = figname
+    plot_info['suptitle'] = suptitle
 
-        fig = plot_map_2panels(pixel_dict, plot_info, map_info, track_dict)
-        plt.close(fig)
-        print(figname)
+    fig = plot_map_2panels(pixel_dict, plot_info, map_info, track_dict)
+    plt.close(fig)
+    print(figname)
 
     ds.close()
     return 1
@@ -696,6 +748,9 @@ if __name__ == "__main__":
     pixeltracking_path = args_dict.get('pixeltracking_path')
     time_format = args_dict.get('time_format')
     figsize_x = args_dict.get('figsize_x', 10)
+    draw_border = args_dict.get('draw_border', 0)
+    draw_state = args_dict.get('draw_state', 0)
+    draw_river = args_dict.get('draw_river', 0)
 
     if time_format is None: time_format = "yyyymodd_hhmmss"
 
@@ -782,9 +837,9 @@ if __name__ == "__main__":
         'lonv': lonv,
         'latv': latv,
         'panel_orientation': panel_orientation,
-        'draw_border': False,
-        'draw_state': False,
-        'draw_river': False,
+        'draw_border': bool(draw_border),
+        'draw_state': bool(draw_state),
+        'draw_river': bool(draw_river),
         'box_lon': box_lon,
         'box_lat': box_lat,
     }
@@ -817,6 +872,7 @@ if __name__ == "__main__":
     os.makedirs(figdir, exist_ok=True)
     # Add to plot_info dictionary
     plot_info['figdir'] = figdir
+    plot_info['pixel_radius'] = pixel_radius
 
     # Convert datetime string to Epoch time (base time)
     # These are for searching pixel-level files
