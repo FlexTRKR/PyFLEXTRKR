@@ -51,8 +51,7 @@ if __name__ == '__main__':
         logger.info('Calculating domain mean advection.')
         driftfile = calc_mean_advection(config)
     else:
-        driftfile = f'{config["stats_outpath"]}advection_' + \
-                    f'{config["startdate"]}_{config["enddate"]}.nc'
+        driftfile = None
     config.update({"driftfile": driftfile})
 
     # Step 3 - Link features in time adjacent files

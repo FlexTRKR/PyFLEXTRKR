@@ -698,13 +698,13 @@ def get_composite_reflectivity_generic(input_filename, config):
         # Height coordinates should increase from surface to top (e.g., 0, 500, 1000, ..., 20000 m)
         # Pressure coordinates should decrease from surface to top (e.g., 1000, 950, 900, ..., 100 hPa)
         
-        # Get a representative vertical profile for checking direction
+        # Get a representative vertical profile in the center of the domain for checking direction
         if height.ndim == 1:
             z_profile = height
         elif height.ndim == 3:  # 3D: [z, y, x]
-            z_profile = height[:, 0, 0]
+            z_profile = height[:, int(ny/2), int(nx/2)]
         else:  # 4D: [time, z, y, x]
-            z_profile = height[0, :, 0, 0]
+            z_profile = height[0, :, int(ny/2), int(nx/2)]
         
         # Check if vertical coordinate needs to be reversed
         need_reverse = False
@@ -718,7 +718,7 @@ def get_composite_reflectivity_generic(input_filename, config):
             if z_profile[0] < z_profile[-1]:
                 logger.info(f"Reversing pressure coordinate to go from surface ({z_profile[-1]:.2f} hPa) to top ({z_profile[0]:.2f} hPa)")
                 need_reverse = True
-        
+
         # Reverse the entire dataset along z dimension if needed
         if need_reverse:
             # Flip height array (handle 1D, 3D, and 4D)
@@ -741,7 +741,10 @@ def get_composite_reflectivity_generic(input_filename, config):
                 x_dimname: ds[x_coordname]
             })
             sfc_elev = dster[elev_varname]
-            mask_goodvalues = dster[rangemask_varname].data.astype(int)
+            if rangemask_varname is not None:
+                mask_goodvalues = dster[rangemask_varname].data.astype(int)
+            else:
+                mask_goodvalues = np.ones((ny, nx), dtype=int)
         else:
             # Create default surface elevation/pressure
             if z_coord_type == 'pressure':

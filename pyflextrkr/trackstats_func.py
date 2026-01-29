@@ -46,7 +46,7 @@ def calc_stats_singlefile(
     pixel_radius = config["pixel_radius"]
     feature_type = config.get("feature_type", None)
     terrain_file = config.get("terrain_file", None)
-    rangemask_varname = config.get("rangemask_varname", 'None')
+    rangemask_varname = config.get("rangemask_varname", None)
     feature_varname = config.get("feature_varname", "feature_number")
     pbc_direction = config.get("pbc_direction", "none")
 
@@ -105,7 +105,10 @@ def calc_stats_singlefile(
             # Range mask file
             if terrain_file is not None:
                 dster = xr.open_dataset(terrain_file, decode_cf=False, mask_and_scale=False)
-                rangemask = dster[rangemask_varname].values.astype('int8')
+                if rangemask_varname is not None:
+                    rangemask = dster[rangemask_varname].values.astype('int8')
+                else:
+                    rangemask = np.ones((ny, nx), dtype=int)
                 dster.close()
 
         if "tb" in feature_type:
@@ -787,7 +790,7 @@ def define_extra_radar_cells(fillval, fillval_f, out_cell_area, out_cell_maxETH1
             "units": "unitless",
             "_FillValue": fillval,
             "comments": "0 = cell partially outside range mask; 1 = cell completely within range mask",
-            "rangemask_varname": rangemask_varname,
+            "rangemask_varname": str(rangemask_varname),
         },
     }
     return out_dict_attrs_extra, out_dict_extra
