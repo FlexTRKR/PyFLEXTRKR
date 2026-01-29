@@ -1,14 +1,25 @@
 """
 Demonstrates plotting generic tracks on input variable snapshots.
+Handles periodic boundary conditions in both longitude and latitude directions.
 
->python plot_subset_generic_tracks_nomap.py -s STARTDATE -e ENDDATE -c CONFIG.yml
+Usage:
+>python plot_subset_tbpf_tracks_pinacles_pbc.py -s STARTDATE -e ENDDATE -c CONFIG.yml
+
+Required arguments:
+-s, --start           Start time (format: YYYY-mm-ddTHH:MM:SS)
+-e, --end             End time (format: YYYY-mm-ddTHH:MM:SS)
+-c, --config          YAML config file for tracking
+
 Optional arguments:
--p 0 (serial), 1 (parallel)
---extent lonmin lonmax latmin latmax (subset domain boundary)
---subset 0 (no), 1 (yes) (subset data before plotting)
---figsize width height (figure size in inches)
---output output_directory (output figure directory)
---figbasename figure base name (output figure base name)
+-p, --parallel        Run in parallel (0:serial, 1:parallel, default=0)
+--extent              Map extent: lonmin lonmax latmin latmax
+--subset              Subset data before plotting (0:no, 1:yes, default=0)
+--figbasename         Output figure base name (default="")
+--figsize             Figure size: width height in inches
+--output              Output directory for figures
+--trackstats_file     Track stats file name (optional, if different from config)
+--pixel_path          Pixel-level tracknumber mask files directory (optional, if different from config)
+--time_format         Pixel-level file datetime format (optional, if different from config)
 """
 __author__ = "Zhe.Feng@pnnl.gov"
 __created_date__ = "26-Jan-2023"
@@ -171,7 +182,7 @@ def get_track_stats(trackstats_file, start_datetime, end_datetime, dt_thres):
     # Read track stats file
     dss = xr.open_dataset(trackstats_file)
     stats_starttime = dss.base_time.isel(times=0)
-    # import pdb; pdb.set_trace()
+
     # Convert input datetime to np.datetime64
     stime = np.datetime64(start_datetime)
     etime = np.datetime64(end_datetime)
@@ -202,17 +213,51 @@ def get_track_stats(trackstats_file, start_datetime, end_datetime, dt_thres):
 #-----------------------------------------------------------------------
 def plot_map(pixel_dict, plot_info, map_info, track_dict):
     """
-    Plotting function.
+    Plotting function for tracks with periodic boundary conditions.
 
     Args:
         pixel_dict: dictionary
-            Dictionary containing pixel-level variables
+            Dictionary containing pixel-level variables:
+                pixel_bt: pixel base time
+                longitude: longitude array
+                latitude: latitude array
+                fvar: field variable array
+                pcp: precipitation array
+                tn_perim: track number perimeter array
+                tn: track number array
         plot_info: dictionary
-            Dictionary containing plotting variables
+            Dictionary containing plotting variables:
+                fontsize: font size for labels
+                levels: dict with variable levels
+                cmap: dict with colormap names
+                remove_oob_low: remove out-of-bounds low values (optional, default=False)
+                remove_oob_high: remove out-of-bounds high values (optional, default=False)
+                cblabels: dict with colorbar labels
+                cbticks: dict with colorbar ticks
+                marker_size: marker size for tracks
+                tracknumber_fontsize: font size for track numbers
+                trackpath_linewidth: line width for track paths
+                trackpath_color: color for track paths
+                xlabel: x-axis label
+                ylabel: y-axis label
+                timestr: time string for title
+                figname: output figure filename
+                figsize: figure size tuple
+                mask_alpha: transparency for mask overlay (optional, default=1)
+                perim_plot: perimeter plot method 'pcolormesh' or 'contour' (optional, default='pcolormesh')
+                perim_linewidth: line width for perimeter contours (optional)
         map_info: dictionary
-            Dictionary containing mapping variables
+            Dictionary containing mapping variables:
+                map_extent: [lonmin, lonmax, latmin, latmax]
         track_dict: dictionary
-            Dictionary containing tracking variables
+            Dictionary containing tracking variables:
+                ntracks: number of tracks
+                lifetime: track lifetime array
+                track_bt: track base time array
+                track_meanlon: track mean longitude array
+                track_meanlat: track mean latitude array
+                dt_thres: time threshold for track plotting
+                time_res: time resolution in hours
 
     Returns:
         fig: object
@@ -372,8 +417,6 @@ def plot_map(pixel_dict, plot_info, map_info, track_dict):
                 # Split the trajectory at wrap-around points
                 split_lon = np.split(wrapped_lon, wrap_indices)
                 split_lat = np.split(wrapped_lat, wrap_indices)
-
-                # import pdb; pdb.set_trace()
 
                 # Plot each segment separately
                 for lon_seg, lat_seg in zip(split_lon, split_lat):
