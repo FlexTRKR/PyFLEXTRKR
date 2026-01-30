@@ -73,7 +73,7 @@ def idcells_reflectivity(
 
     # Get composite reflectivity using generic function
     comp_dict = get_composite_reflectivity_generic(input_filename, config)
-    
+
     # Get is_3d flag from comp_dict
     is_3d = comp_dict.get('is_3d', True)
 
@@ -580,6 +580,12 @@ def get_composite_reflectivity_generic(input_filename, config):
         if round_time_to_second and hasattr(time_coords.dt, 'round'):
             time_coords = time_coords.dt.round('s')
     
+    # Squeeze time dimension if it only has 1 timestep
+    # This handles single-time files consistently with multi-time files
+    if time_dimname in ds.dims and ds.sizes[time_dimname] == 1:
+        ds = ds.squeeze(time_dimname, drop=False)
+        logger.info("Squeezed time dimension (size=1) from dataset")
+    
     # Auto-detect if data is 3D
     if is_3d is None:
         is_3d = z_dimname in ds[reflectivity_varname].dims
@@ -814,8 +820,10 @@ def get_composite_reflectivity_generic(input_filename, config):
             dbz3d_filt = dbz.where(ds[z_coordname] > (sfc_elev + sfc_dz_min))
             
             # Calculate low-level composite reflectivity
+            # Filter for layer between sfc_dz_min and sfc_dz_max above the surface
             dbz3d_lowlevel = dbz.where(
-                (ds[z_coordname] >= sfc_dz_min) & (ds[z_coordname] <= sfc_dz_max)
+                (ds[z_coordname] >= (sfc_elev + sfc_dz_min)) & 
+                (ds[z_coordname] <= (sfc_elev + sfc_dz_max))
             )
         
         # Calculate composite reflectivity
