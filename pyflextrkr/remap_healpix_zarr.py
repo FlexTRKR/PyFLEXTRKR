@@ -247,6 +247,8 @@ def remap_to_healpix_zarr(config):
     
     # Get the DataSet from the catalog
     ds_hp = in_catalog[catalog_source](**catalog_params).to_dask()
+    # Note: healpix_order attribute must be 'nested' for easygems attach_coords to work correctly
+    # ds_hp['crs'].attrs['healpix_order'] = 'nested'
     # Add lat/lon coordinates to the HEALPix DataSet
     ds_hp = ds_hp.pipe(partial(egh.attach_coords, signed_lon=signed_lon))
     
@@ -275,7 +277,7 @@ def remap_to_healpix_zarr(config):
     dsout_hp.attrs['Title'] = f"HEALPix remapped tracking mask data (zoom={hp_zoom})"
     dsout_hp.attrs['zoom'] = hp_zoom
     dsout_hp.attrs["Created_on"] = time.ctime(time.time())
-    
+
     # Optimize cell chunking for HEALPix grid
     chunksize_cell = optimize_healpix_chunks(ds_hp, chunksize_cell, logger)
     
