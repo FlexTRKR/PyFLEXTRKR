@@ -2,10 +2,11 @@ import numpy as np
 import time
 import sys
 import os
+import math
 from netCDF4 import Dataset
 import xarray as xr
 import logging
-from pyflextrkr.ft_utilities import subset_files_timerange
+from pyflextrkr.ft_utilities import subset_files_timerange, find_maxnclouds
 
 def gettracknumbers(config):
     """
@@ -33,6 +34,7 @@ def gettracknumbers(config):
     start_basetime = config["start_basetime"]
     end_basetime = config["end_basetime"]
     fillval = config["fillval"]
+    auto_update_maxnclouds = config.get("auto_update_maxnclouds", True)  # (default: auto-update enabled)
 
     logger = logging.getLogger(__name__)
     np.set_printoptions(threshold=np.inf)
@@ -49,6 +51,18 @@ def gettracknumbers(config):
                                               singletrack_filebase,
                                               start_basetime,
                                               end_basetime)
+
+    # Check and update maxnclouds if needed
+    if auto_update_maxnclouds:
+        max_nclouds_data = find_maxnclouds(config)
+        if max_nclouds_data > maxnclouds:
+            # Round up to nearest 100
+            new_maxnclouds = math.ceil(max_nclouds_data / 100) * 100
+            logger.warning(f"maxnclouds in config ({maxnclouds}) is smaller than maximum number of clouds in data ({max_nclouds_data})")
+            logger.warning(f"Updating maxnclouds to {new_maxnclouds} (rounded up to nearest 100)")
+            maxnclouds = new_maxnclouds
+            # Update config dictionary
+            config["maxnclouds"] = new_maxnclouds
 
     ############################################################################
     # Initialize matrices
