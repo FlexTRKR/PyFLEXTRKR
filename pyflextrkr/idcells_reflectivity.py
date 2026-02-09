@@ -306,137 +306,6 @@ def idcells_reflectivity(
     else:
         return cloudid_outfiles
 
-#--------------------------------------------------------------------------------
-def subset_domain(comp_dict, geolimits, dx, dy):
-    """
-    Subset variables within a domain.
-
-    Args:
-        comp_dict: dictionary
-            Dictionary containing input variables
-        geolimits: list
-            Subset domain lat/lon limits [lon_min, lat_min, lon_max, lat_max]
-        dx: float
-            Grid spacing in x-direction
-        dy: float
-            Grid spacing in y-direction
-
-    Returns:
-        comp_dict: dictionary
-            Dictionary containing output variables
-    """
-    # Get variables from dictionary
-    x_coords = comp_dict['x_coords']
-    y_coords = comp_dict['y_coords']
-    dbz3d_filt = comp_dict['dbz3d_filt']
-    dbz_comp = comp_dict['dbz_comp']
-    dbz_lowlevel = comp_dict['dbz_lowlevel']
-    grid_lat = comp_dict['grid_lat']
-    grid_lon = comp_dict['grid_lon']
-    height = comp_dict['height']
-    mask_goodvalues = comp_dict['mask_goodvalues']
-    radar_lat = comp_dict['radar_lat']
-    radar_lon = comp_dict['radar_lon']
-    refl = comp_dict['refl']
-    time_coords = comp_dict['time_coords']
-
-    # Subset domain
-    if geolimits is not None:
-        # Get lat/lon limits
-        buffer = 0
-        latmin, latmax = geolimits[0]-buffer, geolimits[2]+buffer
-        lonmin, lonmax = geolimits[1]-buffer, geolimits[3]+buffer
-        
-        # Check if grid_lon and grid_lat are 1D or 2D
-        if grid_lon.ndim == 1 and grid_lat.ndim == 1:
-            # For 1D coordinates, find indices directly
-            lon_mask = (grid_lon >= lonmin) & (grid_lon <= lonmax)
-            lat_mask = (grid_lat >= latmin) & (grid_lat <= latmax)
-            x_idx = np.where(lon_mask)[0]
-            y_idx = np.where(lat_mask)[0]
-            if len(x_idx) == 0 or len(y_idx) == 0:
-                raise ValueError("No data points found within specified geolimits")
-            xmin, xmax = x_idx[0], x_idx[-1]
-            ymin, ymax = y_idx[0], y_idx[-1]
-            # Subset 1D coordinates
-            grid_lon = grid_lon[xmin:xmax+1]
-            grid_lat = grid_lat[ymin:ymax+1]
-        else:
-            # For 2D coordinates, create mask and find bounding box
-            mask = ((grid_lon >= lonmin) & (grid_lon <= lonmax) & \
-                    (grid_lat >= latmin) & (grid_lat <= latmax)).squeeze()
-            # Get y/x indices limits from the mask
-            y_idx, x_idx = np.where(mask == True)
-            if len(x_idx) == 0 or len(y_idx) == 0:
-                raise ValueError("No data points found within specified geolimits")
-            xmin, xmax = np.min(x_idx), np.max(x_idx)
-            ymin, ymax = np.min(y_idx), np.max(y_idx)
-            # Subset 2D coordinates
-            grid_lon = grid_lon[ymin:ymax+1, xmin:xmax+1]
-            grid_lat = grid_lat[ymin:ymax+1, xmin:xmax+1]
-        
-        # Subset variables (same for both 1D and 2D coordinates)
-        # Handle time dimension if present
-        if 'time' in dbz3d_filt.dims:
-            dbz3d_filt = dbz3d_filt[:, :, ymin:ymax+1, xmin:xmax+1]
-            dbz_comp = dbz_comp[:, ymin:ymax+1, xmin:xmax+1]
-            dbz_lowlevel = dbz_lowlevel[:, ymin:ymax+1, xmin:xmax+1]
-            refl = refl[:, ymin:ymax+1, xmin:xmax+1]
-        else:
-            dbz3d_filt = dbz3d_filt[:, ymin:ymax+1, xmin:xmax+1]
-            dbz_comp = dbz_comp[ymin:ymax+1, xmin:xmax+1]
-            dbz_lowlevel = dbz_lowlevel[ymin:ymax+1, xmin:xmax+1]
-            refl = refl[ymin:ymax+1, xmin:xmax+1]
-        mask_goodvalues = mask_goodvalues[ymin:ymax+1, xmin:xmax+1]
-        
-        # Vertical coordinate (handle 3D and 4D)
-        if height.ndim == 3:  # 3D: [z, y, x]
-            height = height[:, ymin:ymax+1, xmin:xmax+1]
-        elif height.ndim == 4:  # 4D: [time, z, y, x]
-            height = height[:, :, ymin:ymax+1, xmin:xmax+1]
-        # Horizontal coordinates
-        nx = xmax - xmin + 1
-        ny = ymax - ymin + 1
-        x_coords = np.arange(0, nx) * dx
-        y_coords = np.arange(0, ny) * dy
-        
-        # Subset ds_pass if it exists
-        ds_pass = comp_dict.get('ds_pass', None)
-        if ds_pass is not None:
-            # Subset all variables in ds_pass that have y and x dimensions
-            ds_pass_subset = {}
-            for var_name in ds_pass.data_vars:
-                var = ds_pass[var_name]
-                # Check if variable has spatial dimensions
-                if 'y' in var.dims and 'x' in var.dims:
-                    # Subset spatial dimensions
-                    if 'time' in var.dims:
-                        ds_pass_subset[var_name] = var[:, ymin:ymax+1, xmin:xmax+1]
-                    else:
-                        ds_pass_subset[var_name] = var[ymin:ymax+1, xmin:xmax+1]
-                else:
-                    # Keep variable as-is if no spatial dimensions
-                    ds_pass_subset[var_name] = var
-            # Recreate Dataset with subsetted variables
-            ds_pass = xr.Dataset(ds_pass_subset)
-
-    # Update variables in the dictionary
-    comp_dict['x_coords'] = x_coords
-    comp_dict['y_coords'] = y_coords
-    comp_dict['dbz3d_filt'] = dbz3d_filt
-    comp_dict['dbz_comp'] = dbz_comp
-    comp_dict['dbz_lowlevel'] = dbz_lowlevel
-    comp_dict['grid_lat'] = grid_lat
-    comp_dict['grid_lon'] = grid_lon
-    comp_dict['height'] = height
-    comp_dict['mask_goodvalues'] = mask_goodvalues
-    comp_dict['radar_lat'] = radar_lat
-    comp_dict['radar_lon'] = radar_lon
-    comp_dict['refl'] = refl
-    comp_dict['time_coords'] = time_coords
-    comp_dict['ds_pass'] = ds_pass
-
-    return comp_dict
 
 #--------------------------------------------------------------------------------
 def get_composite_reflectivity_generic(input_filename, config):
@@ -485,6 +354,12 @@ def get_composite_reflectivity_generic(input_filename, config):
     radar_sensitivity = config['radar_sensitivity']
     sfc_dz_min = config['sfc_dz_min']
     sfc_dz_max = config['sfc_dz_max']
+    
+    # Optional scale factors for unit conversion
+    # z_coord_scale_factor: for geopotential height, use 1/9.80665 ≈ 0.101972
+    # sfc_elev_scale_factor: for terrain elevation unit conversion if needed
+    z_coord_scale_factor = config.get('z_coord_scale_factor', None)
+    sfc_elev_scale_factor = config.get('sfc_elev_scale_factor', None)
     
     # Check required grid spacing parameters
     dx = config.get('dx', None)
@@ -681,9 +556,9 @@ def get_composite_reflectivity_generic(input_filename, config):
                 if height.ndim == 1:
                     z_profile = height
                 elif height.ndim == 3:  # 3D: [z, y, x]
-                    z_profile = height[:, 0, 0]
+                    z_profile = height[:, int(ny/2), int(nx/2)]
                 else:  # 4D: [time, z, y, x]
-                    z_profile = height[0, :, 0, 0]
+                    z_profile = height[0, :, int(ny/2), int(nx/2)]
                 
                 # For height: typically increases from surface (low) to top (high)
                 # For pressure: typically decreases from surface (high ~1000 hPa) to top (low ~0.1 hPa)
@@ -738,6 +613,19 @@ def get_composite_reflectivity_generic(input_filename, config):
             # Flip the entire dataset along z dimension to maintain consistency across all variables
             ds = ds.isel({z_dimname: slice(None, None, -1)})
         
+        # Standardize z_coord units (must be done before comparing with sfc_elev)
+        logger.info(f"Standardizing {z_coordname} units...")
+        height, z_conversion_msg = standardize_vertical_coordinate(
+            height,
+            z_coord_type,
+            ds[z_coordname].attrs,
+            scale_factor=z_coord_scale_factor,
+            coord_name=z_coordname
+        )
+        # Update dataset coordinate with standardized values
+        ds = ds.assign_coords({z_coordname: height})
+        logger.info(f"z_coord unit standardization: {z_conversion_msg}")
+        
         # Get or create surface elevation
         if terrain_file is not None:
             logger.info(f"Loading terrain file: {terrain_file}")
@@ -784,6 +672,19 @@ def get_composite_reflectivity_generic(input_filename, config):
                     )
                 logger.info(f"No terrain file specified. Using default surface height: {default_sfc_height} m")
             mask_goodvalues = np.full((ny, nx), 1, dtype=int)
+        
+        # Standardize sfc_elev units (must be done before comparing with z_coord)
+        logger.info(f"Standardizing sfc_elev units...")
+        # Get attributes from terrain file if available, otherwise use empty dict (for default values)
+        sfc_elev_attrs = dster[elev_varname].attrs if terrain_file is not None else {}
+        sfc_elev, sfc_conversion_msg = standardize_vertical_coordinate(
+            sfc_elev,
+            z_coord_type,
+            sfc_elev_attrs,
+            scale_factor=sfc_elev_scale_factor,
+            coord_name='sfc_elev'
+        )
+        logger.info(f"sfc_elev unit standardization: {sfc_conversion_msg}")
         
         # Handle height coordinate transformation (AGL to MSL if needed)
         if radar_alt_varname in ds.variables:
@@ -878,3 +779,248 @@ def get_composite_reflectivity_generic(input_filename, config):
     }
     
     return comp_dict
+
+
+#--------------------------------------------------------------------------------
+def subset_domain(comp_dict, geolimits, dx, dy):
+    """
+    Subset variables within a domain.
+
+    Args:
+        comp_dict: dictionary
+            Dictionary containing input variables
+        geolimits: list
+            Subset domain lat/lon limits [lon_min, lat_min, lon_max, lat_max]
+        dx: float
+            Grid spacing in x-direction
+        dy: float
+            Grid spacing in y-direction
+
+    Returns:
+        comp_dict: dictionary
+            Dictionary containing output variables
+    """
+    # Get variables from dictionary
+    x_coords = comp_dict['x_coords']
+    y_coords = comp_dict['y_coords']
+    dbz3d_filt = comp_dict['dbz3d_filt']
+    dbz_comp = comp_dict['dbz_comp']
+    dbz_lowlevel = comp_dict['dbz_lowlevel']
+    grid_lat = comp_dict['grid_lat']
+    grid_lon = comp_dict['grid_lon']
+    height = comp_dict['height']
+    mask_goodvalues = comp_dict['mask_goodvalues']
+    radar_lat = comp_dict['radar_lat']
+    radar_lon = comp_dict['radar_lon']
+    refl = comp_dict['refl']
+    time_coords = comp_dict['time_coords']
+
+    # Subset domain
+    if geolimits is not None:
+        # Get lat/lon limits
+        buffer = 0
+        latmin, latmax = geolimits[0]-buffer, geolimits[2]+buffer
+        lonmin, lonmax = geolimits[1]-buffer, geolimits[3]+buffer
+        
+        # Check if grid_lon and grid_lat are 1D or 2D
+        if grid_lon.ndim == 1 and grid_lat.ndim == 1:
+            # For 1D coordinates, find indices directly
+            lon_mask = (grid_lon >= lonmin) & (grid_lon <= lonmax)
+            lat_mask = (grid_lat >= latmin) & (grid_lat <= latmax)
+            x_idx = np.where(lon_mask)[0]
+            y_idx = np.where(lat_mask)[0]
+            if len(x_idx) == 0 or len(y_idx) == 0:
+                raise ValueError("No data points found within specified geolimits")
+            xmin, xmax = x_idx[0], x_idx[-1]
+            ymin, ymax = y_idx[0], y_idx[-1]
+            # Subset 1D coordinates
+            grid_lon = grid_lon[xmin:xmax+1]
+            grid_lat = grid_lat[ymin:ymax+1]
+        else:
+            # For 2D coordinates, create mask and find bounding box
+            mask = ((grid_lon >= lonmin) & (grid_lon <= lonmax) & \
+                    (grid_lat >= latmin) & (grid_lat <= latmax)).squeeze()
+            # Get y/x indices limits from the mask
+            y_idx, x_idx = np.where(mask == True)
+            if len(x_idx) == 0 or len(y_idx) == 0:
+                raise ValueError("No data points found within specified geolimits")
+            xmin, xmax = np.min(x_idx), np.max(x_idx)
+            ymin, ymax = np.min(y_idx), np.max(y_idx)
+            # Subset 2D coordinates
+            grid_lon = grid_lon[ymin:ymax+1, xmin:xmax+1]
+            grid_lat = grid_lat[ymin:ymax+1, xmin:xmax+1]
+        
+        # Subset variables (same for both 1D and 2D coordinates)
+        # Handle time dimension if present
+        if 'time' in dbz3d_filt.dims:
+            dbz3d_filt = dbz3d_filt[:, :, ymin:ymax+1, xmin:xmax+1]
+            dbz_comp = dbz_comp[:, ymin:ymax+1, xmin:xmax+1]
+            dbz_lowlevel = dbz_lowlevel[:, ymin:ymax+1, xmin:xmax+1]
+            refl = refl[:, ymin:ymax+1, xmin:xmax+1]
+        else:
+            dbz3d_filt = dbz3d_filt[:, ymin:ymax+1, xmin:xmax+1]
+            dbz_comp = dbz_comp[ymin:ymax+1, xmin:xmax+1]
+            dbz_lowlevel = dbz_lowlevel[ymin:ymax+1, xmin:xmax+1]
+            refl = refl[ymin:ymax+1, xmin:xmax+1]
+        mask_goodvalues = mask_goodvalues[ymin:ymax+1, xmin:xmax+1]
+        
+        # Vertical coordinate (handle 3D and 4D)
+        if height.ndim == 3:  # 3D: [z, y, x]
+            height = height[:, ymin:ymax+1, xmin:xmax+1]
+        elif height.ndim == 4:  # 4D: [time, z, y, x]
+            height = height[:, :, ymin:ymax+1, xmin:xmax+1]
+        # Horizontal coordinates
+        nx = xmax - xmin + 1
+        ny = ymax - ymin + 1
+        x_coords = np.arange(0, nx) * dx
+        y_coords = np.arange(0, ny) * dy
+        
+        # Subset ds_pass if it exists
+        ds_pass = comp_dict.get('ds_pass', None)
+        if ds_pass is not None:
+            # Subset all variables in ds_pass that have y and x dimensions
+            ds_pass_subset = {}
+            for var_name in ds_pass.data_vars:
+                var = ds_pass[var_name]
+                # Check if variable has spatial dimensions
+                if 'y' in var.dims and 'x' in var.dims:
+                    # Subset spatial dimensions
+                    if 'time' in var.dims:
+                        ds_pass_subset[var_name] = var[:, ymin:ymax+1, xmin:xmax+1]
+                    else:
+                        ds_pass_subset[var_name] = var[ymin:ymax+1, xmin:xmax+1]
+                else:
+                    # Keep variable as-is if no spatial dimensions
+                    ds_pass_subset[var_name] = var
+            # Recreate Dataset with subsetted variables
+            ds_pass = xr.Dataset(ds_pass_subset)
+
+    # Update variables in the dictionary
+    comp_dict['x_coords'] = x_coords
+    comp_dict['y_coords'] = y_coords
+    comp_dict['dbz3d_filt'] = dbz3d_filt
+    comp_dict['dbz_comp'] = dbz_comp
+    comp_dict['dbz_lowlevel'] = dbz_lowlevel
+    comp_dict['grid_lat'] = grid_lat
+    comp_dict['grid_lon'] = grid_lon
+    comp_dict['height'] = height
+    comp_dict['mask_goodvalues'] = mask_goodvalues
+    comp_dict['radar_lat'] = radar_lat
+    comp_dict['radar_lon'] = radar_lon
+    comp_dict['refl'] = refl
+    comp_dict['time_coords'] = time_coords
+    comp_dict['ds_pass'] = ds_pass
+
+    return comp_dict
+
+
+#--------------------------------------------------------------------------------
+def standardize_vertical_coordinate(
+    coord_values,
+    coord_type,
+    coord_attrs,
+    scale_factor=None,
+    coord_name="coordinate"
+):
+    """
+    Standardize vertical coordinate units to meters (height) or hPa (pressure).
+    
+    This function implements robust unit detection and conversion with validation.
+    It handles common unit variations and provides clear logging of all conversions.
+    
+    Parameters
+    ----------
+    coord_values : xarray.DataArray or numpy.ndarray
+        Coordinate values to standardize
+    coord_type : str
+        Type of coordinate: 'height' or 'pressure'
+    coord_attrs : dict
+        Coordinate attributes containing 'units' key
+    scale_factor : float, optional
+        Manual scale factor to apply (e.g., 1/9.81 ≈ 0.10194 for geopotential height).
+        If provided, this takes precedence over auto-detection.
+    coord_name : str
+        Name of coordinate for logging (e.g., 'z_coord', 'sfc_elev')
+    
+    Returns
+    -------
+    standardized_values : same type as input
+        Coordinate values in standard units (m for height, hPa for pressure)
+    conversion_msg : str
+        Description of conversion applied for logging
+        
+    Raises
+    ------
+    ValueError
+        If units cannot be recognized or converted, or if coord_type is invalid
+    """
+    
+    logger = logging.getLogger(__name__)
+    
+    # Get units from attributes
+    units = coord_attrs.get('units', None)
+    
+    # Handle missing units attribute
+    if units is None:
+        if scale_factor is not None:
+            logger.info(f"{coord_name} has no 'units' attribute. Applying manual scale factor {scale_factor}")
+            return coord_values * scale_factor, f"scaled by {scale_factor} (no units attribute)"
+        else:
+            logger.warning(f"{coord_name} has no 'units' attribute and no scale_factor provided")
+            logger.warning(f"Assuming {coord_name} is already in standard units ({'m' if coord_type == 'height' else 'hPa'})")
+            return coord_values, "no conversion (no units attribute)"
+    
+    units_lower = units.lower().strip()
+    
+    # Apply manual scale factor if provided (takes precedence over auto-detection)
+    if scale_factor is not None:
+        logger.info(f"Applying manual scale factor {scale_factor} to {coord_name} (original units: {units})")
+        return coord_values * scale_factor, f"{units} scaled by {scale_factor}"
+    
+    # Auto-detect and convert based on coordinate type
+    if coord_type == 'height':
+        # Target: meters
+        if 'km' in units_lower or 'kilometer' in units_lower:
+            logger.info(f"Converting {coord_name} from {units} to meters (×1000)")
+            return coord_values * 1000.0, f"{units} → m (×1000)"
+        
+        elif 'm' in units_lower or 'meter' in units_lower:
+            # Check for geopotential height (requires special handling)
+            if 'gpm' in units_lower or 'geopotential' in units_lower:
+                logger.warning(f"{coord_name} appears to be in geopotential height (units: {units})")
+                logger.warning("Geopotential height should be converted to geometric height")
+                logger.warning("Recommended: set z_coord_scale_factor or sfc_elev_scale_factor in config")
+                logger.warning("For standard conversion: scale_factor = 1/9.80665 ≈ 0.101972")
+                logger.error(f"Cannot automatically convert geopotential height. Please specify scale_factor.")
+                raise ValueError(f"Geopotential height units '{units}' require manual scale_factor")
+            
+            # Regular meters - no conversion needed
+            logger.info(f"{coord_name} already in meters (units: {units})")
+            return coord_values, f"{units} (no conversion needed)"
+        
+        else:
+            logger.error(f"Unrecognized height units '{units}' for {coord_name}")
+            logger.error(f"Supported units: m, meter, meters, km, kilometer, kilometers")
+            logger.error(f"For geopotential height (gpm), specify scale_factor in config")
+            raise ValueError(f"Cannot convert height units '{units}' to meters")
+    
+    elif coord_type == 'pressure':
+        # Target: hPa (hectopascals) = mb (millibars)
+        if units_lower == 'pa' or units_lower == 'pascal' or units_lower == 'pascals':
+            # Pascals to hPa
+            logger.info(f"Converting {coord_name} from {units} to hPa (×0.01)")
+            return coord_values * 0.01, f"{units} → hPa (×0.01)"
+        
+        elif 'hpa' in units_lower or 'mb' in units_lower or 'millibar' in units_lower:
+            # Already in hPa/mb - no conversion needed
+            logger.info(f"{coord_name} already in hPa/mb (units: {units})")
+            return coord_values, f"{units} (no conversion needed)"
+        
+        else:
+            logger.error(f"Unrecognized pressure units '{units}' for {coord_name}")
+            logger.error(f"Supported units: Pa, pascal, hPa, mb, millibar")
+            raise ValueError(f"Cannot convert pressure units '{units}' to hPa")
+    
+    else:
+        logger.error(f"Unknown coordinate type '{coord_type}' for {coord_name}")
+        raise ValueError(f"coord_type must be 'height' or 'pressure', got '{coord_type}'")
