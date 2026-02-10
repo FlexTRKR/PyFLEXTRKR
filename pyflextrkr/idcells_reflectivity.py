@@ -623,7 +623,15 @@ def get_composite_reflectivity_generic(input_filename, config):
             coord_name=z_coordname
         )
         # Update dataset coordinate with standardized values
-        ds = ds.assign_coords({z_coordname: height})
+        # For multi-dimensional coordinates, preserve dimension names
+        if height.ndim > 1:
+            # Get original dimensions from dataset coordinate
+            orig_dims = ds[z_coordname].dims
+            height_da = xr.DataArray(height, dims=orig_dims)
+            ds = ds.assign_coords({z_coordname: height_da})
+        else:
+            # For 1D coordinates, can assign directly
+            ds = ds.assign_coords({z_coordname: height})
         logger.info(f"z_coord unit standardization: {z_conversion_msg}")
         
         # Get or create surface elevation
