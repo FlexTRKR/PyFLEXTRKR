@@ -355,11 +355,8 @@ def get_composite_reflectivity_generic(input_filename, config):
     sfc_dz_min = config['sfc_dz_min']
     sfc_dz_max = config['sfc_dz_max']
     
-    # Optional scale factors for unit conversion
-    # z_coord_scale_factor: for geopotential height, use 1/9.80665 ≈ 0.101972
-    # sfc_elev_scale_factor: for terrain elevation unit conversion if needed
-    z_coord_scale_factor = config.get('z_coord_scale_factor', None)
-    sfc_elev_scale_factor = config.get('sfc_elev_scale_factor', None)
+    # Note: Unit conversion parameters (scale_factor, units_override) are now
+    # extracted directly inside standardize_vertical_coordinate() function
     
     # Check required grid spacing parameters
     dx = config.get('dx', None)
@@ -617,10 +614,9 @@ def get_composite_reflectivity_generic(input_filename, config):
         logger.info(f"Standardizing {z_coordname} units...")
         height, z_conversion_msg = standardize_vertical_coordinate(
             height,
-            z_coord_type,
             ds[z_coordname].attrs,
-            scale_factor=z_coord_scale_factor,
-            coord_name=z_coordname
+            z_coordname,
+            config
         )
         # Update dataset coordinate with standardized values
         # For multi-dimensional coordinates, preserve dimension names
@@ -687,10 +683,9 @@ def get_composite_reflectivity_generic(input_filename, config):
         sfc_elev_attrs = dster[elev_varname].attrs if terrain_file is not None else {}
         sfc_elev, sfc_conversion_msg = standardize_vertical_coordinate(
             sfc_elev,
-            z_coord_type,
             sfc_elev_attrs,
-            scale_factor=sfc_elev_scale_factor,
-            coord_name='sfc_elev'
+            'sfc_elev',
+            config
         )
         logger.info(f"sfc_elev unit standardization: {sfc_conversion_msg}")
         
@@ -925,10 +920,9 @@ def subset_domain(comp_dict, geolimits, dx, dy):
 #--------------------------------------------------------------------------------
 def standardize_vertical_coordinate(
     coord_values,
-    coord_type,
     coord_attrs,
-    scale_factor=None,
-    coord_name="coordinate"
+    coord_name,
+    config
 ):
     """
     Standardize vertical coordinate units to meters (height) or hPa (pressure).
@@ -940,15 +934,18 @@ def standardize_vertical_coordinate(
     ----------
     coord_values : xarray.DataArray or numpy.ndarray
         Coordinate values to standardize
-    coord_type : str
-        Type of coordinate: 'height' or 'pressure'
     coord_attrs : dict
         Coordinate attributes containing 'units' key
-    scale_factor : float, optional
-        Manual scale factor to apply (e.g., 1/9.81 ≈ 0.10194 for geopotential height).
-        If provided, this takes precedence over auto-detection.
     coord_name : str
-        Name of coordinate for logging (e.g., 'z_coord', 'sfc_elev')
+        Name of coordinate for logging (e.g., 'z_coord', 'heightAboveSea', 'sfc_elev')
+        Used to determine which config parameters to use (z_coord_* vs sfc_elev_*)
+    config : dict
+        Configuration dictionary containing:
+        - z_coord_type: 'height' or 'pressure'
+        - z_coord_scale_factor: scale factor for vertical coordinate (optional)
+        - z_coord_units_override: units override for vertical coordinate (optional)
+        - sfc_elev_scale_factor: scale factor for surface elevation (optional)
+        - sfc_elev_units_override: units override for surface elevation (optional)
     
     Returns
     -------
@@ -965,25 +962,42 @@ def standardize_vertical_coordinate(
     
     logger = logging.getLogger(__name__)
     
-    # Get units from attributes
-    units = coord_attrs.get('units', None)
+    # Extract coordinate type from config
+    coord_type = config.get('z_coord_type', 'height')
     
-    # Handle missing units attribute
-    if units is None:
-        if scale_factor is not None:
-            logger.info(f"{coord_name} has no 'units' attribute. Applying manual scale factor {scale_factor}")
-            return coord_values * scale_factor, f"scaled by {scale_factor} (no units attribute)"
-        else:
-            logger.warning(f"{coord_name} has no 'units' attribute and no scale_factor provided")
+    # Determine which config parameters to use based on coord_name
+    # Surface elevation uses sfc_elev_* parameters, vertical coordinate uses z_coord_* parameters
+    if 'sfc' in coord_name.lower() or 'elev' in coord_name.lower():
+        scale_factor = config.get('sfc_elev_scale_factor', None)
+        units_override = config.get('sfc_elev_units_override', None)
+    else:
+        scale_factor = config.get('z_coord_scale_factor', None)
+        units_override = config.get('z_coord_units_override', None)
+    
+    # Priority order: scale_factor > units_override > coord_attrs
+    
+    # 1. If scale_factor provided, use it (highest priority)
+    if scale_factor is not None:
+        units_from_file = coord_attrs.get('units', 'unknown')
+        logger.info(f"Applying manual scale factor {scale_factor} to {coord_name} (file units: {units_from_file})")
+        return coord_values * scale_factor, f"{units_from_file} scaled by {scale_factor}"
+    
+    # 2. If units_override provided, use it instead of file attributes
+    if units_override is not None:
+        units = units_override
+        units_from_file = coord_attrs.get('units', 'not specified')
+        logger.info(f"Using units override '{units}' for {coord_name} (ignoring file units: '{units_from_file}')")
+    else:
+        # 3. Try to get units from file attributes
+        units = coord_attrs.get('units', None)
+        
+        # Handle missing units attribute
+        if units is None:
+            logger.warning(f"{coord_name} has no 'units' attribute and no override provided")
             logger.warning(f"Assuming {coord_name} is already in standard units ({'m' if coord_type == 'height' else 'hPa'})")
             return coord_values, "no conversion (no units attribute)"
     
     units_lower = units.lower().strip()
-    
-    # Apply manual scale factor if provided (takes precedence over auto-detection)
-    if scale_factor is not None:
-        logger.info(f"Applying manual scale factor {scale_factor} to {coord_name} (original units: {units})")
-        return coord_values * scale_factor, f"{units} scaled by {scale_factor}"
     
     # Auto-detect and convert based on coordinate type
     if coord_type == 'height':

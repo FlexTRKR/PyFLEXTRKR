@@ -344,6 +344,7 @@ def plot_map(pixel_dict, plot_info, map_info, track_dict):
     radar_lat = plot_info['radar_lat']
     show_rangecircle = plot_info.get('show_rangecircle', True)
     show_azimuth = plot_info.get('show_azimuth', True)
+    radar_sensitivity = plot_info.get('radar_sensitivity', 0)
 
     # Map domain, lat/lon ticks, background map features
     map_extent = map_info['map_extent']
@@ -397,6 +398,8 @@ def plot_map(pixel_dict, plot_info, map_info, track_dict):
     # Colorfill variable
     cmap = plt.get_cmap(cmaps)
     norm_pcm = mpl.colors.BoundaryNorm(levels, ncolors=cmap.N, clip=True)
+    # Mask out values below radar sensitivity threshold
+    var_fill = np.ma.masked_where(var_fill < radar_sensitivity, var_fill)
     # Scale the variable
     var_fill = var_fill * var_scale
     var_fill = np.ma.masked_where(var_fill < min(levels), var_fill)
@@ -788,6 +791,9 @@ if __name__ == "__main__":
     trackstats_filebase = config["trackstats_filebase"]
     startdate = config["startdate"]
     enddate = config["enddate"]
+    radar_sensitivity = config.get("radar_sensitivity", 0)
+    plot_info['radar_sensitivity'] = radar_sensitivity
+
     trackstats_file = f"{stats_path}{trackstats_filebase}{startdate}_{enddate}.nc"
     # Use n_workers from command-line if provided, otherwise use config file
     if n_workers is None:

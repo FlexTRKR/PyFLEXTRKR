@@ -23,19 +23,24 @@ if __name__ == '__main__':
 
     ################################################################################################
     # Parallel processing options
-    if config['run_parallel'] == 1:
+    run_parallel = config.get('run_parallel', 0)
+    if run_parallel == 1:
         # Set Dask temporary directory for workers
         dask_tmp_dir = config.get("dask_tmp_dir", "./")
         dask.config.set({'temporary-directory': dask_tmp_dir})
+        # Configure retry behavior for transient errors
+        dask.config.set({'distributed.scheduler.allowed-failures': 3})
         # Local cluster
         cluster = LocalCluster(n_workers=config['nprocesses'], threads_per_worker=1)
         client = Client(cluster)
         client.run(setup_logging)
-    elif config['run_parallel'] == 2:
+    elif run_parallel == 2:
         # Dask scheduler
         # Get the scheduler filename from input argument
         scheduler_file = sys.argv[2]
         timeout = config.get("timeout", 120)
+        # Configure retry behavior for transient errors
+        dask.config.set({'distributed.scheduler.allowed-failures': 3})
         client = Client(scheduler_file=scheduler_file)
         # client.wait_for_workers(n_workers=n_workers, timeout=timeout)
         client.run(setup_logging)
@@ -43,11 +48,11 @@ if __name__ == '__main__':
         logger.info(f"Running in serial.")
 
     # Step 1 - Identify features
-    if config['run_idfeature']:
+    if config.get('run_idfeature', False):
         idfeature_driver(config)
 
     # Step 2 - Run advection calculation
-    if config['run_advection']:
+    if config.get('run_advection', False):
         logger.info('Calculating domain mean advection.')
         driftfile = calc_mean_advection(config)
     else:
@@ -55,17 +60,17 @@ if __name__ == '__main__':
     config.update({"driftfile": driftfile})
 
     # Step 3 - Link features in time adjacent files
-    if config['run_tracksingle']:
+    if config.get('run_tracksingle', False):
         tracksingle_driver(config)
 
     # Step 4 - Track features through the entire dataset
-    if config['run_gettracks']:
+    if config.get('run_gettracks', False):
         tracknumbers_filename = gettracknumbers(config)
 
     # Step 5 - Calculate track statistics
-    if config['run_trackstats']:
+    if config.get('run_trackstats', False):
         trackstats_filename = trackstats_driver(config)
 
     # Step 6 - Map tracking to pixel files
-    if config['run_mapfeature']:
+    if config.get('run_mapfeature', False):
         mapfeature_driver(config)
