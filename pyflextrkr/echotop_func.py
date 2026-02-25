@@ -21,8 +21,14 @@ def calc_cloud_boundary(height, idxcld, gap, min_thick):
         Cloud-top height for each cloud layer.
     """
 
+    # Handle empty idxcld
+    if len(idxcld) == 0:
+        return np.zeros(0, dtype=np.float32), np.zeros(0, dtype=np.float32)
+
     # Split idxcld into layers
     Layers = np.split(idxcld, np.where(np.diff(idxcld) > gap)[0]+1)
+    # Filter out empty sublists that np.split can produce
+    Layers = [L for L in Layers if len(L) > 0]
     nLayers = len(Layers)
 
     # Create cloud_base, cloud_top arrays

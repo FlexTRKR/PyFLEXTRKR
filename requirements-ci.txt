@@ -1,0 +1,26 @@
+# Minimal dependencies for running CI tests (GitHub Actions).
+# This is intentionally a subset of requirements.txt — it contains only
+# what the tested pyflextrkr modules actually import.
+#
+# Full environment setup (local/HPC): use environment.yml with mamba/conda
+# Full dependency list: requirements.txt
+
+# Core scientific stack
+numpy
+scipy>=1.4
+xarray>=0.19
+pandas
+
+# NetCDF I/O (imported by pyflextrkr/netcdf_io.py)
+netcdf4
+
+# HEALPix (imported by pyflextrkr/hp_utilities.py)
+healpix
+
+# Utilities (imported by pyflextrkr/ft_utilities.py)
+PyYAML
+pytz
+cftime
+
+# Testing
+pytest>=7.0
