@@ -1,24 +1,35 @@
 """
 Demonstrates ploting MCS tracks on Tb, reflectivity snapshots on a single panel for a subset domain.
 
+Usage:
 >python plot_subset_tbze_mcs_tracks_1panel_demo.py -s STARTDATE -e ENDDATE -c CONFIG.yml
+
+Required arguments:
+-s, --start           Start time (format: YYYY-mm-ddTHH:MM:SS)
+-e, --end             End time (format: YYYY-mm-ddTHH:MM:SS)
+-c, --config          YAML config file for tracking
+
 Optional arguments:
--p 0 (serial), 1 (parallel)
---workers <num_workers> (number of workers for parallel)
---extent lonmin lonmax latmin latmax (subset domain boundary)
---subset 0 (no), 1 (yes) (subset data before plotting)
---figsize width height (figure size in inches)
---figsize_x <width> (figure size width in inches, height auto-calculated to maintain aspect ratio)
---output output_directory (output figure directory)
---figbasename figure base name (output figure base name)
---title_prefix <string> (Prefix string to add to figure title)
---trackstats_file MCS track stats file name (optional, if different from robust MCS track stats file)
---pixel_path Pixel-level tracknumber mask files directory (optional, if different from robust MCS pixel files)
---dbz_varname Variable name for reflectivity in pixel-level files (default: 'reflectivity_comp')
+-p, --parallel        Run in parallel (0:serial, 1:parallel, default=0)
+--workers             Number of Dask workers for parallel processing (default=4)
+--extent              Map extent: lonmin lonmax latmin latmax
+--subset              Subset data before plotting (0:no, 1:yes, default=0)
+--figbasename         Output figure base name (default="")
+--figsize             Figure size: width height in inches
+--figsize_x           Figure width in inches (height auto-calculated, default=10)
+--output              Output directory for figures
+--title_prefix        Prefix string to add to figure title (default="")
+--trackstats_file     MCS track stats file name (optional, if different from config)
+--pixel_path          Pixel-level tracknumber mask files directory (optional, if different from config)
+--time_format         Pixel-level file datetime format (optional, if different from config)
+--dbz_varname         Variable name for reflectivity in pixel-level files (default="reflectivity_comp")
+--draw_border         Draw country borders (0:no, 1:yes, default=0)
+--draw_state          Draw state/province borders (0:no, 1:yes, default=1)
 
 Zhe Feng, PNNL
 contact: Zhe.Feng@pnnl.gov
 """
+__author__ = "Zhe.Feng@pnnl.gov"
 
 import argparse
 import numpy as np
@@ -226,17 +237,59 @@ def get_track_stats(trackstats_file, start_datetime, end_datetime, dt_thres):
 #-----------------------------------------------------------------------
 def plot_map_1panel(pixel_dict, plot_info, map_info, track_dict):
     """
-    Plot Tb, Precipitation and MCS tracks snapshot on a single panel.
+    Plot Tb, Reflectivity and MCS tracks snapshot on a single panel.
 
     Args:
         pixel_dict: dictionary
-            Dictionary containing pixel data variables.
+            Dictionary containing pixel data variables:
+                lon: longitude array
+                lat: latitude array
+                tb: brightness temperature array
+                dbz: radar reflectivity array
+                tracknumber: track number mask array
+                tracknumber_perim: track perimeter array
+                pixel_bt: pixel base time
         plot_info: dictionary
-            Dictionary containing plotting setup variables.
+            Dictionary containing plotting setup variables:
+                levels: dict with 'tb_levels', 'dbz_levels', 'tn_levels'
+                cmaps: dict with 'tb_cmap', 'dbz_cmap', 'tn_cmap'
+                tb_alpha: transparency for Tb layer
+                dbz_alpha: transparency for reflectivity layer
+                titles: dict with 'tb_title'
+                cblabels: dict with 'tb_label', 'dbz_label'
+                cbticks: dict with 'tb_ticks', 'dbz_ticks'
+                fontsize: font size for labels
+                marker_size: marker size for tracks
+                tracknumber_fontsize: font size for track numbers
+                trackpath_linewidth: line width for track paths
+                pfdiam_linewidth: line width for PF diameter circles
+                trackpath_color: color for track paths
+                mcsperim_color: color for MCS perimeter
+                pfdiam_color: color for PF diameter circles
+                map_edgecolor: color for map edges
+                map_resolution: resolution for map features
+                suptitle: figure title
+                figname: output figure filename
+                figsize: figure size tuple
         map_info: dictionary
-            Dictionary containing map boundary info.
+            Dictionary containing map boundary info:
+                map_extent: [lonmin, lonmax, latmin, latmax]
+                lonv: longitude tick values (optional)
+                latv: latitude tick values (optional)
+                draw_border: boolean to draw country borders (optional)
+                draw_state: boolean to draw state borders (optional)
         track_dict: dictionary
-            Dictionary containing tracking data variables.
+            Dictionary containing tracking data variables:
+                ntracks: number of tracks
+                lifetime: track lifetime array
+                track_bt: track base time array
+                track_ccs_lon: track CCS longitude array
+                track_ccs_lat: track CCS latitude array
+                track_pf_lon: track PF longitude array
+                track_pf_lat: track PF latitude array
+                track_pf_diam: track PF diameter array
+                dt_thres: time threshold for track plotting
+                time_res: time resolution in hours
             
     Returns:
         fig: object

@@ -489,6 +489,89 @@ def subset_ds_geolimit(
     # ds_out = ds_out.transpose(y_coordname,x_coordname) # maybe?
     return ds_out
 
+def find_maxnclouds(config):
+    """
+    Find maximum number of clouds across track files.
+    
+    This function scans track_*.nc files and finds the maximum values of
+    nclouds_ref and nclouds_new dimensions to determine the appropriate
+    maxnclouds setting for tracking.
+    
+    Args:
+        config: dictionary
+            Dictionary containing config parameters.
+    
+    Returns:
+        max_nclouds: int
+            Maximum number of clouds found across all track files.
+    """
+    from netCDF4 import Dataset
+    
+    logger = logging.getLogger(__name__)
+    
+    # Get parameters from config
+    tracking_outpath = config["tracking_outpath"]
+    start_basetime = config["start_basetime"]
+    end_basetime = config["end_basetime"]
+    
+    # Track file base name
+    trackfile_filebase = "track_"
+    
+    logger.info("Scanning track files to find maximum number of clouds...")
+    
+    # Get list of track files within time range
+    trackfiles, \
+    trackfiles_basetime, \
+    trackfiles_datestring, \
+    trackfiles_timestring = subset_files_timerange(tracking_outpath,
+                                                    trackfile_filebase,
+                                                    start_basetime,
+                                                    end_basetime)
+    
+    nfiles = len(trackfiles)
+    logger.info(f"Scanning {nfiles} track files...")
+    
+    if nfiles == 0:
+        logger.warning("No track files found")
+        return 0
+    
+    # Initialize max values
+    max_nclouds_ref = 0
+    max_nclouds_new = 0
+    
+    # Loop through all files
+    for i, filepath in enumerate(trackfiles):
+        try:
+            # Open the NetCDF file
+            with Dataset(filepath, 'r') as ds:
+                # Get dimension sizes
+                nclouds_ref = len(ds.dimensions['nclouds_ref'])
+                nclouds_new = len(ds.dimensions['nclouds_new'])
+                
+                # Update maximum values
+                if nclouds_ref > max_nclouds_ref:
+                    max_nclouds_ref = nclouds_ref
+                
+                if nclouds_new > max_nclouds_new:
+                    max_nclouds_new = nclouds_new
+            
+            # Print progress every 500 files
+            if (i + 1) % 500 == 0:
+                logger.info(f"Processed {i + 1}/{nfiles} files...")
+                
+        except Exception as e:
+            logger.warning(f"Error processing {filepath}: {e}")
+            continue
+    
+    # Return the maximum of the two
+    max_nclouds = max(max_nclouds_ref, max_nclouds_new)
+    logger.info(f"Maximum nclouds_ref: {max_nclouds_ref}")
+    logger.info(f"Maximum nclouds_new: {max_nclouds_new}")
+    logger.info(f"Maximum nclouds across all files: {max_nclouds}")
+    
+    return max_nclouds
+
+
 def match_drift_times(
     cloudidfiles_datestring,
     cloudidfiles_timestring,

@@ -73,7 +73,7 @@ def idcells_reflectivity(
 
     # Get composite reflectivity using generic function
     comp_dict = get_composite_reflectivity_generic(input_filename, config)
-    
+
     # Get is_3d flag from comp_dict
     is_3d = comp_dict.get('is_3d', True)
 
@@ -306,6 +306,484 @@ def idcells_reflectivity(
     else:
         return cloudid_outfiles
 
+
+#--------------------------------------------------------------------------------
+def get_composite_reflectivity_generic(input_filename, config):
+    """
+    Generic function to get composite reflectivity from various input sources.
+    
+    This function is agnostic to different input datasets, requiring only:
+    - time coordinate
+    - x, y coordinates (1D or 2D)
+    - z coordinate (optional, for 3D data)
+    - 2D or 3D radar reflectivity variable
+    
+    Args:
+        input_filename: string
+            Input data filename
+        config: dictionary
+            Dictionary containing config parameters
+            
+    Required config parameters:
+        - reflectivity_varname: name of reflectivity variable
+        - x_coordname, y_coordname: coordinate variable names (backward compatible with x_varname, y_varname)
+        - x_dimname, y_dimname: dimension names
+        - time_dimname (optional): time dimension name, default 'time'
+        - z_dimname (optional): vertical dimension name, default 'z'
+        - z_coordname (optional): vertical coordinate name (backward compatible with z_varname)
+        - lon_coordname, lat_coordname (optional): lat/lon coordinate names (backward compatible with lon_varname, lat_varname)
+        - dx, dy: grid spacing in meters
+        - radar_sensitivity: minimum reflectivity threshold
+        - sfc_dz_min, sfc_dz_max: height range for low-level reflectivity
+        - z_coord_type (optional): 'height' or 'pressure', default auto-detect
+          For pressure coordinates, sfc_dz_min/max are in hPa (surface is high pressure)
+        - default_sfc_pressure (optional): default surface pressure in hPa when terrain_file
+          is not provided and z_coord_type='pressure', default 1013.25 hPa
+        - composite_reflectivity_varname (optional): pre-computed composite reflectivity
+        - pass_varname (optional): list of additional variables to pass through
+        - is_3d (optional): flag to indicate if data is 3D, default auto-detect
+        
+    Returns:
+        comp_dict: dictionary
+            Dictionary containing standardized output variables
+    """
+    logger = logging.getLogger(__name__)
+    
+    # Get configuration parameters
+    input_format = config.get("input_format", "netcdf")
+    radar_sensitivity = config['radar_sensitivity']
+    sfc_dz_min = config['sfc_dz_min']
+    sfc_dz_max = config['sfc_dz_max']
+    
+    # Note: Unit conversion parameters (scale_factor, units_override) are now
+    # extracted directly inside standardize_vertical_coordinate() function
+    
+    # Check required grid spacing parameters
+    dx = config.get('dx', None)
+    dy = config.get('dy', None)
+    if dx is None:
+        raise ValueError("'dx' (grid spacing in x-direction) must be specified in config")
+    if dy is None:
+        raise ValueError("'dy' (grid spacing in y-direction) must be specified in config")
+    
+    time_dimname = config.get('time_dimname', 'time')
+    time_coordname = config.get('time_coordname', time_dimname)
+    x_dimname = config.get('x_dimname', 'x')
+    y_dimname = config.get('y_dimname', 'y')
+    z_dimname = config.get('z_dimname', 'z')
+    # Use new coordname parameters with backward compatibility to varname parameters
+    x_coordname = config.get('x_coordname', config.get('x_varname'))
+    y_coordname = config.get('y_coordname', config.get('y_varname'))
+    z_coordname = config.get('z_coordname', config.get('z_varname', z_dimname))
+    lon_coordname = config.get('lon_coordname', config.get('lon_varname', x_coordname))
+    lat_coordname = config.get('lat_coordname', config.get('lat_varname', y_coordname))
+    reflectivity_varname = config['reflectivity_varname']
+    composite_reflectivity_varname = config.get('composite_reflectivity_varname', None)
+    pass_varname = config.get('pass_varname', None)
+    radar_lon_varname = config.get('radar_lon_varname', None)
+    radar_lat_varname = config.get('radar_lat_varname', None)
+    radar_alt_varname = config.get('radar_alt_varname', None)
+    terrain_file = config.get('terrain_file', None)
+    elev_varname = config.get('elev_varname', None)
+    rangemask_varname = config.get('rangemask_varname', None)
+    is_3d = config.get('is_3d', None)  # None = auto-detect
+    z_coord_type = config.get('z_coord_type', None)  # None = auto-detect, 'height' or 'pressure'
+    default_sfc_pressure = config.get('default_sfc_pressure', 1013.25)  # hPa, used when terrain_file=None and z_coord_type='pressure'
+    default_sfc_height = config.get('default_sfc_height', 0)  # meters, used when terrain_file=None and z_coord_type='height'
+    round_time_to_second = config.get('round_time_to_second', False)  # Flag to round time coordinate to nearest second
+    
+    # Read input file
+    if input_format == 'netcdf':
+        ds = xr.open_dataset(input_filename)
+    elif input_format == 'zarr':
+        ds_hp = input_filename
+    else:
+        logger.error(f'Unknown input_format: {input_format}')
+        sys.exit()
+
+    # Handle HEALPix format: remap to regular grid before proceeding
+    if input_format == 'zarr':
+        latlon_filename = config.get('latlon_filename', None)
+        if latlon_filename is None:
+            logger.error("For HEALPix zarr input, 'latlon_filename' must be specified in config")
+            sys.exit()
+        # Remap HEALPix to lat/lon grid
+        ds = remap_healpix_to_latlon_grid(
+            ds_hp,
+            latlon_filename,
+            config,
+        )
+    
+    # Handle special WRF case: rename Time -> time, handle XTIME
+    if 'Time' in ds.dims and time_dimname == 'time':
+        if 'XTIME' in ds.variables:
+            ds = ds.reset_coords(names='XTIME', drop=False)
+        ds = ds.rename({'Time': time_dimname})
+    
+    # Get dimension names from the file
+    dims_file = []
+    for key in ds.dims: dims_file.append(key)
+    # Find extra dimensions beyond [time, z, y, x] or [time, y, x]
+    if z_dimname is not None:
+        dims_keep = [time_dimname, z_dimname, y_dimname, x_dimname]
+    else:
+        dims_keep = [time_dimname, y_dimname, x_dimname]
+    dims_drop = list(set(dims_file) - set(dims_keep))
+    # Reorder Dataset dimensions
+    if z_dimname is not None:
+        # Drop extra dimensions, reorder to [time, z, y, x]
+        ds = ds.drop_dims(dims_drop).transpose(
+            time_dimname, z_dimname, y_dimname, x_dimname, missing_dims='ignore'
+        )
+    else:
+        # Drop extra dimensions, reorder to [time, y, x]
+        ds = ds.drop_dims(dims_drop).transpose(
+            time_dimname, y_dimname, x_dimname, missing_dims='ignore'
+        )
+    
+    # Get time coordinate
+    if time_coordname in ds.variables:
+        time_coords = ds[time_coordname]
+        # Round to nearest second if requested
+        if round_time_to_second and hasattr(time_coords.dt, 'round'):
+            time_coords = time_coords.dt.round('s')
+    else:
+        time_coords = ds[time_dimname]
+        if round_time_to_second and hasattr(time_coords.dt, 'round'):
+            time_coords = time_coords.dt.round('s')
+    
+    # Squeeze time dimension if it only has 1 timestep
+    # This handles single-time files consistently with multi-time files
+    if time_dimname in ds.dims and ds.sizes[time_dimname] == 1:
+        ds = ds.squeeze(time_dimname, drop=False)
+        logger.info("Squeezed time dimension (size=1) from dataset")
+    
+    # Auto-detect if data is 3D
+    if is_3d is None:
+        is_3d = z_dimname in ds[reflectivity_varname].dims
+
+    # Get spatial dimensions
+    nx = ds.sizes[x_dimname]
+    ny = ds.sizes[y_dimname]
+    
+    # Get x, y coordinates
+    if x_coordname in ds.variables:
+        x_coords = ds[x_coordname].data
+    else:
+        # Create x coordinate from dimension using dx from config
+        x_coords = np.arange(0, nx) * dx
+    
+    if y_coordname in ds.variables:
+        y_coords = ds[y_coordname].data
+    else:
+        # Create y coordinate from dimension using dy from config
+        y_coords = np.arange(0, ny) * dy
+    
+    # Get grid lat/lon (can be 1D or 2D)
+    if lon_coordname in ds.variables:
+        grid_lon = ds[lon_coordname].squeeze()
+        # For 3D lat/lon, take first vertical level
+        if z_dimname in grid_lon.dims:
+            grid_lon = grid_lon.isel({z_dimname: 0})
+    else:
+        # Create dummy grid_lon
+        grid_lon = xr.DataArray(
+            np.zeros((ny, nx)), 
+            coords={y_dimname: y_coords, x_dimname: x_coords},
+            dims=(y_dimname, x_dimname)
+        )
+    
+    if lat_coordname in ds.variables:
+        grid_lat = ds[lat_coordname].squeeze()
+        # For 3D lat/lon, take first vertical level
+        if z_dimname in grid_lat.dims:
+            grid_lat = grid_lat.isel({z_dimname: 0})
+    else:
+        # Create dummy grid_lat
+        grid_lat = xr.DataArray(
+            np.zeros((ny, nx)),
+            coords={y_dimname: y_coords, x_dimname: x_coords},
+            dims=(y_dimname, x_dimname)
+        )
+    
+    # Convert 1D grid_lon/grid_lat to 2D for compatibility with write_radar_cellid
+    if grid_lon.ndim == 1 and grid_lat.ndim == 1:
+        # Create 2D meshgrid from 1D coordinates
+        grid_lon_2d, grid_lat_2d = np.meshgrid(grid_lon.data, grid_lat.data)
+        grid_lon = xr.DataArray(
+            grid_lon_2d,
+            coords={y_dimname: y_coords, x_dimname: x_coords},
+            dims=(y_dimname, x_dimname)
+        )
+        grid_lat = xr.DataArray(
+            grid_lat_2d,
+            coords={y_dimname: y_coords, x_dimname: x_coords},
+            dims=(y_dimname, x_dimname)
+        )
+
+    # Get radar location (if available)
+    if radar_lon_varname and radar_lon_varname in ds.variables:
+        radar_lon = ds[radar_lon_varname]
+        radar_lat = ds[radar_lat_varname]
+        radar_alt = ds[radar_alt_varname].squeeze().item() if radar_alt_varname in ds.variables else 0
+    else:
+        # Create fake radar lat/lon for model data
+        radar_lon = xr.DataArray(0, attrs={'long_name': 'Radar longitude'})
+        radar_lat = xr.DataArray(0, attrs={'long_name': 'Radar latitude'})
+        radar_alt = 0
+    
+    # Process 3D reflectivity data
+    if is_3d:
+        # Get vertical coordinate
+        if z_coordname in ds.variables:
+            height = ds[z_coordname].data
+        else:
+            # Special case for WRF geopotential height
+            if 'PH' in ds.variables and 'PHB' in ds.variables:
+                height = ((ds['PH'] + ds['PHB']).squeeze().data / 9.80665)
+            else:
+                logger.warning(f"Vertical coordinate {z_coordname} not found, using index")
+                height = np.arange(ds.sizes[z_dimname])
+        
+        # Auto-detect vertical coordinate type if not specified
+        if z_coord_type is None:
+            # Check if coordinate is monotonically increasing or decreasing
+            if z_coordname in ds.variables:
+                # Get a representative vertical profile for checking
+                if height.ndim == 1:
+                    z_profile = height
+                elif height.ndim == 3:  # 3D: [z, y, x]
+                    z_profile = height[:, int(ny/2), int(nx/2)]
+                else:  # 4D: [time, z, y, x]
+                    z_profile = height[0, :, int(ny/2), int(nx/2)]
+                
+                # For height: typically increases from surface (low) to top (high)
+                # For pressure: typically decreases from surface (high ~1000 hPa) to top (low ~0.1 hPa)
+                if z_profile[0] > z_profile[-1]:
+                    z_coord_type = 'pressure'
+                    logger.info(f"Auto-detected vertical coordinate type: pressure (decreasing from {z_profile[0]:.2f} to {z_profile[-1]:.2f})")
+                else:
+                    z_coord_type = 'height'
+                    logger.info(f"Auto-detected vertical coordinate type: height (increasing from {z_profile[0]:.2f} to {z_profile[-1]:.2f})")
+            else:
+                # Default to height if cannot determine
+                z_coord_type = 'height'
+                logger.warning("Cannot auto-detect vertical coordinate type, defaulting to 'height'")
+        else:
+            logger.info(f"Using specified vertical coordinate type: {z_coord_type}")
+        
+        # Standardize vertical coordinate direction for echo-top height calculations
+        # Height coordinates should increase from surface to top (e.g., 0, 500, 1000, ..., 20000 m)
+        # Pressure coordinates should decrease from surface to top (e.g., 1000, 950, 900, ..., 100 hPa)
+        
+        # Get a representative vertical profile in the center of the domain for checking direction
+        if height.ndim == 1:
+            z_profile = height
+        elif height.ndim == 3:  # 3D: [z, y, x]
+            z_profile = height[:, int(ny/2), int(nx/2)]
+        else:  # 4D: [time, z, y, x]
+            z_profile = height[0, :, int(ny/2), int(nx/2)]
+        
+        # Check if vertical coordinate needs to be reversed
+        need_reverse = False
+        if z_coord_type == 'height':
+            # Height should increase with index (surface=low, top=high)
+            if z_profile[0] > z_profile[-1]:
+                logger.info(f"Reversing height coordinate to go from surface ({z_profile[-1]:.2f} m) to top ({z_profile[0]:.2f} m)")
+                need_reverse = True
+        elif z_coord_type == 'pressure':
+            # Pressure should decrease with index (surface=high, top=low)
+            if z_profile[0] < z_profile[-1]:
+                logger.info(f"Reversing pressure coordinate to go from surface ({z_profile[-1]:.2f} hPa) to top ({z_profile[0]:.2f} hPa)")
+                need_reverse = True
+
+        # Reverse the entire dataset along z dimension if needed
+        if need_reverse:
+            # Flip height array (handle 1D, 3D, and 4D)
+            if height.ndim == 1:
+                height = height[::-1]
+            elif height.ndim == 3:  # 3D: [z, y, x]
+                height = height[::-1, :, :]
+            else:  # 4D: [time, z, y, x]
+                height = height[:, ::-1, :, :]
+            
+            # Flip the entire dataset along z dimension to maintain consistency across all variables
+            ds = ds.isel({z_dimname: slice(None, None, -1)})
+        
+        # Standardize z_coord units (must be done before comparing with sfc_elev)
+        logger.info(f"Standardizing {z_coordname} units...")
+        height, z_conversion_msg = standardize_vertical_coordinate(
+            height,
+            ds[z_coordname].attrs,
+            z_coordname,
+            config
+        )
+        # Update dataset coordinate with standardized values
+        # For multi-dimensional coordinates, preserve dimension names
+        if height.ndim > 1:
+            # Get original dimensions from dataset coordinate
+            orig_dims = ds[z_coordname].dims
+            height_da = xr.DataArray(height, dims=orig_dims)
+            ds = ds.assign_coords({z_coordname: height_da})
+        else:
+            # For 1D coordinates, can assign directly
+            ds = ds.assign_coords({z_coordname: height})
+        logger.info(f"z_coord unit standardization: {z_conversion_msg}")
+        
+        # Get or create surface elevation
+        if terrain_file is not None:
+            logger.info(f"Loading terrain file: {terrain_file}")
+            dster = xr.open_dataset(terrain_file)
+            dster = dster.assign_coords({
+                y_dimname: ds[y_coordname], 
+                x_dimname: ds[x_coordname]
+            })
+            sfc_elev = dster[elev_varname]
+            if rangemask_varname is not None:
+                mask_goodvalues = dster[rangemask_varname].data.astype(int)
+            else:
+                mask_goodvalues = np.ones((ny, nx), dtype=int)
+        else:
+            # Create default surface elevation/pressure
+            if z_coord_type == 'pressure':
+                # For pressure coordinates, use configured or default sea level pressure
+                if isinstance(x_coords, np.ndarray) and x_coords.ndim == 2:
+                    # For 2D coordinates, create with index dimensions only
+                    sfc_elev = xr.DataArray(
+                        np.full((ny, nx), default_sfc_pressure),
+                        dims=(y_dimname, x_dimname)
+                    )
+                else:
+                    sfc_elev = xr.DataArray(
+                        np.full((ny, nx), default_sfc_pressure),
+                        coords={y_dimname: y_coords, x_dimname: x_coords},
+                        dims=(y_dimname, x_dimname)
+                    )
+                logger.info(f"No terrain file specified. Using default surface pressure: {default_sfc_pressure} hPa")
+            else:
+                # For height coordinates, use configured or default surface height
+                if isinstance(x_coords, np.ndarray) and x_coords.ndim == 2:
+                    # For 2D coordinates, create with index dimensions only
+                    sfc_elev = xr.DataArray(
+                        np.full((ny, nx), default_sfc_height),
+                        dims=(y_dimname, x_dimname)
+                    )
+                else:
+                    sfc_elev = xr.DataArray(
+                        np.full((ny, nx), default_sfc_height),
+                        coords={y_dimname: y_coords, x_dimname: x_coords},
+                        dims=(y_dimname, x_dimname)
+                    )
+                logger.info(f"No terrain file specified. Using default surface height: {default_sfc_height} m")
+            mask_goodvalues = np.full((ny, nx), 1, dtype=int)
+        
+        # Standardize sfc_elev units (must be done before comparing with z_coord)
+        logger.info(f"Standardizing sfc_elev units...")
+        # Get attributes from terrain file if available, otherwise use empty dict (for default values)
+        sfc_elev_attrs = dster[elev_varname].attrs if terrain_file is not None else {}
+        sfc_elev, sfc_conversion_msg = standardize_vertical_coordinate(
+            sfc_elev,
+            sfc_elev_attrs,
+            'sfc_elev',
+            config
+        )
+        logger.info(f"sfc_elev unit standardization: {sfc_conversion_msg}")
+        
+        # Handle height coordinate transformation (AGL to MSL if needed)
+        if radar_alt_varname in ds.variables:
+            logger.info(f"Converting vertical coordinate {z_coordname} from AGL to MSL using radar altitude: {radar_alt}")
+            z_agl = ds[z_dimname] + radar_alt
+            ds[z_dimname] = z_agl
+        
+        # Get reflectivity data
+        dbz = ds[reflectivity_varname].squeeze()
+
+        # Apply quality control filters (optional)
+        # Check for normalized coherent power filtering
+        if 'normalized_coherent_power' in ds.variables:
+            ncp = ds['normalized_coherent_power'].squeeze()
+            dbz = dbz.where(ncp >= 0.5)
+        
+        # Filter reflectivity based on vertical coordinate type
+        if z_coord_type == 'pressure':
+            # For pressure coordinates: surface is high pressure, top is low pressure
+            # Filter out levels below surface pressure (sfc_elev represents surface pressure)
+            # Keep levels where pressure < surface pressure - sfc_dz_min
+            dbz3d_filt = dbz.where(ds[z_coordname] < (sfc_elev - sfc_dz_min))
+            
+            # Calculate low-level composite reflectivity
+            # Low-level is defined as pressure range from (sfc - sfc_dz_max) to (sfc - sfc_dz_min)
+            # This captures levels close to but above the surface
+            dbz3d_lowlevel = dbz.where(
+                (ds[z_coordname] >= (sfc_elev - sfc_dz_max)) & 
+                (ds[z_coordname] <= (sfc_elev - sfc_dz_min))
+            )
+        else:
+            # For height coordinates: surface is low, top is high (traditional case)
+            # Filter reflectivity below surface + minimum height
+            dbz3d_filt = dbz.where(ds[z_coordname] > (sfc_elev + sfc_dz_min))
+            
+            # Calculate low-level composite reflectivity
+            # Filter for layer between sfc_dz_min and sfc_dz_max above the surface
+            dbz3d_lowlevel = dbz.where(
+                (ds[z_coordname] >= (sfc_elev + sfc_dz_min)) & 
+                (ds[z_coordname] <= (sfc_elev + sfc_dz_max))
+            )
+        
+        # Calculate composite reflectivity
+        if composite_reflectivity_varname and composite_reflectivity_varname in ds.variables:
+            dbz_comp = ds[composite_reflectivity_varname].squeeze()
+        else:
+            dbz_comp = dbz3d_filt.max(dim=z_dimname)
+        
+        # Calculate low-level maximum reflectivity
+        dbz_lowlevel = dbz3d_lowlevel.max(dim=z_dimname)
+
+    else:
+        # 2D composite reflectivity case
+        dbz_comp = ds[reflectivity_varname].squeeze()
+        dbz_lowlevel = ds[reflectivity_varname].squeeze().copy()
+        # Create fake 3D array for compatibility
+        dbz3d_filt = dbz_comp.expand_dims(z_dimname, axis=0)
+        height = np.zeros(1)
+        mask_goodvalues = np.full((ny, nx), 1, dtype=int)
+    
+    # Extract pass-through variables if requested
+    if pass_varname is not None:
+        pass_varname_set = set(ds.data_vars) & set(pass_varname)
+        ds_pass = ds[pass_varname_set] if pass_varname_set else None
+    else:
+        ds_pass = None
+
+    # Prepare reflectivity array for Steiner classification
+    refl = np.copy(dbz_comp.data)
+    # Replace values below radar sensitivity and NaN with sensitivity value
+    refl[(refl < radar_sensitivity) | np.isnan(refl)] = radar_sensitivity
+
+    # TODO: Add an option to overwrite composite reflectivity array (refl) with CAPPI
+
+    # Return standardized dictionary
+    comp_dict = {
+        'x_coords': x_coords,
+        'y_coords': y_coords,
+        'dbz3d_filt': dbz3d_filt,
+        'dbz_comp': dbz_comp,
+        'dbz_lowlevel': dbz_lowlevel,
+        'grid_lat': grid_lat,
+        'grid_lon': grid_lon,
+        'height': height,
+        'mask_goodvalues': mask_goodvalues,
+        'radar_lat': radar_lat,
+        'radar_lon': radar_lon,
+        'refl': refl,
+        'time_coords': time_coords,
+        'ds_pass': ds_pass,
+        'is_3d': is_3d,
+    }
+    
+    return comp_dict
+
+
 #--------------------------------------------------------------------------------
 def subset_domain(comp_dict, geolimits, dx, dy):
     """
@@ -438,432 +916,133 @@ def subset_domain(comp_dict, geolimits, dx, dy):
 
     return comp_dict
 
+
 #--------------------------------------------------------------------------------
-def get_composite_reflectivity_generic(input_filename, config):
+def standardize_vertical_coordinate(
+    coord_values,
+    coord_attrs,
+    coord_name,
+    config
+):
     """
-    Generic function to get composite reflectivity from various input sources.
+    Standardize vertical coordinate units to meters (height) or hPa (pressure).
     
-    This function is agnostic to different input datasets, requiring only:
-    - time coordinate
-    - x, y coordinates (1D or 2D)
-    - z coordinate (optional, for 3D data)
-    - 2D or 3D radar reflectivity variable
+    This function implements robust unit detection and conversion with validation.
+    It handles common unit variations and provides clear logging of all conversions.
     
-    Args:
-        input_filename: string
-            Input data filename
-        config: dictionary
-            Dictionary containing config parameters
-            
-    Required config parameters:
-        - reflectivity_varname: name of reflectivity variable
-        - x_coordname, y_coordname: coordinate variable names (backward compatible with x_varname, y_varname)
-        - x_dimname, y_dimname: dimension names
-        - time_dimname (optional): time dimension name, default 'time'
-        - z_dimname (optional): vertical dimension name, default 'z'
-        - z_coordname (optional): vertical coordinate name (backward compatible with z_varname)
-        - lon_coordname, lat_coordname (optional): lat/lon coordinate names (backward compatible with lon_varname, lat_varname)
-        - dx, dy: grid spacing in meters
-        - radar_sensitivity: minimum reflectivity threshold
-        - sfc_dz_min, sfc_dz_max: height range for low-level reflectivity
-        - z_coord_type (optional): 'height' or 'pressure', default auto-detect
-          For pressure coordinates, sfc_dz_min/max are in hPa (surface is high pressure)
-        - default_sfc_pressure (optional): default surface pressure in hPa when terrain_file
-          is not provided and z_coord_type='pressure', default 1013.25 hPa
-        - composite_reflectivity_varname (optional): pre-computed composite reflectivity
-        - pass_varname (optional): list of additional variables to pass through
-        - is_3d (optional): flag to indicate if data is 3D, default auto-detect
+    Parameters
+    ----------
+    coord_values : xarray.DataArray or numpy.ndarray
+        Coordinate values to standardize
+    coord_attrs : dict
+        Coordinate attributes containing 'units' key
+    coord_name : str
+        Name of coordinate for logging (e.g., 'z_coord', 'heightAboveSea', 'sfc_elev')
+        Used to determine which config parameters to use (z_coord_* vs sfc_elev_*)
+    config : dict
+        Configuration dictionary containing:
+        - z_coord_type: 'height' or 'pressure'
+        - z_coord_scale_factor: scale factor for vertical coordinate (optional)
+        - z_coord_units_override: units override for vertical coordinate (optional)
+        - sfc_elev_scale_factor: scale factor for surface elevation (optional)
+        - sfc_elev_units_override: units override for surface elevation (optional)
+    
+    Returns
+    -------
+    standardized_values : same type as input
+        Coordinate values in standard units (m for height, hPa for pressure)
+    conversion_msg : str
+        Description of conversion applied for logging
         
-    Returns:
-        comp_dict: dictionary
-            Dictionary containing standardized output variables
+    Raises
+    ------
+    ValueError
+        If units cannot be recognized or converted, or if coord_type is invalid
     """
+    
     logger = logging.getLogger(__name__)
     
-    # Get configuration parameters
-    input_format = config.get("input_format", "netcdf")
-    radar_sensitivity = config['radar_sensitivity']
-    sfc_dz_min = config['sfc_dz_min']
-    sfc_dz_max = config['sfc_dz_max']
+    # Extract coordinate type from config
+    coord_type = config.get('z_coord_type', 'height')
     
-    # Check required grid spacing parameters
-    dx = config.get('dx', None)
-    dy = config.get('dy', None)
-    if dx is None:
-        raise ValueError("'dx' (grid spacing in x-direction) must be specified in config")
-    if dy is None:
-        raise ValueError("'dy' (grid spacing in y-direction) must be specified in config")
-    
-    time_dimname = config.get('time_dimname', 'time')
-    time_coordname = config.get('time_coordname', time_dimname)
-    x_dimname = config.get('x_dimname', 'x')
-    y_dimname = config.get('y_dimname', 'y')
-    z_dimname = config.get('z_dimname', 'z')
-    # Use new coordname parameters with backward compatibility to varname parameters
-    x_coordname = config.get('x_coordname', config.get('x_varname'))
-    y_coordname = config.get('y_coordname', config.get('y_varname'))
-    z_coordname = config.get('z_coordname', config.get('z_varname', z_dimname))
-    lon_coordname = config.get('lon_coordname', config.get('lon_varname', x_coordname))
-    lat_coordname = config.get('lat_coordname', config.get('lat_varname', y_coordname))
-    reflectivity_varname = config['reflectivity_varname']
-    composite_reflectivity_varname = config.get('composite_reflectivity_varname', None)
-    pass_varname = config.get('pass_varname', None)
-    radar_lon_varname = config.get('radar_lon_varname', None)
-    radar_lat_varname = config.get('radar_lat_varname', None)
-    radar_alt_varname = config.get('radar_alt_varname', None)
-    terrain_file = config.get('terrain_file', None)
-    elev_varname = config.get('elev_varname', None)
-    rangemask_varname = config.get('rangemask_varname', None)
-    is_3d = config.get('is_3d', None)  # None = auto-detect
-    z_coord_type = config.get('z_coord_type', None)  # None = auto-detect, 'height' or 'pressure'
-    default_sfc_pressure = config.get('default_sfc_pressure', 1013.25)  # hPa, used when terrain_file=None and z_coord_type='pressure'
-    default_sfc_height = config.get('default_sfc_height', 0)  # meters, used when terrain_file=None and z_coord_type='height'
-    round_time_to_second = config.get('round_time_to_second', False)  # Flag to round time coordinate to nearest second
-    
-    # Read input file
-    if input_format == 'netcdf':
-        ds = xr.open_dataset(input_filename)
-    elif input_format == 'zarr':
-        ds_hp = input_filename
+    # Determine which config parameters to use based on coord_name
+    # Surface elevation uses sfc_elev_* parameters, vertical coordinate uses z_coord_* parameters
+    if 'sfc' in coord_name.lower() or 'elev' in coord_name.lower():
+        scale_factor = config.get('sfc_elev_scale_factor', None)
+        units_override = config.get('sfc_elev_units_override', None)
     else:
-        logger.error(f'Unknown input_format: {input_format}')
-        sys.exit()
-
-    # Handle HEALPix format: remap to regular grid before proceeding
-    if input_format == 'zarr':
-        latlon_filename = config.get('latlon_filename', None)
-        if latlon_filename is None:
-            logger.error("For HEALPix zarr input, 'latlon_filename' must be specified in config")
-            sys.exit()
-        # Remap HEALPix to lat/lon grid
-        ds = remap_healpix_to_latlon_grid(
-            ds_hp,
-            latlon_filename,
-            config,
-        )
+        scale_factor = config.get('z_coord_scale_factor', None)
+        units_override = config.get('z_coord_units_override', None)
     
-    # Handle special WRF case: rename Time -> time, handle XTIME
-    if 'Time' in ds.dims and time_dimname == 'time':
-        if 'XTIME' in ds.variables:
-            ds = ds.reset_coords(names='XTIME', drop=False)
-        ds = ds.rename({'Time': time_dimname})
+    # Priority order: scale_factor > units_override > coord_attrs
     
-    # Get dimension names from the file
-    dims_file = []
-    for key in ds.dims: dims_file.append(key)
-    # Find extra dimensions beyond [time, z, y, x] or [time, y, x]
-    if z_dimname is not None:
-        dims_keep = [time_dimname, z_dimname, y_dimname, x_dimname]
+    # 1. If scale_factor provided, use it (highest priority)
+    if scale_factor is not None:
+        units_from_file = coord_attrs.get('units', 'unknown')
+        logger.info(f"Applying manual scale factor {scale_factor} to {coord_name} (file units: {units_from_file})")
+        return coord_values * scale_factor, f"{units_from_file} scaled by {scale_factor}"
+    
+    # 2. If units_override provided, use it instead of file attributes
+    if units_override is not None:
+        units = units_override
+        units_from_file = coord_attrs.get('units', 'not specified')
+        logger.info(f"Using units override '{units}' for {coord_name} (ignoring file units: '{units_from_file}')")
     else:
-        dims_keep = [time_dimname, y_dimname, x_dimname]
-    dims_drop = list(set(dims_file) - set(dims_keep))
-    # Reorder Dataset dimensions
-    if z_dimname is not None:
-        # Drop extra dimensions, reorder to [time, z, y, x]
-        ds = ds.drop_dims(dims_drop).transpose(
-            time_dimname, z_dimname, y_dimname, x_dimname, missing_dims='ignore'
-        )
-    else:
-        # Drop extra dimensions, reorder to [time, y, x]
-        ds = ds.drop_dims(dims_drop).transpose(
-            time_dimname, y_dimname, x_dimname, missing_dims='ignore'
-        )
-    
-    # Get time coordinate
-    if time_coordname in ds.variables:
-        time_coords = ds[time_coordname]
-        # Round to nearest second if requested
-        if round_time_to_second and hasattr(time_coords.dt, 'round'):
-            time_coords = time_coords.dt.round('s')
-    else:
-        time_coords = ds[time_dimname]
-        if round_time_to_second and hasattr(time_coords.dt, 'round'):
-            time_coords = time_coords.dt.round('s')
-    
-    # Auto-detect if data is 3D
-    if is_3d is None:
-        is_3d = z_dimname in ds[reflectivity_varname].dims
-
-    # Get spatial dimensions
-    nx = ds.sizes[x_dimname]
-    ny = ds.sizes[y_dimname]
-    
-    # Get x, y coordinates
-    if x_coordname in ds.variables:
-        x_coords = ds[x_coordname].data
-    else:
-        # Create x coordinate from dimension using dx from config
-        x_coords = np.arange(0, nx) * dx
-    
-    if y_coordname in ds.variables:
-        y_coords = ds[y_coordname].data
-    else:
-        # Create y coordinate from dimension using dy from config
-        y_coords = np.arange(0, ny) * dy
-    
-    # Get grid lat/lon (can be 1D or 2D)
-    if lon_coordname in ds.variables:
-        grid_lon = ds[lon_coordname].squeeze()
-        # For 3D lat/lon, take first vertical level
-        if z_dimname in grid_lon.dims:
-            grid_lon = grid_lon.isel({z_dimname: 0})
-    else:
-        # Create dummy grid_lon
-        grid_lon = xr.DataArray(
-            np.zeros((ny, nx)), 
-            coords={y_dimname: y_coords, x_dimname: x_coords},
-            dims=(y_dimname, x_dimname)
-        )
-    
-    if lat_coordname in ds.variables:
-        grid_lat = ds[lat_coordname].squeeze()
-        # For 3D lat/lon, take first vertical level
-        if z_dimname in grid_lat.dims:
-            grid_lat = grid_lat.isel({z_dimname: 0})
-    else:
-        # Create dummy grid_lat
-        grid_lat = xr.DataArray(
-            np.zeros((ny, nx)),
-            coords={y_dimname: y_coords, x_dimname: x_coords},
-            dims=(y_dimname, x_dimname)
-        )
-    
-    # Convert 1D grid_lon/grid_lat to 2D for compatibility with write_radar_cellid
-    if grid_lon.ndim == 1 and grid_lat.ndim == 1:
-        # Create 2D meshgrid from 1D coordinates
-        grid_lon_2d, grid_lat_2d = np.meshgrid(grid_lon.data, grid_lat.data)
-        grid_lon = xr.DataArray(
-            grid_lon_2d,
-            coords={y_dimname: y_coords, x_dimname: x_coords},
-            dims=(y_dimname, x_dimname)
-        )
-        grid_lat = xr.DataArray(
-            grid_lat_2d,
-            coords={y_dimname: y_coords, x_dimname: x_coords},
-            dims=(y_dimname, x_dimname)
-        )
-
-    # Get radar location (if available)
-    if radar_lon_varname and radar_lon_varname in ds.variables:
-        radar_lon = ds[radar_lon_varname]
-        radar_lat = ds[radar_lat_varname]
-        radar_alt = ds[radar_alt_varname].squeeze().item() if radar_alt_varname in ds.variables else 0
-    else:
-        # Create fake radar lat/lon for model data
-        radar_lon = xr.DataArray(0, attrs={'long_name': 'Radar longitude'})
-        radar_lat = xr.DataArray(0, attrs={'long_name': 'Radar latitude'})
-        radar_alt = 0
-    
-    # Process 3D reflectivity data
-    if is_3d:
-        # Get vertical coordinate
-        if z_coordname in ds.variables:
-            height = ds[z_coordname].data
-        else:
-            # Special case for WRF geopotential height
-            if 'PH' in ds.variables and 'PHB' in ds.variables:
-                height = ((ds['PH'] + ds['PHB']).squeeze().data / 9.80665)
-            else:
-                logger.warning(f"Vertical coordinate {z_coordname} not found, using index")
-                height = np.arange(ds.sizes[z_dimname])
+        # 3. Try to get units from file attributes
+        units = coord_attrs.get('units', None)
         
-        # Auto-detect vertical coordinate type if not specified
-        if z_coord_type is None:
-            # Check if coordinate is monotonically increasing or decreasing
-            if z_coordname in ds.variables:
-                # Get a representative vertical profile for checking
-                if height.ndim == 1:
-                    z_profile = height
-                elif height.ndim == 3:  # 3D: [z, y, x]
-                    z_profile = height[:, 0, 0]
-                else:  # 4D: [time, z, y, x]
-                    z_profile = height[0, :, 0, 0]
-                
-                # For height: typically increases from surface (low) to top (high)
-                # For pressure: typically decreases from surface (high ~1000 hPa) to top (low ~0.1 hPa)
-                if z_profile[0] > z_profile[-1]:
-                    z_coord_type = 'pressure'
-                    logger.info(f"Auto-detected vertical coordinate type: pressure (decreasing from {z_profile[0]:.2f} to {z_profile[-1]:.2f})")
-                else:
-                    z_coord_type = 'height'
-                    logger.info(f"Auto-detected vertical coordinate type: height (increasing from {z_profile[0]:.2f} to {z_profile[-1]:.2f})")
-            else:
-                # Default to height if cannot determine
-                z_coord_type = 'height'
-                logger.warning("Cannot auto-detect vertical coordinate type, defaulting to 'height'")
-        else:
-            logger.info(f"Using specified vertical coordinate type: {z_coord_type}")
+        # Handle missing units attribute
+        if units is None:
+            logger.warning(f"{coord_name} has no 'units' attribute and no override provided")
+            logger.warning(f"Assuming {coord_name} is already in standard units ({'m' if coord_type == 'height' else 'hPa'})")
+            return coord_values, "no conversion (no units attribute)"
+    
+    units_lower = units.lower().strip()
+    
+    # Auto-detect and convert based on coordinate type
+    if coord_type == 'height':
+        # Target: meters
+        if 'km' in units_lower or 'kilometer' in units_lower:
+            logger.info(f"Converting {coord_name} from {units} to meters (×1000)")
+            return coord_values * 1000.0, f"{units} → m (×1000)"
         
-        # Standardize vertical coordinate direction for echo-top height calculations
-        # Height coordinates should increase from surface to top (e.g., 0, 500, 1000, ..., 20000 m)
-        # Pressure coordinates should decrease from surface to top (e.g., 1000, 950, 900, ..., 100 hPa)
-        
-        # Get a representative vertical profile for checking direction
-        if height.ndim == 1:
-            z_profile = height
-        elif height.ndim == 3:  # 3D: [z, y, x]
-            z_profile = height[:, 0, 0]
-        else:  # 4D: [time, z, y, x]
-            z_profile = height[0, :, 0, 0]
-        
-        # Check if vertical coordinate needs to be reversed
-        need_reverse = False
-        if z_coord_type == 'height':
-            # Height should increase with index (surface=low, top=high)
-            if z_profile[0] > z_profile[-1]:
-                logger.info(f"Reversing height coordinate to go from surface ({z_profile[-1]:.2f} m) to top ({z_profile[0]:.2f} m)")
-                need_reverse = True
-        elif z_coord_type == 'pressure':
-            # Pressure should decrease with index (surface=high, top=low)
-            if z_profile[0] < z_profile[-1]:
-                logger.info(f"Reversing pressure coordinate to go from surface ({z_profile[-1]:.2f} hPa) to top ({z_profile[0]:.2f} hPa)")
-                need_reverse = True
-        
-        # Reverse the entire dataset along z dimension if needed
-        if need_reverse:
-            # Flip height array (handle 1D, 3D, and 4D)
-            if height.ndim == 1:
-                height = height[::-1]
-            elif height.ndim == 3:  # 3D: [z, y, x]
-                height = height[::-1, :, :]
-            else:  # 4D: [time, z, y, x]
-                height = height[:, ::-1, :, :]
+        elif 'm' in units_lower or 'meter' in units_lower:
+            # Check for geopotential height (requires special handling)
+            if 'gpm' in units_lower or 'geopotential' in units_lower:
+                logger.warning(f"{coord_name} appears to be in geopotential height (units: {units})")
+                logger.warning("Geopotential height should be converted to geometric height")
+                logger.warning("Recommended: set z_coord_scale_factor or sfc_elev_scale_factor in config")
+                logger.warning("For standard conversion: scale_factor = 1/9.80665 ≈ 0.101972")
+                logger.error(f"Cannot automatically convert geopotential height. Please specify scale_factor.")
+                raise ValueError(f"Geopotential height units '{units}' require manual scale_factor")
             
-            # Flip the entire dataset along z dimension to maintain consistency across all variables
-            ds = ds.isel({z_dimname: slice(None, None, -1)})
+            # Regular meters - no conversion needed
+            logger.info(f"{coord_name} already in meters (units: {units})")
+            return coord_values, f"{units} (no conversion needed)"
         
-        # Get or create surface elevation
-        if terrain_file is not None:
-            logger.info(f"Loading terrain file: {terrain_file}")
-            dster = xr.open_dataset(terrain_file)
-            dster = dster.assign_coords({
-                y_dimname: ds[y_coordname], 
-                x_dimname: ds[x_coordname]
-            })
-            sfc_elev = dster[elev_varname]
-            mask_goodvalues = dster[rangemask_varname].data.astype(int)
         else:
-            # Create default surface elevation/pressure
-            if z_coord_type == 'pressure':
-                # For pressure coordinates, use configured or default sea level pressure
-                if isinstance(x_coords, np.ndarray) and x_coords.ndim == 2:
-                    # For 2D coordinates, create with index dimensions only
-                    sfc_elev = xr.DataArray(
-                        np.full((ny, nx), default_sfc_pressure),
-                        dims=(y_dimname, x_dimname)
-                    )
-                else:
-                    sfc_elev = xr.DataArray(
-                        np.full((ny, nx), default_sfc_pressure),
-                        coords={y_dimname: y_coords, x_dimname: x_coords},
-                        dims=(y_dimname, x_dimname)
-                    )
-                logger.info(f"No terrain file specified. Using default surface pressure: {default_sfc_pressure} hPa")
-            else:
-                # For height coordinates, use configured or default surface height
-                if isinstance(x_coords, np.ndarray) and x_coords.ndim == 2:
-                    # For 2D coordinates, create with index dimensions only
-                    sfc_elev = xr.DataArray(
-                        np.full((ny, nx), default_sfc_height),
-                        dims=(y_dimname, x_dimname)
-                    )
-                else:
-                    sfc_elev = xr.DataArray(
-                        np.full((ny, nx), default_sfc_height),
-                        coords={y_dimname: y_coords, x_dimname: x_coords},
-                        dims=(y_dimname, x_dimname)
-                    )
-                logger.info(f"No terrain file specified. Using default surface height: {default_sfc_height} m")
-            mask_goodvalues = np.full((ny, nx), 1, dtype=int)
-        
-        # Handle height coordinate transformation (AGL to MSL if needed)
-        if radar_alt_varname in ds.variables:
-            logger.info(f"Converting vertical coordinate {z_coordname} from AGL to MSL using radar altitude: {radar_alt}")
-            z_agl = ds[z_dimname] + radar_alt
-            ds[z_dimname] = z_agl
-        
-        # Get reflectivity data
-        dbz = ds[reflectivity_varname].squeeze()
-
-        # Apply quality control filters (optional)
-        # Check for normalized coherent power filtering
-        if 'normalized_coherent_power' in ds.variables:
-            ncp = ds['normalized_coherent_power'].squeeze()
-            dbz = dbz.where(ncp >= 0.5)
-        
-        # Filter reflectivity based on vertical coordinate type
-        if z_coord_type == 'pressure':
-            # For pressure coordinates: surface is high pressure, top is low pressure
-            # Filter out levels below surface pressure (sfc_elev represents surface pressure)
-            # Keep levels where pressure < surface pressure - sfc_dz_min
-            dbz3d_filt = dbz.where(ds[z_coordname] < (sfc_elev - sfc_dz_min))
-            
-            # Calculate low-level composite reflectivity
-            # Low-level is defined as pressure range from (sfc - sfc_dz_max) to (sfc - sfc_dz_min)
-            # This captures levels close to but above the surface
-            dbz3d_lowlevel = dbz.where(
-                (ds[z_coordname] >= (sfc_elev - sfc_dz_max)) & 
-                (ds[z_coordname] <= (sfc_elev - sfc_dz_min))
-            )
-        else:
-            # For height coordinates: surface is low, top is high (traditional case)
-            # Filter reflectivity below surface + minimum height
-            dbz3d_filt = dbz.where(ds[z_coordname] > (sfc_elev + sfc_dz_min))
-            
-            # Calculate low-level composite reflectivity
-            dbz3d_lowlevel = dbz.where(
-                (ds[z_coordname] >= sfc_dz_min) & (ds[z_coordname] <= sfc_dz_max)
-            )
-        
-        # Calculate composite reflectivity
-        if composite_reflectivity_varname and composite_reflectivity_varname in ds.variables:
-            dbz_comp = ds[composite_reflectivity_varname].squeeze()
-        else:
-            dbz_comp = dbz3d_filt.max(dim=z_dimname)
-        
-        # Calculate low-level maximum reflectivity
-        dbz_lowlevel = dbz3d_lowlevel.max(dim=z_dimname)
-
-    else:
-        # 2D composite reflectivity case
-        dbz_comp = ds[reflectivity_varname].squeeze()
-        dbz_lowlevel = ds[reflectivity_varname].squeeze().copy()
-        # Create fake 3D array for compatibility
-        dbz3d_filt = dbz_comp.expand_dims(z_dimname, axis=0)
-        height = np.zeros(1)
-        mask_goodvalues = np.full((ny, nx), 1, dtype=int)
+            logger.error(f"Unrecognized height units '{units}' for {coord_name}")
+            logger.error(f"Supported units: m, meter, meters, km, kilometer, kilometers")
+            logger.error(f"For geopotential height (gpm), specify scale_factor in config")
+            raise ValueError(f"Cannot convert height units '{units}' to meters")
     
-    # Extract pass-through variables if requested
-    if pass_varname is not None:
-        pass_varname_set = set(ds.data_vars) & set(pass_varname)
-        ds_pass = ds[pass_varname_set] if pass_varname_set else None
-    else:
-        ds_pass = None
-
-    # Prepare reflectivity array for Steiner classification
-    refl = np.copy(dbz_comp.data)
-    # Replace values below radar sensitivity and NaN with sensitivity value
-    refl[(refl < radar_sensitivity) | np.isnan(refl)] = radar_sensitivity
-
-    # TODO: Add an option to overwrite composite reflectivity array (refl) with CAPPI
-
-    # Return standardized dictionary
-    comp_dict = {
-        'x_coords': x_coords,
-        'y_coords': y_coords,
-        'dbz3d_filt': dbz3d_filt,
-        'dbz_comp': dbz_comp,
-        'dbz_lowlevel': dbz_lowlevel,
-        'grid_lat': grid_lat,
-        'grid_lon': grid_lon,
-        'height': height,
-        'mask_goodvalues': mask_goodvalues,
-        'radar_lat': radar_lat,
-        'radar_lon': radar_lon,
-        'refl': refl,
-        'time_coords': time_coords,
-        'ds_pass': ds_pass,
-        'is_3d': is_3d,
-    }
+    elif coord_type == 'pressure':
+        # Target: hPa (hectopascals) = mb (millibars)
+        if units_lower == 'pa' or units_lower == 'pascal' or units_lower == 'pascals':
+            # Pascals to hPa
+            logger.info(f"Converting {coord_name} from {units} to hPa (×0.01)")
+            return coord_values * 0.01, f"{units} → hPa (×0.01)"
+        
+        elif 'hpa' in units_lower or 'mb' in units_lower or 'millibar' in units_lower:
+            # Already in hPa/mb - no conversion needed
+            logger.info(f"{coord_name} already in hPa/mb (units: {units})")
+            return coord_values, f"{units} (no conversion needed)"
+        
+        else:
+            logger.error(f"Unrecognized pressure units '{units}' for {coord_name}")
+            logger.error(f"Supported units: Pa, pascal, hPa, mb, millibar")
+            raise ValueError(f"Cannot convert pressure units '{units}' to hPa")
     
-    return comp_dict
+    else:
+        logger.error(f"Unknown coordinate type '{coord_type}' for {coord_name}")
+        raise ValueError(f"coord_type must be 'height' or 'pressure', got '{coord_type}'")

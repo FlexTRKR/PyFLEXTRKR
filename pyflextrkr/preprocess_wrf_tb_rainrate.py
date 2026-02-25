@@ -169,7 +169,7 @@ def calc_rainrate_tb(filepairnames, outdir, inbasename, outbasename, config):
     
     ntimes = len(Times)
     Times_str = []
-    basetimes = np.full(ntimes, np.NAN, dtype=float)
+    basetimes = np.full(ntimes, np.nan, dtype=float)
     for tt in range(0, ntimes):
         # Decode bytes to string with UTF-8 encoding, then replace "_" with "T"
         # to make time string: YYYY-MO-DDTHH:MM:SS

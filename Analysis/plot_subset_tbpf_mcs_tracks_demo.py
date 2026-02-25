@@ -1,25 +1,37 @@
 """
 Demonstrates ploting MCS tracks on Tb, precipitation snapshots for a subset domain.
 
+Usage:
 >python plot_subset_tbpf_mcs_tracks_demo.py -s STARTDATE -e ENDDATE -c CONFIG.yaml -o horizontal
+
+Required arguments:
+-s, --start           Start time (format: YYYY-mm-ddTHH:MM:SS)
+-e, --end             End time (format: YYYY-mm-ddTHH:MM:SS)
+-c, --config          YAML config file for tracking
+-o, --orientation     Panel orientation: 'vertical' (left+right panel) or 'horizontal' (top+bottom panel)
+
 Optional arguments:
--p 0 (serial), 1 (parallel)
---workers <num_workers> (number of workers for parallel)
---extent <lonmin lonmax latmin latmax> (subset domain boundary)
---subset <0: no, 1: yes> (subset data before plotting)
---figsize <width> <height> (figure size in inches)
---figsize_x <width> (figure size width in inches, height auto-calculated to maintain aspect ratio)
---figname_type <string> (figure naming convention, default: 'date_time', options: 'date_time', 'sequence')
---output <output_directory> (output figure directory)
---figbasename <figure_base_name> (output figure base name)
---title_prefix <string> (Prefix string to add to figure title)
---trackstats_file <MCS_track_stats_file_name> (optional, if different from robust MCS track stats file)
---pixel_path <Pixel_level_tracknumber_mask_files_directory> (optional, if different from robust MCS pixel files)
---time_format <Pixel_level_file_datetime_format> (optional, if different from robust MCS pixel files)
+-p, --parallel        Run in parallel (0:serial, 1:parallel, default=0)
+--workers             Number of Dask workers for parallel processing (default=4)
+--extent              Map extent: lonmin lonmax latmin latmax
+--subset              Subset data before plotting (0:no, 1:yes, default=0)
+--figbasename         Output figure base name (default="")
+--figsize             Figure size: width height in inches
+--figsize_x           Figure width in inches (height auto-calculated, default=10)
+--figname_type        Figure naming convention: 'date_time' or 'sequence' (default='date_time')
+--output              Output directory for figures
+--title_prefix        Prefix string to add to figure title (default="")
+--trackstats_file     MCS track stats file name (optional, if different from config)
+--pixel_path          Pixel-level tracknumber mask files directory (optional, if different from config)
+--time_format         Pixel-level file datetime format (optional, if different from config)
+--draw_border         Draw country borders (0:no, 1:yes, default=0)
+--draw_state          Draw state/province borders (0:no, 1:yes, default=0)
+--draw_river          Draw rivers (0:no, 1:yes, default=0)
 
 Zhe Feng, PNNL
 contact: Zhe.Feng@pnnl.gov
 """
+__author__ = "Zhe.Feng@pnnl.gov"
 
 import argparse
 import numpy as np
@@ -55,7 +67,7 @@ def parse_cmd_args():
     parser.add_argument("-s", "--start", help="first time in time series to plot, format=YYYY-mm-ddTHH:MM:SS", required=True)
     parser.add_argument("-e", "--end", help="last time in time series to plot, format=YYYY-mm-ddTHH:MM:SS", required=True)
     parser.add_argument("-c", "--config", help="yaml config file for tracking", required=True)
-    parser.add_argument("-o", "--orientation", help="panel orientation ('vertical' or 'horizontal')", required=True)
+    parser.add_argument("-o", "--orientation", help="panel orientation ('vertical' (left+right panel) or 'horizontal' (top+bottom panel))", required=True)
     parser.add_argument("-p", "--parallel", help="flag to run in parallel (0:serial, 1:parallel)", type=int, default=0)
     parser.add_argument("--workers", type=int, help="Number of Dask workers for parallel processing", default=4)
     parser.add_argument("--extent", nargs='+', help="map extent (lonmin, lonmax, latmin, latmax)", type=float, default=None)
@@ -256,13 +268,60 @@ def plot_map_2panels(pixel_dict, plot_info, map_info, track_dict):
 
     Args:
         pixel_dict: dictionary
-            Dictionary containing pixel data variables.
+            Dictionary containing pixel data variables:
+                lon: longitude array
+                lat: latitude array
+                tb: brightness temperature array
+                pcp: precipitation array
+                tracknumber: track number mask array
+                tracknumber_perim: track perimeter array
+                pixel_bt: pixel base time
         plot_info: dictionary
-            Dictionary containing plotting setup variables.
+            Dictionary containing plotting setup variables:
+                levels: dict with 'tb_levels', 'pcp_levels', 'tn_levels'
+                cmaps: dict with 'tb_cmap', 'pcp_cmap', 'tn_cmap'
+                titles: dict with 'tb_title', 'pcp_title'
+                cblabels: dict with 'tb_label', 'pcp_label'
+                cbticks: dict with 'tb_ticks', 'pcp_ticks'
+                fontsize: font size for labels
+                marker_size: marker size for tracks
+                tracknumber_fontsize: font size for track numbers
+                trackpath_linewidth: line width for track paths
+                pfdiam_linewidth: line width for PF diameter circles
+                trackpath_color: color for track paths
+                mcsperim_color: color for MCS perimeter
+                pfdiam_color: color for PF diameter circles
+                pfdiam_scale: scaling factor for PF diameter
+                map_edgecolor: color for map edges
+                map_resolution: resolution for map features
+                suptitle: figure title
+                figname: output figure filename
+                figsize: figure size tuple
+                dpi: figure DPI
+                panel_orientation: 'vertical' or 'horizontal'
         map_info: dictionary
-            Dictionary containing map boundary info.
+            Dictionary containing map boundary info:
+                map_extent: [lonmin, lonmax, latmin, latmax]
+                lonv: longitude tick values (optional)
+                latv: latitude tick values (optional)
+                draw_border: boolean to draw country borders (optional)
+                draw_state: boolean to draw state borders (optional)
+                draw_river: boolean to draw rivers (optional)
+                river_color: color for rivers (optional, default='gray')
+                box_lon: longitude values for box overlay (optional)
+                box_lat: latitude values for box overlay (optional)
         track_dict: dictionary
-            Dictionary containing tracking data variables.
+            Dictionary containing tracking data variables:
+                ntracks: number of tracks
+                lifetime: track lifetime array
+                track_bt: track base time array
+                track_ccs_lon: track CCS longitude array
+                track_ccs_lat: track CCS latitude array
+                track_pf_lon: track PF longitude array
+                track_pf_lat: track PF latitude array
+                track_pf_diam: track PF diameter array
+                dt_thres: time threshold for track plotting
+                time_res: time resolution in hours
 
     Returns:
         fig: object
@@ -532,8 +591,8 @@ def plot_map_2panels(pixel_dict, plot_info, map_info, track_dict):
         _iccslat = track_ccs_lat.data[itrack,idx_match]
         # Proceed if time difference is < dt_match
         if (idt_match < dt_match):
-            # Plot PF diameter circle
-            if ~np.isnan(_irad):
+            # Plot PF diameter circle - check that all values are valid (not NaN)
+            if ~np.isnan(_irad) and ~np.isnan(_ilon) and ~np.isnan(_ilat):
                 ipfcircle = ax2.tissot(rad_km=_irad*pfdiam_scale, lons=_ilon, lats=_ilat, n_samples=100,
                                        facecolor='None', edgecolor=pfdiam_color, lw=pfdiam_linewidth, zorder=3)
             # Overplot tracknumbers at current frame
