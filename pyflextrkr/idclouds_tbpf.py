@@ -128,7 +128,9 @@ def idclouds_tbpf(
     # NetCDF format
     elif input_format.lower() == "netcdf":
         # Read in data
-        rawdata = xr.open_dataset(input_data)
+        # decode_timedelta=False suppresses FutureWarning for variables whose
+        # units attribute looks timedelta-like (e.g. 'base_time' with units='seconds')
+        rawdata = xr.open_dataset(input_data, decode_timedelta=False)
 
         # Get dimension names from the file
         dims_file = []

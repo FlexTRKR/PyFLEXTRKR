@@ -484,9 +484,9 @@ def subset_ds_geolimit(
     }
     # Subset dataset
     ds_out = ds_in[subset_dict]
-    # transpose coordinates to enesure LAT is always the 1st dimension
-    ds_out = ds_out.transpose(y_dimname,x_dimname)
-    # ds_out = ds_out.transpose(y_coordname,x_coordname) # maybe?
+    # transpose coordinates to ensure LAT is always the 1st dimension
+    # Use '...' to preserve any extra dimensions (e.g. nbnd)
+    ds_out = ds_out.transpose(y_dimname, x_dimname, ...)
     return ds_out
 
 def find_maxnclouds(config):

@@ -1052,12 +1052,12 @@ def calc_cc_stats(
             )
 
             cceccentricity[icc - 1] = ccproperties[0].eccentricity
-            ccmajoraxis[icc - 1] = ccproperties[0].major_axis_length * pixel_radius
+            ccmajoraxis[icc - 1] = ccproperties[0].axis_major_length * pixel_radius
 
             # Need to treat minor axis length with an error except
             # since the python algorithm occasionally throws an error.
             try:
-                ccminoraxis[icc - 1] = (ccproperties[0].minor_axis_length * pixel_radius)
+                ccminoraxis[icc - 1] = (ccproperties[0].axis_minor_length * pixel_radius)
             except ValueError:
                 pass
             if ~np.isnan(ccminoraxis[icc - 1]) or ~np.isnan(ccmajoraxis[icc - 1]):
@@ -1065,7 +1065,7 @@ def calc_cc_stats(
             ccorientation[icc - 1] = (ccproperties[0].orientation) * (180 / float(pi))
             ccperimeter[icc - 1] = (ccproperties[0].perimeter * pixel_radius)
             [ycentroid, xcentroid] = ccproperties[0].centroid
-            [yweightedcentroid, xweightedcentroid] = ccproperties[0].weighted_centroid
+            [yweightedcentroid, xweightedcentroid] = ccproperties[0].centroid_weighted
 
             # Shift the centroids by minx/miny
             # since the core is a subset from the full image
@@ -1303,14 +1303,14 @@ def calc_pf_stats(
             )
             pfeccentricity[ipf - 1] = pfproperties[0].eccentricity
             pfmajoraxis[ipf - 1] = (
-                    pfproperties[0].major_axis_length * pixel_radius
+                    pfproperties[0].axis_major_length * pixel_radius
             )
 
             # Need to treat minor axis length with an error except
             # since the python algorithm occasionally throws an error.
             try:
                 pfminoraxis[ipf - 1] = (
-                        pfproperties[0].minor_axis_length
+                        pfproperties[0].axis_minor_length
                         * pixel_radius
                 )
             except ValueError:
@@ -1333,7 +1333,7 @@ def calc_pf_stats(
             [
                 yweightedcentroid,
                 xweightedcentroid,
-            ] = pfproperties[0].weighted_centroid
+            ] = pfproperties[0].centroid_weighted
 
             # Shift the centroids by minx/miny
             # since the PF is a subset from the full image
