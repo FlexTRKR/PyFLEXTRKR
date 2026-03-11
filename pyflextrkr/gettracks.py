@@ -726,6 +726,9 @@ def gettracknumbers(config):
     ds_out.track_reset.attrs["valid_max"] = 2
 
     # Write netcdf file
+    # Touch output file so HDF5 1.14.x H5Fis_accessible() probe does not
+    # fail with ENOENT and emit spurious diagnostics to stderr
+    open(tracknumbers_outfile, 'ab').close()
     ds_out.to_netcdf(
         path=tracknumbers_outfile,
         mode="w",

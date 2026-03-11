@@ -191,6 +191,9 @@ def write_cloudid_tb(
     comp = dict(zlib=True)
     encoding = {var: comp for var in ds_out.data_vars}
 
+    # Touch output file so HDF5 1.14.x H5Fis_accessible() probe does not
+    # fail with ENOENT and emit spurious diagnostics to stderr
+    open(cloudid_outfile, 'ab').close()
     # Write netCDF file
     ds_out.to_netcdf(
         path=cloudid_outfile, mode="w", format="NETCDF4", encoding=encoding,
@@ -460,6 +463,9 @@ def write_radar_cellid(
     comp = dict(zlib=True)
     encoding = {var: comp for var in ds_out.data_vars}
 
+    # Touch output file so HDF5 1.14.x H5Fis_accessible() probe does not
+    # fail with ENOENT and emit spurious diagnostics to stderr
+    open(cloudid_outfile, 'ab').close()
     # Write to netcdf file
     ds_out.to_netcdf(
         path=cloudid_outfile, mode='w', format='NETCDF4', unlimited_dims='time', encoding=encoding

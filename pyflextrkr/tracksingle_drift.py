@@ -364,6 +364,9 @@ def trackclouds(
 
         # Write netcdf files
         # output_data.to_netcdf(path=track_outfile, mode='w', format='NETCDF4_CLASSIC', unlimited_dims='times', \
+        # Touch output file so HDF5 1.14.x H5Fis_accessible() probe does not
+        # fail with ENOENT and emit spurious diagnostics to stderr
+        open(track_outfile, 'ab').close()
         zlib = True
         output_data.to_netcdf(
             path=track_outfile,

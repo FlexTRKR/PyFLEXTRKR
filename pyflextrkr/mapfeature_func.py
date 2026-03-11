@@ -305,6 +305,9 @@ def map_feature(
     comp = dict(zlib=True)
     encoding = {var: comp for var in ds_out.data_vars}
     # Write to netCDF file
+    # Touch output file so HDF5 1.14.x H5Fis_accessible() probe does not
+    # fail with ENOENT and emit spurious diagnostics to stderr
+    open(tracksmap_outfile, 'ab').close()
     ds_out.to_netcdf(
         path=tracksmap_outfile,
         mode="w",

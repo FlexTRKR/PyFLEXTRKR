@@ -711,14 +711,14 @@ def calc_pf_stats(
             )
             pfeccentricity[ipf - 1] = pfproperties[0].eccentricity
             pfmajoraxis[ipf - 1] = (
-                    pfproperties[0].major_axis_length * pixel_radius
+                    pfproperties[0].axis_major_length * pixel_radius
             )
 
             # Need to treat minor axis length with an error except
             # since the python algorithm occasionally throws an error.
             try:
                 pfminoraxis[ipf - 1] = (
-                        pfproperties[0].minor_axis_length
+                        pfproperties[0].axis_minor_length
                         * pixel_radius
                 )
             except ValueError:
@@ -741,7 +741,7 @@ def calc_pf_stats(
             [
                 yweightedcentroid,
                 xweightedcentroid,
-            ] = pfproperties[0].weighted_centroid
+            ] = pfproperties[0].centroid_weighted
 
             # Shift the centroids by minx/miny
             # since the PF is a subset from the full image

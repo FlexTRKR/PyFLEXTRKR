@@ -408,6 +408,9 @@ def define_robust_mcs_pf(config):
     encoding = {var: comp for var in dsout.data_vars}
 
     # Write to netcdf file
+    # Touch output file so HDF5 1.14.x H5Fis_accessible() probe does not
+    # fail with ENOENT and emit spurious diagnostics to stderr
+    open(statistics_outfile, 'ab').close()
     dsout.to_netcdf(path=statistics_outfile, mode="w",
                     format="NETCDF4", unlimited_dims=tracks_dimname, encoding=encoding)
     logger.info(f"{statistics_outfile}")

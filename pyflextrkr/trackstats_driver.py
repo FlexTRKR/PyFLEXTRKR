@@ -597,6 +597,9 @@ def write_trackstats_sparse(config, numtracks, out_dict_attrs, out_dict, row_out
     comp = dict(zlib=True)
     encoding = {var: comp for var in dsout.data_vars}
     # Write to netcdf file
+    # Touch output file so HDF5 1.14.x H5Fis_accessible() probe does not
+    # fail with ENOENT and emit spurious diagnostics to stderr
+    open(trackstats_sparse_outfile, 'ab').close()
     dsout.to_netcdf(path=trackstats_sparse_outfile,
                     mode='w',
                     format='NETCDF4',
@@ -698,6 +701,9 @@ def write_trackstats_dense(config, fillval, fillval_f,
     comp = dict(zlib=True)
     encoding = {var: comp for var in dsout.data_vars}
     # Write to netcdf file
+    # Touch output file so HDF5 1.14.x H5Fis_accessible() probe does not
+    # fail with ENOENT and emit spurious diagnostics to stderr
+    open(trackstats_outfile, 'ab').close()
     dsout.to_netcdf(path=trackstats_outfile,
                     mode='w',
                     format='NETCDF4',
