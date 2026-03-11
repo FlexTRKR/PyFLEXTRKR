@@ -160,7 +160,7 @@ def idfeature_generic(
         feature_mask, npix_feature = sort_renumber(var_number, min_size, grid_area=grid_area)
 
         # Get number of features
-        nfeatures = np.nanmax(feature_mask)
+        nfeatures = int(np.nanmax(feature_mask))
 
         # Convert to basetime (i.e., Epoch time)
         iTimestamp = pd.to_datetime(iTime.dt.strftime("%Y-%m-%dT%H:%M:%S").item())
@@ -179,10 +179,10 @@ def idfeature_generic(
 
         # Put time and nfeatures in a numpy array so that they can be set with a time dimension
         out_basetime = np.zeros(1, dtype=float)
-        out_basetime[0] = file_basetime
+        out_basetime[0] = file_basetime[0]
 
         out_nfeatures = np.zeros(1, dtype=int)
-        out_nfeatures[0] = nfeatures
+        out_nfeatures[0] = int(nfeatures)
 
         #######################################################
         # Output netcdf file
@@ -248,6 +248,10 @@ def idfeature_generic(
         # Set encoding/compression for all variables
         comp = dict(zlib=True)
         encoding = {var: comp for var in dsout.data_vars}
+
+        # Touch output file so HDF5 1.14.x H5Fis_accessible() probe does not
+        # fail with ENOENT and emit spurious diagnostics to stderr
+        open(cloudid_outfile, 'ab').close()
         # Write to netcdf file
         dsout.to_netcdf(
             path=cloudid_outfile,
