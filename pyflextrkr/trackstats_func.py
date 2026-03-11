@@ -213,7 +213,7 @@ def calc_stats_singlefile(
                 logger.warning(f'More than 1 {feature_varname} found for tracknumber: {uniquetracknumbers[itrack]}')
                 logger.warning(f'{feature_varname}: {cloudnumber_map}')
                 logger.warning(f'Only use {feature_varname}: {cloudnumber_map[0]}')
-                cloudnumber_map = cloudnumber_map[0]
+            cloudnumber_map = int(cloudnumber_map[0])
             cloudindex = cloudnumber_map - 1
 
             # # Get the cloudmask for the current track (this is the slow method!)
@@ -834,13 +834,13 @@ def get_loc_indices(
     idx = np.where(cloudnumber1d_uniq == cloudnumber_map)[0]
 
     if len(idx) > 0:
-        corecold_npix = cloudnumber1d_counts[idx]
+        corecold_npix = int(cloudnumber1d_counts[idx[0]])
 
         # We use this to know where to index into the sorted list
         # idx > 0 excludes background non-cloud area [0]
         # unravel_index turns 1D indices back to 2D so they can be applied to 2D array
         # to access the original image data
-        if idx > 0:
+        if idx[0] > 0:
             indices = np.unravel_index(
                 ast_cloudarea[
                 cumcounts_cloudarea[idx - 1][0]:

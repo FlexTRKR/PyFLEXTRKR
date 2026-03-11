@@ -155,7 +155,7 @@ def trackstats_driver(config):
     logger.debug("Collecting track statistics")
 
     max_trackduration = int(max(duration_range))
-    numtracks = int(numtracks)
+    numtracks = int(numtracks.item())
 
     # Make a variable list and get attributes from one of the returned dictionaries
     # Loop over each return results till one that is not None

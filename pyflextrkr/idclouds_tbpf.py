@@ -317,7 +317,7 @@ def idclouds_tbpf(
 
                     ######################################################
                     # Separate output into the separate variables
-                    final_nclouds = np.array([clouddata["final_nclouds"]])
+                    final_nclouds = int(clouddata["final_nclouds"])
                     # final_ncorepix = clouddata["final_ncorepix"] not used
                     # final_ncoldpix = clouddata["final_ncoldpix"] not used
                     final_ncorecoldpix = clouddata["final_ncorecoldpix"]
@@ -433,7 +433,7 @@ def idclouds_tbpf(
                             final_convcold_cloudnumber = np.expand_dims(
                                 pf_convcold_cloudnumber_sorted, axis=0
                             )
-                            final_nclouds = np.array([nclouds_linkpf], dtype=int)
+                            final_nclouds = int(np.squeeze(nclouds_linkpf))
                             final_pf_number = np.expand_dims(pf_number, axis=0)
                             final_ncorecoldpix = npix_convcold_linkpf
                             if pcp.ndim == 2:

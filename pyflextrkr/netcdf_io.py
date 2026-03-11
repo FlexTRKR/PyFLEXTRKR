@@ -54,7 +54,7 @@ def write_cloudid_tb(
         "cloudtype": (dim3d, cloudtype),
         "cloudnumber": (dim3d, cloudnumber),
         feature_varname: (dim3d, convcold_cloudnumber),
-        nfeature_varname: (["time"], nclouds),
+        nfeature_varname: (["time"], np.atleast_1d(int(nclouds))),
         featuresize_varname: (["features"], ncorecoldpix),
     }
     # Now check for optional arguments, add them to var_dict if provided
@@ -88,7 +88,7 @@ def write_cloudid_tb(
         "time": (["time"], file_basetime),
         "lat": (["lat"], np.squeeze(out_lat[:, 0])),
         "lon": (["lon"], np.squeeze(out_lon[0, :])),
-        "features": (["features"], np.arange(1, nclouds + 1),),
+        "features": (["features"], np.arange(1, int(np.squeeze(nclouds)) + 1),),
     }
 
     # Define global attributes
@@ -327,7 +327,7 @@ def write_radar_cellid(
         'echotop40': (dim3d, np.expand_dims(echotop40, axis=0)),
         'echotop50': (dim3d, np.expand_dims(echotop50, axis=0)),
         feature_varname: (dim3d, np.expand_dims(feature_mask, axis=0)),
-        nfeature_varname: (["time"], nfeatures),
+        nfeature_varname: (["time"], np.atleast_1d(int(nfeatures))),
         featuresize_varname: (["features"], npix_feature),
     }
     # Output coordinates
@@ -335,7 +335,7 @@ def write_radar_cellid(
         'time': (['time'], file_basetime),
         'lon': (['lon'], np.squeeze(out_lon.data[0, :])),
         'lat': (['lat'], np.squeeze(out_lat.data[:, 0])),
-        'features': (['features'], np.arange(1, nfeatures + 1),),
+        'features': (['features'], np.arange(1, int(np.squeeze(nfeatures)) + 1),),
     }
     # Handle input file attribute for both netCDF string and Zarr Dataset
     if isinstance(reflectivity_file, str):
