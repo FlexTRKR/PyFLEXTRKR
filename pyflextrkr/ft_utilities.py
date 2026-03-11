@@ -627,8 +627,8 @@ def match_drift_times(
             idx = np.where(datetime_drift == cloudid_datetime)[0]
             if (len(idx) == 1):
                 datetime_drift_match[itime] = datetime_drift[idx[0]]
-                xdrifts_match[itime] = xdrifts[idx]
-                ydrifts_match[itime] = ydrifts[idx]
+                xdrifts_match[itime] = xdrifts[idx[0]]
+                ydrifts_match[itime] = ydrifts[idx[0]]
     return (
         datetime_drift_match,
         xdrifts_match,

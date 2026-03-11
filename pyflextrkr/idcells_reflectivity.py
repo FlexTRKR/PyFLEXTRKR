@@ -218,7 +218,7 @@ def idcells_reflectivity(
         # Remove background (unique_num = 0)
         npix_feature = npix_feature[(unique_num > 0)]
         # Get number of features
-        nfeatures = np.nanmax(feature_mask)
+        nfeatures = int(np.nanmax(feature_mask))
 
         # Get date/time and make output filename
         if ntimes > 1:
@@ -245,10 +245,10 @@ def idcells_reflectivity(
 
         # Put time and nfeatures in a numpy array so that they can be set with a time dimension
         out_basetime = np.zeros(1, dtype=float)
-        out_basetime[0] = file_basetime
+        out_basetime[0] = file_basetime[0]
 
         out_nfeatures = np.zeros(1, dtype=int)
-        out_nfeatures[0] = nfeatures
+        out_nfeatures[0] = int(nfeatures)
 
         # Get passing variable DataSet from comp_dict (select time if multiple times)
         ds_pass = comp_dict.get('ds_pass', None)

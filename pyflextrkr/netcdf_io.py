@@ -330,7 +330,7 @@ def write_radar_cellid(
         'echotop40': (dim3d, np.expand_dims(echotop40, axis=0)),
         'echotop50': (dim3d, np.expand_dims(echotop50, axis=0)),
         feature_varname: (dim3d, np.expand_dims(feature_mask, axis=0)),
-        nfeature_varname: (["time"], np.atleast_1d(int(nfeatures))),
+        nfeature_varname: (["time"], np.atleast_1d(nfeatures)),
         featuresize_varname: (["features"], npix_feature),
     }
     # Output coordinates
