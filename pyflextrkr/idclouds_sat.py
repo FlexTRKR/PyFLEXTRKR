@@ -157,6 +157,7 @@ def idclouds_gpmmergir(
                                 cloudtb_threshs,
                                 config['area_thresh'],
                                 config['warmanvilexpansion'],
+                                pixel_area=pixel_area,
                             )
                         elif config['cloudidmethod'] == "label_grow":
                             from pyflextrkr.label_and_grow_cold_clouds import (

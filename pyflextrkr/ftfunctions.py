@@ -4,6 +4,7 @@ from collections import deque
 from skimage.segmentation import watershed
 from skimage.feature import peak_local_max
 from scipy.ndimage import label
+from pyflextrkr.ft_utilities import get_pixel_area, get_mean_pixel_length
 
 def sort_renumber(
     labelcell_number2d,
@@ -622,13 +623,14 @@ def adjust_axis(segments, axis, original_shape, ext_frac, config):
 
     """
     logger = logging.getLogger(__name__)
-    pixel_radius = config.get('pixel_radius')
+    pixel_area = get_pixel_area(config)
+    pixel_length = get_mean_pixel_length(pixel_area)
     area_thresh = config.get('area_thresh')
     # Calculate feature width threshold (in pixels) proportional to minimum area of objects defined in config
     # If there are objects with width > width_thresh, the algorithm will keep searching to refine the position to crop
     # until it reaches the edge of the extended domain.
     size_factor = 3     # adjustable multiplier factor
-    width_thresh = size_factor * int(2 * np.sqrt(area_thresh / np.pi) / pixel_radius)
+    width_thresh = size_factor * int(2 * np.sqrt(area_thresh / np.pi) / pixel_length)
     ext_size = calc_extension(original_shape[axis], ext_frac)
     adjusted = False
     label_positions_cache = cache_label_positions(segments)

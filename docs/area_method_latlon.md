@@ -50,19 +50,34 @@ New functions added:
   grid area file at the start of tracking. Reads lat/lon from the first data file
   (NetCDF) or landmask file (Zarr).
 
-Updated function:
+Updated functions:
 - **`load_config()`** — Reads `area_method` from config, sets `grid_area_file` path.
+- **`get_mean_pixel_length()`** — Updated to support domain-wide mean: when
+  `feature_mask_indices` is `None` and `pixel_area` is 2D, returns
+  `sqrt(nanmean(pixel_area))` instead of raising an error.
 
 ### Feature Identification — Driver & Cloud ID
 
 - **`pyflextrkr/idfeature_driver.py`** — Calls `precompute_grid_area()` before
   parallel feature identification loops.
 - **`pyflextrkr/idclouds_tbpf.py`** — Loads `pixel_area` via `get_pixel_area()`.
-  Passes it to `sort_renumber2vars()` and `label_and_grow_cold_clouds()`.
-- **`pyflextrkr/idclouds_sat.py`** — Same pattern as `idclouds_tbpf.py`.
+  Passes it to `sort_renumber2vars()`, `label_and_grow_cold_clouds()`, and
+  `futyan3()`.
+- **`pyflextrkr/idclouds_sat.py`** — Same pattern as `idclouds_tbpf.py`. Passes
+  `pixel_area` to `futyan3()`.
 - **`pyflextrkr/ftfunctions.py`** — `sort_renumber2vars()` accepts optional
   `grid_area` parameter. When provided, `min_cellpix` is treated as an area
-  threshold and converted to pixel count using mean pixel area.
+  threshold and converted to pixel count using mean pixel area. `adjust_axis()`
+  updated to use `get_pixel_area()` and `get_mean_pixel_length()` instead of
+  `pixel_radius` for computing `width_thresh`.
+
+### Alternative Cloud ID — `pyflextrkr/futyan3.py`
+
+- Accepts optional `pixel_area` parameter (scalar or 2D array).
+- When `pixel_area` is provided, uses it directly instead of computing
+  `pixel_radius ** 2`.
+- Feature area calculation handles 2D `pixel_area` by summing per-pixel areas
+  via `np.sum(pixel_area[feature_idx])` instead of `feature_pixels * pixel_area`.
 
 ### Cloud Labeling — `pyflextrkr/label_and_grow_cold_clouds.py`
 
@@ -77,6 +92,20 @@ Updated function:
 - Five area calculations updated (corecold area, core area, cold area for Tb;
   core area, cell area for radar) to use `np.nansum(pixel_area[indices])` when
   `area_method == 'latlon'`.
+
+### Track Statistics Driver — `pyflextrkr/trackstats_driver.py`
+
+- Computes `pixel_length_km_stats` — a 4-element array `[mean, median, min, max]`
+  of pixel side lengths (km) across the domain.
+- Saves `pixel_length_km_stats` and `pixel_length_km_stats_description` as global
+  attributes in both sparse and dense trackstats output files.
+- For `area_method: 'fixed'`, all four values equal `pixel_radius`.
+
+### Track Statistics I/O (deprecated) — `pyflextrkr/netcdf_io_trackstats.py`
+
+- `write_trackstats_tb()` and `write_trackstats_radar()` add
+  `pixel_length_km_stats` (scalar `pixel_radius` repeated as `[pl, pl, pl, pl]`)
+  and `pixel_length_km_stats_description` global attributes for consistency.
 
 ### Track Statistics (deprecated) — `pyflextrkr/trackstats_single.py`
 
@@ -116,7 +145,28 @@ Updated function:
   `total_rain * pixel_radius²`.
 - Removed `pixel_radius` config extraction (no longer needed).
 
-## New Output Variables
+### Advection — `pyflextrkr/advection_tiles.py`
+
+- Uses `get_pixel_area()` and `get_mean_pixel_length()` to compute `dx` and `dy`
+  instead of reading `pixel_radius` directly from config.
+
+### Cold Pool Identification — `pyflextrkr/idcoldpool.py`
+
+- Uses `get_pixel_area(config, latitude=lat2d, longitude=lon2d)` for grid cell
+  area instead of `pixel_radius**2`.
+- Removed unused `pixel_radius` extraction.
+
+### 3D Storm Labeling — `pyflextrkr/sl3d_func.py`
+
+- WRF branch uses `get_pixel_area()` and `get_mean_pixel_length()` to compute
+  `ngrids` instead of dividing by `pixel_radius`.
+
+### Robust MCS Radar — `pyflextrkr/robustmcs_radar.py`
+
+- Removed dead code: `pixel_radius = config["pixel_radius"]` was extracted but
+  never used.
+
+## New Output Variables / Attributes
 
 Two new variables are added to the Tb+PF and Tb+Radar matching output files:
 
@@ -128,6 +178,13 @@ Two new variables are added to the Tb+PF and Tb+Radar matching output files:
 These are computed as `sum(rainrate_i × area_i)` per pixel, which is physically
 correct for non-uniform grids. For `area_method: 'fixed'`, they equal
 `total_rain × pixel_radius²` (backward compatible).
+
+New global attributes added to trackstats output files:
+
+| Attribute                         | Type        | Description |
+|-----------------------------------|-------------|-------------|
+| `pixel_length_km_stats`           | float[4]    | Pixel side length `[mean, median, min, max]` in km |
+| `pixel_length_km_stats_description` | string    | Description of the stats array |
 
 ## Usage Patterns Addressed
 

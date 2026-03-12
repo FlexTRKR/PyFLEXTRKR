@@ -37,7 +37,6 @@ def define_robust_mcs_radar(config):
     tracks_dimname = config["tracks_dimname"]
     times_dimname = config["times_dimname"]
     pf_dimname = config["pf_dimname"]
-    pixel_radius = config["pixel_radius"]
 
     # Output stats file name
     statistics_outfile = f"{stats_path}{mcsrobust_filebase}{startdate}_{enddate}.nc"

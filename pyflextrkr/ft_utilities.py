@@ -1068,13 +1068,15 @@ def get_mean_pixel_length(pixel_area, feature_mask_indices=None):
 
     For scalar pixel_area, returns sqrt(pixel_area).
     For 2D pixel_area, returns sqrt(mean(pixel_area over feature pixels)).
+    If feature_mask_indices is None and pixel_area is 2D, returns
+    the domain-wide mean pixel length.
 
     Args:
         pixel_area: float or np.ndarray
             Scalar pixel_radius^2 or 2D grid_area array (ny, nx) in km^2.
         feature_mask_indices: tuple of np.ndarray, optional
             Tuple of (y_indices, x_indices) for the feature pixels.
-            Required when pixel_area is 2D.
+            If None and pixel_area is 2D, uses domain-wide mean.
 
     Returns:
         pixel_length: float
@@ -1083,9 +1085,10 @@ def get_mean_pixel_length(pixel_area, feature_mask_indices=None):
     if np.ndim(pixel_area) == 0 or (isinstance(pixel_area, np.ndarray) and pixel_area.ndim == 0):
         return np.sqrt(float(pixel_area))
     else:
-        if feature_mask_indices is None:
-            raise ValueError("feature_mask_indices required for 2D pixel_area")
-        mean_area = np.mean(pixel_area[feature_mask_indices[0], feature_mask_indices[1]])
+        if feature_mask_indices is not None:
+            mean_area = np.mean(pixel_area[feature_mask_indices[0], feature_mask_indices[1]])
+        else:
+            mean_area = np.nanmean(pixel_area)
         return np.sqrt(mean_area)
 
 

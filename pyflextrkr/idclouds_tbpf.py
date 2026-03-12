@@ -315,6 +315,7 @@ def idclouds_tbpf(
                             cloudtb_threshs,
                             area_thresh,
                             warmanvilexpansion,
+                            pixel_area=pixel_area,
                         )
                     else:
                         logger.critical(f"ERROR: Unknown cloudidmethod: {cloudidmethod}")
