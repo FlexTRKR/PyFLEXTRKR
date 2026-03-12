@@ -33,7 +33,6 @@ def define_robust_mcs_pf(config):
     tracks_dimname = config["tracks_dimname"]
     times_dimname = config["times_dimname"]
     pf_dimname = config["pf_dimname"]
-    pixel_radius = config["pixel_radius"]
     mcs_min_rainvol_thresh = config["mcs_min_rainvol_thresh"]
     heavy_rainrate_thresh = config["heavy_rainrate_thresh"]
     mcs_volrain_duration_thresh = config["mcs_volrain_duration_thresh"]
@@ -64,7 +63,7 @@ def define_robust_mcs_pf(config):
     fillval = ds_pf["mcs_status"].attrs["_FillValue"]
 
     # SAAG: total rain volume (sum of rain amount [mm/h] * pixel area [km^2])
-    pf_volrain_all = ds_pf["total_rain"].data * pixel_radius**2
+    pf_volrain_all = ds_pf["total_volrain"].data
 
 
     ##################################################

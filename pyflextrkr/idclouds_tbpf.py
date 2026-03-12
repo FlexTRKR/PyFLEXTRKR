@@ -13,7 +13,7 @@ from pyflextrkr.futyan3 import futyan3
 from pyflextrkr.label_and_grow_cold_clouds import label_and_grow_cold_clouds
 from pyflextrkr.ftfunctions import sort_renumber, sort_renumber2vars, link_pf_tb, pad_and_extend, call_adjust_axis 
 from pyflextrkr.sl3d_func import run_sl3d
-from pyflextrkr.ft_utilities import get_timestamp_from_filename_single
+from pyflextrkr.ft_utilities import get_timestamp_from_filename_single, get_pixel_area
 
 def idclouds_tbpf(
     input_data,
@@ -68,6 +68,7 @@ def idclouds_tbpf(
     cloudidmethod = config['cloudidmethod']
     pixel_radius = config['pixel_radius']
     area_thresh = config['area_thresh']
+    area_method = config.get('area_method', 'fixed')
     mincoldcorepix = config['mincoldcorepix']
     smoothwindowdimensions = config['smoothwindowdimensions']
     warmanvilexpansion = config['warmanvilexpansion']
@@ -222,6 +223,9 @@ def idclouds_tbpf(
         in_lat = lat
     ##############################################################################
 
+    # Get pixel area (scalar for fixed, 2D array for latlon)
+    pixel_area = get_pixel_area(config)
+
     # Convert OLR to Tb if olr2tb flag is set
     if olr2tb is True:
         olr = rawdata[olr_varname].values
@@ -301,7 +305,8 @@ def idclouds_tbpf(
                             mincoldcorepix,
                             smoothwindowdimensions,
                             warmanvilexpansion,
-                            config
+                            config,
+                            pixel_area=pixel_area,
                         )
                     elif cloudidmethod == "futyan3":
                         clouddata = futyan3(
@@ -389,13 +394,17 @@ def idclouds_tbpf(
                                 # )
                                 pf_number, npf = label(pcp_s >= pf_dbz_thresh)
 
-                            # Convert PF area threshold to number of pixels
-                            min_npix = np.ceil(
-                                pf_link_area_thresh / (pixel_radius ** 2)
-                            ).astype(int)
-
                             # Sort and renumber PFs, and remove small PFs
-                            pf_number, pf_npix = sort_renumber(pf_number, min_npix)
+                            if area_method == "latlon":
+                                pf_number, pf_npix = sort_renumber(
+                                    pf_number, pf_link_area_thresh, grid_area=pixel_area,
+                                )
+                            else:
+                                # Convert PF area threshold to number of pixels
+                                min_npix = np.ceil(
+                                    pf_link_area_thresh / (pixel_radius ** 2)
+                                ).astype(int)
+                                pf_number, pf_npix = sort_renumber(pf_number, min_npix)
 
                             # Call function to link clouds with PFs
                             pf_convcold_cloudnumber, pf_cloudnumber = link_pf_tb(
@@ -408,15 +417,27 @@ def idclouds_tbpf(
 
                             # Sort and renumber the linkpf clouds
                             # (removes small clouds after renumbering)
-                            (
-                                pf_convcold_cloudnumber_sorted,
-                                pf_cloudnumber_sorted,
-                                npix_convcold_linkpf,
-                            ) = sort_renumber2vars(
-                                pf_convcold_cloudnumber,
-                                pf_cloudnumber,
-                                area_thresh / pixel_radius ** 2,
-                            )
+                            if area_method == "latlon":
+                                (
+                                    pf_convcold_cloudnumber_sorted,
+                                    pf_cloudnumber_sorted,
+                                    npix_convcold_linkpf,
+                                ) = sort_renumber2vars(
+                                    pf_convcold_cloudnumber,
+                                    pf_cloudnumber,
+                                    area_thresh,
+                                    grid_area=pixel_area,
+                                )
+                            else:
+                                (
+                                    pf_convcold_cloudnumber_sorted,
+                                    pf_cloudnumber_sorted,
+                                    npix_convcold_linkpf,
+                                ) = sort_renumber2vars(
+                                    pf_convcold_cloudnumber,
+                                    pf_cloudnumber,
+                                    area_thresh / pixel_radius ** 2,
+                                )
                             # Get number of clouds from the sorted linkpf clouds
                             nclouds_linkpf = np.nanmax(
                                 pf_convcold_cloudnumber_sorted

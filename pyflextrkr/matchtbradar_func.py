@@ -9,7 +9,7 @@ from math import pi
 from scipy.stats import skew
 import warnings
 from pyflextrkr.ftfunctions import sort_renumber
-from pyflextrkr.ft_utilities import subset_ds_geolimit
+from pyflextrkr.ft_utilities import subset_ds_geolimit, get_pixel_area
 
 def matchtbpf_singlefile(
     cloudid_filename,
@@ -46,6 +46,7 @@ def matchtbpf_singlefile(
     pf_link_area_thresh = config["pf_link_area_thresh"]
     heavy_rainrate_thresh = config["heavy_rainrate_thresh"]
     pixel_radius = config["pixel_radius"]
+    area_method = config.get("area_method", "fixed")
     nmaxpf = config["nmaxpf"]
     mcs_core_min_area = config.get("mcs_core_min_area", 0)
     # ZF: nmaxcore cannot be different from nmaxpf without changing matchtbpf_driver.py
@@ -113,12 +114,20 @@ def matchtbpf_singlefile(
         nmatchcloud = len(ir_cloudnumber)
 
         if nmatchcloud > 0:
+            # Load pixel area once for latlon grids
+            if area_method == "latlon":
+                _pixel_area = get_pixel_area(config)
+            else:
+                _pixel_area = None
+
             # Define a list of 2D variables [tracks, times]
             var_names_2d = [
                 "pf_npf",
                 "pf_landfrac",
                 "total_rain",
                 "total_heavyrain",
+                "total_volrain",
+                "total_heavyvolrain",
                 "rainrate_heavyrain",
                 "conv_rain",
                 "strat_rain",
@@ -128,6 +137,8 @@ def matchtbpf_singlefile(
             pf_landfrac = np.full(nmatchcloud, fillval_f, dtype=float)
             total_rain = np.full(nmatchcloud, fillval_f, dtype=float)
             total_heavyrain = np.full(nmatchcloud, fillval_f, dtype=float)
+            total_volrain = np.full(nmatchcloud, fillval_f, dtype=float)
+            total_heavyvolrain = np.full(nmatchcloud, fillval_f, dtype=float)
             rainrate_heavyrain = np.full(nmatchcloud, fillval_f, dtype=float)
             pf_lon = np.full((nmatchcloud, nmaxpf), fillval_f, dtype=float)
             pf_lat = np.full((nmatchcloud, nmaxpf), fillval_f, dtype=float)
@@ -283,13 +294,39 @@ def matchtbpf_singlefile(
                     sub_echotop45_map = np.copy(echotop45_map[miny:maxy, minx:maxx])
                     sub_echotop50_map = np.copy(echotop50_map[miny:maxy, minx:maxx])
 
+                    # Load pixel area for area calculations
+                    if _pixel_area is not None:
+                        sub_pixel_area = _pixel_area[miny:maxy, minx:maxx]
+                        mean_pixelength = np.sqrt(np.nanmean(_pixel_area))
+                    else:
+                        sub_pixel_area = None
+                        mean_pixelength = pixel_radius
+
                     # Calculate total rainfall within the cold cloud shield
                     total_rain[imatchcloud] = np.nansum(sub_rainrate_map)
+                    # Calculate volumetric rain (rain rate * pixel area)
+                    if _pixel_area is not None:
+                        sub_pa = _pixel_area[miny:maxy, minx:maxx]
+                        total_volrain[imatchcloud] = np.nansum(
+                            sub_rainrate_map * sub_pa
+                        )
+                    else:
+                        total_volrain[imatchcloud] = (
+                            total_rain[imatchcloud] * pixel_radius**2
+                        )
                     idx_heavyrain = np.where(sub_rainrate_map > heavy_rainrate_thresh)
                     if len(idx_heavyrain[0]) > 0:
                         total_heavyrain[imatchcloud] = np.nansum(
                             sub_rainrate_map[idx_heavyrain]
                         )
+                        if _pixel_area is not None:
+                            total_heavyvolrain[imatchcloud] = np.nansum(
+                                sub_rainrate_map[idx_heavyrain] * sub_pa[idx_heavyrain]
+                            )
+                        else:
+                            total_heavyvolrain[imatchcloud] = (
+                                total_heavyrain[imatchcloud] * pixel_radius**2
+                            )
                         rainrate_heavyrain[imatchcloud] = np.nanmean(
                             sub_rainrate_map[idx_heavyrain]
                         )
@@ -318,7 +355,10 @@ def matchtbpf_singlefile(
                         # Label convective cores
                         ccnumberlabelmap, numcc = label(binaryccmap)
                         # Convert min area to number of pixels
-                        min_npix = np.ceil(mcs_core_min_area / (pixel_radius ** 2)).astype(int)
+                        if area_method == "latlon":
+                            min_npix = np.ceil(mcs_core_min_area / np.nanmean(sub_pixel_area)).astype(int)
+                        else:
+                            min_npix = np.ceil(mcs_core_min_area / (pixel_radius ** 2)).astype(int)
                         # Sort and renumber convective cores
                         cc_number, cc_npix = sort_renumber(ccnumberlabelmap, min_npix)
                         # Update convective core arrays after sorting and renumbering
@@ -342,6 +382,8 @@ def matchtbpf_singlefile(
                                 sub_echotop40_map,
                                 sub_echotop45_map,
                                 sub_echotop50_map,
+                                sub_pixel_area=sub_pixel_area,
+                                mean_pixelength=mean_pixelength,
                             )
 
                             # Save core feature statisitcs
@@ -352,7 +394,7 @@ def matchtbpf_singlefile(
                             pf_corelat[imatchcloud, 0:ncc_save] = \
                                 cc_stats_dict["cclat"][0:ncc_save]
                             pf_corearea[imatchcloud, 0:ncc_save] = \
-                                cc_stats_dict["ccnpix"][0:ncc_save] * pixel_radius ** 2
+                                cc_stats_dict["ccarea"][0:ncc_save]
                             pf_corelon_centroid[imatchcloud, 0:ncc_save] = \
                                 cc_stats_dict["cclon_centroid"][0:ncc_save]
                             pf_corelat_centroid[imatchcloud, 0:ncc_save] = \
@@ -428,7 +470,10 @@ def matchtbpf_singlefile(
                         pfnumberlabelmap, numpf = label(binarypfmap)
 
                         # Sort numpf then calculate stats
-                        min_npix = np.ceil(pf_link_area_thresh / (pixel_radius ** 2)).astype(int)
+                        if area_method == "latlon":
+                            min_npix = np.ceil(pf_link_area_thresh / np.nanmean(sub_pixel_area)).astype(int)
+                        else:
+                            min_npix = np.ceil(pf_link_area_thresh / (pixel_radius ** 2)).astype(int)
 
                         # Sort and renumber PFs, and remove small PFs
                         pf_number, pf_npix = sort_renumber(pfnumberlabelmap, min_npix)
@@ -454,6 +499,8 @@ def matchtbpf_singlefile(
                                 sub_echotop40_map,
                                 sub_echotop45_map,
                                 sub_echotop50_map,
+                                sub_pixel_area=sub_pixel_area,
+                                mean_pixelength=mean_pixelength,
                             )
 
                             # Save precipitation feature statisitcs
@@ -464,7 +511,7 @@ def matchtbpf_singlefile(
                             pf_lat[imatchcloud, 0:npf_save] = \
                                 pf_stats_dict["pflat"][0:npf_save]
                             pf_area[imatchcloud, 0:npf_save] = \
-                                pf_stats_dict["pfnpix"][0:npf_save] * pixel_radius**2
+                                pf_stats_dict["pfarea"][0:npf_save]
                             pf_rainrate[imatchcloud, 0:npf_save] = \
                                 pf_stats_dict["pfrainrate"][0:npf_save]
                             pf_maxrainrate[imatchcloud, 0:npf_save] = \
@@ -500,9 +547,9 @@ def matchtbpf_singlefile(
                             pf_lat_maxrainrate[imatchcloud, 0:npf_save] = \
                                 pf_stats_dict["pflat_maxrainrate"][0:npf_save]
                             pf_ccarea[imatchcloud, 0:npf_save] = \
-                                pf_stats_dict["pfccnpix"][0:npf_save] * pixel_radius**2
+                                pf_stats_dict["pfccarea"][0:npf_save]
                             pf_sfarea[imatchcloud, 0:npf_save] = \
-                                pf_stats_dict["pfsfnpix"][0:npf_save] * pixel_radius**2
+                                pf_stats_dict["pfsfarea"][0:npf_save]
                             pf_ccrainrate[imatchcloud, 0:npf_save] = \
                                 pf_stats_dict["pfccrainrate"][0:npf_save]
                             pf_sfrainrate[imatchcloud, 0:npf_save] = \
@@ -524,11 +571,11 @@ def matchtbpf_singlefile(
                             pf_ccmaxechotop50[imatchcloud, 0:npf_save] = \
                                 pf_stats_dict["pfccmaxechotop50"][0:npf_save]
                             pf_ccechotop40area[imatchcloud, 0: npf_save] = \
-                                pf_stats_dict["pfccechotop40npix"][0:npf_save] * pixel_radius**2
+                                pf_stats_dict["pfccechotop40area"][0:npf_save]
                             pf_ccechotop45area[imatchcloud, 0: npf_save] = \
-                                pf_stats_dict["pfccechotop45npix"][0:npf_save] * pixel_radius ** 2
+                                pf_stats_dict["pfccechotop45area"][0:npf_save]
                             pf_ccechotop50area[imatchcloud, 0: npf_save] = \
-                                pf_stats_dict["pfccechotop50npix"][0:npf_save] * pixel_radius ** 2
+                                pf_stats_dict["pfccechotop50area"][0:npf_save]
                             # import matplotlib.pyplot as plt
                             # import pdb;
                             # pdb.set_trace()
@@ -559,6 +606,8 @@ def matchtbpf_singlefile(
                 "pf_landfrac": pf_landfrac,
                 "total_rain": total_rain,
                 "total_heavyrain": total_heavyrain,
+                "total_volrain": total_volrain,
+                "total_heavyvolrain": total_heavyvolrain,
                 "rainrate_heavyrain": rainrate_heavyrain,
                 # Radar PF variables
                 "conv_rain": conv_rain,
@@ -710,6 +759,17 @@ def matchtbpf_singlefile(
                 "total_heavyrain": {
                     "long_name": "Total heavy precipitation under cold cloud shield",
                     "units": "mm/h",
+                    "_FillValue": fillval_f,
+                    "heavy_rainrate_threshold": heavy_rainrate_thresh,
+                },
+                "total_volrain": {
+                    "long_name": "Total volumetric precipitation under cold cloud shield",
+                    "units": "mm/h km^2",
+                    "_FillValue": fillval_f,
+                },
+                "total_heavyvolrain": {
+                    "long_name": "Total heavy volumetric precipitation under cold cloud shield",
+                    "units": "mm/h km^2",
                     "_FillValue": fillval_f,
                     "heavy_rainrate_threshold": heavy_rainrate_thresh,
                 },
@@ -945,6 +1005,8 @@ def calc_cc_stats(
         sub_echotop40_map,
         sub_echotop45_map,
         sub_echotop50_map,
+        sub_pixel_area=None,
+        mean_pixelength=None,
 ):
     """
     Calculate individual convective core statistics.
@@ -979,6 +1041,7 @@ def calc_cc_stats(
     # Initialize arrays
     ncc_save = np.nanmin([nmaxcore, numcc])
     ccnpix = np.zeros(ncc_save, dtype=float)
+    ccarea = np.full(ncc_save, fillval_f, dtype=float)
     ccid = np.full(ncc_save, fillval, dtype=int)
     cclon = np.full(ncc_save, fillval_f, dtype=float)
     cclat = np.full(ncc_save, fillval_f, dtype=float)
@@ -1022,6 +1085,11 @@ def calc_cc_stats(
 
             # Basic statistics
             ccnpix[icc - 1] = np.copy(iiccnpix)
+            # Compute core area
+            if sub_pixel_area is not None:
+                ccarea[icc - 1] = np.nansum(sub_pixel_area[iiccy, iiccx])
+            else:
+                ccarea[icc - 1] = iiccnpix * pixel_radius ** 2
             ccid[icc - 1] = np.copy(int(icc))
             cclon[icc - 1] = np.nanmean(lon[iiccy[:] + miny, iiccx[:] + minx])
             cclat[icc - 1] = np.nanmean(lat[iiccy[:] + miny, iiccx[:] + minx])
@@ -1052,18 +1120,19 @@ def calc_cc_stats(
             )
 
             cceccentricity[icc - 1] = ccproperties[0].eccentricity
-            ccmajoraxis[icc - 1] = ccproperties[0].axis_major_length * pixel_radius
+            _pixel_length = mean_pixelength if mean_pixelength is not None else pixel_radius
+            ccmajoraxis[icc - 1] = ccproperties[0].axis_major_length * _pixel_length
 
             # Need to treat minor axis length with an error except
             # since the python algorithm occasionally throws an error.
             try:
-                ccminoraxis[icc - 1] = (ccproperties[0].axis_minor_length * pixel_radius)
+                ccminoraxis[icc - 1] = (ccproperties[0].axis_minor_length * _pixel_length)
             except ValueError:
                 pass
             if ~np.isnan(ccminoraxis[icc - 1]) or ~np.isnan(ccmajoraxis[icc - 1]):
                 ccaspectratio[icc - 1] = np.divide(ccmajoraxis[icc - 1], ccminoraxis[icc - 1])
             ccorientation[icc - 1] = (ccproperties[0].orientation) * (180 / float(pi))
-            ccperimeter[icc - 1] = (ccproperties[0].perimeter * pixel_radius)
+            ccperimeter[icc - 1] = (ccproperties[0].perimeter * _pixel_length)
             [ycentroid, xcentroid] = ccproperties[0].centroid
             [yweightedcentroid, xweightedcentroid] = ccproperties[0].centroid_weighted
 
@@ -1089,6 +1158,7 @@ def calc_cc_stats(
     cc_stats_dict = {
         "ncc_save": ncc_save,
         "ccnpix": ccnpix,
+        "ccarea": ccarea,
         "ccid": ccid,
         "cclon": cclon,
         "cclat": cclat,
@@ -1121,6 +1191,8 @@ def calc_pf_stats(
         sub_echotop40_map,
         sub_echotop45_map,
         sub_echotop50_map,
+        sub_pixel_area=None,
+        mean_pixelength=None,
 ):
     """
     Calculate individual PF statistics.
@@ -1157,6 +1229,7 @@ def calc_pf_stats(
     # Initialize arrays
     npf_save = np.nanmin([nmaxpf, numpf])
     pfnpix = np.zeros(npf_save, dtype=float)
+    pfarea = np.full(npf_save, fillval_f, dtype=float)
     pfid = np.full(npf_save, fillval, dtype=int)
     pflon = np.full(npf_save, fillval_f, dtype=float)
     pflat = np.full(npf_save, fillval_f, dtype=float)
@@ -1180,6 +1253,8 @@ def calc_pf_stats(
     # Radar features
     pfccnpix = np.full(npf_save, fillval_f, dtype=float)
     pfsfnpix = np.full(npf_save, fillval_f, dtype=float)
+    pfccarea = np.full(npf_save, fillval_f, dtype=float)
+    pfsfarea = np.full(npf_save, fillval_f, dtype=float)
     pfccrainrate = np.full(npf_save, fillval_f, dtype=float)
     pfsfrainrate = np.full(npf_save, fillval_f, dtype=float)
     pfccrainamount = np.full(npf_save, fillval_f, dtype=float)
@@ -1193,6 +1268,9 @@ def calc_pf_stats(
     pfccechotop40npix = np.full(npf_save, fillval_f, dtype=float)
     pfccechotop45npix = np.full(npf_save, fillval_f, dtype=float)
     pfccechotop50npix = np.full(npf_save, fillval_f, dtype=float)
+    pfccechotop40area = np.full(npf_save, fillval_f, dtype=float)
+    pfccechotop45area = np.full(npf_save, fillval_f, dtype=float)
+    pfccechotop50area = np.full(npf_save, fillval_f, dtype=float)
 
     logger.debug(
         "Looping through each feature to calculate statistics"
@@ -1246,6 +1324,11 @@ def calc_pf_stats(
 
             # Basic statistics
             pfnpix[ipf - 1] = np.copy(iipfnpix)
+            # Compute PF area
+            if sub_pixel_area is not None:
+                pfarea[ipf - 1] = np.nansum(sub_pixel_area[iipfy, iipfx])
+            else:
+                pfarea[ipf - 1] = iipfnpix * pixel_radius ** 2
             pfid[ipf - 1] = np.copy(int(ipf))
             pflon[ipf - 1] = np.nanmean(lon[iipfy[:] + miny, iipfx[:] + minx])
             pflat[ipf - 1] = np.nanmean(lat[iipfy[:] + miny, iipfx[:] + minx])
@@ -1262,6 +1345,15 @@ def calc_pf_stats(
             # Convective/stratiform rain statistics
             pfccnpix[ipf - 1] = np.copy(len(iipfy_cc))
             pfsfnpix[ipf - 1] = np.copy(len(iipfy_sf))
+            # Compute convective/stratiform areas
+            if sub_pixel_area is not None:
+                if iipfnpix_cc > 0:
+                    pfccarea[ipf - 1] = np.nansum(sub_pixel_area[iipfy_cc, iipfx_cc])
+                if iipfnpix_sf > 0:
+                    pfsfarea[ipf - 1] = np.nansum(sub_pixel_area[iipfy_sf, iipfx_sf])
+            else:
+                pfccarea[ipf - 1] = len(iipfy_cc) * pixel_radius ** 2
+                pfsfarea[ipf - 1] = len(iipfy_sf) * pixel_radius ** 2
             if iipfnpix_cc > 0:
                 pfccrainrate[ipf - 1] = np.nanmean(sub_rainrate_map[iipfy_cc, iipfx_cc])
                 pfccrainamount[ipf - 1] = np.nansum(sub_rainrate_map[iipfy_cc, iipfx_cc])
@@ -1290,6 +1382,20 @@ def calc_pf_stats(
                         sub_echotop50_map[iipfy_cc, iipfx_cc] > 0
                     )
 
+                    # Compute echotop area
+                    if sub_pixel_area is not None:
+                        _et40_mask = sub_echotop40_map[iipfy_cc, iipfx_cc] > 0
+                        _et45_mask = sub_echotop45_map[iipfy_cc, iipfx_cc] > 0
+                        _et50_mask = sub_echotop50_map[iipfy_cc, iipfx_cc] > 0
+                        _cc_pixel_area = sub_pixel_area[iipfy_cc, iipfx_cc]
+                        pfccechotop40area[ipf - 1] = np.nansum(_cc_pixel_area[_et40_mask]) if np.any(_et40_mask) else 0
+                        pfccechotop45area[ipf - 1] = np.nansum(_cc_pixel_area[_et45_mask]) if np.any(_et45_mask) else 0
+                        pfccechotop50area[ipf - 1] = np.nansum(_cc_pixel_area[_et50_mask]) if np.any(_et50_mask) else 0
+                    else:
+                        pfccechotop40area[ipf - 1] = pfccechotop40npix[ipf - 1] * pixel_radius ** 2
+                        pfccechotop45area[ipf - 1] = pfccechotop45npix[ipf - 1] * pixel_radius ** 2
+                        pfccechotop50area[ipf - 1] = pfccechotop50npix[ipf - 1] * pixel_radius ** 2
+
             # Generate a binary map of PF
             iipfflagmap = np.zeros((subdimy, subdimx), dtype=int)
             iipfflagmap[iipfy, iipfx] = 1
@@ -1302,8 +1408,9 @@ def calc_pf_stats(
                 intensity_image=_sub_rainrate_map,
             )
             pfeccentricity[ipf - 1] = pfproperties[0].eccentricity
+            _pixel_length = mean_pixelength if mean_pixelength is not None else pixel_radius
             pfmajoraxis[ipf - 1] = (
-                    pfproperties[0].axis_major_length * pixel_radius
+                    pfproperties[0].axis_major_length * _pixel_length
             )
 
             # Need to treat minor axis length with an error except
@@ -1311,7 +1418,7 @@ def calc_pf_stats(
             try:
                 pfminoraxis[ipf - 1] = (
                         pfproperties[0].axis_minor_length
-                        * pixel_radius
+                        * _pixel_length
                 )
             except ValueError:
                 pass
@@ -1324,7 +1431,7 @@ def calc_pf_stats(
                                          pfproperties[0].orientation
                                      ) * (180 / float(pi))
             pfperimeter[ipf - 1] = (
-                    pfproperties[0].perimeter * pixel_radius
+                    pfproperties[0].perimeter * _pixel_length
             )
             [
                 ycentroid,
@@ -1365,6 +1472,7 @@ def calc_pf_stats(
         "pfaccumrain": pfaccumrain,
         "pfaccumrainheavy": pfaccumrainheavy,
         "pfaspectratio": pfaspectratio,
+        "pfarea": pfarea,
         "pfeccentricity": pfeccentricity,
         "pflat": pflat,
         "pflon": pflon,
@@ -1384,6 +1492,8 @@ def calc_pf_stats(
         "pflat_maxrainrate": pflat_maxrainrate,
         "pfccnpix": pfccnpix,
         "pfsfnpix": pfsfnpix,
+        "pfccarea": pfccarea,
+        "pfsfarea": pfsfarea,
         "pfccrainrate": pfccrainrate,
         "pfsfrainrate": pfsfrainrate,
         "pfccrainamount": pfccrainamount,
@@ -1397,6 +1507,9 @@ def calc_pf_stats(
         "pfccechotop40npix": pfccechotop40npix,
         "pfccechotop45npix": pfccechotop45npix,
         "pfccechotop50npix": pfccechotop50npix,
+        "pfccechotop40area": pfccechotop40area,
+        "pfccechotop45area": pfccechotop45area,
+        "pfccechotop50area": pfccechotop50area,
     }
     return pf_stats_dict
 

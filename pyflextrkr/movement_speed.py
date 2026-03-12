@@ -10,7 +10,7 @@ from scipy.signal import fftconvolve
 from scipy.interpolate import interp1d
 import dask
 from dask.distributed import wait
-from pyflextrkr.ft_utilities import subset_files_timerange
+from pyflextrkr.ft_utilities import subset_files_timerange, get_pixel_area
 from pyflextrkr.ftfunctions import find_max_indices_to_roll, subset_roll_map
 
 def movement_speed(
@@ -54,6 +54,7 @@ def movement_speed(
     run_parallel = config["run_parallel"]
     feature_type = config["feature_type"]
     pixel_radius = config["pixel_radius"]
+    area_method = config.get("area_method", "fixed")
     lag = config["lag_for_speed"]
     max_speed_thresh = config["max_speed_thresh"]
 
@@ -129,21 +130,24 @@ def movement_speed(
     else:
         sys.exit('Valid parallelization flag not provided')
 
-    move_y, move_x, time_lag, base_time = zip(*final_result)
+    move_y, move_x, time_lag, base_time, feat_pixel_length = zip(*final_result)
     move_y = np.array(move_y)
     move_x = np.array(move_x)
+    # Per-feature pixel length [km], shape: (nfiles-1, ntracks)
+    feat_pixel_length = np.array(feat_pixel_length)
     base_time = np.asarray(base_time, dtype=float)
 
     # Compute movement speed, direction
     (r_mag, r_dir, r_speed) = offset_to_speed(move_x, move_y, time_lag)
 
-    # Convert distance to physical units
+    # Use per-feature pixel length for distance/speed conversion
+    pixel_length = feat_pixel_length
     # Movement magnitude [km]
-    movement_mag = r_mag * pixel_radius / lag
-    movement_x = move_x * pixel_radius / lag
-    movement_y = move_y * pixel_radius / lag
+    movement_mag = r_mag * pixel_length / lag
+    movement_x = move_x * pixel_length / lag
+    movement_y = move_y * pixel_length / lag
     # Movement speed [m/s]
-    movement_speed = r_speed * pixel_radius * 1000.
+    movement_speed = r_speed * pixel_length * 1000.
     # Movement direction
     # '0 deg = North' now implemented in "offset_to_speed"
     movement_dir = r_dir
@@ -220,10 +224,18 @@ def movement_of_feature_fft(
     tracknumber = config["track_number_for_speed"]
     track_field = config["track_field_for_speed"]
     min_size_thresh = config["min_size_thresh_for_speed"]
+    pixel_radius = config["pixel_radius"]
+    area_method = config.get("area_method", "fixed")
     # Parameters for handling perdiodic boundary condition
     pbc_direction = config.get("pbc_direction", "none")
     max_feature_frac_x = 0.95   # Max fraction of domain size for a feature in x-direction
     max_feature_frac_y = 0.95   # Max fraction of domain size for a feature in y-direction
+
+    # Load pixel area for per-feature pixel length computation
+    if area_method == "latlon":
+        pixel_area = get_pixel_area(config)
+    else:
+        pixel_area = None
 
     logger = logging.getLogger(__name__)
     logger.debug("Starting Storm File: %s" % filepairs[0])
@@ -233,6 +245,11 @@ def movement_of_feature_fft(
     dset2 = Dataset(filepairs[1], 'r')
     y_lag = np.zeros(ntracks)
     x_lag = np.zeros(ntracks)
+    # Per-feature mean pixel length [km]
+    if pixel_area is not None:
+        pixel_length_per_feature = np.full(ntracks, np.nan)
+    else:
+        pixel_length_per_feature = np.full(ntracks, pixel_radius)
 
     # Get minimum size of feature from pixel files
     min_cloud_size = np.minimum(get_pixel_size_of_clouds(dset1, ntracks, tracknumber),
@@ -314,13 +331,31 @@ def movement_of_feature_fft(
             y_lag[track_number] = np.floor(y_dim/2) - y_step
             x_lag[track_number] = np.floor(x_dim/2) - x_step
 
+            # Compute per-feature mean pixel length for latlon grids
+            if pixel_area is not None:
+                if optimize_sub_array:
+                    sub_pa = pixel_area[ymin:ymax, xmin:xmax]
+                    feat_mask = (
+                        (tracknumber_1[ymin:ymax, xmin:xmax] == track_number_pix) |
+                        (tracknumber_2[ymin:ymax, xmin:xmax] == track_number_pix)
+                    )
+                else:
+                    sub_pa = pixel_area
+                    feat_mask = (
+                        (tracknumber_1 == track_number_pix) |
+                        (tracknumber_2 == track_number_pix)
+                    )
+                pixel_length_per_feature[track_number] = np.sqrt(
+                    np.nanmean(sub_pa[feat_mask])
+                )
+
     # Get time difference between the file pair
     time_lag = dset2.variables['time'][0] - dset1.variables['time'][0]
     base_time = dset1.variables['time'][0].copy()
 
     dset1.close()
     dset2.close()
-    return y_lag, x_lag, time_lag, base_time
+    return y_lag, x_lag, time_lag, base_time, pixel_length_per_feature
 
 
 def get_pixel_size_of_clouds(

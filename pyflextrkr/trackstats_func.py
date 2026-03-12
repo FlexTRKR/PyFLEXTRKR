@@ -5,6 +5,7 @@ import sys
 import logging
 import warnings
 from pyflextrkr.ftfunctions import circular_mean
+from pyflextrkr.ft_utilities import get_pixel_area
 
 def calc_stats_singlefile(
         tracknumbers,
@@ -44,6 +45,7 @@ def calc_stats_singlefile(
 
     tracking_outpath = config["tracking_outpath"]
     pixel_radius = config["pixel_radius"]
+    area_method = config.get("area_method", "fixed")
     feature_type = config.get("feature_type", None)
     terrain_file = config.get("terrain_file", None)
     rangemask_varname = config.get("rangemask_varname", None)
@@ -65,6 +67,8 @@ def calc_stats_singlefile(
         longitude = ds["longitude"].values
         nx = ds.sizes["lon"]
         ny = ds.sizes["lat"]
+        # Load pixel area for area calculations
+        pixel_area = get_pixel_area(config)
         # Get domain coordinate size information
         lon_range = np.ptp(longitude)  # Total range of longitude values
         lat_range = np.ptp(latitude)   # Total range of latitude values
@@ -228,7 +232,10 @@ def calc_stats_singlefile(
             )
 
             if corecold_npix > 0:
-                out_area[itrack] = corecold_npix * pixel_radius ** 2
+                if area_method == "latlon":
+                    out_area[itrack] = np.nansum(pixel_area[corecold_indices[0], corecold_indices[1]])
+                else:
+                    out_area[itrack] = corecold_npix * pixel_radius ** 2
                 corecold_lat = latitude[corecold_indices[0], corecold_indices[1]]
                 corecold_lon = longitude[corecold_indices[0], corecold_indices[1]]
 
@@ -263,8 +270,12 @@ def calc_stats_singlefile(
                         cloudnumber_map, nx, ny,
                     )
 
-                    out_core_area[itrack] = core_npix * pixel_radius ** 2
-                    out_cold_area[itrack] = cold_npix * pixel_radius ** 2
+                    if area_method == "latlon":
+                        out_core_area[itrack] = np.nansum(pixel_area[core_indices[0], core_indices[1]]) if core_npix > 0 else 0
+                        out_cold_area[itrack] = np.nansum(pixel_area[cold_indices[0], cold_indices[1]]) if cold_npix > 0 else 0
+                    else:
+                        out_core_area[itrack] = core_npix * pixel_radius ** 2
+                        out_cold_area[itrack] = cold_npix * pixel_radius ** 2
                     out_corecold_mintb[itrack] = np.nanmin(file_tb[corecold_indices[0], corecold_indices[1]])
                     out_corecold_meantb[itrack] = np.nanmean(file_tb[corecold_indices[0], corecold_indices[1]])
                     # Get min Tb location
@@ -336,8 +347,12 @@ def calc_stats_singlefile(
                         out_cell_meanlat[itrack] = np.nanmean(cell_lat)                    
                         out_cell_mean_y[itrack] = np.nanmean(cell_y)                        
 
-                    out_core_area[itrack] = core_npix * pixel_radius ** 2
-                    out_cell_area[itrack] = corecold_npix * pixel_radius ** 2
+                    if area_method == "latlon":
+                        out_core_area[itrack] = np.nansum(pixel_area[core_indices[0], core_indices[1]]) if core_npix > 0 else 0
+                        out_cell_area[itrack] = np.nansum(pixel_area[corecold_indices[0], corecold_indices[1]])
+                    else:
+                        out_core_area[itrack] = core_npix * pixel_radius ** 2
+                        out_cell_area[itrack] = corecold_npix * pixel_radius ** 2
 
                     out_cell_max_dbz[itrack] = np.nanmax(
                         file_dbz[corecold_indices[0], corecold_indices[1]]
