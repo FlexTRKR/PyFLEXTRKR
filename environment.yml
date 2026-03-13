@@ -21,6 +21,7 @@ dependencies:
   - numpy
   - pandas
   - pip
+  - pytest
   - pytz
   - scikit-image>=0.22
   - scikit-learn

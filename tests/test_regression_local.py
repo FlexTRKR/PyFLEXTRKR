@@ -59,10 +59,15 @@ def assert_valid_stat_file(stat_file, min_tracks=1):
         assert ntracks >= min_tracks, \
             f"Expected >= {min_tracks} tracks in {stat_file}, got {ntracks}"
 
-        # base_time must be finite
+        # base_time must have at least some valid (non-NaT) entries
         bt = ds['base_time'].values
-        assert np.isfinite(bt[~np.isnan(bt.astype(float))]).all(), \
-            "base_time should be finite (no NaT/NaN)"
+        if np.issubdtype(bt.dtype, np.datetime64):
+            n_valid = np.sum(~np.isnat(bt))
+            assert n_valid > 0, "base_time is all NaT"
+        else:
+            bt_float = bt.astype(float)
+            assert np.isfinite(bt_float[~np.isnan(bt_float)]).all(), \
+                "base_time should be finite (no NaT/NaN)"
 
         # At least one numeric variable must have non-NaN values
         for vname in ('cell_meanlon', 'cell_meanlat', 'track_duration'):
@@ -156,20 +161,321 @@ class TestCellNexradDemo:
 
 
 # ---------------------------------------------------------------------------
-# Generic: add more demo tests below following the same pattern
+# Shared MCS / generic helper
 # ---------------------------------------------------------------------------
-# Example stub for an MCS demo — uncomment and adapt when you have a demo:
-#
-# @pytest.mark.local
-# class TestMcsTbpfDemo:
-#     DEMO_ROOT  = demo_path('mcs', 'tbpf')
-#     STATS_DIR  = demo_path('mcs', 'tbpf', 'stats')
-#     PIXEL_DIR  = demo_path('mcs', 'tbpf', 'mcstracking')
-#
-#     def test_stats_output_exists_and_valid(self):
-#         stat_files = sorted(glob.glob(os.path.join(self.STATS_DIR, 'mcs_tracks_*.nc')))
-#         assert stat_files, f"No MCS trackstats file found in {self.STATS_DIR}"
-#         assert_valid_stat_file(stat_files[-1], min_tracks=1)
-#
-#     def test_pixel_files_exist_and_valid(self):
-#         assert_valid_pixel_files(self.PIXEL_DIR, filebase='mcstracking_')
+
+def _find_mcs_stats(stats_dir, pattern='mcs_tracks_final_*.nc'):
+    """Return the best MCS stats file, with fallbacks."""
+    for pat in [pattern, 'mcs_tracks_robust_*.nc',
+                'mcs_tracks_pf_*.nc', 'mcs_tracks_*.nc',
+                'trackstats_*.nc']:
+        files = sorted(glob.glob(os.path.join(stats_dir, pat)))
+        files = [f for f in files if 'sparse' not in os.path.basename(f)]
+        if files:
+            return files[-1]
+    return None
+
+
+def assert_latlons_in_range(stat_file, lat_var, lon_var, lat_range, lon_range):
+    """Check that lat/lon variables fall within expected geographic range."""
+    with xr.open_dataset(stat_file) as ds:
+        for var, (lo, hi), label in [
+            (lat_var, lat_range, 'latitude'),
+            (lon_var, lon_range, 'longitude'),
+        ]:
+            if var not in ds:
+                continue
+            vals = ds[var].values.ravel()
+            valid = vals[np.isfinite(vals)]
+            assert len(valid) > 0, f"No valid {label} values in {stat_file}"
+            assert np.all(valid >= lo) and np.all(valid <= hi), \
+                f"{label} out of range: {valid.min():.1f}..{valid.max():.1f} " \
+                f"expected [{lo}, {hi}]"
+
+
+# ---------------------------------------------------------------------------
+# Cell tracking on CSAPR data
+# ---------------------------------------------------------------------------
+
+@pytest.mark.local
+class TestCellCsaprDemo:
+    """Validates the output of demo_cell_csapr.sh"""
+
+    STATS_DIR = demo_path('cell_radar', 'csapr', 'stats')
+    PIXEL_DIR = demo_path('cell_radar', 'csapr', 'celltracking')
+    QUICKLOOK_DIR = demo_path('cell_radar', 'csapr', 'quicklooks_trackpaths')
+
+    def test_stats_output_exists_and_valid(self):
+        stat_files = sorted(glob.glob(os.path.join(self.STATS_DIR, 'trackstats_*.nc')))
+        stat_files = [f for f in stat_files if 'sparse' not in os.path.basename(f)]
+        assert stat_files, f"No trackstats file found in {self.STATS_DIR}"
+        assert_valid_stat_file(stat_files[-1], min_tracks=1)
+
+    def test_pixel_files_exist_and_valid(self):
+        assert_valid_pixel_files(self.PIXEL_DIR, filebase='celltracks_')
+
+    def test_cell_lons_within_domain(self):
+        """CSAPR at Cordoba, Argentina (~-64.7 °E, ~-32.1 °S)."""
+        stat_files = sorted(glob.glob(os.path.join(self.STATS_DIR, 'trackstats_*.nc')))
+        stat_files = [f for f in stat_files if 'sparse' not in os.path.basename(f)]
+        if not stat_files:
+            pytest.skip("No trackstats file found")
+        assert_latlons_in_range(
+            stat_files[-1],
+            'cell_meanlat', 'cell_meanlon',
+            lat_range=(-35, -30), lon_range=(-67, -62),
+        )
+
+    def test_quicklook_plots_exist(self):
+        pngs = glob.glob(os.path.join(self.QUICKLOOK_DIR, '*.png'))
+        assert len(pngs) > 0, f"No quicklook PNGs in {self.QUICKLOOK_DIR}"
+
+    def test_animation_exists(self):
+        assert_animation_exists(self.QUICKLOOK_DIR)
+
+
+# ---------------------------------------------------------------------------
+# MCS tracking on GPM IMERG
+# ---------------------------------------------------------------------------
+
+@pytest.mark.local
+class TestMcsImergDemo:
+    """Validates the output of demo_mcs_imerg.sh"""
+
+    STATS_DIR = demo_path('mcs_tbpf', 'imerg', 'stats')
+    PIXEL_DIR = demo_path('mcs_tbpf', 'imerg', 'mcstracking')
+    QUICKLOOK_DIR = demo_path('mcs_tbpf', 'imerg', 'quicklooks_trackpaths')
+
+    def test_stats_output_exists_and_valid(self):
+        stat_file = _find_mcs_stats(self.STATS_DIR)
+        assert stat_file, f"No MCS stats file found in {self.STATS_DIR}"
+        assert_valid_stat_file(stat_file, min_tracks=1)
+
+    def test_pixel_files_exist_and_valid(self):
+        assert_valid_pixel_files(self.PIXEL_DIR, filebase='mcstrack_')
+
+    def test_latlons_within_domain(self):
+        stat_file = _find_mcs_stats(self.STATS_DIR)
+        if not stat_file:
+            pytest.skip("No MCS stats file found")
+        assert_latlons_in_range(
+            stat_file, 'meanlat', 'meanlon',
+            lat_range=(-60, 20), lon_range=(-80, 10),
+        )
+
+    def test_quicklook_plots_exist(self):
+        pngs = glob.glob(os.path.join(self.QUICKLOOK_DIR, '*.png'))
+        assert len(pngs) > 0, f"No quicklook PNGs in {self.QUICKLOOK_DIR}"
+
+    def test_animation_exists(self):
+        assert_animation_exists(self.QUICKLOOK_DIR)
+
+
+# ---------------------------------------------------------------------------
+# MCS tracking on WRF Tb+Precipitation
+# ---------------------------------------------------------------------------
+
+@pytest.mark.local
+class TestMcsWrfTbpfDemo:
+    """Validates the output of demo_mcs_wrf_tbpf.sh"""
+
+    STATS_DIR = demo_path('mcs_tbpf', 'wrf', 'stats')
+    PIXEL_DIR = demo_path('mcs_tbpf', 'wrf', 'mcstracking')
+    QUICKLOOK_DIR = demo_path('mcs_tbpf', 'wrf', 'quicklooks_trackpaths')
+
+    def test_stats_output_exists_and_valid(self):
+        stat_file = _find_mcs_stats(self.STATS_DIR)
+        assert stat_file, f"No MCS stats file found in {self.STATS_DIR}"
+        assert_valid_stat_file(stat_file, min_tracks=1)
+
+    def test_pixel_files_exist_and_valid(self):
+        assert_valid_pixel_files(self.PIXEL_DIR, filebase='mcstrack_')
+
+    def test_latlons_within_domain(self):
+        stat_file = _find_mcs_stats(self.STATS_DIR)
+        if not stat_file:
+            pytest.skip("No MCS stats file found")
+        assert_latlons_in_range(
+            stat_file, 'meanlat', 'meanlon',
+            lat_range=(-20, 5), lon_range=(-80, -40),
+        )
+
+    def test_quicklook_plots_exist(self):
+        pngs = glob.glob(os.path.join(self.QUICKLOOK_DIR, '*.png'))
+        assert len(pngs) > 0, f"No quicklook PNGs in {self.QUICKLOOK_DIR}"
+
+    def test_animation_exists(self):
+        assert_animation_exists(self.QUICKLOOK_DIR)
+
+
+# ---------------------------------------------------------------------------
+# MCS tracking on WRF Tb+Radar (3D)
+# ---------------------------------------------------------------------------
+
+@pytest.mark.local
+class TestMcsWrfTbradarDemo:
+    """Validates the output of demo_mcs_wrf_tbradar.sh"""
+
+    STATS_DIR = demo_path('mcs_tbpfradar3d', 'wrf', 'stats')
+    PIXEL_DIR = demo_path('mcs_tbpfradar3d', 'wrf', 'mcstracking')
+    QUICKLOOK_DIR = demo_path('mcs_tbpfradar3d', 'wrf', 'quicklooks_trackpaths')
+
+    def test_stats_output_exists_and_valid(self):
+        stat_file = _find_mcs_stats(self.STATS_DIR)
+        assert stat_file, f"No MCS stats file found in {self.STATS_DIR}"
+        assert_valid_stat_file(stat_file, min_tracks=1)
+
+    def test_pixel_files_exist_and_valid(self):
+        assert_valid_pixel_files(self.PIXEL_DIR, filebase='mcstrack_')
+
+    def test_latlons_within_domain(self):
+        stat_file = _find_mcs_stats(self.STATS_DIR)
+        if not stat_file:
+            pytest.skip("No MCS stats file found")
+        assert_latlons_in_range(
+            stat_file, 'meanlat', 'meanlon',
+            lat_range=(25, 55), lon_range=(-115, -75),
+        )
+
+    def test_animation_exists(self):
+        assert_animation_exists(self.QUICKLOOK_DIR)
+
+
+# ---------------------------------------------------------------------------
+# MCS tracking on GridRad Tb+Radar
+# ---------------------------------------------------------------------------
+
+@pytest.mark.local
+class TestMcsGridradDemo:
+    """Validates the output of demo_mcs_gridrad.sh"""
+
+    STATS_DIR = demo_path('mcs_tbpfradar3d', 'gridrad', 'stats')
+    PIXEL_DIR = demo_path('mcs_tbpfradar3d', 'gridrad', 'mcstracking')
+    QUICKLOOK_DIR = demo_path('mcs_tbpfradar3d', 'gridrad', 'quicklooks_trackpaths')
+
+    def test_stats_output_exists_and_valid(self):
+        stat_file = _find_mcs_stats(self.STATS_DIR)
+        assert stat_file, f"No MCS stats file found in {self.STATS_DIR}"
+        assert_valid_stat_file(stat_file, min_tracks=1)
+
+    def test_pixel_files_exist_and_valid(self):
+        assert_valid_pixel_files(self.PIXEL_DIR, filebase='mcstrack_')
+
+    def test_latlons_within_domain(self):
+        stat_file = _find_mcs_stats(self.STATS_DIR)
+        if not stat_file:
+            pytest.skip("No MCS stats file found")
+        assert_latlons_in_range(
+            stat_file, 'meanlat', 'meanlon',
+            lat_range=(20, 55), lon_range=(-130, -60),
+        )
+
+    def test_animation_exists(self):
+        assert_animation_exists(self.QUICKLOOK_DIR)
+
+
+# ---------------------------------------------------------------------------
+# MCS tracking on E3SM model (25 km)
+# ---------------------------------------------------------------------------
+
+@pytest.mark.local
+class TestMcsModel25kmDemo:
+    """Validates the output of demo_mcs_model25km.sh"""
+
+    STATS_DIR = demo_path('mcs_tbpf', 'e3sm', 'stats')
+    PIXEL_DIR = demo_path('mcs_tbpf', 'e3sm', 'mcstracking')
+    QUICKLOOK_DIR = demo_path('mcs_tbpf', 'e3sm', 'quicklooks_robust')
+
+    def test_stats_output_exists_and_valid(self):
+        stat_file = _find_mcs_stats(self.STATS_DIR)
+        assert stat_file, f"No MCS stats file found in {self.STATS_DIR}"
+        assert_valid_stat_file(stat_file, min_tracks=1)
+
+    def test_pixel_files_exist_and_valid(self):
+        assert_valid_pixel_files(self.PIXEL_DIR, filebase='mcstrack_')
+
+    def test_latlons_within_domain(self):
+        stat_file = _find_mcs_stats(self.STATS_DIR)
+        if not stat_file:
+            pytest.skip("No MCS stats file found")
+        assert_latlons_in_range(
+            stat_file, 'meanlat', 'meanlon',
+            lat_range=(-60, 60), lon_range=(-180, 360),
+        )
+
+    def test_animation_exists(self):
+        assert_animation_exists(
+            self.QUICKLOOK_DIR, anim_name='mcs_robust_animation.mp4',
+        )
+
+
+# ---------------------------------------------------------------------------
+# MCS tracking on Himawari (Tb-only)
+# ---------------------------------------------------------------------------
+
+@pytest.mark.local
+class TestMcsHimawariDemo:
+    """Validates the output of demo_mcs_himawari.sh"""
+
+    STATS_DIR = demo_path('mcs_tbpf', 'himawari', 'stats')
+    PIXEL_DIR = demo_path('mcs_tbpf', 'himawari', 'mcstracking_tb')
+    QUICKLOOK_DIR = demo_path('mcs_tbpf', 'himawari', 'quicklooks_trackpaths')
+
+    def test_stats_output_exists_and_valid(self):
+        stat_file = _find_mcs_stats(self.STATS_DIR, pattern='mcs_tracks_*.nc')
+        assert stat_file, f"No MCS stats file found in {self.STATS_DIR}"
+        assert_valid_stat_file(stat_file, min_tracks=1)
+
+    def test_pixel_files_exist_and_valid(self):
+        assert_valid_pixel_files(self.PIXEL_DIR, filebase='mcstrack_')
+
+    def test_latlons_within_domain(self):
+        stat_file = _find_mcs_stats(self.STATS_DIR, pattern='mcs_tracks_*.nc')
+        if not stat_file:
+            pytest.skip("No MCS stats file found")
+        assert_latlons_in_range(
+            stat_file, 'meanlat', 'meanlon',
+            lat_range=(-60, 60), lon_range=(80, 200),
+        )
+
+    def test_animation_exists(self):
+        assert_animation_exists(self.QUICKLOOK_DIR)
+
+
+# ---------------------------------------------------------------------------
+# Generic feature tracking (ERA5 Z500 anomaly)
+# ---------------------------------------------------------------------------
+
+@pytest.mark.local
+class TestGenericTrackingDemo:
+    """Validates the output of demo_generic_tracking.sh"""
+
+    STATS_DIR = demo_path('general_tracking', 'z500_blocking', 'stats')
+    PIXEL_DIR = demo_path('general_tracking', 'z500_blocking', 'z500tracking')
+    QUICKLOOK_DIR = demo_path('general_tracking', 'z500_blocking', 'quicklooks_trackpaths')
+
+    def test_stats_output_exists_and_valid(self):
+        stat_files = sorted(glob.glob(os.path.join(self.STATS_DIR, 'trackstats_*.nc')))
+        stat_files = [f for f in stat_files if 'sparse' not in os.path.basename(f)]
+        assert stat_files, f"No trackstats file found in {self.STATS_DIR}"
+        assert_valid_stat_file(stat_files[-1], min_tracks=1)
+
+    def test_pixel_files_exist_and_valid(self):
+        assert_valid_pixel_files(self.PIXEL_DIR, filebase='z500tracks_')
+
+    def test_latlons_within_domain(self):
+        stat_files = sorted(glob.glob(os.path.join(self.STATS_DIR, 'trackstats_*.nc')))
+        stat_files = [f for f in stat_files if 'sparse' not in os.path.basename(f)]
+        if not stat_files:
+            pytest.skip("No trackstats file found")
+        assert_latlons_in_range(
+            stat_files[-1], 'meanlat', 'meanlon',
+            lat_range=(-90, 90), lon_range=(-180, 360),
+        )
+
+    def test_quicklook_plots_exist(self):
+        pngs = glob.glob(os.path.join(self.QUICKLOOK_DIR, '*.png'))
+        assert len(pngs) > 0, f"No quicklook PNGs in {self.QUICKLOOK_DIR}"
+
+    def test_animation_exists(self):
+        assert_animation_exists(self.QUICKLOOK_DIR)
