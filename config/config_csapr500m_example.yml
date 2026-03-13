@@ -133,6 +133,7 @@ z_coord_type: height
 # Specify data structure
 datatimeresolution: 0.25     # hours
 pixel_radius: 0.5      # km
+area_method: 'latlon'  # 'fixed' (default) or 'latlon' for latitude-dependent grid cell area
 ref_varname: dbz_comp
 
 # Tracking parameters

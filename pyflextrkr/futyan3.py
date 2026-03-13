@@ -1,4 +1,4 @@
-def futyan3(ir, pixel_radius, tb_threshs, area_thresh, warmanvilexpansion):
+def futyan3(ir, pixel_radius, tb_threshs, area_thresh, warmanvilexpansion, pixel_area=None):
     ######################################################################
     # Import modules
     import numpy as np
@@ -15,8 +15,9 @@ def futyan3(ir, pixel_radius, tb_threshs, area_thresh, warmanvilexpansion):
     # Determine dimensions
     ny, nx = np.shape(ir)
 
-    # Calculate area of one pixel. Assumed to be a circle.
-    pixel_area = pixel_radius ** 2
+    # Calculate area of one pixel (scalar or 2D array)
+    if pixel_area is None:
+        pixel_area = pixel_radius ** 2
 
     ######################################################################
     # Use thresholds to make a map of all brightnes temperatures that fit within the criteria for convective, cold anvil, and warm anvil points. Cores = 1. Cold anvils = 2. Warm anvils = 3. Other = 4. Clear = 5. Areas do not overlap
@@ -45,11 +46,13 @@ def futyan3(ir, pixel_radius, tb_threshs, area_thresh, warmanvilexpansion):
         approved_convarea = np.empty(convective_number, dtype=int) * np.nan
 
         for featurestep, ifeature in enumerate(range(1, convective_number + 1)):
-            # Identify pixels from each feature and multiple by pixel area to get feature
-            feature_pixels = len(
-                np.extract(convective_label == ifeature, convective_label)
-            )
-            feature_area = feature_pixels * pixel_area
+            # Identify pixels from each feature and compute feature area
+            feature_idx = np.where(convective_label == ifeature)
+            feature_pixels = len(feature_idx[0])
+            if np.ndim(pixel_area) >= 2:
+                feature_area = np.sum(pixel_area[feature_idx[0], feature_idx[1]])
+            else:
+                feature_area = feature_pixels * pixel_area
 
             # If statisfies store the feature number and its area
             if feature_area > area_thresh:

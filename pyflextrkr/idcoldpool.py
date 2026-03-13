@@ -8,7 +8,7 @@ import logging
 from scipy import integrate
 from scipy.ndimage import gaussian_filter
 from pyflextrkr.ftfunctions import sort_renumber, skimage_watershed, adjust_pbc_watershed
-from pyflextrkr.ft_utilities import get_timestamp_from_filename_single
+from pyflextrkr.ft_utilities import get_timestamp_from_filename_single, get_pixel_area
 
 #---------------------------------------------------------------------------------
 def calculate_buoyancy_dmean(ds, var='thetav'):
@@ -193,7 +193,6 @@ def idcoldpool(
     buoy_thresh = config.get("buoy_thresh")
     min_cp_depth = config.get("min_cp_depth")
     buoy_smooth_sigma = config.get("buoy_smooth_sigma", 1)
-    pixel_radius = config.get("pixel_radius")
     # R_earth = config.get("R_earth")
     pass_varname = config.get("pass_varname", None)
     fillval = config["fillval"]
@@ -271,9 +270,9 @@ def idcoldpool(
     # dlon = np.mean(np.abs(np.diff(lon2d, axis=1)))
     # dlat = np.mean(np.abs(np.diff(lat2d, axis=0)))
 
-    # Calculate grid cell area (simple cosine adjustment)
+    # Calculate grid cell area
     # grid_area = (R_earth**2) * np.cos(np.deg2rad(lat2d)) * np.deg2rad(dlat) * np.deg2rad(dlon)
-    grid_area = pixel_radius**2
+    pixel_area = get_pixel_area(config, latitude=lat2d, longitude=lon2d)
 
     if pass_varname is not None:
         # Find the common variable names between the dataset and the list

@@ -77,11 +77,21 @@ def load_config(config_file):
     # Optional parameters (default values if not in config file)
     trackstats_dense_netcdf = config.get("trackstats_dense_netcdf", 0)
     geolimits = config.get("geolimits", [-90., -360., 90., 360.])
+    area_method = config.get("area_method", "fixed")
 
     # Create output directories
     os.makedirs(tracking_outpath, exist_ok=True)
     os.makedirs(stats_outpath, exist_ok=True)
     os.makedirs(pixeltracking_outpath, exist_ok=True)
+
+    # Set grid_area_file path if area_method is "latlon"
+    if area_method == "latlon":
+        grid_area_file = config.get(
+            "grid_area_file",
+            stats_outpath + "grid_area_from_latlon.nc",
+        )
+    else:
+        grid_area_file = None
 
     # Calculate basetime for start and end date
     start_basetime = get_basetime_from_string(startdate)
@@ -101,6 +111,8 @@ def load_config(config_file):
             "start_basetime": start_basetime,
             "end_basetime": end_basetime,
             "geolimits": geolimits,
+            "area_method": area_method,
+            "grid_area_file": grid_area_file,
         }
     )
     return config
@@ -484,9 +496,9 @@ def subset_ds_geolimit(
     }
     # Subset dataset
     ds_out = ds_in[subset_dict]
-    # transpose coordinates to enesure LAT is always the 1st dimension
-    ds_out = ds_out.transpose(y_dimname,x_dimname)
-    # ds_out = ds_out.transpose(y_coordname,x_coordname) # maybe?
+    # transpose coordinates to ensure LAT is always the 1st dimension
+    # Use '...' to preserve any extra dimensions (e.g. nbnd)
+    ds_out = ds_out.transpose(y_dimname, x_dimname, ...)
     return ds_out
 
 def find_maxnclouds(config):
@@ -627,8 +639,8 @@ def match_drift_times(
             idx = np.where(datetime_drift == cloudid_datetime)[0]
             if (len(idx) == 1):
                 datetime_drift_match[itime] = datetime_drift[idx[0]]
-                xdrifts_match[itime] = xdrifts[idx]
-                ydrifts_match[itime] = ydrifts[idx]
+                xdrifts_match[itime] = xdrifts[idx[0]]
+                ydrifts_match[itime] = ydrifts[idx[0]]
     return (
         datetime_drift_match,
         xdrifts_match,
@@ -799,3 +811,387 @@ def convert_trackstats_sparse2dense(
         encoding=encoding
     )
     return True
+
+
+def compute_grid_area(lat, lon):
+    """
+    Compute the area of each grid cell (in km^2) for a 2D lat/lon grid
+    using great-circle (haversine) distances between grid cell edges.
+
+    Works for both regular and curvilinear 2D lat/lon grids.
+    Input 1D lat/lon arrays are meshed to 2D internally.
+
+    Args:
+        lat: np.ndarray
+            Latitude array, either 1D (ny,) or 2D (ny, nx), in degrees.
+        lon: np.ndarray
+            Longitude array, either 1D (nx,) or 2D (ny, nx), in degrees.
+
+    Returns:
+        grid_area: np.ndarray
+            2D array (ny, nx) of grid cell areas in km^2.
+    """
+    R_earth = 6371.0  # Earth radius in km
+
+    # Ensure 2D arrays
+    if lat.ndim == 1 and lon.ndim == 1:
+        lon2d, lat2d = np.meshgrid(lon, lat)
+    elif lat.ndim == 2 and lon.ndim == 2:
+        lat2d = lat
+        lon2d = lon
+    else:
+        raise ValueError(
+            f"lat and lon must both be 1D or both be 2D. "
+            f"Got lat.ndim={lat.ndim}, lon.ndim={lon.ndim}"
+        )
+
+    ny, nx = lat2d.shape
+
+    # Compute cell edge coordinates as midpoints between grid centers
+    # For interior edges, use midpoints; for boundary edges, extrapolate
+    # Latitude edges: shape (ny+1, nx)
+    lat_edges_y = np.empty((ny + 1, nx), dtype=np.float64)
+    if ny > 1:
+        lat_edges_y[1:-1, :] = 0.5 * (lat2d[:-1, :] + lat2d[1:, :])
+        lat_edges_y[0, :] = lat2d[0, :] - 0.5 * (lat2d[1, :] - lat2d[0, :])
+        lat_edges_y[-1, :] = lat2d[-1, :] + 0.5 * (lat2d[-1, :] - lat2d[-2, :])
+    else:
+        # Single row: assume symmetric half-cell around center
+        # Use a default ~1 degree half-width if only 1 row
+        half_dlat = 0.5 if nx == 1 else 0.5
+        lat_edges_y[0, :] = lat2d[0, :] - half_dlat
+        lat_edges_y[1, :] = lat2d[0, :] + half_dlat
+
+    # Longitude edges: shape (ny, nx+1)
+    lon_edges_x = np.empty((ny, nx + 1), dtype=np.float64)
+    if nx > 1:
+        lon_edges_x[:, 1:-1] = 0.5 * (lon2d[:, :-1] + lon2d[:, 1:])
+        lon_edges_x[:, 0] = lon2d[:, 0] - 0.5 * (lon2d[:, 1] - lon2d[:, 0])
+        lon_edges_x[:, -1] = lon2d[:, -1] + 0.5 * (lon2d[:, -1] - lon2d[:, -2])
+    else:
+        # Single column: assume symmetric half-cell around center
+        half_dlon = 0.5
+        lon_edges_x[:, 0] = lon2d[:, 0] - half_dlon
+        lon_edges_x[:, 1] = lon2d[:, 0] + half_dlon
+
+    # Compute dy (north-south distance) using haversine between top/bottom edges
+    # at the cell center longitude
+    # dy[j, i] = distance from (lat_edges_y[j], lon[j,i]) to (lat_edges_y[j+1], lon[j,i])
+    lat_s = np.deg2rad(lat_edges_y[:-1, :])  # (ny, nx)
+    lat_n = np.deg2rad(lat_edges_y[1:, :])    # (ny, nx)
+    dlat = lat_n - lat_s
+    dy = R_earth * np.abs(dlat)  # For pure N-S displacement, haversine simplifies
+
+    # Compute dx (east-west distance) using haversine between left/right edges
+    # at the cell center latitude
+    # dx[j, i] = distance from (lat[j,i], lon_edges_x[j,i]) to (lat[j,i], lon_edges_x[j,i+1])
+    lat_c = np.deg2rad(lat2d)  # (ny, nx)
+    lon_w = np.deg2rad(lon_edges_x[:, :-1])  # (ny, nx)
+    lon_e = np.deg2rad(lon_edges_x[:, 1:])    # (ny, nx)
+    dlon = lon_e - lon_w
+    # Haversine for pure E-W displacement: a = cos(lat)^2 * sin(dlon/2)^2
+    a = np.cos(lat_c) ** 2 * np.sin(dlon / 2.0) ** 2
+    dx = R_earth * 2.0 * np.arctan2(np.sqrt(a), np.sqrt(1.0 - a))
+
+    grid_area = dx * dy
+    return grid_area
+
+
+def save_grid_area(grid_area, lat2d, lon2d, filepath):
+    """
+    Save grid_area and 2D lat/lon arrays to a netCDF file.
+
+    Args:
+        grid_area: np.ndarray
+            2D array (ny, nx) of grid cell areas in km^2.
+        lat2d: np.ndarray
+            2D latitude array (ny, nx) in degrees.
+        lon2d: np.ndarray
+            2D longitude array (ny, nx) in degrees.
+        filepath: str
+            Output netCDF file path.
+
+    Returns:
+        filepath: str
+            Path to the saved file.
+    """
+    logger = logging.getLogger(__name__)
+    ny, nx = grid_area.shape
+    ds = xr.Dataset(
+        {
+            "grid_area": (
+                ["lat", "lon"],
+                grid_area.astype(np.float32),
+                {
+                    "long_name": "Grid cell area",
+                    "units": "km^2",
+                },
+            ),
+            "latitude": (
+                ["lat", "lon"],
+                lat2d.astype(np.float32),
+                {
+                    "long_name": "Latitude",
+                    "units": "degrees_north",
+                },
+            ),
+            "longitude": (
+                ["lat", "lon"],
+                lon2d.astype(np.float32),
+                {
+                    "long_name": "Longitude",
+                    "units": "degrees_east",
+                },
+            ),
+        },
+        coords={
+            "lat": (["lat"], np.arange(ny)),
+            "lon": (["lon"], np.arange(nx)),
+        },
+        attrs={
+            "Title": "Grid cell area computed from latitude-dependent spacing",
+            "Created_on": time.ctime(time.time()),
+        },
+    )
+    # Set encoding/compression for all variables
+    comp = dict(zlib=True)
+    encoding = {var: comp for var in ds.data_vars}
+    os.makedirs(os.path.dirname(filepath), exist_ok=True)
+    ds.to_netcdf(path=filepath, mode="w", format="NETCDF4", encoding=encoding)
+    logger.info(f"Grid area file saved: {filepath}")
+    return filepath
+
+
+def load_grid_area(filepath):
+    """
+    Load grid_area from a netCDF file.
+
+    Args:
+        filepath: str
+            Path to the grid area netCDF file.
+
+    Returns:
+        grid_area: np.ndarray
+            2D array (ny, nx) of grid cell areas in km^2.
+    """
+    ds = xr.open_dataset(filepath)
+    grid_area = ds["grid_area"].values
+    ds.close()
+    return grid_area
+
+
+def get_pixel_area(config, latitude=None, longitude=None):
+    """
+    Get pixel area based on config settings.
+
+    When area_method is "latlon", computes or loads latitude-dependent
+    2D grid cell areas. Otherwise returns a scalar pixel_radius^2.
+
+    Args:
+        config: dict
+            Configuration dictionary. Must contain 'pixel_radius'.
+            Optionally contains 'area_method' and 'grid_area_file'.
+        latitude: np.ndarray, optional
+            Latitude array (1D or 2D). Required if area_method is "latlon"
+            and grid_area file does not exist yet.
+        longitude: np.ndarray, optional
+            Longitude array (1D or 2D). Required if area_method is "latlon"
+            and grid_area file does not exist yet.
+
+    Returns:
+        pixel_area: float or np.ndarray
+            Scalar pixel_radius^2 (km^2) if area_method is "fixed",
+            or 2D array (ny, nx) of grid cell areas (km^2) if "latlon".
+    """
+    logger = logging.getLogger(__name__)
+    area_method = config.get("area_method", "fixed")
+    pixel_radius = config["pixel_radius"]
+
+    if area_method == "latlon":
+        grid_area_file = config.get("grid_area_file", None)
+        # If the file already exists, load it
+        if grid_area_file is not None and os.path.isfile(grid_area_file):
+            pixel_area = load_grid_area(grid_area_file)
+            logger.debug(f"Loaded grid area from: {grid_area_file}")
+        else:
+            # Compute from lat/lon
+            if latitude is None or longitude is None:
+                raise ValueError(
+                    "area_method is 'latlon' but no grid_area_file found and "
+                    "latitude/longitude arrays were not provided."
+                )
+            pixel_area = compute_grid_area(latitude, longitude)
+            # Save to file if grid_area_file path is defined
+            if grid_area_file is not None:
+                # Ensure 2D lat/lon for saving
+                if latitude.ndim == 1 and longitude.ndim == 1:
+                    lon2d, lat2d = np.meshgrid(longitude, latitude)
+                else:
+                    lat2d, lon2d = latitude, longitude
+                save_grid_area(pixel_area, lat2d, lon2d, grid_area_file)
+            logger.info(f"Computed grid area from lat/lon arrays.")
+        return pixel_area
+    else:
+        # Fixed pixel area (backward compatible)
+        return pixel_radius ** 2
+
+
+def get_feature_area(pixel_area, feature_mask_indices):
+    """
+    Compute the total area of a feature from its pixel indices.
+
+    Works with both scalar pixel_area (fixed) and 2D pixel_area (latlon).
+
+    Args:
+        pixel_area: float or np.ndarray
+            Scalar pixel_radius^2 or 2D grid_area array (ny, nx) in km^2.
+        feature_mask_indices: tuple of np.ndarray
+            Tuple of (y_indices, x_indices) for the feature pixels.
+
+    Returns:
+        area: float
+            Total area of the feature in km^2.
+    """
+    npix = len(feature_mask_indices[0])
+    if np.ndim(pixel_area) == 0 or (isinstance(pixel_area, np.ndarray) and pixel_area.ndim == 0):
+        # Scalar pixel area
+        return npix * float(pixel_area)
+    else:
+        # 2D pixel area
+        return np.sum(pixel_area[feature_mask_indices[0], feature_mask_indices[1]])
+
+
+def get_mean_pixel_length(pixel_area, feature_mask_indices=None):
+    """
+    Get the representative pixel length scale (km) for a feature,
+    used to convert regionprops pixel-unit lengths to physical units.
+
+    For scalar pixel_area, returns sqrt(pixel_area).
+    For 2D pixel_area, returns sqrt(mean(pixel_area over feature pixels)).
+    If feature_mask_indices is None and pixel_area is 2D, returns
+    the domain-wide mean pixel length.
+
+    Args:
+        pixel_area: float or np.ndarray
+            Scalar pixel_radius^2 or 2D grid_area array (ny, nx) in km^2.
+        feature_mask_indices: tuple of np.ndarray, optional
+            Tuple of (y_indices, x_indices) for the feature pixels.
+            If None and pixel_area is 2D, uses domain-wide mean.
+
+    Returns:
+        pixel_length: float
+            Representative pixel length scale in km.
+    """
+    if np.ndim(pixel_area) == 0 or (isinstance(pixel_area, np.ndarray) and pixel_area.ndim == 0):
+        return np.sqrt(float(pixel_area))
+    else:
+        if feature_mask_indices is not None:
+            mean_area = np.mean(pixel_area[feature_mask_indices[0], feature_mask_indices[1]])
+        else:
+            mean_area = np.nanmean(pixel_area)
+        return np.sqrt(mean_area)
+
+
+def precompute_grid_area(config, first_file=None):
+    """
+    Pre-compute and save the grid area file for area_method='latlon'.
+
+    Should be called once before parallel processing to avoid race conditions.
+    Does nothing if area_method is not 'latlon' or if the grid area file
+    already exists.
+
+    Args:
+        config: dict
+            Configuration dictionary.
+        first_file: str, optional
+            Path to the first input data file (for NetCDF format).
+            Not needed for Zarr format when landmask_filename is in config.
+    """
+    area_method = config.get("area_method", "fixed")
+    if area_method != "latlon":
+        return
+
+    grid_area_file = config.get("grid_area_file", None)
+    if grid_area_file is not None and os.path.isfile(grid_area_file):
+        return
+
+    logger = logging.getLogger(__name__)
+    input_format = config.get("input_format", "netcdf")
+    x_coordname = config.get("x_coordname", "lon")
+    y_coordname = config.get("y_coordname", "lat")
+    # For radar data, lat/lon may be in separate variables (e.g., point_latitude)
+    # If lat_coordname/lon_coordname are defined, use those instead
+    lat_coordname = config.get("lat_coordname", None)
+    lon_coordname = config.get("lon_coordname", None)
+    geolimits = config.get("geolimits", None)
+
+    # Read lat/lon coordinates
+    if input_format.lower() == "zarr":
+        # For HEALPix/Zarr, coordinates come from the landmask file
+        landmask_filename = config.get("landmask_filename", None)
+        landmask_x_coordname = config.get("landmask_x_coordname", x_coordname)
+        landmask_y_coordname = config.get("landmask_y_coordname", y_coordname)
+        if landmask_filename is not None:
+            ds = xr.open_dataset(landmask_filename)
+            lat = ds[landmask_y_coordname].values
+            lon = ds[landmask_x_coordname].values
+            ds.close()
+        else:
+            raise ValueError(
+                "area_method='latlon' with Zarr format requires "
+                "'landmask_filename' in config to read lat/lon."
+            )
+    else:
+        # NetCDF: open the first data file
+        if first_file is None:
+            raise ValueError(
+                "first_file must be provided for NetCDF format "
+                "to read lat/lon for grid area computation."
+            )
+        ds = xr.open_dataset(first_file, decode_timedelta=False)
+        # Use lat_coordname/lon_coordname if available (e.g., radar data
+        # where x_coordname/y_coordname are Cartesian meters)
+        _lat_name = lat_coordname if lat_coordname else y_coordname
+        _lon_name = lon_coordname if lon_coordname else x_coordname
+        da_lat = ds[_lat_name]
+        da_lon = ds[_lon_name]
+
+        # If lat/lon are 3D (e.g., radar point_latitude(z, y, x)),
+        # select the first level using dimension name from config
+        z_dimname = config.get("z_dimname", None)
+        y_dimname = config.get("y_dimname", "lat")
+        x_dimname = config.get("x_dimname", "lon")
+        if da_lat.ndim == 3 and z_dimname and z_dimname in da_lat.dims:
+            da_lat = da_lat.isel({z_dimname: 0})
+            da_lon = da_lon.isel({z_dimname: 0})
+        # Ensure (y, x) dimension order and convert to numpy
+        if da_lat.ndim == 2:
+            da_lat = da_lat.transpose(y_dimname, x_dimname)
+            da_lon = da_lon.transpose(y_dimname, x_dimname)
+        lat = da_lat.values
+        lon = da_lon.values
+        ds.close()
+
+    # Mesh 1D to 2D if needed
+    if lat.ndim == 1 or lon.ndim == 1:
+        lon2d, lat2d = np.meshgrid(lon, lat)
+    else:
+        lat2d, lon2d = lat, lon
+
+    # Apply geolimit subsetting if defined
+    if geolimits is not None:
+        indicesy, indicesx = np.array(np.where(
+            (lat2d >= geolimits[0]) & (lat2d <= geolimits[2]) &
+            (lon2d >= geolimits[1]) & (lon2d <= geolimits[3])
+        ))
+        if len(indicesy) > 0 and len(indicesx) > 0:
+            ymin = np.nanmin(indicesy)
+            ymax = np.nanmax(indicesy) + 1
+            xmin = np.nanmin(indicesx)
+            xmax = np.nanmax(indicesx) + 1
+            lat2d = lat2d[ymin:ymax, xmin:xmax]
+            lon2d = lon2d[ymin:ymax, xmin:xmax]
+
+    # Compute and save grid area
+    get_pixel_area(config, latitude=lat2d, longitude=lon2d)
+    logger.info(f"Pre-computed grid area file: {grid_area_file}")

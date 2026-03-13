@@ -92,7 +92,7 @@ def trackclouds(
             reference_file, mask_and_scale=False, decode_times=False, chunks=-1,
         )
         reference_convcold_cloudnumber = reference_data[feature_varname].load().data
-        nreference = reference_data[nfeature_varname].load().data
+        nreference = int(np.squeeze(reference_data[nfeature_varname].load().data))
         reference_data.close()
 
         ##########################################################
@@ -104,7 +104,7 @@ def trackclouds(
             new_file, mask_and_scale=False, decode_times=False, chunks=-1,
         )
         new_convcold_cloudnumber = new_data[feature_varname].load().data
-        nnew = new_data[nfeature_varname].load().data
+        nnew = int(np.squeeze(new_data[nfeature_varname].load().data))
         new_data.close()
 
         # Convert float type to int, missing value to 0
@@ -364,6 +364,9 @@ def trackclouds(
 
         # Write netcdf files
         # output_data.to_netcdf(path=track_outfile, mode='w', format='NETCDF4_CLASSIC', unlimited_dims='times', \
+        # Touch output file so HDF5 1.14.x H5Fis_accessible() probe does not
+        # fail with ENOENT and emit spurious diagnostics to stderr
+        open(track_outfile, 'ab').close()
         zlib = True
         output_data.to_netcdf(
             path=track_outfile,

@@ -11,6 +11,7 @@ import logging
 import dask
 from dask.distributed import wait
 from pyflextrkr.trackstats_func import calc_stats_singlefile, adjust_mergesplit_numbers, get_track_startend_status
+from pyflextrkr.ft_utilities import get_pixel_area, get_mean_pixel_length
 
 def trackstats_driver(config):
     """
@@ -155,7 +156,7 @@ def trackstats_driver(config):
     logger.debug("Collecting track statistics")
 
     max_trackduration = int(max(duration_range))
-    numtracks = int(numtracks)
+    numtracks = int(numtracks.item())
 
     # Make a variable list and get attributes from one of the returned dictionaries
     # Loop over each return results till one that is not None
@@ -577,6 +578,20 @@ def write_trackstats_sparse(config, numtracks, out_dict_attrs, out_dict, row_out
         tracks_dimname: ([tracks_dimname], np.arange(0, numtracks)),
         sparse_dimname: ([sparse_dimname], np.arange(0, len(row_out))),
     }
+    # Compute pixel length statistics for metadata
+    _pixel_area = get_pixel_area(config)
+    if np.ndim(_pixel_area) >= 2:
+        _pixel_lengths = np.sqrt(_pixel_area.ravel())
+        pixel_length_km_stats = np.array([
+            np.nanmean(_pixel_lengths),
+            np.nanmedian(_pixel_lengths),
+            np.nanmin(_pixel_lengths),
+            np.nanmax(_pixel_lengths),
+        ])
+    else:
+        _pl = np.sqrt(float(_pixel_area))
+        pixel_length_km_stats = np.array([_pl, _pl, _pl, _pl])
+
     # Define global attributes
     gattrlist = {
         "Title": 'Statistics of each track',
@@ -590,6 +605,8 @@ def write_trackstats_sparse(config, numtracks, out_dict_attrs, out_dict, row_out
         "timegap_hour": config["timegap"],
         "time_resolution_hour": config["datatimeresolution"],
         "pixel_radius_km": config["pixel_radius"],
+        "pixel_length_km_stats": pixel_length_km_stats,
+        "pixel_length_km_stats_description": "Pixel length [mean, median, min, max] in km",
     }
     # Define output Xarray dataset
     dsout = xr.Dataset(varlist, coords=coordlist, attrs=gattrlist)
@@ -597,6 +614,9 @@ def write_trackstats_sparse(config, numtracks, out_dict_attrs, out_dict, row_out
     comp = dict(zlib=True)
     encoding = {var: comp for var in dsout.data_vars}
     # Write to netcdf file
+    # Touch output file so HDF5 1.14.x H5Fis_accessible() probe does not
+    # fail with ENOENT and emit spurious diagnostics to stderr
+    open(trackstats_sparse_outfile, 'ab').close()
     dsout.to_netcdf(path=trackstats_sparse_outfile,
                     mode='w',
                     format='NETCDF4',
@@ -678,6 +698,20 @@ def write_trackstats_dense(config, fillval, fillval_f,
         tracks_dimname: ([tracks_dimname], np.arange(0, numtracks)),
         times_dimname: ([times_dimname], np.arange(0, max_trackduration)),
     }
+    # Compute pixel length statistics for metadata
+    _pixel_area = get_pixel_area(config)
+    if np.ndim(_pixel_area) >= 2:
+        _pixel_lengths = np.sqrt(_pixel_area.ravel())
+        pixel_length_km_stats = np.array([
+            np.nanmean(_pixel_lengths),
+            np.nanmedian(_pixel_lengths),
+            np.nanmin(_pixel_lengths),
+            np.nanmax(_pixel_lengths),
+        ])
+    else:
+        _pl = np.sqrt(float(_pixel_area))
+        pixel_length_km_stats = np.array([_pl, _pl, _pl, _pl])
+
     # Define global attributes
     gattrlist = {
         "Title": 'Statistics of each track',
@@ -691,6 +725,8 @@ def write_trackstats_dense(config, fillval, fillval_f,
         "timegap_hour": config["timegap"],
         "time_resolution_hour": config["datatimeresolution"],
         "pixel_radius_km": config["pixel_radius"],
+        "pixel_length_km_stats": pixel_length_km_stats,
+        "pixel_length_km_stats_description": "Pixel length [mean, median, min, max] in km",
     }
     # Define output Xarray dataset
     dsout = xr.Dataset(varlist, coords=coordlist, attrs=gattrlist)
@@ -698,6 +734,9 @@ def write_trackstats_dense(config, fillval, fillval_f,
     comp = dict(zlib=True)
     encoding = {var: comp for var in dsout.data_vars}
     # Write to netcdf file
+    # Touch output file so HDF5 1.14.x H5Fis_accessible() probe does not
+    # fail with ENOENT and emit spurious diagnostics to stderr
+    open(trackstats_outfile, 'ab').close()
     dsout.to_netcdf(path=trackstats_outfile,
                     mode='w',
                     format='NETCDF4',

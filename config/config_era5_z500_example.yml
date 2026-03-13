@@ -44,6 +44,7 @@ feature_type: 'generic'
 # Specify data structure
 datatimeresolution: 24.0     # hours
 pixel_radius: 200.0      # km
+area_method: 'latlon'  # 'fixed' (default) or 'latlon' for latitude-dependent grid cell area
 time_dimname: 'time'
 x_dimname: 'lon'
 y_dimname: 'lat'

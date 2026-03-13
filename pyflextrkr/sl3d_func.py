@@ -3,6 +3,7 @@ import math
 from scipy import ndimage
 import warnings
 from pyflextrkr.echotop_func import echotop_height
+from pyflextrkr.ft_utilities import get_pixel_area, get_mean_pixel_length
 
 def run_sl3d(ds, config):
     """
@@ -241,9 +242,10 @@ def gridrad_sl3d(data, config, **kwargs):
     # Estimate the number of grid points based on radar data source
     if (radardatasource == 'wrf'):
         # WRF has fixed grid spacing
-        # Simply divide background_Box [km] by pixel_radius to get number of grid points
-        pixel_radius = config.get('pixel_radius')
-        ngrids = int(background_Box / pixel_radius)
+        # Divide background_Box [km] by mean pixel length to get number of grid points
+        pixel_area = get_pixel_area(config)
+        pixel_length = get_mean_pixel_length(pixel_area)
+        ngrids = int(background_Box / pixel_length)
 
     if (radardatasource == 'gridrad'):
         # Get composite grid spacing (in degrees)

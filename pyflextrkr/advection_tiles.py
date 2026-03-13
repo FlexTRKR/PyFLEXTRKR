@@ -7,7 +7,7 @@ from skimage.registration import phase_cross_correlation
 from scipy import ndimage as ndi
 import logging
 import dask
-from pyflextrkr.ft_utilities import subset_files_timerange
+from pyflextrkr.ft_utilities import subset_files_timerange, get_pixel_area, get_mean_pixel_length
 
 
 def offset_to_speed(x, y, time_lag, dx, dy):
@@ -236,8 +236,9 @@ def calc_mean_advection(config):
 
     clouddata_path = config["tracking_outpath"]
     field_threshold = config["advection_field_threshold"]
-    dx = config["pixel_radius"]
-    dy = config["pixel_radius"]
+    pixel_area = get_pixel_area(config)
+    dx = get_mean_pixel_length(pixel_area)
+    dy = dx
     advection_tiles = config["advection_tiles"]
     advection_med_filt_len = config["advection_med_filt_len"]
     advection_max_movement_mps = config["advection_max_movement_mps"]

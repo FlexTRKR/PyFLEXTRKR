@@ -249,9 +249,15 @@ def plot_map(pixel_dict, plot_info, map_info, track_dict):
     marker_style = dict(edgecolor=trackpath_color, facecolor=trackpath_color, linestyle='-', marker='o')
 
     # Set up map projection
+    # Normalize map_extent longitudes to [-180, 180] (handles 0-360 input)
+    _lon0 = map_extent[0] if map_extent[0] <= 180 else map_extent[0] - 360
+    _lon1 = map_extent[1] if map_extent[1] <= 180 else map_extent[1] - 360
+    # If the range wraps the antimeridian after normalization, treat as global
+    if _lon0 > _lon1:
+        _lon0, _lon1 = -180, 180
     # If longitude extent spans across 0 degree longitude, set central_longitude=0
     # otherwise, set it to 180
-    if ((map_extent[0] < 0) & (map_extent[1] > 0)):
+    if (_lon0 < 0) & (_lon1 > 0):
         central_longitude = 0
     else:
         central_longitude = 180
@@ -270,7 +276,11 @@ def plot_map(pixel_dict, plot_info, map_info, track_dict):
     ax1 = plt.subplot(gs[0], projection=proj)
     cax1 = plt.subplot(gs[1])
     # Plot background map elements
-    ax1.set_extent(map_extent, crs=data_proj)
+    # Use set_global() for global domains to avoid projection boundary NaN issues
+    if _lon0 == -180 and _lon1 == 180:
+        ax1.set_global()
+    else:
+        ax1.set_extent([_lon0, _lon1, map_extent[2], map_extent[3]], crs=data_proj)
     ax1.set_aspect('auto', adjustable=None)
     ax1.add_feature(land, facecolor='none', edgecolor=map_edgecolor, zorder=3)
     if draw_border == True:

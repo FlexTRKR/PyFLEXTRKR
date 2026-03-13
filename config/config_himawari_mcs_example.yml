@@ -48,6 +48,7 @@ landmask_y_coordname: 'lat'
 
 # Specific to GPM Tb+IMERG combined dataset
 pixel_radius:  5.0  # [km] Spatial resolution of the input data
+area_method: 'latlon'  # 'fixed' (default) or 'latlon' for latitude-dependent grid cell area
 datatimeresolution: 1.0  # [hour] Temporal resolution of the input data
 # Variable names in the input data
 tb_varname:  'tbb_11'

@@ -1,6 +1,7 @@
 import time
 import numpy as np
 import xarray as xr
+from pyflextrkr.ft_utilities import get_pixel_area
 
 
 def write_trackstats_tb(
@@ -150,6 +151,11 @@ def write_trackstats_tb(
         "tb_coldanvil": thresh_cold,
         "pixel_radius_km": pixel_radius,
     }
+    # Add pixel_length_km_stats if pixel_radius is from a config dict
+    # (deprecated function, keep simple - just use pixel_radius as scalar stats)
+    _pl = float(pixel_radius)
+    gattrlist["pixel_length_km_stats"] = np.array([_pl, _pl, _pl, _pl])
+    gattrlist["pixel_length_km_stats_description"] = "Pixel length [mean, median, min, max] in km"
 
     # Define xarray dataset
     output_data = xr.Dataset(varlist, coords=coordlist, attrs=gattrlist)
@@ -646,6 +652,10 @@ def write_trackstats_radar(
         "time_resolution_hour": datatimeresolution,
         "pixel_radius_km": pixel_radius,
     }
+    # Add pixel_length_km_stats
+    _pl = float(pixel_radius)
+    gattrlist["pixel_length_km_stats"] = np.array([_pl, _pl, _pl, _pl])
+    gattrlist["pixel_length_km_stats_description"] = "Pixel length [mean, median, min, max] in km"
 
     # Define xarray dataset
     output_data = xr.Dataset(varlist, coords=coordlist, attrs=gattrlist)

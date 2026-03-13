@@ -1,12 +1,13 @@
 # PyFLEXTRKR Automated Tests
 
 This directory contains automated tests for PyFLEXTRKR.  
-Tests are written with [pytest](https://docs.pytest.org/) and are split into two tiers:
+Tests are written with [pytest](https://docs.pytest.org/) and are split into three tiers:
 
 | Tier | Files | Runs on | Needs data? |
 |------|-------|---------|-------------|
-| Unit / synthetic | `test_steiner_func.py`, `test_echotop_func.py`, `test_vertical_coordinate.py`, `test_idcells_synthetic.py`, `test_example.py` | GitHub CI + local | No |
+| Unit / synthetic | `test_steiner_func.py`, `test_echotop_func.py`, `test_vertical_coordinate.py`, `test_idcells_synthetic.py`, `test_area_method_utils.py`, `test_area_method_clouds.py`, `test_example.py` | GitHub CI + local | No |
 | Local regression | `test_regression_local.py` | Local / HPC only | Yes (demo outputs) |
+| End-to-end demos | `run_demo_tests.py` | Local / HPC only | Auto-downloads |
 
 ---
 
@@ -109,6 +110,20 @@ temporary directory, then runs the full cell-identification pipeline:
 Verifies that the known convective cell in the synthetic data is detected correctly.
 No real data needed.
 
+### `test_area_method_utils.py`
+Unit tests for the `area_method: 'latlon'` utility functions: `compute_grid_area`,
+`save_grid_area`, `load_grid_area`, `get_pixel_area`, and `precompute_grid_area`.
+Also tests `sort_renumber2vars` with a 2D `grid_area` array to verify that
+feature areas are computed correctly with variable-size pixels.
+Uses synthetic lat/lon grids and temporary files — no real data needed.
+
+### `test_area_method_clouds.py`
+Unit tests for `label_and_grow_cold_clouds` with 2D `pixel_area` (grid area)
+support. Verifies that cloud labelling, area thresholding, and feature
+renumbering work correctly when pixel areas vary across the domain (as they
+do for latitude-dependent grids). Tests both the fixed (scalar) and
+latlon (2D array) modes to ensure backward compatibility.
+
 ### `test_regression_local.py`
 Validates the output of full demo runs (e.g., `demo_cell_nexrad.sh`).
 These tests check that track statistics files contain reasonable values
@@ -138,6 +153,91 @@ python -m pytest tests/ -v
 export PYFLEXTRKR_TEST_DATA=/pscratch/sd/f/feng045/demo
 python -m pytest tests/ -v
 ```
+
+---
+
+## End-to-end demo tests (`run_demo_tests.py`)
+
+The demo test runner automates the full workflow: download sample data →
+run tracking → validate outputs. It replaces the manual process of editing
+`dir_demo` in shell scripts and visually inspecting results.
+
+### List available demos
+```bash
+python tests/run_demo_tests.py --list
+```
+
+### Run specific demos
+```bash
+# Run two demos with 4 workers
+python tests/run_demo_tests.py --demos demo_mcs_imerg demo_cell_nexrad -n 4
+
+# Run all portable demos with 8 workers
+python tests/run_demo_tests.py --all -n 8
+```
+
+### Validate outputs without re-running
+```bash
+python tests/run_demo_tests.py --demos demo_mcs_imerg --validate-only
+```
+
+### Custom data root directory
+```bash
+python tests/run_demo_tests.py --demos demo_mcs_imerg --data-root /tmp/demo -n 4
+```
+
+### Include plotting and animation
+```bash
+python tests/run_demo_tests.py --demos demo_mcs_imerg --with-plots -n 4
+```
+
+### Force re-download and backup existing data
+```bash
+python tests/run_demo_tests.py --demos demo_mcs_imerg --fresh --backup -n 4
+```
+
+### Available demos
+
+| Demo name | Type | Description |
+|-----------|------|-------------|
+| `demo_mcs_imerg` | MCS Tb+PF | GPM IMERG Tb+Precipitation |
+| `demo_mcs_wrf_tbpf` | MCS Tb+PF | WRF Tb+Precipitation |
+| `demo_mcs_model25km` | MCS Tb+PF | E3SM OLR+Precipitation (25 km) |
+| `demo_mcs_tbpf_idealized` | MCS Tb+PF | Idealized Tb+Precipitation |
+| `demo_mcs_wrf_tbradar` | MCS Tb+Radar | WRF Tb+Radar (3D) |
+| `demo_mcs_gridrad` | MCS Tb+Radar | GridRad Tb+Radar |
+| `demo_mcs_himawari` | MCS Tb-only | Himawari Tb-only |
+| `demo_cell_nexrad` | Cell | NEXRAD radar (KHGX) |
+| `demo_cell_csapr` | Cell | CACTI CSAPR2 radar |
+| `demo_generic_tracking` | Generic | ERA5 Z500 anomaly |
+
+### What the runner does (for each demo)
+
+1. **Clean** — Removes previous output directories (stats, tracking, pixel files).
+   Input data is preserved unless `--fresh` is specified.
+   Use `--backup` to move outputs to `*.bak/` instead of deleting.
+2. **Download** — Downloads sample data via `wget` (skipped if input already exists).
+3. **Configure** — Generates a config YAML from the template, overriding
+   `nprocesses` with the value from `-n`.
+4. **Track** — Runs the Python tracking pipeline.
+5. **Plot** (optional) — Runs quicklook plotting and `ffmpeg` animation (with `--with-plots`).
+6. **Validate** — Checks that:
+   - Stats file exists with ≥ 1 track
+   - Lat/lon values fall within expected geographic range
+   - Track durations are non-negative
+   - Pixel-level tracking files exist with `tracknumber` variable
+   - (If `--with-plots`) Quicklook PNGs and animation file exist
+
+### Linking to pytest regression tests
+
+After running demos, you can also run the pytest-based regression tests:
+```bash
+export PYFLEXTRKR_TEST_DATA=~/data/demo
+python -m pytest tests/test_regression_local.py -v
+```
+
+The regression test classes (`TestMcsImergDemo`, `TestCellNexradDemo`, etc.)
+provide finer-grained assertions on the same output files.
 
 If any test fails after your changes, the output will show exactly which assertion
 failed and what values were produced vs. expected, making it easy to diagnose

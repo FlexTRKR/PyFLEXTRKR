@@ -47,6 +47,7 @@ landmask_varname: 'landseamask'
 
 # Specific to GPM Tb+IMERG combined dataset
 pixel_radius:  10.0  # [km] Spatial resolution of the input data
+area_method: 'latlon'  # 'fixed' (default) or 'latlon' for latitude-dependent grid cell area
 datatimeresolution: 1.0  # [hour] Temporal resolution of the input data
 # Variable names in the input data
 tb_varname: 'Tb'
@@ -119,7 +120,7 @@ nmaxcore: 20  # Maximum number of convective cores that can be within a cloud fe
 pcp_thresh:  1.0  # Pixels with hourly precipitation larger than this will be labeled with track number
 heavy_rainrate_thresh:  10.0  # [mm/hr] Heavy rain rate threshold
 mcs_min_rainvol_thresh: 20000   #  [km^2 mm/h] Min rain volumne threshold
-mcs_volrain_durationthresh: 1.0   # [hour] Min volume rain threshold
+mcs_volrain_duration_thresh: 1.0   # [hour] Min volume rain threshold
 
 # MCS PF parameter coefficients [intercept, slope]
 # These parameters are derived with pf_rr_thres:  2 mm/h

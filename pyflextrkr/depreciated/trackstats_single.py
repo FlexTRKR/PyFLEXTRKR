@@ -18,6 +18,7 @@ def calc_stats_single(
     trackmerge,
     tracksplit,
     trackreset,
+    config=None,
 ):
 
     import numpy as np
@@ -32,9 +33,24 @@ def calc_stats_single(
     import xarray as xr
     import pandas as pd
     import logging
+    from pyflextrkr.ft_utilities import get_pixel_area, get_mean_pixel_length
 
     file_tracknumbers = tracknumbers
     logger = logging.getLogger(__name__)
+
+    # Determine area method
+    if config is not None:
+        area_method = config.get("area_method", "fixed")
+        if area_method == "latlon":
+            pixel_area = get_pixel_area(config)
+            mean_pixelength = get_mean_pixel_length(pixel_area)
+        else:
+            pixel_area = None
+            mean_pixelength = None
+    else:
+        area_method = "fixed"
+        pixel_area = None
+        mean_pixelength = None
 
     # Only process file if that file contains a track
     if np.nanmax(file_tracknumbers) <= 0:
@@ -322,14 +338,18 @@ def calc_stats_single(
                 finaltrack_corecold_eccentricity[itrack] = cloudproperties[
                     0
                 ].eccentricity
+                if area_method == "latlon":
+                    _pixel_length = mean_pixelength
+                else:
+                    _pixel_length = pixel_radius
                 finaltrack_corecold_majoraxis[itrack] = (
-                    cloudproperties[0].major_axis_length * pixel_radius
+                    cloudproperties[0].major_axis_length * _pixel_length
                 )
                 finaltrack_corecold_orientation[itrack] = (
                     cloudproperties[0].orientation
                 ) * (180 / float(pi))
                 finaltrack_corecold_perimeter[itrack] = (
-                    cloudproperties[0].perimeter * pixel_radius
+                    cloudproperties[0].perimeter * _pixel_length
                 )
                 [temp_ycenter, temp_xcenter] = cloudproperties[0].centroid
                 [
@@ -351,18 +371,27 @@ def calc_stats_single(
                     int
                 )
 
-                # Determine equivalent radius of core+cold. Assuming circular area = (number pixels)*(pixel radius)^2, equivalent radius = sqrt(Area / pi)
+                # Determine equivalent radius of core+cold. Assuming circular area, equivalent radius = sqrt(Area / pi)
+                if area_method == "latlon":
+                    corecold_area_km2 = np.nansum(pixel_area[corecoldarea[0], corecoldarea[1]])
+                else:
+                    corecold_area_km2 = ncorecoldpix * (np.square(pixel_radius))
                 finaltrack_corecold_radius[itrack] = np.sqrt(
-                    np.divide(ncorecoldpix * (np.square(pixel_radius)), pi)
+                    np.divide(corecold_area_km2, pi)
                 )
 
-                # Determine equivalent radius of core+cold+warm. Assuming circular area = (number pixels)*(pixel radius)^2, equivalent radius = sqrt(Area / pi)
-                finaltrack_corecoldwarm_radius[itrack] = np.sqrt(
-                    np.divide(
+                # Determine equivalent radius of core+cold+warm. Assuming circular area, equivalent radius = sqrt(Area / pi)
+                if area_method == "latlon":
+                    # Warm pixel indices not readily available, use mean pixel area
+                    warm_area_km2 = nwarmpix_m[itrack] * np.nanmean(pixel_area) if nwarmpix_m[itrack] > 0 else 0
+                    corecoldwarm_area_km2 = corecold_area_km2 + warm_area_km2
+                else:
+                    corecoldwarm_area_km2 = (
                         (ncorepix_m[itrack] + ncoldpix_m[itrack] + nwarmpix_m[itrack])
-                        * (np.square(pixel_radius)),
-                        pi,
+                        * (np.square(pixel_radius))
                     )
+                finaltrack_corecoldwarm_radius[itrack] = np.sqrt(
+                    np.divide(corecoldwarm_area_km2, pi)
                 )
 
                 ##############################################################

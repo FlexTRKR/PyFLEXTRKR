@@ -37,7 +37,6 @@ def define_robust_mcs_radar(config):
     tracks_dimname = config["tracks_dimname"]
     times_dimname = config["times_dimname"]
     pf_dimname = config["pf_dimname"]
-    pixel_radius = config["pixel_radius"]
 
     # Output stats file name
     statistics_outfile = f"{stats_path}{mcsrobust_filebase}{startdate}_{enddate}.nc"
@@ -50,8 +49,8 @@ def define_robust_mcs_radar(config):
     ds_pf = xr.open_dataset(mcspfstats_file,
                             mask_and_scale=False,
                             decode_times=False,)
-    ntracks = ds_pf.dims[tracks_dimname]
-    ntimes = ds_pf.dims[times_dimname]
+    ntracks = ds_pf.sizes[tracks_dimname]
+    ntimes = ds_pf.sizes[times_dimname]
 
     ir_trackduration = ds_pf["track_duration"].data
     pf_area = ds_pf["pf_area"].data

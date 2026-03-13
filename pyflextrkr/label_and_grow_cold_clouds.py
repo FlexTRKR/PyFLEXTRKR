@@ -13,7 +13,8 @@ def label_and_grow_cold_clouds(
     mincoldcorepix,
     smoothsize,
     warmanvilexpansion,
-    config
+    config,
+    pixel_area=None,
 ):
     """
     Label and growth cold clouds using infrared Tb.
@@ -26,13 +27,18 @@ def label_and_grow_cold_clouds(
         tb_threshs: np.ndarray()
             Infrared Tb thresholds.
         area_thresh: float
-            Minimum area to define a cloud.
+            Minimum area to define a cloud [km^2].
         mincoldcorepix: int
             Minimum number of pixels to define a cold core.
         smoothsize: int
             Window size to smooth Tb data using Box2DKernel.
         warmanvilexpansion: int
             Flag to expand cloud to include warm anvil.
+        config: dict
+            Dictionary containing config parameters.
+        pixel_area: float or np.ndarray, optional
+            Scalar pixel_radius^2 or 2D grid_area array (ny, nx) in km^2.
+            When 2D, area-based thresholds use actual grid cell areas.
 
     Returns:
         Dictionary: 
@@ -53,11 +59,20 @@ def label_and_grow_cold_clouds(
     # Determine dimensions
     ny, nx = np.shape(ir)
 
-    # Calculate area of one pixel. Assumed to be a circle.
-    pixel_area = pixel_radius ** 2
+    # Set pixel_area if not provided (backward compatible)
+    if pixel_area is None:
+        pixel_area = pixel_radius ** 2
+
+    # Check if pixel_area is a 2D array (latlon mode)
+    use_grid_area = isinstance(pixel_area, np.ndarray) and pixel_area.ndim == 2
 
     # Calculate minimum number of pixels based on area threshold
-    nthresh = area_thresh / pixel_area
+    # When using grid_area, nthresh is area_thresh (km^2) for sort_renumber with grid_area
+    # When using fixed pixel area, nthresh is number of pixels
+    if use_grid_area:
+        nthresh = area_thresh
+    else:
+        nthresh = area_thresh / pixel_area
 
     ######################################################################
     # Use thresholds identify pixels containing cold core, cold anvil, and warm anvil.
@@ -85,6 +100,9 @@ def label_and_grow_cold_clouds(
         core_flag, _, _ = pad_and_extend(core_flag, config)
         coldanvil_flag, _, _ = pad_and_extend(coldanvil_flag, config)
         final_cloudid, _, _ = pad_and_extend(final_cloudid, config)
+        # Extend pixel_area if it's 2D
+        if use_grid_area:
+            pixel_area, _, _ = pad_and_extend(pixel_area, config)
 
         # Update dimensions after padding
         ny, nx = ir.shape
@@ -166,7 +184,14 @@ def label_and_grow_cold_clouds(
 
         labelisolated_number2d, nlabelisolated = label(isolated_flag)
         # Sort isolated cold cores/anvils by size and remove small ones
-        sortedisolated_number2d, sortedisolated_npix = sort_renumber(labelisolated_number2d, nthresh)
+        if use_grid_area:
+            sortedisolated_number2d, sortedisolated_npix = sort_renumber(
+                labelisolated_number2d, nthresh, grid_area=pixel_area,
+            )
+        else:
+            sortedisolated_number2d, sortedisolated_npix = sort_renumber(
+                labelisolated_number2d, nthresh,
+            )
 
 
         ##############################################################
@@ -260,7 +285,14 @@ def label_and_grow_cold_clouds(
                     temp_cold = np.copy(coldanvil_flag[feature_indices])
                     temp_coldnpix = np.nansum(temp_cold)
 
-                    if temp_corenpix + temp_coldnpix >= nthresh:
+                    # Check if feature exceeds area threshold
+                    if use_grid_area:
+                        # Sum actual grid cell areas for the feature
+                        feature_area = np.sum(pixel_area[feature_indices])
+                        passes_thresh = feature_area >= area_thresh
+                    else:
+                        passes_thresh = temp_corenpix + temp_coldnpix >= nthresh
+                    if passes_thresh:
                         featurecount = featurecount + 1
 
                         labelcorecold_number2d[feature_indices] = np.copy(featurecount)

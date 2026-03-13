@@ -4,6 +4,7 @@ from collections import deque
 from skimage.segmentation import watershed
 from skimage.feature import peak_local_max
 from scipy.ndimage import label
+from pyflextrkr.ft_utilities import get_pixel_area, get_mean_pixel_length
 
 def sort_renumber(
     labelcell_number2d,
@@ -117,6 +118,7 @@ def sort_renumber2vars(
     labelcell_number2d,
     labelcell2_number2d,
     min_cellpix,
+    grid_area=None,
 ):
     """
     Sorts 2D labeled cells by size, and removes cells smaller than min_cellpix.
@@ -128,7 +130,12 @@ def sort_renumber2vars(
         labelcell2_number2d: np.ndarray()
             Labeled cell number array2 in 2D.
         min_cellpix: float
-            Minimum number of pixel to count as a cell.
+            Minimum number of pixels to count as a cell.
+            When grid_area is provided, this is the minimum area threshold
+            (in the same units as grid_area, e.g., km^2).
+        grid_area: np.ndarray, optional
+            2D array of grid cell areas (e.g., km^2). When provided,
+            min_cellpix is treated as an area threshold instead of pixel count.
 
     Returns:
         sortedlabelcell_number2d: np.ndarray(int)
@@ -154,9 +161,17 @@ def sort_renumber2vars(
         for ilabelcell in range(1, nlabelcells + 1):
             # Count number of pixels for the cell
             ilabelcell_npix = np.count_nonzero(labelcell_number2d == ilabelcell)
-            # Check if cell satisfies size threshold
-            if ilabelcell_npix > min_cellpix:
-                labelcell_npix[ilabelcell - 1] = ilabelcell_npix
+            # Check if grid_area is supplied
+            if grid_area is None:
+                # Check if cell satisfies size threshold
+                if ilabelcell_npix > min_cellpix:
+                    labelcell_npix[ilabelcell - 1] = ilabelcell_npix
+            else:
+                # If grid_area is supplied, sum grid area for the cell
+                ilabelcell_area = np.sum(grid_area[labelcell_number2d == ilabelcell])
+                # If cell area > min size threshold
+                if ilabelcell_area > min_cellpix:
+                    labelcell_npix[ilabelcell - 1] = ilabelcell_npix
 
         # # This faster approach does not work
         # # Because when labelcell_number2d is not sequentially numbered (e.g., when some cells are removed)
@@ -608,13 +623,14 @@ def adjust_axis(segments, axis, original_shape, ext_frac, config):
 
     """
     logger = logging.getLogger(__name__)
-    pixel_radius = config.get('pixel_radius')
+    pixel_area = get_pixel_area(config)
+    pixel_length = get_mean_pixel_length(pixel_area)
     area_thresh = config.get('area_thresh')
     # Calculate feature width threshold (in pixels) proportional to minimum area of objects defined in config
     # If there are objects with width > width_thresh, the algorithm will keep searching to refine the position to crop
     # until it reaches the edge of the extended domain.
     size_factor = 3     # adjustable multiplier factor
-    width_thresh = size_factor * int(2 * np.sqrt(area_thresh / np.pi) / pixel_radius)
+    width_thresh = size_factor * int(2 * np.sqrt(area_thresh / np.pi) / pixel_length)
     ext_size = calc_extension(original_shape[axis], ext_frac)
     adjusted = False
     label_positions_cache = cache_label_positions(segments)

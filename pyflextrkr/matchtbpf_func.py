@@ -9,7 +9,7 @@ from skimage.measure import regionprops
 from math import pi
 from scipy.stats import skew
 from pyflextrkr.ftfunctions import sort_renumber
-from pyflextrkr.ft_utilities import subset_ds_geolimit
+from pyflextrkr.ft_utilities import subset_ds_geolimit, get_pixel_area
 from pyflextrkr.ftfunctions import circular_mean, get_cloud_boundary, find_max_indices_to_roll, subset_roll_map
 
 def matchtbpf_singlefile(
@@ -47,6 +47,7 @@ def matchtbpf_singlefile(
     pf_link_area_thresh = config["pf_link_area_thresh"]
     heavy_rainrate_thresh = config["heavy_rainrate_thresh"]
     pixel_radius = config["pixel_radius"]
+    area_method = config.get("area_method", "fixed")
     nmaxpf = config["nmaxpf"]
     # pfdatasource = config["pfdatasource"]
     landmask_filename = config.get("landmask_filename", "")
@@ -110,12 +111,20 @@ def matchtbpf_singlefile(
         nmatchcloud = len(ir_cloudnumber)
 
         if nmatchcloud > 0:
+            # Load pixel area once for latlon grids
+            if area_method == "latlon":
+                _pixel_area = get_pixel_area(config)
+            else:
+                _pixel_area = None
+
             # Define a list of 2D variables [tracks, times]
             var_names_2d = [
                 "pf_npf",
                 "pf_landfrac",
                 "total_rain",
                 "total_heavyrain",
+                "total_volrain",
+                "total_heavyvolrain",
                 "rainrate_heavyrain",
                 "rainrate_p95",
             ]
@@ -124,6 +133,8 @@ def matchtbpf_singlefile(
             pf_landfrac = np.full(nmatchcloud, fillval_f, dtype=float)
             total_rain = np.full(nmatchcloud, fillval_f, dtype=float)
             total_heavyrain = np.full(nmatchcloud, fillval_f, dtype=float)
+            total_volrain = np.full(nmatchcloud, fillval_f, dtype=float)
+            total_heavyvolrain = np.full(nmatchcloud, fillval_f, dtype=float)
             rainrate_heavyrain = np.full(nmatchcloud, fillval_f, dtype=float)
             rainrate_p95 = np.full(nmatchcloud, fillval_f, dtype=float)
             pf_lon = np.full((nmatchcloud, nmaxpf), fillval_f, dtype=float)
@@ -249,11 +260,33 @@ def matchtbpf_singlefile(
 
                     # Calculate total rainfall within the cold cloud shield
                     total_rain[imatchcloud] = np.nansum(sub_rainrate_map)
+                    # Calculate volumetric rain (rain rate * pixel area)
+                    if _pixel_area is not None:
+                        sub_pa = _pixel_area[miny:maxy, minx:maxx]
+                        if roll_flag:
+                            sub_pa = subset_roll_map(
+                                sub_pa, shift_x_right, shift_y_top, xdim, ydim,
+                            )
+                        total_volrain[imatchcloud] = np.nansum(
+                            sub_rainrate_map * sub_pa
+                        )
+                    else:
+                        total_volrain[imatchcloud] = (
+                            total_rain[imatchcloud] * pixel_radius**2
+                        )
                     idx_heavyrain = np.where(sub_rainrate_map > heavy_rainrate_thresh)
                     if len(idx_heavyrain[0]) > 0:
                         total_heavyrain[imatchcloud] = np.nansum(
                             sub_rainrate_map[idx_heavyrain]
                         )
+                        if _pixel_area is not None:
+                            total_heavyvolrain[imatchcloud] = np.nansum(
+                                sub_rainrate_map[idx_heavyrain] * sub_pa[idx_heavyrain]
+                            )
+                        else:
+                            total_heavyvolrain[imatchcloud] = (
+                                total_heavyrain[imatchcloud] * pixel_radius**2
+                            )
                         rainrate_heavyrain[imatchcloud] = np.nanmean(
                             sub_rainrate_map[idx_heavyrain]
                         )
@@ -269,9 +302,7 @@ def matchtbpf_singlefile(
                     if nrainpix == 0:
                         rainrate_p95[imatchcloud] = np.nan 
                     else:
-                    #  print (nrainpix)
                         rainrate_p95[imatchcloud] = np.nanquantile(sub_rainrate_map[ipfy, ipfx], 0.95)
-                    #  print (np.quantile(sub_rainrate_map[ipfy, ipfx], 0.95))
                     
                     if nrainpix > 0:
 
@@ -303,7 +334,14 @@ def matchtbpf_singlefile(
                         pfnumberlabelmap, numpf = label(binarypfmap)
 
                         # Sort numpf then calculate stats
-                        min_npix = np.ceil(pf_link_area_thresh / (pixel_radius ** 2)).astype(int)
+                        if area_method == "latlon":
+                            sub_pixel_area = _pixel_area[miny:maxy, minx:maxx]
+                            mean_pixelength = np.sqrt(np.nanmean(_pixel_area))
+                            min_npix = np.ceil(pf_link_area_thresh / np.nanmean(sub_pixel_area)).astype(int)
+                        else:
+                            sub_pixel_area = None
+                            mean_pixelength = pixel_radius
+                            min_npix = np.ceil(pf_link_area_thresh / (pixel_radius ** 2)).astype(int)
 
                         # Sort and renumber PFs, and remove small PFs
                         pf_number, pf_npix = sort_renumber(pfnumberlabelmap, min_npix)
@@ -329,6 +367,8 @@ def matchtbpf_singlefile(
                                     lon_roll=lon_roll, lat_roll=lat_roll,
                                     lon_min=lon_min, lon_max=lon_max,
                                     lat_min=lat_min, lat_max=lat_max,
+                                    sub_pixel_area=sub_pixel_area,
+                                    mean_pixelength=mean_pixelength,
                                 )
 
                             # Save precipitation feature statisitcs
@@ -339,7 +379,7 @@ def matchtbpf_singlefile(
                             pf_lat[imatchcloud, 0:npf_save] = \
                                 pf_stats_dict["pflat"][0:npf_save]
                             pf_area[imatchcloud, 0:npf_save] = \
-                                pf_stats_dict["pfnpix"][0:npf_save] * pixel_radius**2
+                                pf_stats_dict["pfarea"][0:npf_save]
                             pf_rainrate[imatchcloud, 0:npf_save] = \
                                 pf_stats_dict["pfrainrate"][0:npf_save]
                             pf_maxrainrate[imatchcloud, 0:npf_save] = \
@@ -401,6 +441,8 @@ def matchtbpf_singlefile(
                 "pf_landfrac": pf_landfrac,
                 "total_rain": total_rain,
                 "total_heavyrain": total_heavyrain,
+                "total_volrain": total_volrain,
+                "total_heavyvolrain": total_heavyvolrain,
                 "rainrate_heavyrain": rainrate_heavyrain,
                 "rainrate_p95":rainrate_p95,
             }
@@ -518,6 +560,17 @@ def matchtbpf_singlefile(
                     "_FillValue": fillval_f,
                     "heavy_rainrate_threshold": heavy_rainrate_thresh,
                 },
+                "total_volrain": {
+                    "long_name": "Total volumetric precipitation under cold cloud shield",
+                    "units": "mm/h km^2",
+                    "_FillValue": fillval_f,
+                },
+                "total_heavyvolrain": {
+                    "long_name": "Total heavy volumetric precipitation under cold cloud shield",
+                    "units": "mm/h km^2",
+                    "_FillValue": fillval_f,
+                    "heavy_rainrate_threshold": heavy_rainrate_thresh,
+                },
                 "rainrate_heavyrain": {
                     "long_name": "Mean heavy rain rate under cold cloud shield",
                     "units": "mm/h",
@@ -559,6 +612,7 @@ def calc_pf_stats(
         pfnumberlabelmap, pixel_radius, subdimx, subdimy, sub_rainrate_map,
         roll_flag=False, lon_roll=None, lat_roll=None,
         lon_min=None, lon_max=None, lat_min=None, lat_max=None,
+        sub_pixel_area=None, mean_pixelength=None,
 ):
     """
     Calculate individual PF statistics.
@@ -617,6 +671,7 @@ def calc_pf_stats(
     # Initialize arrays
     npf_save = np.nanmin([nmaxpf, numpf])
     pfnpix = np.zeros(npf_save, dtype=float)
+    pfarea = np.full(npf_save, fillval_f, dtype=float)
     pfid = np.full(npf_save, fillval, dtype=int)
     pflon = np.full(npf_save, fillval_f, dtype=float)
     pflat = np.full(npf_save, fillval_f, dtype=float)
@@ -677,6 +732,11 @@ def calc_pf_stats(
 
             # Basic statistics
             pfnpix[ipf - 1] = np.copy(iipfnpix)
+            # Compute PF area
+            if sub_pixel_area is not None:
+                pfarea[ipf - 1] = np.nansum(sub_pixel_area[iipfy, iipfx])
+            else:
+                pfarea[ipf - 1] = iipfnpix * pixel_radius ** 2
             pfid[ipf - 1] = np.copy(int(ipf))
             if roll_flag:
                 # Remove NaN values from the rolled lon/lat arrays
@@ -710,16 +770,17 @@ def calc_pf_stats(
                 intensity_image=_sub_rainrate_map,
             )
             pfeccentricity[ipf - 1] = pfproperties[0].eccentricity
+            _pixel_length = mean_pixelength if mean_pixelength is not None else pixel_radius
             pfmajoraxis[ipf - 1] = (
-                    pfproperties[0].major_axis_length * pixel_radius
+                    pfproperties[0].axis_major_length * _pixel_length
             )
 
             # Need to treat minor axis length with an error except
             # since the python algorithm occasionally throws an error.
             try:
                 pfminoraxis[ipf - 1] = (
-                        pfproperties[0].minor_axis_length
-                        * pixel_radius
+                        pfproperties[0].axis_minor_length
+                        * _pixel_length
                 )
             except ValueError:
                 pass
@@ -732,7 +793,7 @@ def calc_pf_stats(
                                          pfproperties[0].orientation
                                      ) * (180 / float(pi))
             pfperimeter[ipf - 1] = (
-                    pfproperties[0].perimeter * pixel_radius
+                    pfproperties[0].perimeter * _pixel_length
             )
             [
                 ycentroid,
@@ -741,7 +802,7 @@ def calc_pf_stats(
             [
                 yweightedcentroid,
                 xweightedcentroid,
-            ] = pfproperties[0].weighted_centroid
+            ] = pfproperties[0].centroid_weighted
 
             # Shift the centroids by minx/miny
             # since the PF is a subset from the full image
@@ -774,6 +835,7 @@ def calc_pf_stats(
         "pfaccumrain": pfaccumrain,
         "pfaccumrainheavy": pfaccumrainheavy,
         "pfaspectratio": pfaspectratio,
+        "pfarea": pfarea,
         "pfeccentricity": pfeccentricity,
         "pflat": pflat,
         "pflon": pflon,

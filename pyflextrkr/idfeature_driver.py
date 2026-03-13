@@ -5,7 +5,7 @@ import xarray as xr
 import pandas as pd
 import dask
 from dask.distributed import wait
-from pyflextrkr.ft_utilities import subset_files_timerange, convert_to_cftime
+from pyflextrkr.ft_utilities import subset_files_timerange, convert_to_cftime, precompute_grid_area
 
 def idfeature_driver(config):
     """
@@ -114,6 +114,9 @@ def idfeature_driver(config):
         nfiles = ds.sizes['time']
         logger.info(f"Total number of time steps to process: {nfiles}")
 
+        # Pre-compute grid area file if area_method is 'latlon'
+        precompute_grid_area(config)
+
         # Serial
         if run_parallel == 0:
             for ifile in range(0, nfiles):
@@ -147,6 +150,9 @@ def idfeature_driver(config):
         rawdatafiles = infiles_info[0]
         nfiles = len(rawdatafiles)
         logger.info(f"Total number of files to process: {nfiles}")
+
+        # Pre-compute grid area file if area_method is 'latlon'
+        precompute_grid_area(config, first_file=rawdatafiles[0])
 
         # Serial
         if run_parallel == 0:
