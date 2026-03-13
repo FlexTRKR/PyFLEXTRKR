@@ -46,6 +46,7 @@ landmask_varname: 'LANDMASK'
 
 # Input dataset structure
 pixel_radius:  25.0  # [km] Spatial resolution of the input data
+area_method: 'latlon'  # 'fixed' (default) or 'latlon' for latitude-dependent grid cell area
 datatimeresolution: 1.0  # [hour] Temporal resolution of the input data
 # Variable names in the input dat
 olr2tb: True

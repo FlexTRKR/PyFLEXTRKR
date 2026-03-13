@@ -1119,6 +1119,10 @@ def precompute_grid_area(config, first_file=None):
     input_format = config.get("input_format", "netcdf")
     x_coordname = config.get("x_coordname", "lon")
     y_coordname = config.get("y_coordname", "lat")
+    # For radar data, lat/lon may be in separate variables (e.g., point_latitude)
+    # If lat_coordname/lon_coordname are defined, use those instead
+    lat_coordname = config.get("lat_coordname", None)
+    lon_coordname = config.get("lon_coordname", None)
     geolimits = config.get("geolimits", None)
 
     # Read lat/lon coordinates
@@ -1145,8 +1149,27 @@ def precompute_grid_area(config, first_file=None):
                 "to read lat/lon for grid area computation."
             )
         ds = xr.open_dataset(first_file, decode_timedelta=False)
-        lat = ds[y_coordname].values
-        lon = ds[x_coordname].values
+        # Use lat_coordname/lon_coordname if available (e.g., radar data
+        # where x_coordname/y_coordname are Cartesian meters)
+        _lat_name = lat_coordname if lat_coordname else y_coordname
+        _lon_name = lon_coordname if lon_coordname else x_coordname
+        da_lat = ds[_lat_name]
+        da_lon = ds[_lon_name]
+
+        # If lat/lon are 3D (e.g., radar point_latitude(z, y, x)),
+        # select the first level using dimension name from config
+        z_dimname = config.get("z_dimname", None)
+        y_dimname = config.get("y_dimname", "lat")
+        x_dimname = config.get("x_dimname", "lon")
+        if da_lat.ndim == 3 and z_dimname and z_dimname in da_lat.dims:
+            da_lat = da_lat.isel({z_dimname: 0})
+            da_lon = da_lon.isel({z_dimname: 0})
+        # Ensure (y, x) dimension order and convert to numpy
+        if da_lat.ndim == 2:
+            da_lat = da_lat.transpose(y_dimname, x_dimname)
+            da_lon = da_lon.transpose(y_dimname, x_dimname)
+        lat = da_lat.values
+        lon = da_lon.values
         ds.close()
 
     # Mesh 1D to 2D if needed

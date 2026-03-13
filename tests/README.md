@@ -5,7 +5,7 @@ Tests are written with [pytest](https://docs.pytest.org/) and are split into thr
 
 | Tier | Files | Runs on | Needs data? |
 |------|-------|---------|-------------|
-| Unit / synthetic | `test_steiner_func.py`, `test_echotop_func.py`, `test_vertical_coordinate.py`, `test_idcells_synthetic.py`, `test_example.py` | GitHub CI + local | No |
+| Unit / synthetic | `test_steiner_func.py`, `test_echotop_func.py`, `test_vertical_coordinate.py`, `test_idcells_synthetic.py`, `test_area_method_utils.py`, `test_area_method_clouds.py`, `test_example.py` | GitHub CI + local | No |
 | Local regression | `test_regression_local.py` | Local / HPC only | Yes (demo outputs) |
 | End-to-end demos | `run_demo_tests.py` | Local / HPC only | Auto-downloads |
 
@@ -109,6 +109,20 @@ temporary directory, then runs the full cell-identification pipeline:
 
 Verifies that the known convective cell in the synthetic data is detected correctly.
 No real data needed.
+
+### `test_area_method_utils.py`
+Unit tests for the `area_method: 'latlon'` utility functions: `compute_grid_area`,
+`save_grid_area`, `load_grid_area`, `get_pixel_area`, and `precompute_grid_area`.
+Also tests `sort_renumber2vars` with a 2D `grid_area` array to verify that
+feature areas are computed correctly with variable-size pixels.
+Uses synthetic lat/lon grids and temporary files — no real data needed.
+
+### `test_area_method_clouds.py`
+Unit tests for `label_and_grow_cold_clouds` with 2D `pixel_area` (grid area)
+support. Verifies that cloud labelling, area thresholding, and feature
+renumbering work correctly when pixel areas vary across the domain (as they
+do for latitude-dependent grids). Tests both the fixed (scalar) and
+latlon (2D array) modes to ensure backward compatibility.
 
 ### `test_regression_local.py`
 Validates the output of full demo runs (e.g., `demo_cell_nexrad.sh`).
