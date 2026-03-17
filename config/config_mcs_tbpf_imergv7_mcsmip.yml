@@ -26,18 +26,6 @@ timeout: 3600  # [seconds] Dask timeout limit
 startdate: '20190801.0000'
 enddate: '20200901.0000'
 
-# HEALPix parameters (only for remapping MCS masks back to HEALPix)
-# catalog_file: /global/cfs/cdirs/m4581/gsharing/scream-cess-healpix/main.yaml
-catalog_file: https://digital-earths-global-hackathon.github.io/catalog/catalog.yaml
-catalog_location: NERSC
-catalog_source: IR_IMERG
-# The SCREAM source is only used for remapping back to HEALPix, 
-# using the IR_IMERG HEALPix source is not remapping correctly because the grid is not global (60S-60N)
-# catalog_source: scream2D_hrly
-# Catalog parameters, can have multiple entries
-catalog_params:
-  zoom: 9
-
 # Specify tracking input data date/time string format
 # This is the preprocessed file that contains Tb & rainrate
 # E.g., databasename20181101.011503.nc --> yyyymodd.hhmmss

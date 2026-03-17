@@ -4,9 +4,7 @@ import os
 import glob
 import time
 import logging
-import intake
-import requests
-import easygems.healpix as egh
+import healpy as hp
 from functools import partial
 from pyflextrkr.ft_utilities import setup_logging
 
@@ -15,9 +13,19 @@ def remap_to_healpix_zarr(config):
     Convert pixel-level tracking mask NetCDF files to HEALPix grid in Zarr format.
     This function combines the functionality of convert_mask_to_zarr and remap_mask_to_healpix.
 
+    HEALPix cell coordinates are generated directly using healpy (nested ordering),
+    removing the previous dependency on intake catalogs and easygems.healpix.
+    The zoom level is specified via zarr_output_presets.healpix.zoom in config.
+
     Args:
         config: dictionary
-            Dictionary containing config parameters
+            Dictionary containing config parameters.
+            Required keys for HEALPix remapping:
+                zarr_output_presets.healpix.zoom: int
+                    HEALPix zoom level (order). nside = 2^zoom.
+            Optional keys:
+                alternative_healpix_chunks: bool, default False
+                    If True, use optimize_healpix_chunks() instead of compute_chunksize().
 
     Returns:
         out_zarr: string
@@ -47,7 +55,7 @@ def remap_to_healpix_zarr(config):
     startdate = config.get("startdate")
     enddate = config.get("enddate")
     outpath = os.path.dirname(os.path.normpath(pixeltracking_outpath)) + "/"
-    
+
     # Get preset-specific configuration
     presets = config.get("zarr_output_presets", {})
     preset_mask = presets.get("mask", {})
@@ -55,17 +63,12 @@ def remap_to_healpix_zarr(config):
     write_mask = preset_mask.get("write", False)
     
     # ---------- HEALPIX CONFIGURATION ----------
-    catalog_file = config.get("catalog_file")
-    catalog_location = config.get("catalog_location", None)
-    catalog_source = config.get("catalog_source", "")
-    catalog_params = config.get("catalog_params", {})
-    catalog_zoom = catalog_params.get("zoom")
-    hp_zoom = preset_healpix.get("zoom", catalog_zoom)
+    # Get zoom level from healpix preset, fall back to catalog_params for backward compatibility
+    hp_zoom = preset_healpix.get("zoom", config.get("catalog_params", {}).get("zoom"))
     hp_version = preset_healpix.get("version", "v1")
-    
-    # Update catalog_params to match desired hp zoom level from preset
-    if hp_zoom != catalog_zoom:
-        catalog_params["zoom"] = hp_zoom
+    if hp_zoom is None:
+        logger.error("HEALPix zoom level not specified. Set zarr_output_presets.healpix.zoom in config.")
+        return None
     
     # ---------- OUTPUT FILE PATHS ----------
     # Intermediate lat/lon Zarr (if needed)
@@ -74,32 +77,12 @@ def remap_to_healpix_zarr(config):
     
     # Final HEALPix Zarr output
     hp_filebase = preset_healpix.get("out_filebase", "mcs_mask_")
-    out_zarr = f"{outpath}{hp_filebase}hp{hp_zoom}_{hp_version}.zarr"
+    out_zarr = f"{outpath}{hp_filebase}hp{hp_zoom}_{hp_version}_{startdate}_{enddate}.zarr"
     
     # Check if output exists and should be overwritten
     overwrite = preset_mask.get("overwrite", config.get("overwrite_zarr", True))
     if os.path.exists(out_zarr) and not overwrite:
         logger.warning(f"HEALPix Zarr store already exists at {out_zarr} and overwrite=False. Skipping.")
-        return out_zarr
-    
-    # Check catalog file availability
-    if catalog_file:
-        if catalog_file.startswith(('http://', 'https://')):
-            # Handle URL case
-            try:
-                response = requests.head(catalog_file, timeout=10)
-                if response.status_code >= 400:
-                    logger.error(f"Catalog URL {catalog_file} returned status code {response.status_code}. Skipping remap.")
-                    return out_zarr
-            except requests.exceptions.RequestException as e:
-                logger.error(f"Error accessing catalog URL {catalog_file}: {str(e)}. Skipping remap.")
-                return out_zarr
-        elif os.path.isfile(catalog_file) is False:
-            # Handle local file case
-            logger.error(f"Catalog file {catalog_file} does not exist. Skipping remap.")
-            return out_zarr
-    else:
-        logger.error("Catalog file not specified in config. HEALPix remapping requires a catalog.")
         return out_zarr
 
     # ---------- CHUNKING CONFIGURATION ----------
@@ -130,7 +113,7 @@ def remap_to_healpix_zarr(config):
     logger.info("Reading input NetCDF files...")
     file_list = sorted(glob.glob(f"{pixeltracking_outpath}{pixeltracking_filebase}*.nc"))
     logger.info(f"Number of input files: {len(file_list)}")
-    
+
     # Open as a lazy dataset
     ds = xr.open_mfdataset(
         file_list,
@@ -239,23 +222,29 @@ def remap_to_healpix_zarr(config):
     signed_lon = True if np.min(ds["lon"]) < 0 else False
     logger.info(f"Input data lon coordinate has negative values: {signed_lon}")
     
-    # Load the HEALPix catalog
-    logger.info(f"Loading HEALPix catalog: {catalog_file}")
-    in_catalog = intake.open_catalog(catalog_file)
-    if catalog_location is not None:
-        in_catalog = in_catalog[catalog_location]
+    # Generate HEALPix cell coordinates using healpy
+    hp_nside = 2 ** hp_zoom
+    hp_npix = hp.nside2npix(hp_nside)
+    logger.info(f"Generating HEALPix grid: zoom={hp_zoom}, nside={hp_nside}, npix={hp_npix}")
+    hp_lons, hp_lats = hp.pix2ang(
+        nside=hp_nside, ipix=np.arange(hp_npix), lonlat=True, nest=True,
+    )
+    if signed_lon:
+        hp_lons = np.where(hp_lons <= 180, hp_lons, hp_lons - 360)
+    else:
+        hp_lons = hp_lons % 360
     
-    # Get the DataSet from the catalog
-    ds_hp = in_catalog[catalog_source](**catalog_params).to_dask()
-    # Note: healpix_order attribute must be 'nested' for easygems attach_coords to work correctly
-    # ds_hp['crs'].attrs['healpix_order'] = 'nested'
-    # Add lat/lon coordinates to the HEALPix DataSet
-    ds_hp = ds_hp.pipe(partial(egh.attach_coords, signed_lon=signed_lon))
-    
-    # Assign extra coordinates (lon_hp, lat_hp) to the HEALPix coordinates
-    # This is needed for limiting the extrapolation during remapping
-    lon_hp = ds_hp.lon.assign_coords(cell=ds_hp.cell, lon_hp=lambda da: da)
-    lat_hp = ds_hp.lat.assign_coords(cell=ds_hp.cell, lat_hp=lambda da: da)
+    # Create DataArrays with cell coordinate and extra hp coordinates
+    # (hp coordinates are needed for limiting extrapolation via is_valid)
+    cell_coord = np.arange(hp_npix)
+    lon_hp = xr.DataArray(
+        hp_lons, dims="cell",
+        coords={"cell": cell_coord, "lon_hp": ("cell", hp_lons)},
+    )
+    lat_hp = xr.DataArray(
+        hp_lats, dims="cell",
+        coords={"cell": cell_coord, "lat_hp": ("cell", hp_lats)},
+    )
     
     # Make sure coordinates are fixed before remapping
     ds = fix_coords(ds)
@@ -273,14 +262,33 @@ def remap_to_healpix_zarr(config):
     
     # Drop lat/lon coordinates (not needed in HEALPix)
     dsout_hp = dsout_hp.drop_vars(["lat_hp", "lon_hp", "lat", "lon"])
+    # Add CRS coordinate (consistent with HEALPix catalog convention)
+    crs_var = xr.DataArray(
+        data=np.array([], dtype=np.float64),
+        dims=["crs"],
+        coords={"crs": np.array([], dtype=np.float64)},
+        attrs={
+            "grid_mapping_name": "healpix",
+            "healpix_nside": hp_nside,
+            "healpix_order": "nest",
+        },
+    )
+    dsout_hp = dsout_hp.assign_coords(crs=crs_var)
     # Update global attributes
     dsout_hp.attrs['Title'] = f"HEALPix remapped tracking mask data (zoom={hp_zoom})"
     dsout_hp.attrs['zoom'] = hp_zoom
     dsout_hp.attrs["Created_on"] = time.ctime(time.time())
 
-    # Optimize cell chunking for HEALPix grid
-    chunksize_cell = optimize_healpix_chunks(ds_hp, chunksize_cell, logger)
-    
+    # Compute cell chunking for HEALPix grid
+    if chunksize_cell == 'auto' or not isinstance(chunksize_cell, (int, float)):
+        if config.get("alternative_healpix_chunks", False):
+            chunksize_cell = optimize_healpix_chunks(hp_npix, chunksize_cell, logger)
+        else:
+            chunksize_cell = compute_chunksize(hp_zoom)
+            logger.info(f"HEALPix chunk size: {chunksize_cell} (zoom={hp_zoom})")
+    else:
+        chunksize_cell = int(chunksize_cell)
+
     # Make time chunks more even if needed
     if isinstance(chunksize_time, (int, float)) and chunksize_time != 'auto':
         total_times = dsout_hp.sizes['time']
@@ -297,7 +305,7 @@ def remap_to_healpix_zarr(config):
         "time": chunksize_time, 
         "cell": chunksize_cell, 
     })
-    
+
     # Report dataset size and chunking info
     logger.info(f"HEALPix dataset dimensions: {dict(chunked_hp.sizes)}")
     logger.info(f"HEALPix chunking scheme: time={chunksize_time}, cell={chunksize_cell}")
@@ -456,14 +464,44 @@ def calculate_healpix_tolerance(zoom_level):
     return pixel_size_degrees
 
 
-def optimize_healpix_chunks(ds_hp, chunksize_cell='auto', logger=None):
+def compute_chunksize(zoom):
+    """
+    Compute HEALPix cell chunk size based on zoom level.
+
+    For lower zoom levels (zoom < 8), the total number of cells is small enough
+    to fit in a single chunk (npix = 12 * 4^zoom).
+    For higher zoom levels (zoom >= 8), uses a fixed chunk size of 4^9 = 262144,
+    which evenly divides npix since npix = 12 * 4^zoom and 4^9 divides 12 * 4^zoom
+    for all zoom >= 8.
+
+    Parameters:
+    -----------
+    zoom : int
+        HEALPix zoom level (order). Determines resolution via nside = 2^zoom.
+
+    Returns:
+    --------
+    int
+        Chunk size for the cell dimension.
+    """
+    # Zoom level below which all cells fit in one chunk
+    start_split = 8
+    if zoom < start_split:
+        # Total cells = 12 * 4^zoom, use a single chunk
+        return 12 * 4**zoom
+    else:
+        # Fixed chunk size that evenly divides npix for zoom >= 8
+        return 4 ** (start_split + 1)
+
+
+def optimize_healpix_chunks(total_cells, chunksize_cell='auto', logger=None):
     """
     Optimize chunking for HEALPix grids based on their hierarchical structure.
     
     Parameters:
     -----------
-    ds_hp : xarray.Dataset
-        HEALPix dataset containing cell dimension and crs attributes
+    total_cells : int
+        Total number of HEALPix cells (npix)
     chunksize_cell : int or 'auto', optional
         Requested chunk size or 'auto' for automatic optimization
     logger : logging.Logger, optional
@@ -475,18 +513,12 @@ def optimize_healpix_chunks(ds_hp, chunksize_cell='auto', logger=None):
         Optimized chunk size for the cell dimension
     """
     
-    # Get the total cell count
-    total_cells = ds_hp.sizes['cell']
-    
     # If a specific chunk size is requested (not 'auto'), return it directly
     if chunksize_cell != 'auto' and isinstance(chunksize_cell, (int, float)):
         return int(chunksize_cell)
     
-    # Get the HEALPix nside parameter if available
-    nside = getattr(ds_hp.crs, 'healpix_nside', None)
-    if nside is None:
-        # Estimate nside based on cell count (12 * nside^2 = total cells)
-        nside = int(np.sqrt(total_cells / 12))
+    # Estimate nside based on cell count (12 * nside^2 = total cells)
+    nside = int(np.sqrt(total_cells / 12))
     
     if logger:
         logger.info(f"Total HEALPix cells: {total_cells}, estimated nside: {nside}")
