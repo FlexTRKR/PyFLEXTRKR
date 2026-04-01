@@ -8,7 +8,7 @@ from skimage.measure import regionprops
 from math import pi
 from scipy.stats import skew
 import warnings
-from pyflextrkr.ftfunctions import sort_renumber
+from pyflextrkr.ftfunctions import sort_renumber, get_cloud_boundary, find_max_indices_to_roll, subset_roll_map
 from pyflextrkr.ft_utilities import subset_ds_geolimit, get_pixel_area
 
 def matchtbpf_singlefile(
@@ -47,6 +47,9 @@ def matchtbpf_singlefile(
     heavy_rainrate_thresh = config["heavy_rainrate_thresh"]
     pixel_radius = config["pixel_radius"]
     area_method = config.get("area_method", "fixed")
+    pbc_direction = config.get("pbc_direction", "none")
+    max_feature_frac_x = config.get("max_feature_frac_x", 0.95)
+    max_feature_frac_y = config.get("max_feature_frac_y", 0.95)
     nmaxpf = config["nmaxpf"]
     mcs_core_min_area = config.get("mcs_core_min_area", 0)
     # ZF: nmaxcore cannot be different from nmaxpf without changing matchtbpf_driver.py
@@ -284,19 +287,97 @@ def matchtbpf_singlefile(
                                                                 ydim)
 
                     # Isolate region over the cloud shield
-                    sub_rainrate_map = np.copy(rainrate_map[miny:maxy, minx:maxx])
-                    sub_reflectivity_map = np.copy(reflectivity_map[miny:maxy, minx:maxx])
-                    sub_sl3d_map = np.copy(sl3d_map[miny:maxy, minx:maxx])
-                    sub_echotop10_map = np.copy(echotop10_map[miny:maxy, minx:maxx])
-                    sub_echotop20_map = np.copy(echotop20_map[miny:maxy, minx:maxx])
-                    sub_echotop30_map = np.copy(echotop30_map[miny:maxy, minx:maxx])
-                    sub_echotop40_map = np.copy(echotop40_map[miny:maxy, minx:maxx])
-                    sub_echotop45_map = np.copy(echotop45_map[miny:maxy, minx:maxx])
-                    sub_echotop50_map = np.copy(echotop50_map[miny:maxy, minx:maxx])
+                    sub_rainrate = np.copy(rainrate_map[miny:maxy, minx:maxx])
+                    sub_reflectivity = np.copy(reflectivity_map[miny:maxy, minx:maxx])
+                    sub_sl3d = np.copy(sl3d_map[miny:maxy, minx:maxx])
+                    sub_echotop10 = np.copy(echotop10_map[miny:maxy, minx:maxx])
+                    sub_echotop20 = np.copy(echotop20_map[miny:maxy, minx:maxx])
+                    sub_echotop30 = np.copy(echotop30_map[miny:maxy, minx:maxx])
+                    sub_echotop40 = np.copy(echotop40_map[miny:maxy, minx:maxx])
+                    sub_echotop45 = np.copy(echotop45_map[miny:maxy, minx:maxx])
+                    sub_echotop50 = np.copy(echotop50_map[miny:maxy, minx:maxx])
+
+                    # Check cloud boundary span: if > X fraction of domain and PBC is set,
+                    # roll the data so the cloud does not span the domain boundary
+                    roll_flag = False
+                    if (((maxx - minx) >= xdim * max_feature_frac_x) or \
+                        ((maxy - miny) >= ydim * max_feature_frac_y)) and \
+                        (pbc_direction != 'none'):
+                        sub_mask = cloudnumbermap[miny:maxy, minx:maxx] == ittcloudnumber
+                        shift_x_right, shift_y_top = find_max_indices_to_roll(
+                            sub_mask, xdim, ydim,
+                        )
+                        if (sub_rainrate.size > 0) and \
+                            (sub_rainrate.shape[0] > 0) and \
+                            (sub_rainrate.shape[1] > 0) and \
+                            (np.any(sub_rainrate > pf_rr_thres)):
+                            sub_rainrate_map = subset_roll_map(
+                                sub_rainrate, shift_x_right, shift_y_top, xdim, ydim,
+                            )
+                            sub_reflectivity_map = subset_roll_map(
+                                sub_reflectivity, shift_x_right, shift_y_top, xdim, ydim,
+                            )
+                            sub_sl3d_map = subset_roll_map(
+                                sub_sl3d, shift_x_right, shift_y_top, xdim, ydim,
+                            )
+                            sub_echotop10_map = subset_roll_map(
+                                sub_echotop10, shift_x_right, shift_y_top, xdim, ydim,
+                            )
+                            sub_echotop20_map = subset_roll_map(
+                                sub_echotop20, shift_x_right, shift_y_top, xdim, ydim,
+                            )
+                            sub_echotop30_map = subset_roll_map(
+                                sub_echotop30, shift_x_right, shift_y_top, xdim, ydim,
+                            )
+                            sub_echotop40_map = subset_roll_map(
+                                sub_echotop40, shift_x_right, shift_y_top, xdim, ydim,
+                            )
+                            sub_echotop45_map = subset_roll_map(
+                                sub_echotop45, shift_x_right, shift_y_top, xdim, ydim,
+                            )
+                            sub_echotop50_map = subset_roll_map(
+                                sub_echotop50, shift_x_right, shift_y_top, xdim, ydim,
+                            )
+                            roll_flag = True
+                        else:
+                            sub_rainrate_map = sub_rainrate
+                            sub_reflectivity_map = sub_reflectivity
+                            sub_sl3d_map = sub_sl3d
+                            sub_echotop10_map = sub_echotop10
+                            sub_echotop20_map = sub_echotop20
+                            sub_echotop30_map = sub_echotop30
+                            sub_echotop40_map = sub_echotop40
+                            sub_echotop45_map = sub_echotop45
+                            sub_echotop50_map = sub_echotop50
+                            shift_x_right = 0
+                            shift_y_top = 0
+                    else:
+                        sub_rainrate_map = sub_rainrate
+                        sub_reflectivity_map = sub_reflectivity
+                        sub_sl3d_map = sub_sl3d
+                        sub_echotop10_map = sub_echotop10
+                        sub_echotop20_map = sub_echotop20
+                        sub_echotop30_map = sub_echotop30
+                        sub_echotop40_map = sub_echotop40
+                        sub_echotop45_map = sub_echotop45
+                        sub_echotop50_map = sub_echotop50
+                        shift_x_right = 0
+                        shift_y_top = 0
 
                     # Load pixel area for area calculations
-                    if _pixel_area is not None:
-                        sub_pixel_area = _pixel_area[miny:maxy, minx:maxx]
+                    if area_method == "latlon":
+                        _pa_subset = _pixel_area[miny:maxy, minx:maxx]
+                        if roll_flag:
+                            # Use sub_rainrate (pre-roll, NaN outside cloud) as ref so the
+                            # crop boundary matches sub_rainrate_map for any PBC direction
+                            # (x, y, or both). _pixel_area has no NaN/zero values so it
+                            # cannot self-identify its valid extent after rolling.
+                            sub_pixel_area = subset_roll_map(
+                                _pa_subset, shift_x_right, shift_y_top, xdim, ydim,
+                                ref_array=sub_rainrate,
+                            )
+                        else:
+                            sub_pixel_area = _pa_subset
                         mean_pixelength = np.sqrt(np.nanmean(_pixel_area))
                     else:
                         sub_pixel_area = None
@@ -305,8 +386,8 @@ def matchtbpf_singlefile(
                     # Calculate total rainfall within the cold cloud shield
                     total_rain[imatchcloud] = np.nansum(sub_rainrate_map)
                     # Calculate volumetric rain (rain rate * pixel area)
-                    if _pixel_area is not None:
-                        sub_pa = _pixel_area[miny:maxy, minx:maxx]
+                    if area_method == "latlon":
+                        sub_pa = sub_pixel_area  # already computed with correct shape above
                         total_volrain[imatchcloud] = np.nansum(
                             sub_rainrate_map * sub_pa
                         )
@@ -319,7 +400,7 @@ def matchtbpf_singlefile(
                         total_heavyrain[imatchcloud] = np.nansum(
                             sub_rainrate_map[idx_heavyrain]
                         )
-                        if _pixel_area is not None:
+                        if area_method == "latlon":
                             total_heavyvolrain[imatchcloud] = np.nansum(
                                 sub_rainrate_map[idx_heavyrain] * sub_pa[idx_heavyrain]
                             )

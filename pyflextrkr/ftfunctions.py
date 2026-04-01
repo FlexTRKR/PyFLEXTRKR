@@ -887,7 +887,7 @@ def find_max_indices_to_roll(mask_map, xdim, ydim):
     return (shift_x_right, shift_y_top)
 
 #-----------------------------------------------------------------------
-def subset_roll_map(data_array, shift_x_right, shift_y_top, xdim, ydim, fillval=0):
+def subset_roll_map(data_array, shift_x_right, shift_y_top, xdim, ydim, fillval=0, ref_array=None):
     """
     Subset and roll the data array to avoid periodic boundary condition.
 
@@ -904,6 +904,11 @@ def subset_roll_map(data_array, shift_x_right, shift_y_top, xdim, ydim, fillval=
             y dimension of domain.
         fillval: float, default=0
             Fill value in data_array to exclude.
+        ref_array: numpy array or None, default=None
+            Optional reference 2D array used to determine the crop boundary after
+            rolling, instead of data_array. Useful when data_array has no NaN/zero
+            values (e.g. pixel_area) and cannot self-identify its valid extent.
+            When provided, ref_array must have the same shape as data_array.
 
     Returns:
         out_data_array: numpy array
@@ -915,8 +920,16 @@ def subset_roll_map(data_array, shift_x_right, shift_y_top, xdim, ydim, fillval=
     data_array_rolled = np.roll(
         data_array, shift=(np.abs(shift_y_top), np.abs(shift_x_right)), axis=(0,1),
     )
-    # Find valid values
-    _y, _x = np.where((~np.isnan(data_array_rolled)) & (data_array_rolled != fillval))
+    # Find valid values — use ref_array to determine crop boundary if provided.
+    # This handles arrays (e.g., pixel_area) that contain no NaN/zero values
+    # and cannot self-identify their valid extent after rolling, for any PBC direction.
+    if ref_array is not None:
+        ref_rolled = np.roll(
+            ref_array, shift=(np.abs(shift_y_top), np.abs(shift_x_right)), axis=(0, 1),
+        )
+        _y, _x = np.where((~np.isnan(ref_rolled)) & (ref_rolled != fillval))
+    else:
+        _y, _x = np.where((~np.isnan(data_array_rolled)) & (data_array_rolled != fillval))
     # Get data boundary
     _maxx, _maxy, _minx, _miny = get_cloud_boundary(_x, _y, xdim, ydim)
     # Subset data array

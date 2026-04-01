@@ -261,12 +261,20 @@ def matchtbpf_singlefile(
                     # Calculate total rainfall within the cold cloud shield
                     total_rain[imatchcloud] = np.nansum(sub_rainrate_map)
                     # Calculate volumetric rain (rain rate * pixel area)
-                    if _pixel_area is not None:
-                        sub_pa = _pixel_area[miny:maxy, minx:maxx]
+                    if area_method == "latlon":
+                        _pa_subset = _pixel_area[miny:maxy, minx:maxx]
                         if roll_flag:
+                            # Use sub_rainrate (pre-roll, NaN outside cloud) as ref so the
+                            # crop boundary matches sub_rainrate_map for any PBC direction
+                            # (x, y, or both). _pixel_area has no NaN/zero values so it
+                            # cannot self-identify its valid extent after rolling.
                             sub_pa = subset_roll_map(
-                                sub_pa, shift_x_right, shift_y_top, xdim, ydim,
+                                _pa_subset, shift_x_right, shift_y_top, xdim, ydim,
+                                ref_array=sub_rainrate,
                             )
+                            import pdb; pdb.set_trace()
+                        else:
+                            sub_pa = _pa_subset
                         total_volrain[imatchcloud] = np.nansum(
                             sub_rainrate_map * sub_pa
                         )
@@ -335,7 +343,9 @@ def matchtbpf_singlefile(
 
                         # Sort numpf then calculate stats
                         if area_method == "latlon":
-                            sub_pixel_area = _pixel_area[miny:maxy, minx:maxx]
+                            # sub_pa already has the correct shape matching sub_rainrate_map
+                            # (computed above with ref_array if roll_flag, plain slice otherwise)
+                            sub_pixel_area = sub_pa
                             mean_pixelength = np.sqrt(np.nanmean(_pixel_area))
                             min_npix = np.ceil(pf_link_area_thresh / np.nanmean(sub_pixel_area)).astype(int)
                         else:
