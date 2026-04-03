@@ -7,6 +7,7 @@ import logging
 import dask
 from dask.distributed import wait
 from pyflextrkr.ft_utilities import subset_files_timerange
+from pyflextrkr.trackstats_driver import adjust_position_continuous_simple
 # from pyflextrkr.matchtbpf_func import matchtbpf_singlefile
 
 def match_tbpf_tracks(config):
@@ -38,6 +39,9 @@ def match_tbpf_tracks(config):
     fillval = config["fillval"]
     # Minimum time difference threshold [second] to match track stats and cloudid pixel files
     match_pixel_dt_thresh = config["match_pixel_dt_thresh"]
+    # PBC position adjustment (same logic as trackstats_driver for CCS meanlon)
+    pbc_direction = config.get("pbc_direction", "none")
+    pbc_max_domain_fraction = config.get("pbc_max_domain_fraction", 0.5)
 
     np.set_printoptions(threshold=np.inf)
     logger = logging.getLogger(__name__)
@@ -82,6 +86,23 @@ def match_tbpf_tracks(config):
     cloudidfile_list = infiles_info[0]
     cloudidfile_basetime = infiles_info[1]
     nfiles = len(cloudidfile_list)
+
+    # Compute lon/lat jump thresholds for PBC position adjustment.
+    # Uses the same formula as trackstats_driver: pbc_max_domain_fraction * n * d.
+    thresh_lon = None
+    thresh_lat = None
+    if pbc_direction != "none" and nfiles > 0:
+        _dspix = xr.open_dataset(cloudidfile_list[0])
+        _lon2d = _dspix["longitude"].values
+        _lat2d = _dspix["latitude"].values
+        _nx = _lon2d.shape[1] if _lon2d.ndim == 2 else len(_lon2d)
+        _ny = _lat2d.shape[0] if _lat2d.ndim == 2 else len(_lat2d)
+        _dx = float(np.abs(np.median(np.diff(_lon2d[0, :] if _lon2d.ndim == 2 else _lon2d))))
+        _dy = float(np.abs(np.median(np.diff(_lat2d[:, 0] if _lat2d.ndim == 2 else _lat2d))))
+        thresh_lon = pbc_max_domain_fraction * _nx * _dx
+        thresh_lat = pbc_max_domain_fraction * _ny * _dy
+        _dspix.close()
+        logger.info(f"PBC adjustment thresholds: lon={thresh_lon:.4f} lat={thresh_lat:.4f} deg (pbc_direction={pbc_direction})")
 
     #########################################################################################
     # Find precipitation feature in each mcs
@@ -193,6 +214,25 @@ def match_tbpf_tracks(config):
                     pf_dict[ivar][trackindices,timeindices] = iResult[ivar]
                 if iResult[ivar].ndim == 2:
                     pf_dict[ivar][trackindices,timeindices,:] = iResult[ivar]
+
+    # Adjust PF lon and lat variables for PBC continuity across periodic boundaries.
+    # trackstats_driver does this for CCS meanlon/meanlat via adjust_positions_for_tracks;
+    # here we apply the same per-track temporal unwrap to every _lon and _lat variable.
+    for _thresh, _suffix in [(thresh_lon, "_lon"), (thresh_lat, "_lat")]:
+        if _thresh is None:
+            continue
+        _var_names = [v for v in var_names if _suffix in v]
+        logger.info(f"Applying PBC {_suffix} adjustment to: {_var_names}")
+        for ivar in _var_names:
+            arr = pf_dict[ivar]  # shape: (numtracks, maxtracklength, nmaxpf)
+            for itrack in range(numtracks):
+                for ipf in range(nmaxpf):
+                    ts = arr[itrack, :, ipf]
+                    if np.any(~np.isnan(ts)):
+                        adjusted, _ = adjust_position_continuous_simple(
+                            ts, _thresh, pbc_max_domain_fraction
+                        )
+                        arr[itrack, :, ipf] = adjusted
 
     # Define a dataset containing all PF variables
     varlist = {}

@@ -35,9 +35,9 @@ databasename: MCS_idealized_periodic_ # Note: include all strings before the tim
 input_format: netcdf
 
 # Input files directory
-clouddata_path: INPUT_DIR/
+clouddata_path: /pscratch/sd/f/feng045/demo/mcs_tbpf/idealized/periodic_boundary/input//
 # Working directory for the tracking data
-root_path: TRACK_DIR/
+root_path: /pscratch/sd/f/feng045/demo/mcs_tbpf/idealized/periodic_boundary//
 # Working sub-directory names
 tracking_path_name: tracking
 stats_path_name: stats

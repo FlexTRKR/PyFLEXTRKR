@@ -26,6 +26,9 @@ Usage examples
   # Include quicklook plots and animation
   python tests/run_demo_tests.py --demos demo_mcs_imerg --with-plots -n 4
 
+  # Validate and re-make plots only (skip download/tracking)
+  python tests/run_demo_tests.py --demos demo_mcs_imerg --make-plots-only -n 4
+
   # Force re-download of input data
   python tests/run_demo_tests.py --demos demo_mcs_imerg --fresh -n 4
 
@@ -136,6 +139,20 @@ DEMOS: Dict[str, DemoInfo] = {
         lon_range=(-80, 10),
         plot_script="Analysis/plot_subset_tbpf_mcs_tracks_demo.py",
         plot_args="-s '2019-01-25T00' -e '2019-01-27T00' -o vertical -p 1 --figsize 10 8",
+    ),
+    "demo_mcs_imerg_mcsmip": DemoInfo(
+        name="demo_mcs_imerg_mcsmip",
+        description="MCS tracking – Global GPM IMERG Tb+Precip (MCSMIP)",
+        data_subdir="mcs_tbpf/imerg_global",
+        data_url="https://portal.nersc.gov/cfs/m1867/PyFLEXTRKR/sample_data/tb_pcp/gpm_tb_imergv7_global_202001.tar.gz",
+        config_template="config_mcs_tbpf_imergv7_mcsmip_demo.yml",
+        runscript="runscripts/run_mcs_tbpf_mcsmip.py",
+        stats_pattern="mcs_tracks_final_*.nc",
+        pixel_filebase="mcstrack_",
+        lat_range=(-60, 60),
+        lon_range=(-200, 200),  # periodic boundary handling could make tracks extend beyond 180E/W
+        plot_script="Analysis/plot_subset_tbpf_mcs_tracks_demo.py",
+        plot_args="-s '2020-01-01T00' -e '2020-01-03T00' -o horizontal -p 1 --extent 140.0 -140.0 -20.0 20.0",
     ),
     "demo_mcs_wrf_tbpf": DemoInfo(
         name="demo_mcs_wrf_tbpf",
@@ -556,6 +573,7 @@ def run_single_demo(
     backup: bool = False,
     fresh: bool = False,
     validate_only: bool = False,
+    make_plots_only: bool = False,
 ) -> ValidationResult:
     """Run one demo end-to-end and validate."""
     dir_demo = data_root / demo.data_subdir
@@ -564,6 +582,23 @@ def run_single_demo(
 
     header = f"\n{'='*64}\n  {demo.name}: {demo.description}\n{'='*64}"
     logger.info(header)
+
+    if make_plots_only:
+        # Validate existing outputs, then generate plots without re-running tracking.
+        # Reuse the auto-generated config if present; otherwise create it from the template.
+        config_path = CONFIG_DIR / f"config_autotest_{demo.name}.yml"
+        if not config_path.exists():
+            config_path = generate_config(demo, dir_input, dir_demo, nworkers)
+        logger.info("Validating outputs ...")
+        result = validate_demo(demo, dir_demo, check_plots=False)
+        logger.info("Making plots and animation ...")
+        run_plots_and_animation(demo, dir_demo, config_path)
+        result.elapsed_sec = time.time() - t0
+        status = "PASSED" if result.passed else "FAILED"
+        logger.info(f"  Result: {status}")
+        for msg in result.messages:
+            logger.info(f"    {msg}")
+        return result
 
     if not validate_only:
         # Clean outputs
@@ -655,6 +690,7 @@ Examples:
   %(prog)s --demos demo_mcs_imerg --validate-only
   %(prog)s --demos demo_mcs_imerg --data-root /tmp/demo -n 4
   %(prog)s --demos demo_mcs_imerg --with-plots -n 4
+  %(prog)s --demos demo_mcs_imerg --make-plots-only -n 4
 """,
     )
     parser.add_argument(
@@ -693,6 +729,10 @@ Examples:
     parser.add_argument(
         "--fresh", action="store_true",
         help="Re-download input data even if it already exists",
+    )
+    parser.add_argument(
+        "--make-plots-only", action="store_true",
+        help="Validate existing outputs and run plots/animation (skip download/tracking)",
     )
     args = parser.parse_args()
 
@@ -739,6 +779,7 @@ Examples:
                 backup=args.backup,
                 fresh=args.fresh,
                 validate_only=args.validate_only,
+                make_plots_only=args.make_plots_only,
             )
         except Exception as e:
             r = ValidationResult(demo_name=name)

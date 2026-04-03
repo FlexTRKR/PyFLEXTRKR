@@ -358,9 +358,22 @@ def plot_map(pixel_dict, plot_info, map_info, track_dict):
     cmap_lifetime = plt.get_cmap(cmap_tracks)
     norm_lifetime = mpl.colors.BoundaryNorm(lev_lifetime, ncolors=cmap_lifetime.N, clip=True)
     
-    # Set up map projection
-    proj = ccrs.PlateCarree()
+    # Set up map projection.
+    # Detect dateline-crossing by normalizing both extent lons to -180~+180:
+    # if lon0_n > lon1_n the extent goes eastward across the dateline.
+    # This works for both 0-360 notation (lon_max=220) and -180~+180 notation (lon_max=-140).
+    _lon0_n = ((map_extent[0] + 180) % 360) - 180
+    _lon1_n = ((map_extent[1] + 180) % 360) - 180
+    if _lon0_n > _lon1_n:
+        central_longitude = 180
+    else:
+        central_longitude = 0
+    proj = ccrs.PlateCarree(central_longitude=central_longitude)
+    # data_proj always PlateCarree(0): data lons are in -180~+180 convention.
     data_proj = ccrs.PlateCarree(central_longitude=0)
+    # Compute set_extent bounds in the proj frame (values relative to central_longitude).
+    _ext_lon0 = ((map_extent[0] - central_longitude + 180) % 360) - 180
+    _ext_lon1 = ((map_extent[1] - central_longitude + 180) % 360) - 180
     land = cfeature.NaturalEarthFeature('physical', 'land', map_resolution)
     borders = cfeature.NaturalEarthFeature('cultural', 'admin_0_boundary_lines_land', map_resolution)
     states = cfeature.NaturalEarthFeature('cultural', 'admin_1_states_provinces_lakes', map_resolution)
@@ -374,7 +387,7 @@ def plot_map(pixel_dict, plot_info, map_info, track_dict):
     ax1 = plt.subplot(gs[0], projection=proj)
     cax1 = plt.subplot(gs[1])
 
-    ax1.set_extent(map_extent, crs=proj)
+    ax1.set_extent([_ext_lon0, _ext_lon1, map_extent[2], map_extent[3]], crs=proj)
     ax1.set_aspect('auto', adjustable=None) # Do not auto adjust aspect ratio
     # Add map features
     if draw_land == True:
@@ -464,10 +477,17 @@ def plot_map(pixel_dict, plot_info, map_info, track_dict):
             
     # Overplot cell tracknumbers at current frame
     for ii in range(0, len(lon_tn)):
-        if (lon_tn[ii] > map_extent[0]) & (lon_tn[ii] < map_extent[1]) & \
-            (lat_tn[ii] > map_extent[2]) & (lat_tn[ii] < map_extent[3]):
-            ax1.text(lon_tn[ii]+0.02, lat_tn[ii]+0.02, f'{tracknumbers[ii]:.0f}', color='k', size=fontsize_tracks, 
-                    weight='bold', ha='left', va='center', transform=proj, zorder=4)
+        # Normalize to 0-360 for dateline-safe lon check
+        _lon_tn_norm = lon_tn[ii] % 360
+        _lonmin_norm = map_extent[0] % 360
+        _lonmax_norm = map_extent[1] % 360
+        if _lonmin_norm <= _lonmax_norm:
+            _in_lon = (_lon_tn_norm >= _lonmin_norm) and (_lon_tn_norm <= _lonmax_norm)
+        else:  # domain crosses the dateline
+            _in_lon = (_lon_tn_norm >= _lonmin_norm) or (_lon_tn_norm <= _lonmax_norm)
+        if _in_lon and (lat_tn[ii] > map_extent[2]) and (lat_tn[ii] < map_extent[3]):
+            ax1.text(lon_tn[ii]+0.02, lat_tn[ii]+0.02, f'{tracknumbers[ii]:.0f}', color='k', size=fontsize_tracks,
+                    weight='bold', ha='left', va='center', transform=data_proj, zorder=4)
 
     # Plot range circles around radar
     if show_rangecircle:
@@ -693,7 +713,7 @@ if __name__ == "__main__":
     if (figsize is None):
         if (map_extent is not None):
             # Calculate aspect ratio from map extent
-            lon_span = map_extent[1] - map_extent[0]
+            lon_span = (map_extent[1] - map_extent[0]) % 360 or 360
             lat_span = map_extent[3] - map_extent[2]
             # Use simple lat/lon ratio (works reasonably well for mid-latitudes)
             aspect_ratio = lat_span / lon_span

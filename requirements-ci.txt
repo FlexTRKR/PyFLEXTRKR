@@ -15,6 +15,7 @@ pandas
 netcdf4
 
 # HEALPix (imported by pyflextrkr/hp_utilities.py)
+# healpy: Linux/macOS only (C extension requiring cfitsio); install via conda
 healpix
 
 # Utilities (imported by pyflextrkr/ft_utilities.py)

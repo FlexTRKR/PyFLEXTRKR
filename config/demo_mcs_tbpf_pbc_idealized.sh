@@ -5,11 +5,26 @@
 # To run this demo script:
 # 1. Modify the dir_demo to a directory on your computer to download the sample data
 # 2. Modify the test input basename
-# 3. Run the script: bash demo_mcs_tbpf_idealized.sh
+# 3. Run the script: bash demo_mcs_tbpf_pbc_idealized.sh
 #
-# By default the demo config uses 4 processors for parallel processing,
-#    assuming most computers have at least 4 CPU cores.
+# By default the demo runs the script in serial mode.
 ###############################################################################################
+
+# Specify directory for the demo data
+dir_demo='/pscratch/sd/f/feng045/demo/mcs_tbpf/idealized/periodic_boundary/'
+
+# Example config file name
+config_demo='./config_mcs_pbc_idealized_demo.yml'
+
+# Demo input data directory
+dir_input=${dir_demo}'input/'
+
+# Create the demo directory
+mkdir -p ${dir_input}
+
+# Download idealized Tb+Precipitation data:
+echo 'Downloading demo input data ...'
+wget https://portal.nersc.gov/cfs/m1867/PyFLEXTRKR/sample_data/tb_pcp/MCS_idealized_periodic_2020-01-01_00-00-00.nc -O ${dir_input}/MCS_idealized_periodic_2020-01-01_00-00-00.nc
 
 # Specify start/end datetime
 start_date='2020-01-01T00' 
@@ -17,16 +32,19 @@ end_date='2020-01-03T00'
 
 # Plotting map domain (lonmin lonmax latmin latmax)
 map_extent='0. 1500 0. 1500'  # (xmin xmax ymin ymax)
-run_parallel=1
+run_parallel=0
 
 # Demo output directory
-dir_demo='/pscratch/sd/p/paccini/temp/output_tracking/tracking_mcs_idealized_demo_v2/' 
 quicklook_dir=${dir_demo}'/quicklooks_trackpaths/'
 animation_dir=${dir_demo}'/animations/'
-animation_filename=${animation_dir}mcs_tracking2_${start_date}_${end_date}.mp4
+animation_filename=${animation_dir}mcs_tracking_${start_date}_${end_date}.mp4
 
-# Example config file name
-config_demo='./config_mcs_pbc_idealized.yml'
+# Add '\' to each '/' in directory names
+dir_input1=$(echo ${dir_input} | sed 's_/_\\/_g')
+dir_demo1=$(echo ${dir_demo} | sed 's_/_\\/_g')
+# Replace input directory names in example config file
+sed 's/INPUT_DIR/'${dir_input1}'/g;s/TRACK_DIR/'${dir_demo1}'/g' config_mcs_pbc_idealized.yml > ${config_demo}
+echo 'Created new config file: '${config_demo}
 
 # Make quicklook & animation directories
 mkdir -p ${quicklook_dir}
