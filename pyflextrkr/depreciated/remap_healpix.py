@@ -4,7 +4,6 @@ import os
 import time
 import logging
 import dask.array as da
-import intake
 import requests
 import easygems.healpix as egh
 from functools import partial
@@ -103,6 +102,7 @@ def remap_mask_to_healpix(config):
     logger.info(f"Mask lon coordinate has negative values: {signed_lon}")
 
     # Load the HEALPix catalog
+    import intake  # Optional dependency: only needed for catalog-based workflows
     in_catalog = intake.open_catalog(catalog_file)[catalog_location]
     # Get the DataSet from the catalog
     ds_hp = in_catalog[catalog_source](**catalog_params).to_dask()

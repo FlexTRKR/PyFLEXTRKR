@@ -10,7 +10,7 @@ from math import pi
 from scipy.stats import skew
 from pyflextrkr.ftfunctions import sort_renumber
 from pyflextrkr.ft_utilities import subset_ds_geolimit, get_pixel_area
-from pyflextrkr.ftfunctions import circular_mean, get_cloud_boundary, find_max_indices_to_roll, subset_roll_map
+from pyflextrkr.ftfunctions import circular_mean, get_cloud_boundary
 
 def matchtbpf_singlefile(
     cloudid_filename,
@@ -221,28 +221,58 @@ def matchtbpf_singlefile(
                     if (((maxx - minx) >= xdim * max_feature_frac_x) or \
                         ((maxy - miny) >= ydim * max_feature_frac_y)) and \
                         (pbc_direction != 'none'):
-                        # Subset cloudnumber mask that contains the current cloud
-                        sub_mask = cloudnumbermap[miny:maxy, minx:maxx] == ittcloudnumber
-                        # Find the indices to roll the array to avoid periodic boundary condition
-                        shift_x_right, shift_y_top = find_max_indices_to_roll(
-                            sub_mask, xdim, ydim,
+                        # Compute roll shifts from the largest gap in the sorted pixel
+                        # indices. When a feature crosses the boundary its x-indices form
+                        # two clusters (left-edge and right-edge) separated by a large gap.
+                        # Finding that gap and using the right cluster's minimum gives the
+                        # exact shift needed to merge the two clusters in the rolled domain,
+                        # with no hardcoded edge thresholds.
+                        sorted_x = np.sort(np.unique(icloudlocationx))
+                        gap_x    = np.diff(sorted_x)
+                        max_gap_x_idx = np.argmax(gap_x)
+                        if gap_x[max_gap_x_idx] > xdim * 0.5:
+                            # Right cluster starts at sorted_x[max_gap_x_idx + 1]
+                            shift_x_right = xdim - int(sorted_x[max_gap_x_idx + 1])
+                        else:
+                            shift_x_right = 0
+
+                        sorted_y = np.sort(np.unique(icloudlocationy))
+                        gap_y    = np.diff(sorted_y)
+                        max_gap_y_idx = np.argmax(gap_y)
+                        if gap_y[max_gap_y_idx] > ydim * 0.5:
+                            # Top cluster starts at sorted_y[max_gap_y_idx + 1]
+                            shift_y_top = ydim - int(sorted_y[max_gap_y_idx + 1])
+                        else:
+                            shift_y_top = 0
+
+                        # Roll the pixel indices to get the compact bounding box in the
+                        # rolled domain — always MCS-sized, never globe-wide.
+                        rolled_x = (icloudlocationx + shift_x_right) % xdim
+                        rolled_y = (icloudlocationy + shift_y_top)   % ydim
+                        r_maxx, r_maxy, r_minx, r_miny = get_cloud_boundary(
+                            rolled_x, rolled_y, xdim, ydim,
                         )
-                        # Subset rainrate over the cloud shield
-                        sub_rainrate = np.copy(rainrate_map[miny:maxy, minx:maxx])
-                        sub_lon = np.copy(lon_map[miny:maxy, minx:maxx])
-                        sub_lat = np.copy(lat_map[miny:maxy, minx:maxx])
-                        # Check sub_rainrate array size and 
-                        # make sure there are pixels above the rainrate threshold
+                        # Roll the full-domain maps then slice the compact bounding box.
+                        # This ensures sub_* arrays are always compact (MCS-sized), even
+                        # when the original minx=0/maxx=xdim spanned the full domain width.
+                        _rr_rolled  = np.roll(rainrate_map, (shift_y_top, shift_x_right), axis=(0, 1))
+                        _lon_rolled = np.roll(lon_map,      (shift_y_top, shift_x_right), axis=(0, 1))
+                        _lat_rolled = np.roll(lat_map,      (shift_y_top, shift_x_right), axis=(0, 1))
+                        sub_rainrate = _rr_rolled [r_miny:r_maxy, r_minx:r_maxx]
+                        sub_lon      = _lon_rolled[r_miny:r_maxy, r_minx:r_maxx]
+                        sub_lat      = _lat_rolled[r_miny:r_maxy, r_minx:r_maxx]
+                        # Update bounding box indices to the compact rolled box so that
+                        # pixel_area subsetting and centroid index arithmetic remain correct
+                        minx, miny = r_minx, r_miny
+                        maxx, maxy = r_maxx, r_maxy
+                        # Check there are pixels above the rainrate threshold
                         if (sub_rainrate.size > 0) and \
                             (sub_rainrate.shape[0] > 0) and \
                             (sub_rainrate.shape[1] > 0) and \
                             (np.any(sub_rainrate > pf_rr_thres)):
-                            # Roll rainrate to avoid periodic boundary condition
-                            sub_rainrate_map = subset_roll_map(
-                                sub_rainrate, shift_x_right, shift_y_top, xdim, ydim,
-                            )
-                            lon_roll = subset_roll_map(sub_lon, shift_x_right, shift_y_top, xdim, ydim)
-                            lat_roll = subset_roll_map(sub_lat, shift_x_right, shift_y_top, xdim, ydim)
+                            sub_rainrate_map = sub_rainrate
+                            lon_roll = sub_lon
+                            lat_roll = sub_lat
                             roll_flag = True
                         else:
                             sub_rainrate_map = sub_rainrate
@@ -262,19 +292,10 @@ def matchtbpf_singlefile(
                     total_rain[imatchcloud] = np.nansum(sub_rainrate_map)
                     # Calculate volumetric rain (rain rate * pixel area)
                     if area_method == "latlon":
-                        _pa_subset = _pixel_area[miny:maxy, minx:maxx]
-                        if roll_flag:
-                            # Use sub_rainrate (pre-roll, NaN outside cloud) as ref so the
-                            # crop boundary matches sub_rainrate_map for any PBC direction
-                            # (x, y, or both). _pixel_area has no NaN/zero values so it
-                            # cannot self-identify its valid extent after rolling.
-                            sub_pa = subset_roll_map(
-                                _pa_subset, shift_x_right, shift_y_top, xdim, ydim,
-                                ref_array=sub_rainrate,
-                            )
-                            import pdb; pdb.set_trace()
-                        else:
-                            sub_pa = _pa_subset
+                        # minx/miny always reflect the compact bounding box (updated to the
+                        # rolled box above when roll_flag=True), so this slice is always
+                        # MCS-sized and matches sub_rainrate_map.shape for any PBC direction.
+                        sub_pa = _pixel_area[miny:maxy, minx:maxx]
                         total_volrain[imatchcloud] = np.nansum(
                             sub_rainrate_map * sub_pa
                         )
@@ -379,6 +400,9 @@ def matchtbpf_singlefile(
                                     lat_min=lat_min, lat_max=lat_max,
                                     sub_pixel_area=sub_pixel_area,
                                     mean_pixelength=mean_pixelength,
+                                    shift_x_right=shift_x_right,
+                                    shift_y_top=shift_y_top,
+                                    xdim=xdim, ydim=ydim,
                                 )
 
                             # Save precipitation feature statisitcs
@@ -623,6 +647,7 @@ def calc_pf_stats(
         roll_flag=False, lon_roll=None, lat_roll=None,
         lon_min=None, lon_max=None, lat_min=None, lat_max=None,
         sub_pixel_area=None, mean_pixelength=None,
+        shift_x_right=0, shift_y_top=0, xdim=None, ydim=None,
 ):
     """
     Calculate individual PF statistics.
@@ -749,12 +774,17 @@ def calc_pf_stats(
                 pfarea[ipf - 1] = iipfnpix * pixel_radius ** 2
             pfid[ipf - 1] = np.copy(int(ipf))
             if roll_flag:
-                # Remove NaN values from the rolled lon/lat arrays
-                lon_roll_v = lon_roll[~np.isnan(lon_roll)]
-                lat_roll_v = lat_roll[~np.isnan(lat_roll)]
-                # Calculate circular mean of lon/lat
-                pflon[ipf - 1] = circular_mean(lon_roll_v, lon_min, lon_max)
-                pflat[ipf - 1] = circular_mean(lat_roll_v, lat_min, lat_max)
+                # Extract PF-only pixels from the rolled sub-array (iipfy/iipfx are
+                # indices within the sub-array where pfnumberlabelmap == ipf).
+                # Using only PF pixels (not all non-NaN sub-domain pixels) avoids
+                # biasing circular_mean toward non-PF pixels when the bounding box
+                # contains contributions from the far side of the dateline.
+                iipflon_roll = lon_roll[iipfy, iipfx]
+                iipflat_roll = lat_roll[iipfy, iipfx]
+                iipflon_v = iipflon_roll[~np.isnan(iipflon_roll)]
+                iipflat_v = iipflat_roll[~np.isnan(iipflat_roll)]
+                pflon[ipf - 1] = circular_mean(iipflon_v, lon_min, lon_max) if len(iipflon_v) > 0 else fillval_f
+                pflat[ipf - 1] = circular_mean(iipflat_v, lat_min, lat_max) if len(iipflat_v) > 0 else fillval_f
             else:
                 pflon[ipf - 1] = np.nanmean(lon[iipfy[:] + miny, iipfx[:] + minx])
                 pflat[ipf - 1] = np.nanmean(lat[iipfy[:] + miny, iipfx[:] + minx])
@@ -805,35 +835,69 @@ def calc_pf_stats(
             pfperimeter[ipf - 1] = (
                     pfproperties[0].perimeter * _pixel_length
             )
-            [
-                ycentroid,
-                xcentroid,
-            ] = pfproperties[0].centroid
-            [
-                yweightedcentroid,
-                xweightedcentroid,
-            ] = pfproperties[0].centroid_weighted
+            # Compute local (sub-array) centroid indices from regionprops.
+            # Guard against NaN before converting to int: regionprops centroid/
+            # centroid_weighted can return NaN when the intensity image has no
+            # valid positive weights (e.g. all-NaN or all-zero intensity_image).
+            _c = pfproperties[0].centroid
+            _cw = pfproperties[0].centroid_weighted
+            _c_valid  = not (np.isnan(_c[0])  or np.isnan(_c[1]))
+            _cw_valid = not (np.isnan(_cw[0]) or np.isnan(_cw[1]))
+            yc_local  = int(np.round(_c[0]))  if _c_valid  else -1
+            xc_local  = int(np.round(_c[1]))  if _c_valid  else -1
+            ywc_local = int(np.round(_cw[0])) if _cw_valid else -1
+            xwc_local = int(np.round(_cw[1])) if _cw_valid else -1
 
-            # Shift the centroids by minx/miny
-            # since the PF is a subset from the full image
-            # Round the centroid values as indices
-            # TODO: the lat/lon values below are not correct for PFs at the boundary of the domain
-            ycentroid = int(np.round(ycentroid + miny))
-            xcentroid = int(np.round(xcentroid + minx))
-            yweightedcentroid = int(np.round(yweightedcentroid + miny))
-            xweightedcentroid = int(np.round(xweightedcentroid + minx))
+            if roll_flag and xdim is not None:
+                # Inverse-shift rolled-domain indices back to original domain so that
+                # the dense un-rolled lon/lat arrays can be indexed correctly.
+                # (local + miny) is the rolled-domain index; subtracting shift_y_top/
+                # shift_x_right and wrapping modulo ydim/xdim recovers the original index.
+                ycentroid         = (yc_local  + miny - shift_y_top)   % ydim
+                xcentroid         = (xc_local  + minx - shift_x_right)  % xdim
+                yweightedcentroid = (ywc_local + miny - shift_y_top)   % ydim
+                xweightedcentroid = (xwc_local + minx - shift_x_right)  % xdim
+                iipfy_max_orig    = (iipfy_max + miny - shift_y_top)   % ydim
+                iipfx_max_orig    = (iipfx_max + minx - shift_x_right)  % xdim
+            else:
+                ycentroid         = yc_local  + miny
+                xcentroid         = xc_local  + minx
+                yweightedcentroid = ywc_local + miny
+                xweightedcentroid = xwc_local + minx
+                iipfy_max_orig    = iipfy_max + miny
+                iipfx_max_orig    = iipfx_max + minx
 
             # Apply the indices to get centroid lat/lon
-            if (0 < (ycentroid) < ny) & (0 < (xcentroid) < nx):
+            if (0 < ycentroid < ny) and (0 < xcentroid < nx):
                 pflon_centroid[ipf-1] = lon[ycentroid, xcentroid]
                 pflat_centroid[ipf-1] = lat[ycentroid, xcentroid]
-            if (0 < (yweightedcentroid) < ny) & (0 < (xweightedcentroid) < nx):
+            if (0 < yweightedcentroid < ny) and (0 < xweightedcentroid < nx):
                 pflon_weightedcentroid[ipf-1] = lon[yweightedcentroid, xweightedcentroid]
                 pflat_weightedcentroid[ipf-1] = lat[yweightedcentroid, xweightedcentroid]
 
-            # Shift the x, y indices by minx/miny
-            pflon_maxrainrate[ipf - 1] = lon[iipfy_max + miny, iipfx_max + minx]
-            pflat_maxrainrate[ipf - 1] = lat[iipfy_max + miny, iipfx_max + minx]
+            # Max rain rate location
+            pflon_maxrainrate[ipf - 1] = lon[iipfy_max_orig, iipfx_max_orig]
+            pflat_maxrainrate[ipf - 1] = lat[iipfy_max_orig, iipfx_max_orig]
+
+            # When roll_flag is active (PBC domain), unwrap centroid/max-rainrate lon/lat
+            # relative to pflon/pflat. Use domain width as correction size (not hardcoded
+            # 360°) for robust support of both global and small idealized doubly-periodic domains.
+            if roll_flag and xdim is not None:
+                _lon_domain = lon_max - lon_min
+                _lat_domain = lat_max - lat_min
+                for _arr, _ref, _domain in [
+                    (pflon_centroid, pflon, _lon_domain),
+                    (pflon_weightedcentroid, pflon, _lon_domain),
+                    (pflon_maxrainrate, pflon, _lon_domain),
+                    (pflat_centroid, pflat, _lat_domain),
+                    (pflat_weightedcentroid, pflat, _lat_domain),
+                    (pflat_maxrainrate, pflat, _lat_domain),
+                ]:
+                    _diff = _arr[ipf - 1] - _ref[ipf - 1]
+                    if _diff > _domain / 2:
+                        _arr[ipf - 1] -= _domain
+                    elif _diff < -_domain / 2:
+                        _arr[ipf - 1] += _domain
 
         else:
             sys.exit("Error: PF pixel count not matching!")

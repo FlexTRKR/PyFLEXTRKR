@@ -245,6 +245,14 @@ def get_track_stats(trackstats_file, start_datetime, end_datetime, dt_thres):
         track_ccs_lon = dss['meanlon'].isel(tracks=idx)
         track_ccs_lat = dss['meanlat'].isel(tracks=idx)
 
+    # Check if PF centroid coordinates exist, otherwise use PF mean lat/lon coordinates
+    if 'pf_lon_centroid' in dss.variables and 'pf_lat_centroid' in dss.variables:
+        track_pf_lon = dss['pf_lon_centroid'].isel(tracks=idx, nmaxpf=0)
+        track_pf_lat = dss['pf_lat_centroid'].isel(tracks=idx, nmaxpf=0)
+    else:
+        track_pf_lon = dss['pf_lon'].isel(tracks=idx, nmaxpf=0)
+        track_pf_lat = dss['pf_lat'].isel(tracks=idx, nmaxpf=0)
+
     # Subset these tracks and put in a dictionary
     track_dict = {
         'ntracks': ntracks,
@@ -252,8 +260,8 @@ def get_track_stats(trackstats_file, start_datetime, end_datetime, dt_thres):
         'track_bt': dss['base_time'].isel(tracks=idx),
         'track_ccs_lon': track_ccs_lon,
         'track_ccs_lat': track_ccs_lat,
-        'track_pf_lon': dss['pf_lon_centroid'].isel(tracks=idx, nmaxpf=0),
-        'track_pf_lat': dss['pf_lat_centroid'].isel(tracks=idx, nmaxpf=0),
+        'track_pf_lon': track_pf_lon,
+        'track_pf_lat': track_pf_lat,
         'track_pf_diam': 2 * np.sqrt(dss['pf_area'].isel(tracks=idx, nmaxpf=0) / np.pi),
         'dt_thres': dt_thres,
         'time_res': time_res,
@@ -387,15 +395,22 @@ def plot_map_2panels(pixel_dict, plot_info, map_info, track_dict):
     # Marker style for tracks
     marker_style = dict(edgecolor=trackpath_color, facecolor=trackpath_color, linestyle='-', marker='o')
 
-    # Set up map projection
-    # If longitude extent spans across 0 degree longitude, set central_longitude=0
-    # otherwise, set it to 180
-    if ((map_extent[0] < 0) & (map_extent[1] > 0)):
-        central_longitude = 0
-    else:
+    # Set up map projection.
+    # Detect dateline-crossing by normalizing both extent lons to -180~+180:
+    # if lon0_n > lon1_n the extent goes eastward across the dateline.
+    # This works for both 0-360 notation (lon_max=220) and -180~+180 notation (lon_max=-140).
+    _lon0_n = ((map_extent[0] + 180) % 360) - 180
+    _lon1_n = ((map_extent[1] + 180) % 360) - 180
+    if _lon0_n > _lon1_n:
         central_longitude = 180
+    else:
+        central_longitude = 0
     proj = ccrs.PlateCarree(central_longitude=central_longitude)
+    # data_proj always PlateCarree(0): data lons are in -180~+180 convention.
     data_proj = ccrs.PlateCarree(central_longitude=0)
+    # Compute set_extent bounds in the proj frame (values relative to central_longitude).
+    _ext_lon0 = ((map_extent[0] - central_longitude + 180) % 360) - 180
+    _ext_lon1 = ((map_extent[1] - central_longitude + 180) % 360) - 180
     land = cfeature.NaturalEarthFeature('physical', 'land', map_resolution)
     borders = cfeature.NaturalEarthFeature('cultural', 'admin_0_boundary_lines_land', map_resolution)
     states = cfeature.NaturalEarthFeature('cultural', 'admin_1_states_provinces_lakes', map_resolution)
@@ -451,7 +466,7 @@ def plot_map_2panels(pixel_dict, plot_info, map_info, track_dict):
     #################################################################
     # Tb Panel
     ax1 = plt.subplot(gs[0,0], projection=proj)
-    ax1.set_extent(map_extent, crs=data_proj)
+    ax1.set_extent([_ext_lon0, _ext_lon1, map_extent[2], map_extent[3]], crs=proj)
     ax1.add_feature(land, facecolor='none', edgecolor=map_edgecolor, linewidth=2, zorder=3)
     if draw_border == True:
         ax1.add_feature(borders, edgecolor=map_edgecolor, facecolor='none', linewidth=0.8, zorder=3)
@@ -497,7 +512,7 @@ def plot_map_2panels(pixel_dict, plot_info, map_info, track_dict):
 
     #################################################################
     # Precipitation Panel
-    ax2.set_extent(map_extent, crs=data_proj)
+    ax2.set_extent([_ext_lon0, _ext_lon1, map_extent[2], map_extent[3]], crs=proj)
     ax2.add_feature(land, facecolor='none', edgecolor=map_edgecolor, linewidth=2, zorder=3)
     if draw_border == True:
         ax2.add_feature(borders, edgecolor=map_edgecolor, facecolor='none', linewidth=0.8, zorder=3)
@@ -565,7 +580,7 @@ def plot_map_2panels(pixel_dict, plot_info, map_info, track_dict):
             idx_cut = np.where(ibt <= pixel_bt)[0]
             idur_cut = len(idx_cut)
             if (idur_cut > 0):
-                # Track path
+                # CCS track path
                 color_vals = np.repeat(ilifetime, idur_cut)
                 size_vals = np.repeat(marker_size, idur_cut)
                 size_vals[0] = marker_size * 2
@@ -573,6 +588,11 @@ def plot_map_2panels(pixel_dict, plot_info, map_info, track_dict):
                                lw=trackpath_linewidth, ls='-', color=trackpath_color, transform=data_proj, zorder=3)
                 cc2 = ax2.plot(track_ccs_lon.data[itrack,idx_cut], track_ccs_lat.data[itrack,idx_cut],
                                lw=trackpath_linewidth, ls='-', color=trackpath_color, transform=data_proj, zorder=3)
+                # PF track path
+                # pf1 = ax1.plot(track_pf_lon.data[itrack,idx_cut], track_pf_lat.data[itrack,idx_cut], 
+                #                 lw=trackpath_linewidth, ls='-', color=trackpath_color, transform=data_proj, zorder=3)
+                # pf2 = ax2.plot(track_pf_lon.data[itrack,idx_cut], track_pf_lat.data[itrack,idx_cut], 
+                #                 lw=trackpath_linewidth, ls='-', color=trackpath_color, transform=data_proj, zorder=3)
                 # Initiation location
                 cl1 = ax1.scatter(track_ccs_lon.data[itrack,0], track_ccs_lat.data[itrack,0], s=marker_size*2,
                                   transform=data_proj, zorder=4, **marker_style)
@@ -596,8 +616,16 @@ def plot_map_2panels(pixel_dict, plot_info, map_info, track_dict):
                 ipfcircle = ax2.tissot(rad_km=_irad*pfdiam_scale, lons=_ilon, lats=_ilat, n_samples=100,
                                        facecolor='None', edgecolor=pfdiam_color, lw=pfdiam_linewidth, zorder=3)
             # Overplot tracknumbers at current frame
-            if (_iccslon > map_extent[0]) & (_iccslon < map_extent[1]) & \
-                    (_iccslat > map_extent[2]) & (_iccslat < map_extent[3]):
+            # Normalize to 0-360 for dateline-safe lon check
+            # (e.g. map_extent[1]=-140 fails a naive > check for lons west of the dateline).
+            _iccslon_norm = _iccslon % 360
+            _lonmin_norm = map_extent[0] % 360
+            _lonmax_norm = map_extent[1] % 360
+            if _lonmin_norm <= _lonmax_norm:
+                _in_lon = (_iccslon_norm >= _lonmin_norm) and (_iccslon_norm <= _lonmax_norm)
+            else:  # domain crosses the dateline
+                _in_lon = (_iccslon_norm >= _lonmin_norm) or (_iccslon_norm <= _lonmax_norm)
+            if _in_lon and (_iccslat > map_extent[2]) and (_iccslat < map_extent[3]):
                 ax1.text(_iccslon+0.05, _iccslat+0.05, f'{itracknum:.0f}', color='k', size=tracknumber_fontsize, 
                          ha='left', va='center', weight='bold', transform=data_proj, zorder=5)
                 ax2.text(_iccslon+0.05, _iccslat+0.05, f'{itracknum:.0f}', color='k', size=tracknumber_fontsize, 
@@ -695,9 +723,19 @@ def work_for_time_loop(datafile, track_dict, map_info, plot_info, config, ifile)
         lon_vals = ds['longitude'].values
         lat_vals = ds['latitude'].values
         
+        # Normalize lon_vals and extent to 0-360 for consistent comparison.
+        # Handles data in either 0-360 or -180~180, and extents crossing
+        # the dateline (e.g. lonmin=160, lonmax=-160 -> lonmax_norm=200).
+        lon_vals_norm = lon_vals % 360
+        lonmin_norm = lonmin % 360
+        lonmax_norm = lonmax % 360
+        lat_mask = (lat_vals >= latmin) & (lat_vals <= latmax)
+        if lonmin_norm <= lonmax_norm:
+            lon_mask = (lon_vals_norm >= lonmin_norm) & (lon_vals_norm <= lonmax_norm)
+        else:  # extent wraps around 360 deg (e.g. 350 to 30)
+            lon_mask = (lon_vals_norm >= lonmin_norm) | (lon_vals_norm <= lonmax_norm)
         # Find all points within the domain
-        mask = ((lon_vals >= lonmin) & (lon_vals <= lonmax) & 
-                (lat_vals >= latmin) & (lat_vals <= latmax))
+        mask = lon_mask & lat_mask
         
         # Find bounding box in index space
         rows, cols = np.where(mask)
@@ -818,7 +856,9 @@ if __name__ == "__main__":
         # If map_extent is specified, calculate aspect ratio
         if (map_extent is not None):
             # Get map aspect ratio from map_extent (minlon, maxlon, minlat, maxlat)
-            lon_span = map_extent[1] - map_extent[0]
+            # Use modulo to compute lon_span correctly for any convention
+            # including 0-360 extents and regions crossing the dateline.
+            lon_span = (map_extent[1] - map_extent[0]) % 360 or 360
             lat_span = map_extent[3] - map_extent[2]
             fig_ratio_yx = lat_span / lon_span
 

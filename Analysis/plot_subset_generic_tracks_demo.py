@@ -248,21 +248,22 @@ def plot_map(pixel_dict, plot_info, map_info, track_dict):
     # Marker style for track center
     marker_style = dict(edgecolor=trackpath_color, facecolor=trackpath_color, linestyle='-', marker='o')
 
-    # Set up map projection
-    # Normalize map_extent longitudes to [-180, 180] (handles 0-360 input)
-    _lon0 = map_extent[0] if map_extent[0] <= 180 else map_extent[0] - 360
-    _lon1 = map_extent[1] if map_extent[1] <= 180 else map_extent[1] - 360
-    # If the range wraps the antimeridian after normalization, treat as global
-    if _lon0 > _lon1:
-        _lon0, _lon1 = -180, 180
-    # If longitude extent spans across 0 degree longitude, set central_longitude=0
-    # otherwise, set it to 180
-    if (_lon0 < 0) & (_lon1 > 0):
-        central_longitude = 0
-    else:
+    # Set up map projection.
+    # Detect dateline-crossing by normalizing both extent lons to -180~+180:
+    # if lon0_n > lon1_n the extent goes eastward across the dateline.
+    # This works for both 0-360 notation (lon_max=220) and -180~+180 notation (lon_max=-140).
+    _lon0_n = ((map_extent[0] + 180) % 360) - 180
+    _lon1_n = ((map_extent[1] + 180) % 360) - 180
+    if _lon0_n > _lon1_n:
         central_longitude = 180
+    else:
+        central_longitude = 0
     proj = ccrs.PlateCarree(central_longitude=central_longitude)
-    data_proj = ccrs.PlateCarree()
+    # data_proj always PlateCarree(0): data lons are in -180~+180 convention.
+    data_proj = ccrs.PlateCarree(central_longitude=0)
+    # Compute set_extent bounds in the proj frame (values relative to central_longitude).
+    _ext_lon0 = ((map_extent[0] - central_longitude + 180) % 360) - 180
+    _ext_lon1 = ((map_extent[1] - central_longitude + 180) % 360) - 180
     land = cfeature.NaturalEarthFeature('physical', 'land', map_resolution)
     borders = cfeature.NaturalEarthFeature('cultural', 'admin_0_boundary_lines_land', map_resolution)
     states = cfeature.NaturalEarthFeature('cultural', 'admin_1_states_provinces_lakes', map_resolution)
@@ -276,11 +277,7 @@ def plot_map(pixel_dict, plot_info, map_info, track_dict):
     ax1 = plt.subplot(gs[0], projection=proj)
     cax1 = plt.subplot(gs[1])
     # Plot background map elements
-    # Use set_global() for global domains to avoid projection boundary NaN issues
-    if _lon0 == -180 and _lon1 == 180:
-        ax1.set_global()
-    else:
-        ax1.set_extent([_lon0, _lon1, map_extent[2], map_extent[3]], crs=data_proj)
+    ax1.set_extent([_ext_lon0, _ext_lon1, map_extent[2], map_extent[3]], crs=proj)
     ax1.set_aspect('auto', adjustable=None)
     ax1.add_feature(land, facecolor='none', edgecolor=map_edgecolor, zorder=3)
     if draw_border == True:
@@ -356,8 +353,15 @@ def plot_map(pixel_dict, plot_info, map_info, track_dict):
         # Proceed if time difference is < dt_match
         if (idt_match < dt_match):
             # Overplot tracknumbers at current frame
-            if (_ilon > map_extent[0]) & (_ilon < map_extent[1]) & \
-                (_ilat > map_extent[2]) & (_ilat < map_extent[3]):
+            # Normalize to 0-360 for dateline-safe lon check
+            _ilon_norm = _ilon % 360
+            _lonmin_norm = map_extent[0] % 360
+            _lonmax_norm = map_extent[1] % 360
+            if _lonmin_norm <= _lonmax_norm:
+                _in_lon = (_ilon_norm >= _lonmin_norm) and (_ilon_norm <= _lonmax_norm)
+            else:  # domain crosses the dateline
+                _in_lon = (_ilon_norm >= _lonmin_norm) or (_ilon_norm <= _lonmax_norm)
+            if _in_lon and (_ilat > map_extent[2]) and (_ilat < map_extent[3]):
                 ax1.text(_ilon+0.02, _ilat+0.02, f'{itracknum:.0f}', color='k', size=tracknumber_fontsize,
                          ha='left', va='center', weight='bold', transform=data_proj, zorder=5)
 
@@ -510,7 +514,7 @@ if __name__ == "__main__":
         # If map_extent is specified, calculate aspect ratio
         if (map_extent is not None):
             # Get map aspect ratio from map_extent (minlon, maxlon, minlat, maxlat)
-            lon_span = map_extent[1] - map_extent[0]
+            lon_span = (map_extent[1] - map_extent[0]) % 360 or 360
             lat_span = map_extent[3] - map_extent[2]
             fig_ratio_yx = lat_span / lon_span
 

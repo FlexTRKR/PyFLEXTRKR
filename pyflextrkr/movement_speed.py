@@ -11,7 +11,6 @@ from scipy.interpolate import interp1d
 import dask
 from dask.distributed import wait
 from pyflextrkr.ft_utilities import subset_files_timerange, get_pixel_area
-from pyflextrkr.ftfunctions import find_max_indices_to_roll, subset_roll_map
 
 def movement_speed(
         config,
@@ -292,19 +291,35 @@ def movement_of_feature_fft(
                 if (((xmax - xmin) >= xdim * max_feature_frac_x) or \
                     ((ymax - ymin) >= ydim * max_feature_frac_y)) and \
                     (pbc_direction != 'none'):
-                    # Make a mask of valid values for both fields
+                    # Combine non-zero pixels from both time steps to detect
+                    # which boundaries the feature crosses.
                     masked_fields = (np.abs(masked_field_1) > 0) | (np.abs(masked_field_2) > 0)
-                    # Find the indices to roll the array to avoid periodic boundary condition
-                    shift_x_right, shift_y_top = find_max_indices_to_roll(
-                        masked_fields, xdim, ydim,
-                    )
-                    # Roll arrays to avoid periodic boundary condition
-                    masked_field_1 = subset_roll_map(
-                        masked_field_1, shift_x_right, shift_y_top, xdim, ydim, fillval=0,
-                    )
-                    masked_field_2 = subset_roll_map(
-                        masked_field_2, shift_x_right, shift_y_top, xdim, ydim, fillval=0,
-                    )
+                    # Sub-array dimensions; indices are 0-based within the sub-box.
+                    sub_ydim, sub_xdim = masked_fields.shape
+                    occ_y, occ_x = np.where(masked_fields)
+                    # Gap-based boundary detection:
+                    # The largest gap in sorted occupied indices > 50% of the
+                    # sub-array span indicates the feature wraps across that edge.
+                    # The shift amount is chosen so the right/top cluster rolls
+                    # to the left/bottom, compacting the feature away from the border.
+                    sorted_x = np.sort(np.unique(occ_x))
+                    gap_x = np.diff(sorted_x)
+                    max_gap_x_idx = np.argmax(gap_x) if len(gap_x) > 0 else 0
+                    if len(gap_x) > 0 and gap_x[max_gap_x_idx] > sub_xdim * 0.5:
+                        shift_x_right = sub_xdim - int(sorted_x[max_gap_x_idx + 1])
+                    else:
+                        shift_x_right = 0
+                    sorted_y = np.sort(np.unique(occ_y))
+                    gap_y = np.diff(sorted_y)
+                    max_gap_y_idx = np.argmax(gap_y) if len(gap_y) > 0 else 0
+                    if len(gap_y) > 0 and gap_y[max_gap_y_idx] > sub_ydim * 0.5:
+                        shift_y_top = sub_ydim - int(sorted_y[max_gap_y_idx + 1])
+                    else:
+                        shift_y_top = 0
+                    # Roll both sub-arrays by the detected shifts so the
+                    # feature is compact and does not straddle the boundary.
+                    masked_field_1 = np.roll(masked_field_1, (shift_y_top, shift_x_right), axis=(0, 1))
+                    masked_field_2 = np.roll(masked_field_2, (shift_y_top, shift_x_right), axis=(0, 1))
             else:
                 masked_field_1 = field_1.copy()
                 masked_field_2 = field_2.copy()
