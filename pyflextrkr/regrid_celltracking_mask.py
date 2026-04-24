@@ -88,10 +88,10 @@ def regrid_file(in_filename, in_basename, out_dir, out_basename, config):
 
     raw_dir = config['rawdata_path']
     raw_basename = config['rawdatabasename']
-    x_dimname = config['x_dimname']
-    y_dimname = config['y_dimname']
-    x_varname = config['x_varname']
-    y_varname = config['y_varname']
+    x_dimname = config.get('x_dimname', 'x')
+    y_dimname = config.get('y_dimname', 'y')
+    x_coordname = config.get('x_coordname', config.get('x_varname'))
+    y_coordname = config.get('y_coordname', config.get('y_varname'))
     regrid_ratio = config.get('regrid_ratio')
     geolimits = config.get('geolimits', None)
 
@@ -106,8 +106,8 @@ def regrid_file(in_filename, in_basename, out_dir, out_basename, config):
         # Read original input file
         dso = xr.open_dataset(raw_files[0])
         # Get coordinates
-        xcoord_orig = dso[x_varname].squeeze()
-        ycoord_orig = dso[y_varname].squeeze()
+        xcoord_orig = dso[x_coordname].squeeze()
+        ycoord_orig = dso[y_coordname].squeeze()
         xcoord_attrs = xcoord_orig.attrs
         ycoord_attrs = ycoord_orig.attrs
         nx_orig = dso.sizes[x_dimname]
@@ -121,8 +121,8 @@ def regrid_file(in_filename, in_basename, out_dir, out_basename, config):
             ycoord_2d = ycoord_orig.data
         else:
             logger.critical("ERROR: Unexpected input data x, y coordinate dimensions.")
-            logger.critical(f"{x_varname} dimension: {xcoord_orig.ndim}")
-            logger.critical(f"{y_varname} dimension: {ycoord_orig.ndim}")
+            logger.critical(f"{x_coordname} dimension: {xcoord_orig.ndim}")
+            logger.critical(f"{y_coordname} dimension: {ycoord_orig.ndim}")
             logger.critical("Tracking will now exit.")
             sys.exit()
 
@@ -156,8 +156,8 @@ def regrid_file(in_filename, in_basename, out_dir, out_basename, config):
         latmin, latmax = geolimits[0]-buffer, geolimits[2]+buffer
         lonmin, lonmax = geolimits[1]-buffer, geolimits[3]+buffer
         # Make a 2D mask
-        mask = ((dso[x_varname] >= lonmin) & (dso[x_varname] <= lonmax) & \
-                (dso[y_varname] >= latmin) & (dso[y_varname] <= latmax)).squeeze()
+        mask = ((dso[x_coordname] >= lonmin) & (dso[x_coordname] <= lonmax) & \
+                (dso[y_coordname] >= latmin) & (dso[y_coordname] <= latmax)).squeeze()
         # Get y/x indices limits from the mask
         y_idx, x_idx = np.where(mask == True)
         xmin, xmax = np.min(x_idx), np.max(x_idx)

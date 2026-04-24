@@ -30,4 +30,5 @@ dependencies:
   - seaborn
   - xarray>=2025.1.2
   - xesmf>=0.8
-  - zarr<3.0.0
+  - zarr>=3.0.0
+  - mamba

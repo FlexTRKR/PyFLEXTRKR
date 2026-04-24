@@ -112,6 +112,91 @@ def echotop_height(dbz3d, height, z_dimname, shape_2d, dbz_thresh, gap, min_thic
     return echotop
 
 
+def echotop_height_fast(dbz3d, height, z_dimname, shape_2d, dbz_thresh, gap, min_thick):
+    """
+    Vectorized version of echotop_height.  Produces results numerically identical
+    to echotop_height (within float32 precision).
+
+    Instead of looping over every cloudy pixel in Python (~npix_cloud iterations),
+    this function scans the nz vertical levels once with fully vectorized NumPy
+    operations.  For a 2775×2145 domain at 100 m resolution the loop count falls
+    from ~6 million to ~25, giving 100–1000× less Python overhead.
+
+    Parameters  (identical to echotop_height)
+    ----------
+    dbz3d: xarray.DataArray
+        3-D reflectivity [z, y, x].
+    height: np.ndarray
+        1-D or 3-D height array.
+    z_dimname: str
+        Name of the z dimension in dbz3d.
+    shape_2d: tuple
+        (ny, nx) of the 2-D output domain.
+    dbz_thresh: float
+        Reflectivity threshold (dBZ).
+    gap: int
+        Maximum gap (in vertical levels) allowed within one echo layer.
+    min_thick: float
+        Unused (kept for API compatibility with echotop_height).
+
+    Returns
+    -------
+    echotop: np.ndarray float32 shape (ny, nx)
+        First-layer echo-top height from bottom up.  NaN where no echo found.
+    """
+    # Binary cloud mask [nz, ny, nx]
+    cmask = (dbz3d > dbz_thresh).squeeze().values  # bool
+
+    nz = cmask.shape[0]
+    ny, nx = shape_2d
+    height_is_1d = height.ndim == 1
+
+    # Output array
+    echotop = np.full(shape_2d, np.nan, dtype=np.float32)
+
+    # Per-column trackers (2-D arrays over the horizontal domain)
+    # last_cloud_z: last level index where a cloud was observed (-1 = none yet)
+    last_cloud_z = np.full((ny, nx), -1, dtype=np.intp)
+    # passed_gap: True once the first-layer gap has been crossed for a column
+    passed_gap = np.zeros((ny, nx), dtype=bool)
+    # first_layer_top_idx: level index of the current first-layer top (-1 = none)
+    first_layer_top_idx = np.full((ny, nx), -1, dtype=np.intp)
+
+    for k in range(nz):
+        cloud_at_k = cmask[k]  # bool [ny, nx]
+
+        # A gap too large exists when:
+        #   - we've seen cloud before (last_cloud_z >= 0), AND
+        #   - there is cloud at level k, AND
+        #   - the spacing from the last cloud level exceeds `gap`
+        cloud_seen = last_cloud_z >= 0
+        gap_too_large = cloud_seen & cloud_at_k & ((k - last_cloud_z) > gap)
+        passed_gap |= gap_too_large
+
+        # A level is still in the first layer if it has cloud AND we haven't
+        # crossed a layer-breaking gap yet.
+        in_first_layer = cloud_at_k & ~passed_gap
+
+        # Update the running first-layer top index
+        first_layer_top_idx = np.where(in_first_layer, k, first_layer_top_idx)
+
+        # Advance the last-seen cloud level tracker
+        last_cloud_z = np.where(cloud_at_k, k, last_cloud_z)
+
+    # Assign echo-top heights for columns that have a valid first layer
+    valid = first_layer_top_idx >= 0
+    if valid.any():
+        if height_is_1d:
+            echotop[valid] = height[first_layer_top_idx[valid]]
+        else:
+            y_idx, x_idx = np.where(valid)
+            echotop[y_idx, x_idx] = height[
+                first_layer_top_idx[y_idx, x_idx], y_idx, x_idx
+            ]
+
+    return echotop
+
+
 def echotop_height_wrf(dbz3d, height, z_dimname, shape_2d, dbz_thresh, gap, min_thick):
     """
     Calculates first layer echo-top height from bottom up for WRF.

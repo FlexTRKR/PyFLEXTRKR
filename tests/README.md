@@ -6,6 +6,7 @@ Tests are written with [pytest](https://docs.pytest.org/) and are split into thr
 | Tier | Files | Runs on | Needs data? |
 |------|-------|---------|-------------|
 | Unit / synthetic | `test_steiner_func.py`, `test_echotop_func.py`, `test_vertical_coordinate.py`, `test_idcells_synthetic.py`, `test_area_method_utils.py`, `test_area_method_clouds.py`, `test_example.py` | GitHub CI + local | No |
+| Local integration | `test_convolve_method_demo_data.py` | Local / HPC only | Yes (demo inputs) |
 | Local regression | `test_regression_local.py` | Local / HPC only | Yes (demo outputs) |
 | End-to-end demos | `run_demo_tests.py` | Local / HPC only | Auto-downloads |
 
@@ -123,6 +124,31 @@ support. Verifies that cloud labelling, area thresholding, and feature
 renumbering work correctly when pixel areas vary across the domain (as they
 do for latitude-dependent grids). Tests both the fixed (scalar) and
 latlon (2D array) modes to ensure backward compatibility.
+
+### `test_convolve_method_demo_data.py`
+Local integration tests using real NEXRAD (KHGX) and CSAPR-2 (CACTI) demo input files.
+All tests are marked `@pytest.mark.local` and skipped unless `PYFLEXTRKR_TEST_DATA` is set.
+
+**Convolution method comparison (ndimage vs fft):**
+- `TestNexradConvolveMethod`, `TestCsaprConvolveMethod` — compare background reflectivity
+  (interior < 1e-4 dBZ, edge < 1e-3 dBZ) and full Steiner sclass/score_dilate (must be identical)
+
+**Fast / EDT function validation:**
+- `TestEchotopHeightFast` — `echotop_height_fast` vs `echotop_height` for all 5 dBZ thresholds;
+  assert max difference < 1 m
+- `TestLabelCellsFast` — `label_cells_fast` vs `label_cells`; assert bit-identical output
+- `TestExpandConvCoreFast` — `expand_conv_core_fast` vs `expand_conv_core`; assert bit-identical
+- `TestExpandConvCoreEdt` — `expand_conv_core_edt` vs orig/fast; assert ≤ 0.1% pixel differences
+  (EDT uses nearest-core Voronoi; sub-pixel tie-breaking at equidistant boundaries may differ)
+- `TestModDilateConvRadEdt` — `mod_dilate_conv_rad_edt` vs `mod_dilate_conv_rad`;
+  assert ≤ 0.1% pixel differences
+
+To download demo data and run:
+```bash
+python tests/run_demo_tests.py --demos demo_cell_nexrad demo_cell_csapr -n 4
+export PYFLEXTRKR_TEST_DATA=~/data/demo
+pytest tests/test_convolve_method_demo_data.py -m local -v -s
+```
 
 ### `test_regression_local.py`
 Validates the output of full demo runs (e.g., `demo_cell_nexrad.sh`).
@@ -242,6 +268,50 @@ provide finer-grained assertions on the same output files.
 If any test fails after your changes, the output will show exactly which assertion
 failed and what values were produced vs. expected, making it easy to diagnose
 whether the change broke existing behaviour or whether the test needs updating.
+
+---
+
+## Performance profiling scripts
+
+These standalone scripts are **not pytest tests** — run them directly with Python.
+They measure wall-clock timing of individual pipeline steps and are useful for
+benchmarking the orig / fast / edt method options on your specific hardware and data.
+
+### `profile_idcells.py`
+Times each major step in `idcells_reflectivity` for any given config YAML file.
+No demo data setup required — point it at any config.
+
+Steps timed: `get_composite`, `mod_steiner` (+ sub-steps: `background_intensity`,
+`peakedness`, `mod_dilate_conv_rad`, `mod_dilate_conv_rad_edt`),
+`expand_conv_core` (orig / fast / edt), `echotop_height` (orig / fast, 5 thresholds).
+
+```bash
+# Profile first file of LES 100m data:
+conda run -n pyflex26.4 python tests/profile_idcells.py \
+  lasso/cellgrowth/tracking/slurm/config_lasso_wrf100m_20181129_gefs09_base.yml \
+  --nfiles 1
+
+# Profile demo CSAPR data (all files) with cProfile breakdown:
+export PYFLEXTRKR_TEST_DATA=~/data/demo
+conda run -n pyflex26.4 python tests/profile_idcells.py \
+  config/config_autotest_demo_cell_csapr.yml --cprofile
+```
+
+### `plot_idcells_speedup.py`
+Measures orig / fast / edt speedups across both demo datasets and saves PNG bar charts.
+Requires `$PYFLEXTRKR_TEST_DATA` pointing to downloaded demo input data.
+
+```bash
+conda run -n pyflex26.4 bash -c \
+  "PYFLEXTRKR_TEST_DATA=~/data/demo python tests/plot_idcells_speedup.py \
+   --outdir /tmp/speedup_figs --nfiles 2"
+```
+
+Outputs: `idcells_speedup_NEXRAD_KHGX_.png`, `idcells_speedup_CSAPR-2_CACTI_.png`
+
+Each figure has two panels:
+- **Top**: absolute timing (orig / fast / edt bars with std error)
+- **Bottom**: speedup vs orig on a log scale (edt bars typically show 30-3000×)
 
 ---
 

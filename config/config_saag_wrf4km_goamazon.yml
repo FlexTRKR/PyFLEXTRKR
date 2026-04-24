@@ -104,8 +104,23 @@ maxConvRadius: 8.0  # option6
 conv_rad_increment: 0.75  # option6
 # Background reflectivity step-function increment [dB]
 bkg_refl_increment: 5
-# Convolution method to calculate background reflectivity: ndimage (default), signal (FFT)
-convolve_method: ndimage
+# Convolution method for background reflectivity:
+#   ndimage: direct spatial convolution (default, exact, slow for large kernels)
+#   fft:     FFT-based convolution (5-20x faster when bkg_rad >> dx, e.g., bkgrndRadius=11km at dx=500m)
+convolve_method: fft
+# Convective core dilation method (controls binary expansion of cores based on background Ze):
+#   orig: binary_dilation per radius bin (default, exact)
+#   edt:  distance_transform_edt (30x+ faster; recommended for high-res dx<=500m data)
+dilate_method: orig
+# Convective cell expansion method (final outward expansion of cell footprints for tracking):
+#   orig: binary_dilation per core per radius (default, exact, slowest)
+#   fast: grey_dilation per radius (~8-24x speedup, bit-identical to orig)
+#   edt:  distance_transform_edt, single pass (1000-3000x faster than orig; recommended for high-res)
+expand_method: orig
+# Echo-top height calculation method:
+#   orig: level-by-level pixel scan (default; faster for high thresholds or sparse data)
+#   fast: vectorized scan (faster for low thresholds on dense/high-res data, e.g., thresh=10 on LES)
+echotop_method: orig
 # Define a set of radii for final step of convective cell expansion [km]
 # This is for the purpose of making the convective region larger for tracking convective cells
 radii_expand: [1,2,3,4,5,6,7,8]
