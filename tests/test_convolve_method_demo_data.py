@@ -114,13 +114,30 @@ def _demo_steiner_params(dx=500.0, bkg_rad_km=11.0):
 # Helpers
 # ---------------------------------------------------------------------------
 
-def _find_first_input_file(input_dir, pattern="*.nc"):
-    """Return the first (alphabetically sorted) input NetCDF file."""
+def _find_input_files(input_dir, pattern="*.nc", n=1):
+    """
+    Return a sorted list of input NetCDF files.
+
+    Parameters
+    ----------
+    n : int
+        Maximum number of files to return.
+        0 means all available files.
+        Default is 1 (first file only, same as previous behaviour).
+    """
     files = sorted(glob.glob(os.path.join(input_dir, pattern)))
     if not files:
         # Some demos nest files in subdirectories
         files = sorted(glob.glob(os.path.join(input_dir, "**", pattern), recursive=True))
-    return files[0] if files else None
+    if n > 0:
+        files = files[:n]
+    return files
+
+
+def _find_first_input_file(input_dir, pattern="*.nc"):
+    """Return the first (alphabetically sorted) input NetCDF file (legacy helper)."""
+    result = _find_input_files(input_dir, pattern, n=1)
+    return result[0] if result else None
 
 
 def _bkg(refl, mask, dx, bkg_rad, method):
@@ -210,177 +227,219 @@ class _ConvolveCompareBase:
     LABEL = ""
 
     @pytest.fixture(scope="class")
-    def comp_dict(self):
+    def comp_dicts(self, nfiles):
         """
-        Load the first input file and return the composite reflectivity dict.
-        Skips the test class if input data is not present.
+        Load the first *nfiles* input files (0 = all) and return a list of
+        ``(comp_dict, filepath)`` pairs.  Skips the test class if no data found.
         """
-        first_file = _find_first_input_file(self.INPUT_DIR, self.INPUT_PATTERN)
-        if first_file is None:
+        pairs = _load_demo_3d_multi(
+            self.INPUT_DIR, self.INPUT_PATTERN, self.CONFIG, n=nfiles
+        )
+        if not pairs:
             pytest.skip(
                 f"No input files found in {self.INPUT_DIR}\n"
                 f"Run: python tests/run_demo_tests.py --demos {self.LABEL} -n 4"
             )
-        return get_composite_reflectivity_generic(first_file, self.CONFIG)
+        return pairs
 
     @pytest.fixture(scope="class")
-    def refl_mask(self, comp_dict):
-        """Extract a single-time composite reflectivity array and mask."""
-        dbz_comp = comp_dict['dbz_comp']
-        # dbz_comp may be an xarray.DataArray; convert to numpy
-        refl = np.array(dbz_comp.values if hasattr(dbz_comp, 'values') else dbz_comp,
-                        dtype=np.float32)
-        # Replace NaN with radar_sensitivity so mask is consistent
-        radar_sens = self.CONFIG.get('radar_sensitivity', 0.0)
-        mask = np.ones(refl.shape, dtype=int)
-        mask[~np.isfinite(refl)] = 0
-        refl[mask == 0] = radar_sens
-        # Squeeze any leading singleton dimensions (time)
-        refl = refl.squeeze()
-        mask = mask.squeeze()
-        return refl, mask
+    def refl_mask(self, comp_dicts):
+        """
+        Return a list of ``(refl, mask)`` tuples — one entry per loaded file.
+
+        Each ``refl`` is a 2-D float32 array; ``mask`` is a 2-D int array
+        (1 = valid, 0 = missing/below-sensitivity).
+        """
+        result = []
+        for comp_dict, _ in comp_dicts:
+            dbz_comp = comp_dict['dbz_comp']
+            refl = np.array(
+                dbz_comp.values if hasattr(dbz_comp, 'values') else dbz_comp,
+                dtype=np.float32,
+            )
+            radar_sens = self.CONFIG.get('radar_sensitivity', 0.0)
+            mask = np.ones(refl.shape, dtype=int)
+            mask[~np.isfinite(refl)] = 0
+            refl[mask == 0] = radar_sens
+            refl = refl.squeeze()
+            mask = mask.squeeze()
+            result.append((refl, mask))
+        return result
 
     # ── Test 1: background reflectivity agreement (all pixels) ─────────────
 
     def test_background_reflectivity_interior_max_diff(self, refl_mask, capsys):
-        """Max |ndimage - fft| at interior pixels must be < 1e-4 dBZ."""
-        refl, mask = refl_mask
-        dx  = self.PARAMS['dx']
+        """Max |ndimage - fft| at interior pixels must be < 1e-4 dBZ (all files)."""
+        dx      = self.PARAMS['dx']
         bkg_rad = self.PARAMS['bkg_rad']
-        k   = int(bkg_rad / dx)
+        k       = int(bkg_rad / dx)
 
-        t0 = time.time()
-        bkg_ndimage = _bkg(refl, mask, dx, bkg_rad, 'ndimage')
-        t_ndimage   = time.time() - t0
-        t0 = time.time()
-        bkg_fft     = _bkg(refl, mask, dx, bkg_rad, 'fft')
-        t_fft       = time.time() - t0
+        agg_max_interior = 0.0
+        for fi, (refl, mask) in enumerate(refl_mask):
+            t0 = time.time()
+            bkg_ndimage = _bkg(refl, mask, dx, bkg_rad, 'ndimage')
+            t_ndimage   = time.time() - t0
+            t0 = time.time()
+            bkg_fft     = _bkg(refl, mask, dx, bkg_rad, 'fft')
+            t_fft       = time.time() - t0
+
+            with capsys.disabled():
+                print(
+                    f"\n[{self.LABEL} file={fi}] "
+                    f"ndimage={t_ndimage:.2f}s  fft={t_fft:.2f}s  "
+                    f"speedup={t_ndimage/t_fft:.1f}x"
+                )
+
+            max_interior, _ = _report_diff(
+                f"{self.LABEL} file={fi}", bkg_ndimage, bkg_fft, k, capsys
+            )
+            agg_max_interior = max(agg_max_interior, max_interior)
 
         with capsys.disabled():
             print(
-                f"\n[{self.LABEL}] Timing: ndimage={t_ndimage:.2f}s, "
-                f"fft={t_fft:.2f}s, speedup={t_ndimage/t_fft:.1f}x"
+                f"\n[{self.LABEL}] AGGREGATE over {len(refl_mask)} file(s): "
+                f"max_interior={agg_max_interior:.3e} dBZ"
             )
-
-        max_interior, max_edge = _report_diff(
-            self.LABEL, bkg_ndimage, bkg_fft, k, capsys
-        )
-        assert max_interior < 1e-4, (
-            f"[{self.LABEL}] Interior max diff = {max_interior:.3e} dBZ (threshold 1e-4 dBZ)"
+        assert agg_max_interior < 1e-4, (
+            f"[{self.LABEL}] Interior max diff = {agg_max_interior:.3e} dBZ "
+            f"(threshold 1e-4 dBZ, over {len(refl_mask)} file(s))"
         )
 
     def test_background_reflectivity_edge_max_diff(self, refl_mask, capsys):
-        """Max |ndimage - fft| at edge pixels (within kernel_radius) must be < 1e-3 dBZ."""
-        refl, mask = refl_mask
-        dx  = self.PARAMS['dx']
+        """Max |ndimage - fft| at edge pixels must be < 1e-3 dBZ (all files)."""
+        dx      = self.PARAMS['dx']
         bkg_rad = self.PARAMS['bkg_rad']
-        k   = int(bkg_rad / dx)
+        k       = int(bkg_rad / dx)
 
-        bkg_ndimage = _bkg(refl, mask, dx, bkg_rad, 'ndimage')
-        bkg_fft     = _bkg(refl, mask, dx, bkg_rad, 'fft')
+        agg_max_edge = 0.0
+        for fi, (refl, mask) in enumerate(refl_mask):
+            bkg_ndimage = _bkg(refl, mask, dx, bkg_rad, 'ndimage')
+            bkg_fft     = _bkg(refl, mask, dx, bkg_rad, 'fft')
 
-        em   = _edge_mask(refl.shape, k)
-        diff = np.abs(bkg_fft - bkg_ndimage)
-        valid_edge = em & np.isfinite(diff)
-        max_edge = float(diff[valid_edge].max()) if valid_edge.any() else 0.0
+            em   = _edge_mask(refl.shape, k)
+            diff = np.abs(bkg_fft - bkg_ndimage)
+            valid_edge = em & np.isfinite(diff)
+            max_edge = float(diff[valid_edge].max()) if valid_edge.any() else 0.0
+            agg_max_edge = max(agg_max_edge, max_edge)
 
-        assert max_edge < 1e-3, (
-            f"[{self.LABEL}] Edge max diff = {max_edge:.3e} dBZ (threshold 1e-3 dBZ)\n"
-            "  If this fails, consider explicit zero-padding in background_intensity for 'fft' method."
+        assert agg_max_edge < 1e-3, (
+            f"[{self.LABEL}] Edge max diff = {agg_max_edge:.3e} dBZ "
+            f"(threshold 1e-3 dBZ, over {len(refl_mask)} file(s))\n"
+            "  If this fails, consider explicit zero-padding in "
+            "background_intensity for 'fft' method."
         )
 
     # ── Test 2: Steiner classification agreement ────────────────────────────
 
     def test_sclass_identical_ndimage_vs_fft(self, refl_mask, capsys):
-        """Full Steiner sclass array must be elementally identical."""
-        refl, mask = refl_mask
-        r_ndimage = _run_steiner(refl, mask, self.PARAMS, 'ndimage')
-        r_fft     = _run_steiner(refl, mask, self.PARAMS, 'fft')
+        """Full Steiner sclass array must be elementally identical (all files)."""
+        total_diff  = 0
+        total_valid = 0
+        for fi, (refl, mask) in enumerate(refl_mask):
+            r_ndimage = _run_steiner(refl, mask, self.PARAMS, 'ndimage')
+            r_fft     = _run_steiner(refl, mask, self.PARAMS, 'fft')
 
-        diff_pixels = np.sum(r_ndimage['sclass'] != r_fft['sclass'])
-        total = int(np.sum(mask > 0))
+            diff_px = int(np.sum(r_ndimage['sclass'] != r_fft['sclass']))
+            n_valid = int(np.sum(mask > 0))
+            total_diff  += diff_px
+            total_valid += n_valid
+
+            with capsys.disabled():
+                print(
+                    f"\n[{self.LABEL} file={fi}] sclass diffs: "
+                    f"{diff_px}/{n_valid} ({100.0*diff_px/max(n_valid,1):.4f}%)"
+                )
 
         with capsys.disabled():
             print(
-                f"\n[{self.LABEL}] sclass differences: "
-                f"{diff_pixels}/{total} pixels "
-                f"({100.0*diff_pixels/max(total,1):.4f}%)"
+                f"\n[{self.LABEL}] AGGREGATE: sclass diffs "
+                f"{total_diff}/{total_valid} over {len(refl_mask)} file(s)"
             )
-        assert diff_pixels == 0, (
-            f"[{self.LABEL}] sclass differs at {diff_pixels} pixel(s). "
-            f"Check refl_bkg differences above for root cause."
+        assert total_diff == 0, (
+            f"[{self.LABEL}] sclass differs at {total_diff} pixel(s) total "
+            f"over {len(refl_mask)} file(s)"
         )
 
     def test_score_dilate_identical_ndimage_vs_fft(self, refl_mask, capsys):
-        """Dilated convective core (score_dilate) must be elementally identical."""
-        refl, mask = refl_mask
-        r_ndimage = _run_steiner(refl, mask, self.PARAMS, 'ndimage')
-        r_fft     = _run_steiner(refl, mask, self.PARAMS, 'fft')
+        """Dilated convective core (score_dilate) must be elementally identical (all files)."""
+        total_diff = 0
+        for fi, (refl, mask) in enumerate(refl_mask):
+            r_ndimage = _run_steiner(refl, mask, self.PARAMS, 'ndimage')
+            r_fft     = _run_steiner(refl, mask, self.PARAMS, 'fft')
 
-        diff_pixels = np.sum(r_ndimage['score_dilate'] != r_fft['score_dilate'])
-        with capsys.disabled():
-            print(
-                f"\n[{self.LABEL}] score_dilate differences: {diff_pixels} pixel(s)"
-            )
-        assert diff_pixels == 0, (
-            f"[{self.LABEL}] score_dilate differs at {diff_pixels} pixel(s)."
+            diff_px = int(np.sum(r_ndimage['score_dilate'] != r_fft['score_dilate']))
+            total_diff += diff_px
+
+            with capsys.disabled():
+                print(
+                    f"\n[{self.LABEL} file={fi}] score_dilate diffs: {diff_px} px"
+                )
+
+        assert total_diff == 0, (
+            f"[{self.LABEL}] score_dilate differs at {total_diff} pixel(s) total "
+            f"over {len(refl_mask)} file(s)"
         )
 
     # ── Test 3: Edge-specific pixel comparison ──────────────────────────────
 
     def test_edge_pixel_background_vs_interior(self, refl_mask, capsys):
         """
-        Measure and compare edge vs interior |ndimage - fft| differences.
-        Reports exact values; asserts both stay below their respective thresholds.
+        Measure and compare edge vs interior |ndimage - fft| differences across
+        all loaded files.  Asserts both stay below their respective thresholds.
         """
-        refl, mask = refl_mask
-        dx  = self.PARAMS['dx']
+        dx      = self.PARAMS['dx']
         bkg_rad = self.PARAMS['bkg_rad']
-        k   = int(bkg_rad / dx)
+        k       = int(bkg_rad / dx)
 
-        bkg_ndimage = _bkg(refl, mask, dx, bkg_rad, 'ndimage')
-        bkg_fft     = _bkg(refl, mask, dx, bkg_rad, 'fft')
+        agg_max_interior = 0.0
+        agg_max_edge     = 0.0
 
-        diff  = np.abs(bkg_fft - bkg_ndimage)
-        valid = np.isfinite(diff) & (mask > 0).reshape(diff.shape)
-        em    = _edge_mask(refl.shape, k)
+        for fi, (refl, mask) in enumerate(refl_mask):
+            bkg_ndimage = _bkg(refl, mask, dx, bkg_rad, 'ndimage')
+            bkg_fft     = _bkg(refl, mask, dx, bkg_rad, 'fft')
 
-        interior_vals = diff[~em & valid]
-        edge_vals     = diff[em & valid]
+            diff  = np.abs(bkg_fft - bkg_ndimage)
+            valid = np.isfinite(diff) & (mask > 0).reshape(diff.shape)
+            em    = _edge_mask(refl.shape, k)
 
-        max_interior = float(interior_vals.max()) if interior_vals.size else 0.0
-        max_edge     = float(edge_vals.max())     if edge_vals.size     else 0.0
+            interior_vals = diff[~em & valid]
+            edge_vals     = diff[em & valid]
 
-        # Find the edge pixel with the largest difference
-        edge_diff = np.where(em & valid, diff, np.nan)
-        if np.any(np.isfinite(edge_diff)):
-            worst_edge_loc = np.unravel_index(np.nanargmax(edge_diff), diff.shape)
-            worst_edge_refl = float(refl[worst_edge_loc])
-            worst_edge_ndimage = float(bkg_ndimage[worst_edge_loc])
-            worst_edge_fft     = float(bkg_fft[worst_edge_loc])
-        else:
-            worst_edge_loc = (-1, -1)
-            worst_edge_refl = worst_edge_ndimage = worst_edge_fft = float('nan')
+            max_interior = float(interior_vals.max()) if interior_vals.size else 0.0
+            max_edge     = float(edge_vals.max())     if edge_vals.size     else 0.0
+
+            edge_diff = np.where(em & valid, diff, np.nan)
+            if np.any(np.isfinite(edge_diff)):
+                worst_edge_loc = np.unravel_index(np.nanargmax(edge_diff), diff.shape)
+                worst_edge_ndimage = float(bkg_ndimage[worst_edge_loc])
+                worst_edge_fft     = float(bkg_fft[worst_edge_loc])
+            else:
+                worst_edge_loc = (-1, -1)
+                worst_edge_ndimage = worst_edge_fft = float('nan')
+
+            agg_max_interior = max(agg_max_interior, max_interior)
+            agg_max_edge     = max(agg_max_edge, max_edge)
+
+            with capsys.disabled():
+                print(
+                    f"\n[{self.LABEL} file={fi}] Edge pixel analysis (k={k}px):\n"
+                    f"  Interior max diff : {max_interior:.3e} dBZ\n"
+                    f"  Edge     max diff : {max_edge:.3e} dBZ\n"
+                    f"  Worst edge pixel  : {worst_edge_loc}  "
+                    f"ndimage={worst_edge_ndimage:.4f}  fft={worst_edge_fft:.4f} dBZ"
+                )
 
         with capsys.disabled():
             print(
-                f"\n[{self.LABEL}] Edge pixel analysis (kernel_radius={k}px):\n"
-                f"  Interior max diff : {max_interior:.3e} dBZ\n"
-                f"  Edge     max diff : {max_edge:.3e} dBZ\n"
-                f"  Worst edge pixel  : {worst_edge_loc}\n"
-                f"    refl            : {worst_edge_refl:.2f} dBZ\n"
-                f"    bkg_ndimage     : {worst_edge_ndimage:.4f} dBZ\n"
-                f"    bkg_fft         : {worst_edge_fft:.4f} dBZ\n"
-                f"    difference      : {max_edge:.4e} dBZ\n"
-                f"  Note: classification thresholds are ≥10 dBZ, so differences\n"
-                f"  below 1.0 dBZ cannot cause misclassification."
+                f"\n[{self.LABEL}] AGGREGATE over {len(refl_mask)} file(s): "
+                f"max_interior={agg_max_interior:.3e}  max_edge={agg_max_edge:.3e} dBZ"
             )
 
-        assert max_interior < 1e-4, (
-            f"[{self.LABEL}] Interior diff = {max_interior:.3e} dBZ exceeds 1e-4 dBZ"
+        assert agg_max_interior < 1e-4, (
+            f"[{self.LABEL}] Interior diff = {agg_max_interior:.3e} dBZ exceeds 1e-4 dBZ"
         )
-        assert max_edge < 1e-3, (
-            f"[{self.LABEL}] Edge diff = {max_edge:.3e} dBZ exceeds 1e-3 dBZ"
+        assert agg_max_edge < 1e-3, (
+            f"[{self.LABEL}] Edge diff = {agg_max_edge:.3e} dBZ exceeds 1e-3 dBZ"
         )
 
 
@@ -527,6 +586,25 @@ def _load_demo_3d(input_dir, pattern, config):
     return get_composite_reflectivity_generic(first_file, config), first_file
 
 
+def _load_demo_3d_multi(input_dir, pattern, config, n=1):
+    """
+    Return a list of ``(comp_dict, filepath)`` pairs for the first *n* input files
+    (``n=0`` loads all available files).
+
+    Returns an empty list if no files are found.
+    """
+    files = _find_input_files(input_dir, pattern, n=n)
+    result = []
+    for f in files:
+        try:
+            cd = get_composite_reflectivity_generic(f, config)
+            result.append((cd, f))
+        except Exception as exc:  # pragma: no cover
+            import warnings
+            warnings.warn(f"Skipping {f}: {exc}")
+    return result
+
+
 def _steiner_result_for_expand(comp_dict):
     """Run Steiner classification and return (core_dilate, dx, radii_expand)."""
     from pyflextrkr.steiner_func import make_dilation_step_func, mod_steiner_classification
@@ -568,44 +646,59 @@ class TestEchotopHeightFast:
          "taranis_corcsapr2*.nc", _CSAPR_CONFIG),
     ])
     @pytest.mark.parametrize("thresh", [10, 20, 30, 40, 50])
-    def test_echotop_agrees(self, demo, input_dir, pattern, config, thresh, capsys):
-        """echotop_height_fast == echotop_height within 1 m for every threshold."""
-        comp_dict, first_file = _load_demo_3d(input_dir, pattern, config)
-        if comp_dict is None:
+    def test_echotop_agrees(self, demo, input_dir, pattern, config, thresh, nfiles, capsys):
+        """echotop_height_fast == echotop_height within 1 m for every threshold (all files)."""
+        pairs = _load_demo_3d_multi(input_dir, pattern, config, n=nfiles)
+        if not pairs:
             pytest.skip(f"No input files in {input_dir}")
 
-        dbz3d  = comp_dict['dbz3d_filt']
-        height = comp_dict['height']
-        shape_2d = comp_dict['refl'].shape
         gap = 3  # default echotop_gap used in demo configs
+        agg_nan_diff = 0
+        agg_max_diff = 0.0
 
-        t0 = time.time()
-        old = echotop_height(
-            dbz3d, height, 'z', shape_2d, dbz_thresh=thresh, gap=gap, min_thick=0)
-        t_old = time.time() - t0
+        for fi, (comp_dict, fpath) in enumerate(pairs):
+            dbz3d    = comp_dict['dbz3d_filt']
+            height   = comp_dict['height']
+            shape_2d = comp_dict['refl'].shape
 
-        t0 = time.time()
-        new = echotop_height_fast(
-            dbz3d, height, 'z', shape_2d, dbz_thresh=thresh, gap=gap, min_thick=0)
-        t_new = time.time() - t0
+            t0 = time.time()
+            old = echotop_height(
+                dbz3d, height, 'z', shape_2d, dbz_thresh=thresh, gap=gap, min_thick=0)
+            t_old = time.time() - t0
 
-        nan_diff = int(np.sum(np.isnan(old) != np.isnan(new)))
-        valid = np.isfinite(old) & np.isfinite(new)
-        max_diff = float(np.abs(old[valid] - new[valid]).max()) if valid.any() else 0.0
+            t0 = time.time()
+            new = echotop_height_fast(
+                dbz3d, height, 'z', shape_2d, dbz_thresh=thresh, gap=gap, min_thick=0)
+            t_new = time.time() - t0
+
+            nan_diff = int(np.sum(np.isnan(old) != np.isnan(new)))
+            valid    = np.isfinite(old) & np.isfinite(new)
+            max_diff = float(np.abs(old[valid] - new[valid]).max()) if valid.any() else 0.0
+
+            agg_nan_diff += nan_diff
+            agg_max_diff  = max(agg_max_diff, max_diff)
+
+            with capsys.disabled():
+                print(
+                    f"\n[{demo} thresh={thresh} file={fi}] "
+                    f"old={t_old:.3f}s  fast={t_new:.3f}s  "
+                    f"speedup={t_old/max(t_new, 1e-9):.1f}x  "
+                    f"max_diff={max_diff:.2e}m  nan_mismatch={nan_diff}"
+                )
 
         with capsys.disabled():
             print(
-                f"\n[{demo} thresh={thresh}] "
-                f"old={t_old:.3f}s  fast={t_new:.3f}s  "
-                f"speedup={t_old/max(t_new, 1e-9):.1f}x  "
-                f"max_diff={max_diff:.2e}m  nan_mismatch={nan_diff}"
+                f"\n[{demo} thresh={thresh}] AGGREGATE over {len(pairs)} file(s): "
+                f"max_diff={agg_max_diff:.2e}m  nan_mismatch={agg_nan_diff}"
             )
 
-        assert nan_diff == 0, (
-            f"[{demo} thresh={thresh}] NaN pattern differs: {nan_diff} pixel(s)"
+        assert agg_nan_diff == 0, (
+            f"[{demo} thresh={thresh}] NaN pattern differs: "
+            f"{agg_nan_diff} pixel(s) over {len(pairs)} file(s)"
         )
-        assert np.allclose(old, new, equal_nan=True, atol=1.0), (
-            f"[{demo} thresh={thresh}] max |old-fast| = {max_diff:.3e} m (threshold 1.0 m)"
+        assert agg_max_diff <= 1.0, (
+            f"[{demo} thresh={thresh}] max |old-fast| = {agg_max_diff:.3e} m "
+            f"(threshold 1.0 m, over {len(pairs)} file(s))"
         )
 
 
@@ -624,34 +717,47 @@ class TestLabelCellsFast:
         ("csapr",  demo_path('cell_radar', 'csapr', 'input'),
          "taranis_corcsapr2*.nc", _CSAPR_CONFIG),
     ])
-    def test_label_cells_identical(self, demo, input_dir, pattern, config, capsys):
-        """label_cells_fast output must be array_equal to label_cells output."""
-        comp_dict, first_file = _load_demo_3d(input_dir, pattern, config)
-        if comp_dict is None:
+    def test_label_cells_identical(self, demo, input_dir, pattern, config, nfiles, capsys):
+        """label_cells_fast output must be array_equal to label_cells output (all files)."""
+        pairs = _load_demo_3d_multi(input_dir, pattern, config, n=nfiles)
+        if not pairs:
             pytest.skip(f"No input files in {input_dir}")
 
-        core_dilate, dx, radii_expand = _steiner_result_for_expand(comp_dict)
-        convmask = (core_dilate > 0).astype(int)
+        total_diff_lbl  = 0
+        total_diff_npix = 0
 
-        t0 = time.time()
-        lbl_old, npix_old = label_cells(convmask, min_cellpix=0)
-        t_old = time.time() - t0
+        for fi, (comp_dict, _) in enumerate(pairs):
+            core_dilate, dx, radii_expand = _steiner_result_for_expand(comp_dict)
+            convmask = (core_dilate > 0).astype(int)
 
-        t0 = time.time()
-        lbl_new, npix_new = label_cells_fast(convmask, min_cellpix=0)
-        t_new = time.time() - t0
+            t0 = time.time()
+            lbl_old, npix_old = label_cells(convmask, min_cellpix=0)
+            t_old = time.time() - t0
 
-        with capsys.disabled():
-            print(
-                f"\n[{demo}] label_cells: old={t_old:.4f}s  fast={t_new:.4f}s  "
-                f"speedup={t_old/max(t_new, 1e-9):.1f}x  ncells={len(npix_old)}"
-            )
+            t0 = time.time()
+            lbl_new, npix_new = label_cells_fast(convmask, min_cellpix=0)
+            t_new = time.time() - t0
 
-        assert np.array_equal(lbl_old, lbl_new), (
-            f"[{demo}] label array differs: {np.sum(lbl_old != lbl_new)} pixel(s)"
+            diff_lbl  = int(np.sum(lbl_old  != lbl_new))
+            diff_npix = int(np.sum(npix_old != npix_new))
+            total_diff_lbl  += diff_lbl
+            total_diff_npix += diff_npix
+
+            with capsys.disabled():
+                print(
+                    f"\n[{demo} file={fi}] label_cells: "
+                    f"old={t_old:.4f}s  fast={t_new:.4f}s  "
+                    f"speedup={t_old/max(t_new,1e-9):.1f}x  "
+                    f"ncells={len(npix_old)}  "
+                    f"diff_lbl={diff_lbl}  diff_npix={diff_npix}"
+                )
+
+        assert total_diff_lbl == 0, (
+            f"[{demo}] label array differs: "
+            f"{total_diff_lbl} pixel(s) over {len(pairs)} file(s)"
         )
-        assert np.array_equal(npix_old, npix_new), (
-            f"[{demo}] npix array differs"
+        assert total_diff_npix == 0, (
+            f"[{demo}] npix array differs over {len(pairs)} file(s)"
         )
 
 
@@ -670,40 +776,49 @@ class TestExpandConvCoreFast:
         ("csapr",  demo_path('cell_radar', 'csapr', 'input'),
          "taranis_corcsapr2*.nc", _CSAPR_CONFIG),
     ])
-    def test_expand_core_identical(self, demo, input_dir, pattern, config, capsys):
-        """expand_conv_core_fast output must be array_equal to expand_conv_core."""
-        comp_dict, first_file = _load_demo_3d(input_dir, pattern, config)
-        if comp_dict is None:
+    def test_expand_core_identical(self, demo, input_dir, pattern, config, nfiles, capsys):
+        """expand_conv_core_fast output must be array_equal to expand_conv_core (all files)."""
+        pairs = _load_demo_3d_multi(input_dir, pattern, config, n=nfiles)
+        if not pairs:
             pytest.skip(f"No input files in {input_dir}")
 
-        core_dilate, dx, radii_expand = _steiner_result_for_expand(comp_dict)
+        total_diff_expand = 0
+        total_diff_sorted = 0
 
-        t0 = time.time()
-        exp_old, sorted_old = expand_conv_core(
-            core_dilate, radii_expand, dx, dx, min_corenpix=0)
-        t_old = time.time() - t0
+        for fi, (comp_dict, _) in enumerate(pairs):
+            core_dilate, dx, radii_expand = _steiner_result_for_expand(comp_dict)
 
-        t0 = time.time()
-        exp_new, sorted_new = expand_conv_core_fast(
-            core_dilate, radii_expand, dx, dx, min_corenpix=0)
-        t_new = time.time() - t0
+            t0 = time.time()
+            exp_old, sorted_old = expand_conv_core(
+                core_dilate, radii_expand, dx, dx, min_corenpix=0)
+            t_old = time.time() - t0
 
-        ncores = int(sorted_old.max()) if sorted_old.size else 0
-        diff_expand = int(np.sum(exp_old != exp_new))
-        diff_sorted = int(np.sum(sorted_old != sorted_new))
+            t0 = time.time()
+            exp_new, sorted_new = expand_conv_core_fast(
+                core_dilate, radii_expand, dx, dx, min_corenpix=0)
+            t_new = time.time() - t0
 
-        with capsys.disabled():
-            print(
-                f"\n[{demo}] expand_conv_core: old={t_old:.3f}s  fast={t_new:.3f}s  "
-                f"speedup={t_old/max(t_new, 1e-9):.1f}x  "
-                f"ncores={ncores}  diff_expand={diff_expand}  diff_sorted={diff_sorted}"
-            )
+            ncores     = int(sorted_old.max()) if sorted_old.size else 0
+            diff_expand = int(np.sum(exp_old != exp_new))
+            diff_sorted = int(np.sum(sorted_old != sorted_new))
+            total_diff_expand += diff_expand
+            total_diff_sorted += diff_sorted
 
-        assert diff_sorted == 0, (
-            f"[{demo}] score_sorted differs: {diff_sorted} pixel(s)"
+            with capsys.disabled():
+                print(
+                    f"\n[{demo} file={fi}] expand_conv_core: "
+                    f"old={t_old:.3f}s  fast={t_new:.3f}s  "
+                    f"speedup={t_old/max(t_new,1e-9):.1f}x  "
+                    f"ncores={ncores}  diff_expand={diff_expand}  diff_sorted={diff_sorted}"
+                )
+
+        assert total_diff_sorted == 0, (
+            f"[{demo}] score_sorted differs: "
+            f"{total_diff_sorted} pixel(s) over {len(pairs)} file(s)"
         )
-        assert diff_expand == 0, (
-            f"[{demo}] score_expand differs: {diff_expand} pixel(s)"
+        assert total_diff_expand == 0, (
+            f"[{demo}] score_expand differs: "
+            f"{total_diff_expand} pixel(s) over {len(pairs)} file(s)"
         )
 
 
@@ -764,14 +879,57 @@ def _steiner_result_for_dilate(comp_dict):
 
 # ── TestExpandConvCoreEdt ───────────────────────────────────────────────────
 
+def _contested_boundary_mask(exp_orig):
+    """
+    Return a boolean mask that is True for every covered pixel that is
+    8-connected adjacent to a covered pixel belonging to a **different** cell.
+
+    These are the only pixels where expand_conv_core_edt is permitted to assign
+    a different label than expand_conv_core: at equidistant Voronoi boundaries
+    the two methods apply different tie-breaking rules (nearest-core EDT vs
+    largest-core-wins sequential dilation).
+
+    Parameters
+    ----------
+    exp_orig : np.ndarray of int
+        Labeled expansion array from expand_conv_core (0 = background).
+
+    Returns
+    -------
+    contested : np.ndarray of bool, same shape as exp_orig
+    """
+    from scipy.ndimage import maximum_filter, minimum_filter
+    covered = exp_orig > 0
+    # Local maximum label in the 3x3 neighbourhood
+    local_max = maximum_filter(exp_orig, size=3, mode='constant', cval=0)
+    # Local minimum *nonzero* label: replace background with a sentinel so that
+    # minimum_filter returns the smallest real label rather than 0.
+    sentinel = int(exp_orig.max()) + 1
+    exp_filled = np.where(covered, exp_orig, sentinel)
+    local_min_nz = minimum_filter(exp_filled, size=3, mode='constant', cval=sentinel)
+    # A covered pixel is contested if the neighbourhood contains a strictly
+    # larger label OR a strictly smaller nonzero label.
+    contested = covered & ((local_max > exp_orig) | (local_min_nz < exp_orig))
+    return contested
+
+
 @pytest.mark.local
 class TestExpandConvCoreEdt:
     """
     Verify that expand_conv_core_edt agrees with expand_conv_core (orig) and
     expand_conv_core_fast on both demo datasets.
 
-    score_sorted must be identical (same label_cells_fast call).
-    score_expand may differ at sub-pixel-wide equidistant boundaries (≤ 0.1%).
+    Assertions:
+      1. Coverage identical: the set of covered pixels (label > 0) must be
+         bit-identical between EDT and orig.  No pixel should be gained or
+         lost — only label re-assignment at boundaries is permitted.
+      2. score_sorted identical: both methods use the same label_cells_fast
+         call, so sorted core indices must match exactly.
+      3. All label mismatches at contested boundaries: the only pixels where
+         EDT may assign a different label are those 8-connected adjacent to a
+         covered pixel belonging to a different cell.  At equidistant Voronoi
+         boundaries EDT uses nearest-core assignment while orig uses
+         largest-core-wins; both choices are equally valid scientifically.
     """
 
     @pytest.mark.parametrize("demo,input_dir,pattern,config", [
@@ -780,57 +938,106 @@ class TestExpandConvCoreEdt:
         ("csapr",  demo_path('cell_radar', 'csapr', 'input'),
          "taranis_corcsapr2*.nc", _CSAPR_CONFIG),
     ])
-    def test_expand_core_edt_vs_orig(self, demo, input_dir, pattern, config, capsys):
-        """expand_conv_core_edt score_expand must agree with orig within 0.1% pixels."""
-        comp_dict, _ = _load_demo_3d(input_dir, pattern, config)
-        if comp_dict is None:
+    def test_expand_core_edt_vs_orig(self, demo, input_dir, pattern, config, nfiles, capsys):
+        """
+        Three structural assertions (all files):
+          1. Coverage bit-identical   (zero tolerance)
+          2. score_sorted identical   (zero tolerance)
+          3. All label mismatches at contested multi-cell boundaries
+        """
+        pairs = _load_demo_3d_multi(input_dir, pattern, config, n=nfiles)
+        if not pairs:
             pytest.skip(f"No input files in {input_dir}")
 
-        core_dilate, dx, radii_expand = _steiner_result_for_expand(comp_dict)
+        total_sorted_diff      = 0
+        total_cov_diff         = 0
+        total_label_mismatch   = 0
+        total_outside_boundary = 0
 
-        t0 = time.time()
-        exp_orig, sorted_orig = expand_conv_core(
-            core_dilate, radii_expand, dx, dx, min_corenpix=0)
-        t_orig = time.time() - t0
+        for fi, (comp_dict, _) in enumerate(pairs):
+            core_dilate, dx, radii_expand = _steiner_result_for_expand(comp_dict)
 
-        t0 = time.time()
-        exp_fast, sorted_fast = expand_conv_core_fast(
-            core_dilate, radii_expand, dx, dx, min_corenpix=0)
-        t_fast = time.time() - t0
+            t0 = time.time()
+            exp_orig, sorted_orig = expand_conv_core(
+                core_dilate, radii_expand, dx, dx, min_corenpix=0)
+            t_orig = time.time() - t0
 
-        t0 = time.time()
-        exp_edt, sorted_edt = expand_conv_core_edt(
-            core_dilate, radii_expand, dx, dx, min_corenpix=0)
-        t_edt = time.time() - t0
+            t0 = time.time()
+            exp_fast, sorted_fast = expand_conv_core_fast(
+                core_dilate, radii_expand, dx, dx, min_corenpix=0)
+            t_fast = time.time() - t0
 
-        total_pix = int(np.sum(sorted_orig > 0))
-        diff_sorted_orig  = int(np.sum(sorted_orig  != sorted_edt))
-        diff_sorted_fast  = int(np.sum(sorted_fast  != sorted_edt))
-        diff_expand_orig  = int(np.sum(exp_orig  != exp_edt))
-        diff_expand_fast  = int(np.sum(exp_fast  != exp_edt))
-        pct_orig = 100.0 * diff_expand_orig / max(total_pix, 1)
-        pct_fast = 100.0 * diff_expand_fast / max(total_pix, 1)
+            t0 = time.time()
+            exp_edt, sorted_edt = expand_conv_core_edt(
+                core_dilate, radii_expand, dx, dx, min_corenpix=0)
+            t_edt = time.time() - t0
+
+            # Coverage diff: pixels where one method covers but the other does not
+            cov_orig = exp_orig > 0
+            cov_edt  = exp_edt  > 0
+            cov_diff = int(np.sum(cov_orig != cov_edt))
+
+            # Label mismatch: both covered, different cell ID
+            label_mismatch_mask = cov_orig & cov_edt & (exp_orig != exp_edt)
+            n_label_mismatch    = int(np.sum(label_mismatch_mask))
+
+            # All label mismatches must lie at contested multi-cell boundaries
+            if n_label_mismatch > 0:
+                contested = _contested_boundary_mask(exp_orig)
+                n_outside = int(np.sum(label_mismatch_mask & ~contested))
+            else:
+                n_outside = 0
+
+            diff_sorted = int(np.sum(sorted_orig != sorted_edt))
+
+            total_sorted_diff      += diff_sorted
+            total_cov_diff         += cov_diff
+            total_label_mismatch   += n_label_mismatch
+            total_outside_boundary += n_outside
+
+            with capsys.disabled():
+                print(
+                    f"\n[{demo} file={fi}] expand_conv_core timing:\n"
+                    f"  orig={t_orig:.3f}s  fast={t_fast:.3f}s  edt={t_edt:.3f}s\n"
+                    f"  speedup vs orig: {t_orig/max(t_edt,1e-9):.1f}x  "
+                    f"vs fast: {t_fast/max(t_edt,1e-9):.1f}x\n"
+                    f"  score_sorted diff         : {diff_sorted} px\n"
+                    f"  coverage diff             : {cov_diff} px\n"
+                    f"  label mismatch (at bdry)  : {n_label_mismatch} px\n"
+                    f"  label mismatch (off bdry) : {n_outside} px"
+                )
 
         with capsys.disabled():
             print(
-                f"\n[{demo}] expand_conv_core timing:\n"
-                f"  orig={t_orig:.3f}s  fast={t_fast:.3f}s  edt={t_edt:.3f}s\n"
-                f"  speedup vs orig: {t_orig/max(t_edt,1e-9):.1f}x\n"
-                f"  speedup vs fast: {t_fast/max(t_edt,1e-9):.1f}x\n"
-                f"  score_sorted diff (edt vs orig): {diff_sorted_orig} px\n"
-                f"  score_sorted diff (edt vs fast): {diff_sorted_fast} px\n"
-                f"  score_expand diff (edt vs orig): {diff_expand_orig} px ({pct_orig:.4f}%)\n"
-                f"  score_expand diff (edt vs fast): {diff_expand_fast} px ({pct_fast:.4f}%)"
+                f"\n[{demo}] AGGREGATE over {len(pairs)} file(s):\n"
+                f"  sorted_diff={total_sorted_diff}  "
+                f"cov_diff={total_cov_diff}  "
+                f"label_mismatch={total_label_mismatch}  "
+                f"outside_boundary={total_outside_boundary}"
             )
 
-        assert diff_sorted_orig == 0, (
-            f"[{demo}] score_sorted differs (edt vs orig): {diff_sorted_orig} px"
+        # Assert 1: coverage must be bit-identical
+        assert total_cov_diff == 0, (
+            f"[{demo}] coverage differs (edt vs orig): "
+            f"{total_cov_diff} px over {len(pairs)} file(s).\n"
+            "  EDT and orig must expand to the same set of covered pixels."
         )
-        assert pct_orig <= 0.1, (
-            f"[{demo}] score_expand (edt vs orig): {diff_expand_orig} px = {pct_orig:.4f}% > 0.1%"
+
+        # Assert 2: score_sorted labels must be identical
+        assert total_sorted_diff == 0, (
+            f"[{demo}] score_sorted differs (edt vs orig): "
+            f"{total_sorted_diff} px over {len(pairs)} file(s)"
         )
-        assert pct_fast <= 0.1, (
-            f"[{demo}] score_expand (edt vs fast): {diff_expand_fast} px = {pct_fast:.4f}% > 0.1%"
+
+        # Assert 3: all label mismatches must be at contested boundaries.
+        # EDT uses nearest-core Voronoi; orig uses largest-core-wins sequential
+        # dilation.  At equidistant boundaries between adjacent cells the two
+        # tie-breaking rules assign different labels — both are scientifically
+        # valid.  Any mismatch *away* from such boundaries indicates a bug.
+        assert total_outside_boundary == 0, (
+            f"[{demo}] {total_outside_boundary} label-mismatch pixel(s) are NOT "
+            f"at contested multi-cell boundaries over {len(pairs)} file(s).\n"
+            "  EDT should only differ from orig at equidistant Voronoi boundaries."
         )
 
 
@@ -849,46 +1056,68 @@ class TestModDilateConvRadEdt:
         ("csapr",  demo_path('cell_radar', 'csapr', 'input'),
          "taranis_corcsapr2*.nc", _CSAPR_CONFIG),
     ])
-    def test_mod_dilate_edt_vs_orig(self, demo, input_dir, pattern, config, capsys):
-        """mod_dilate_conv_rad_edt sclass/score_dilate must agree with orig within 0.1%."""
-        comp_dict, _ = _load_demo_3d(input_dir, pattern, config)
-        if comp_dict is None:
+    def test_mod_dilate_edt_vs_orig(self, demo, input_dir, pattern, config, nfiles, capsys):
+        """mod_dilate_conv_rad_edt sclass/score_dilate must agree with orig within 0.1% (all files)."""
+        pairs = _load_demo_3d_multi(input_dir, pattern, config, n=nfiles)
+        if not pairs:
             pytest.skip(f"No input files in {input_dir}")
 
-        refl_bkg, sclass, score_keep, mask, bkg_bin, conv_rad_bin, types_steiner, dx = \
-            _steiner_result_for_dilate(comp_dict)
+        total_diff_sclass  = 0
+        total_diff_sdilate = 0
+        total_valid        = 0
 
-        t0 = time.time()
-        sclass_orig, sdilate_orig = mod_dilate_conv_rad(
-            types_steiner, refl_bkg, sclass, score_keep,
-            mask, dx, dx, bkg_bin, conv_rad_bin)
-        t_orig = time.time() - t0
+        for fi, (comp_dict, _) in enumerate(pairs):
+            refl_bkg, sclass, score_keep, mask, bkg_bin, conv_rad_bin, types_steiner, dx = \
+                _steiner_result_for_dilate(comp_dict)
 
-        t0 = time.time()
-        sclass_edt, sdilate_edt = mod_dilate_conv_rad_edt(
-            types_steiner, refl_bkg, sclass, score_keep,
-            mask, dx, dx, bkg_bin, conv_rad_bin)
-        t_edt = time.time() - t0
+            t0 = time.time()
+            sclass_orig, sdilate_orig = mod_dilate_conv_rad(
+                types_steiner, refl_bkg, sclass, score_keep,
+                mask, dx, dx, bkg_bin, conv_rad_bin)
+            t_orig = time.time() - t0
 
-        total_valid = int(np.sum(mask == 1))
-        diff_sclass  = int(np.sum(sclass_orig  != sclass_edt))
-        diff_sdilate = int(np.sum(sdilate_orig != sdilate_edt))
-        pct_sclass  = 100.0 * diff_sclass  / max(total_valid, 1)
-        pct_sdilate = 100.0 * diff_sdilate / max(total_valid, 1)
+            t0 = time.time()
+            sclass_edt, sdilate_edt = mod_dilate_conv_rad_edt(
+                types_steiner, refl_bkg, sclass, score_keep,
+                mask, dx, dx, bkg_bin, conv_rad_bin)
+            t_edt = time.time() - t0
+
+            n_valid       = int(np.sum(mask == 1))
+            diff_sclass   = int(np.sum(sclass_orig  != sclass_edt))
+            diff_sdilate  = int(np.sum(sdilate_orig != sdilate_edt))
+            total_diff_sclass  += diff_sclass
+            total_diff_sdilate += diff_sdilate
+            total_valid        += n_valid
+
+            with capsys.disabled():
+                print(
+                    f"\n[{demo} file={fi}] mod_dilate_conv_rad: "
+                    f"orig={t_orig:.3f}s  edt={t_edt:.3f}s  "
+                    f"speedup={t_orig/max(t_edt,1e-9):.1f}x\n"
+                    f"  sclass  diff: {diff_sclass} px "
+                    f"({100.0*diff_sclass/max(n_valid,1):.4f}%)\n"
+                    f"  sdilate diff: {diff_sdilate} px "
+                    f"({100.0*diff_sdilate/max(n_valid,1):.4f}%)"
+                )
+
+        pct_sclass  = 100.0 * total_diff_sclass  / max(total_valid, 1)
+        pct_sdilate = 100.0 * total_diff_sdilate / max(total_valid, 1)
 
         with capsys.disabled():
             print(
-                f"\n[{demo}] mod_dilate_conv_rad timing:\n"
-                f"  orig={t_orig:.3f}s  edt={t_edt:.3f}s  "
-                f"speedup={t_orig/max(t_edt,1e-9):.1f}x\n"
-                f"  sclass  diff (edt vs orig): {diff_sclass}  px ({pct_sclass:.4f}%)\n"
-                f"  sdilate diff (edt vs orig): {diff_sdilate} px ({pct_sdilate:.4f}%)"
+                f"\n[{demo}] AGGREGATE over {len(pairs)} file(s): "
+                f"sclass_diff={total_diff_sclass} ({pct_sclass:.4f}%)  "
+                f"sdilate_diff={total_diff_sdilate} ({pct_sdilate:.4f}%)"
             )
 
         assert pct_sclass <= 0.1, (
-            f"[{demo}] sclass (edt vs orig): {diff_sclass} px = {pct_sclass:.4f}% > 0.1%"
+            f"[{demo}] sclass (edt vs orig): "
+            f"{total_diff_sclass} px = {pct_sclass:.4f}% > 0.1% "
+            f"over {len(pairs)} file(s)"
         )
         assert pct_sdilate <= 0.1, (
-            f"[{demo}] score_dilate (edt vs orig): {diff_sdilate} px = {pct_sdilate:.4f}% > 0.1%"
+            f"[{demo}] score_dilate (edt vs orig): "
+            f"{total_diff_sdilate} px = {pct_sdilate:.4f}% > 0.1% "
+            f"over {len(pairs)} file(s)"
         )
 
