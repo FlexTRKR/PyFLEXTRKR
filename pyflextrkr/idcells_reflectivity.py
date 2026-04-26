@@ -53,7 +53,7 @@ def idcells_reflectivity(
     z_dimname = config.get('z_dimname', 'z')
     fillval = config['fillval']
     geolimits = config.get('geolimits', None)
-    convolve_method = config.get('convolve_method', 'ndimage')
+    convolve_method = config.get('convolve_method', 'fft')
     dilate_method = config.get('dilate_method', 'orig')
     expand_method = config.get('expand_method', 'orig')
     echotop_method = config.get('echotop_method', 'orig')

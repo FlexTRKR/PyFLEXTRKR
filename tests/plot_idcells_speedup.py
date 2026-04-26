@@ -18,6 +18,10 @@ Steps timed
 
 Usage
 -----
+  # Run on an existing tracking config directly (no demo data setup needed):
+  python tests/plot_idcells_speedup.py \
+      --config /path/to/config.yml --nfiles 10 --outdir /path/to/figures/
+
   # Run with default demo data paths, save figure to current directory:
   PYFLEXTRKR_TEST_DATA=~/data/demo python tests/plot_idcells_speedup.py
 
@@ -63,6 +67,9 @@ from pyflextrkr.steiner_func import (
 
 # ── CLI ───────────────────────────────────────────────────────────────────────
 parser = argparse.ArgumentParser(description=__doc__)
+parser.add_argument('--config', default=None,
+                    help='Path to an existing PyFLEXTRKR config YAML. '
+                         'When specified, times that config directly (bypasses demo data setup).')
 parser.add_argument('--data_root', default=os.environ.get('PYFLEXTRKR_TEST_DATA', ''),
                     help='Path to demo data root (default: $PYFLEXTRKR_TEST_DATA)')
 parser.add_argument('--outdir', default='.',
@@ -75,9 +82,10 @@ DATA_ROOT = args.data_root
 OUTDIR    = args.outdir
 os.makedirs(OUTDIR, exist_ok=True)
 
-if not DATA_ROOT:
+if not DATA_ROOT and not args.config:
     raise SystemExit(
-        "ERROR: set --data_root or export PYFLEXTRKR_TEST_DATA=/path/to/demo"
+        "ERROR: set --data_root or export PYFLEXTRKR_TEST_DATA=/path/to/demo, "
+        "or use --config to specify a config directly"
     )
 
 # ── Demo specifications ───────────────────────────────────────────────────────
@@ -371,19 +379,9 @@ def make_speedup_figure(demo_name, timings, outdir):
 # ── Main ──────────────────────────────────────────────────────────────────────
 if __name__ == '__main__':
     saved = []
-    for demo in DEMOS:
-        print(f"\n{'='*60}")
-        print(f"Demo: {demo['name']}")
 
-        config_path = make_config(
-            demo['template'], demo['data_subdir'], DATA_ROOT, OUTDIR
-        )
-        if not os.path.exists(config_path):
-            print(f"  Config not found: {config_path} — skipping")
-            continue
-
-        timings = time_demo(config_path, args.nfiles)
-
+    def _print_summary(demo_name, timings):
+        """Print per-step timing summary to stdout."""
         for step_label, orig_key, fast_key, edt_key in [
             ('mod_dilate',       'dilate_orig',       None,              'dilate_edt'),
             ('expand_conv_core', 'expand_orig',        'expand_fast',     'expand_edt'),
@@ -401,8 +399,34 @@ if __name__ == '__main__':
                               f"edt={e:.3f}s ({sp:.1f}x)")
             print(f"  {step_label}: {', '.join(parts)}")
 
-        outfile = make_speedup_figure(demo['name'], timings, OUTDIR)
+    if args.config:
+        # ── Direct-config mode: time a single user-supplied config ──────────
+        demo_name = os.path.splitext(os.path.basename(args.config))[0]
+        print(f"\n{'='*60}")
+        print(f"Config: {args.config}")
+
+        timings = time_demo(args.config, args.nfiles)
+        _print_summary(demo_name, timings)
+        outfile = make_speedup_figure(demo_name, timings, OUTDIR)
         saved.append(outfile)
+
+    else:
+        # ── Demo mode: iterate over built-in NEXRAD / CSAPR demos ───────────
+        for demo in DEMOS:
+            print(f"\n{'='*60}")
+            print(f"Demo: {demo['name']}")
+
+            config_path = make_config(
+                demo['template'], demo['data_subdir'], DATA_ROOT, OUTDIR
+            )
+            if not os.path.exists(config_path):
+                print(f"  Config not found: {config_path} — skipping")
+                continue
+
+            timings = time_demo(config_path, args.nfiles)
+            _print_summary(demo['name'], timings)
+            outfile = make_speedup_figure(demo['name'], timings, OUTDIR)
+            saved.append(outfile)
 
     print(f"\nFigures saved to: {OUTDIR}")
     for f in saved:

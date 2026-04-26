@@ -92,7 +92,8 @@ dilate_method: orig
 # Convective cell expansion method (final outward expansion of cell footprints for tracking):
 #   orig: binary_dilation per core per radius (default, exact, slowest)
 #   fast: grey_dilation per radius (~8-24x speedup, bit-identical to orig)
-#   edt:  distance_transform_edt, single pass (1000-3000x faster than orig; recommended for high-res)
+#   edt:  distance_transform_edt, single pass (~60-3000x faster than orig depending on resolution;
+#         ~60-103x for 500m radar, ~1000-3000x for LES 100m; recommended for high-res data)
 expand_method: orig
 # Echo-top height calculation method:
 #   orig: level-by-level pixel scan (default; faster for high thresholds or sparse data)
