@@ -5,8 +5,8 @@ import pandas as pd
 import logging
 from pyflextrkr.steiner_func import make_dilation_step_func
 from pyflextrkr.steiner_func import mod_steiner_classification
-from pyflextrkr.steiner_func import expand_conv_core
-from pyflextrkr.echotop_func import echotop_height
+from pyflextrkr.steiner_func import expand_conv_core, expand_conv_core_edt, expand_conv_core_fast
+from pyflextrkr.echotop_func import echotop_height, echotop_height_fast
 from pyflextrkr.netcdf_io import write_radar_cellid
 from pyflextrkr.hp_utilities import remap_healpix_to_latlon_grid
 
@@ -53,7 +53,10 @@ def idcells_reflectivity(
     z_dimname = config.get('z_dimname', 'z')
     fillval = config['fillval']
     geolimits = config.get('geolimits', None)
-    convolve_method = config.get('convolve_method', 'ndimage')
+    convolve_method = config.get('convolve_method', 'fft')
+    dilate_method = config.get('dilate_method', 'orig')
+    expand_method = config.get('expand_method', 'orig')
+    echotop_method = config.get('echotop_method', 'orig')
     remove_smallcores = config.get('remove_smallcores', True)
     remove_smallcells = config.get('remove_smallcells', False)
     
@@ -148,6 +151,7 @@ def idcells_reflectivity(
             remove_smallcells=remove_smallcells,
             return_diag=return_diag,
             convolve_method=convolve_method,
+            dilate_method=dilate_method,
         )
         
         # Extract main outputs
@@ -163,8 +167,16 @@ def idcells_reflectivity(
 
         # Expand convective cell masks outward to a set of radii to
         # increase the convective cell footprint for better tracking convective cells
-        core_expand, core_sorted = expand_conv_core(
-            core_dilate, radii_expand, dx, dy, min_corenpix=0)
+        # Select method via expand_method config parameter (default: 'orig' for backward compat)
+        if expand_method == 'edt':
+            core_expand, core_sorted = expand_conv_core_edt(
+                core_dilate, radii_expand, dx, dy, min_corenpix=0)
+        elif expand_method == 'fast':
+            core_expand, core_sorted = expand_conv_core_fast(
+                core_dilate, radii_expand, dx, dy, min_corenpix=0)
+        else:
+            core_expand, core_sorted = expand_conv_core(
+                core_dilate, radii_expand, dx, dy, min_corenpix=0)
 
         # Calculate echo-top heights for various reflectivity thresholds
         shape_2d = refl.shape
@@ -177,17 +189,20 @@ def idcells_reflectivity(
             echotop40 = np.full(shape_2d, np.nan, dtype=np.float32)
             echotop50 = np.full(shape_2d, np.nan, dtype=np.float32)
         else:
-            # Use unified echotop_height function (handles both 1D and 3D height arrays)
-            echotop10 = echotop_height(dbz3d_filt, height, z_dimname, shape_2d,
-                                       dbz_thresh=10, gap=echotop_gap, min_thick=0)
-            echotop20 = echotop_height(dbz3d_filt, height, z_dimname, shape_2d,
-                                       dbz_thresh=20, gap=echotop_gap, min_thick=0)
-            echotop30 = echotop_height(dbz3d_filt, height, z_dimname, shape_2d,
-                                       dbz_thresh=30, gap=echotop_gap, min_thick=0)
-            echotop40 = echotop_height(dbz3d_filt, height, z_dimname, shape_2d,
-                                       dbz_thresh=40, gap=echotop_gap, min_thick=0)
-            echotop50 = echotop_height(dbz3d_filt, height, z_dimname, shape_2d,
-                                       dbz_thresh=50, gap=echotop_gap, min_thick=0)
+            # Select echo-top method via echotop_method config parameter (default: 'orig')
+            # 'fast' is faster at low thresholds on dense/high-res data (e.g., thresh=10 on LES)
+            # 'orig' is faster at high thresholds or sparse data
+            _echotop_fn = echotop_height_fast if echotop_method == 'fast' else echotop_height
+            echotop10 = _echotop_fn(dbz3d_filt, height, z_dimname, shape_2d,
+                                    dbz_thresh=10, gap=echotop_gap, min_thick=0)
+            echotop20 = _echotop_fn(dbz3d_filt, height, z_dimname, shape_2d,
+                                    dbz_thresh=20, gap=echotop_gap, min_thick=0)
+            echotop30 = _echotop_fn(dbz3d_filt, height, z_dimname, shape_2d,
+                                    dbz_thresh=30, gap=echotop_gap, min_thick=0)
+            echotop40 = _echotop_fn(dbz3d_filt, height, z_dimname, shape_2d,
+                                    dbz_thresh=40, gap=echotop_gap, min_thick=0)
+            echotop50 = _echotop_fn(dbz3d_filt, height, z_dimname, shape_2d,
+                                    dbz_thresh=50, gap=echotop_gap, min_thick=0)
 
         del dbz3d_filt
         # Put all Steiner parameters in a dictionary

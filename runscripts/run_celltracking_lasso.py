@@ -14,6 +14,7 @@ from pyflextrkr.mapfeature_driver import mapfeature_driver
 from pyflextrkr.regrid_celltracking_mask import regrid_celltracking_mask
 
 if __name__ == '__main__':
+
     # Set the logging message level
     setup_logging()
     logger = logging.getLogger(__name__)
@@ -24,24 +25,31 @@ if __name__ == '__main__':
 
     ################################################################################################
     # Parallel processing options
-    if config['run_parallel'] == 1:
+    run_parallel = config.get('run_parallel', 0)
+    if run_parallel == 1:
         # Set Dask temporary directory for workers
         dask_tmp_dir = config.get("dask_tmp_dir", "./")
         dask.config.set({'temporary-directory': dask_tmp_dir})
+        # Configure retry behavior for transient errors
+        dask.config.set({'distributed.scheduler.allowed-failures': 3})
         # Local cluster
         cluster = LocalCluster(n_workers=config['nprocesses'], threads_per_worker=1)
         client = Client(cluster)
         client.run(setup_logging)
-    elif config['run_parallel'] == 2:
-        # Dask-MPI
-        scheduler_file = os.path.join(os.environ["SCRATCH"], "scheduler.json")
+    elif run_parallel == 2:
+        # Dask scheduler
+        # Get the scheduler filename from input argument
+        scheduler_file = sys.argv[2]
+        timeout = config.get("timeout", 120)
+        # Configure retry behavior for transient errors
+        dask.config.set({'distributed.scheduler.allowed-failures': 3})
         client = Client(scheduler_file=scheduler_file)
         client.run(setup_logging)
     else:
         logger.info(f"Running in serial.")
 
     # Step 0 - Regrid reflectivity
-    if config['run_regridreflectivity']:
+    if config.get('run_regridreflectivity', False):
         # Load function depending on feature_type
         if config['input_source'] == 'wrf_regrid':
             from pyflextrkr.regrid_lasso_reflectivity import regrid_lasso_reflectivity as regrid_func
@@ -52,34 +60,33 @@ if __name__ == '__main__':
         regrid_func(config)
 
     # Step 1 - Identify features
-    if config['run_idfeature']:
+    if config.get('run_idfeature', False):
         idfeature_driver(config)
 
     # Step 2 - Run advection calculation
-    if config['run_advection']:
+    if config.get('run_advection', False):
         logger.info('Calculating domain mean advection.')
         driftfile = calc_mean_advection(config)
     else:
-        driftfile = f'{config["stats_outpath"]}advection_' + \
-                    f'{config["startdate"]}_{config["enddate"]}.nc'
+        driftfile = None
     config.update({"driftfile": driftfile})
 
     # Step 3 - Link features in time adjacent files
-    if config['run_tracksingle']:
+    if config.get('run_tracksingle', False):
         tracksingle_driver(config)
 
     # Step 4 - Track features through the entire dataset
-    if config['run_gettracks']:
+    if config.get('run_gettracks', False):
         tracknumbers_filename = gettracknumbers(config)
 
     # Step 5 - Calculate track statistics
-    if config['run_trackstats']:
+    if config.get('run_trackstats', False):
         trackstats_filename = trackstats_driver(config)
 
     # Step 6 - Map tracking to pixel files
-    if config['run_mapfeature']:
+    if config.get('run_mapfeature', False):
         mapfeature_driver(config)
 
     # Step 7 - Regrid pixel masks to original grid
-    if config['run_regridmask']:
+    if config.get('run_regridmask', False):
         regrid_celltracking_mask(config)

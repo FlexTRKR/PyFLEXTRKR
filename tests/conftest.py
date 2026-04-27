@@ -34,6 +34,29 @@ def pytest_configure(config):
 
 
 # ---------------------------------------------------------------------------
+# Custom CLI options
+# ---------------------------------------------------------------------------
+
+def pytest_addoption(parser):
+    parser.addoption(
+        "--nfiles",
+        type=int,
+        default=1,
+        help=(
+            "Number of demo input files to use in @pytest.mark.local tests. "
+            "1 = first file only (default, fast). "
+            "0 = all available files (most thorough)."
+        ),
+    )
+
+
+@pytest.fixture(scope="session")
+def nfiles(request):
+    """Number of demo input files to process in local integration tests."""
+    return request.config.getoption("--nfiles")
+
+
+# ---------------------------------------------------------------------------
 # Auto-skip local/demo tests when no data root is found
 # ---------------------------------------------------------------------------
 DATA_ROOT_ENV = "PYFLEXTRKR_TEST_DATA"  # set this env-var on HPC/workstation
