@@ -40,6 +40,8 @@ def trackstats_driver(config):
     tracking_outpath = config["tracking_outpath"]
     stats_path = config["stats_outpath"]
     duration_range = config["duration_range"]
+    duration_range_auto_update = config.get("duration_range_auto_update", False)
+    duration_range_round_base  = config.get("duration_range_round_base", 10)
     run_parallel = config["run_parallel"]
     fillval = config["fillval"]
     tracks_dimname = config["tracks_dimname"]
@@ -219,33 +221,56 @@ def trackstats_driver(config):
                     out_dict["track_duration"][tracknumbertmp] + 1
             )
 
-            # Find track lengths that are within max_trackduration
-            # Only record these to avoid array index out of bounds
-            # itracklength = out_tracklength[tracknumbertmp]
             itracklength = out_dict["track_duration"][tracknumbertmp]
-            ridx = itracklength <= max_trackduration
             # Loop over each variable and assign values to output dictionary
             for ivar in var_names:
                 # Concatenate arrays for 2D variables
                 out_dict[ivar] = np.concatenate(
                     (out_dict[ivar], iResult[ivar])
                 )
-            # row, column indices for sparse matrix
-            # row:tracks, col:times
-            row_idx = np.concatenate((row_idx, tracknumbertmp[ridx])).astype(int)
-            col_idx = np.concatenate((col_idx, itracklength[ridx] - 1)).astype(int)
+            # row, column indices for sparse matrix (row:tracks, col:times)
+            # Collect all entries unconditionally; filtering happens after the
+            # auto-update check so that max_trackduration is already final.
+            row_idx = np.concatenate((row_idx, tracknumbertmp)).astype(int)
+            col_idx = np.concatenate((col_idx, itracklength - 1)).astype(int)
 
     #########################################################################################
     # Check data max duration against config set up
-    # Provide warning message and exit if 'duration_range' is too short
     data_max_trackduration = np.nanmax(out_dict["track_duration"])
     if data_max_trackduration > max_trackduration:
-        logger.critical(f"WARNING: Max track duration in data ({data_max_trackduration}) " +
-                        f"exceeds 'duration_range' ({duration_range}) in the config file!")
-        logger.critical(f"This would cause missing statistics in long-lived tracks!")
-        logger.critical(f"Increase 'duration_range' in the config file.")
-        logger.critical(f"Tracking will now exit.")
-        sys.exit()
+        if duration_range_auto_update:
+            # Round up to the nearest multiple of duration_range_round_base
+            new_max = int(
+                np.ceil(data_max_trackduration / duration_range_round_base)
+                * duration_range_round_base
+            )
+            logger.warning(
+                f"Max track duration in data ({data_max_trackduration}) exceeds "
+                f"'duration_range' max ({max_trackduration}). "
+                f"Auto-updating max_trackduration: {max_trackduration} -> {new_max} "
+                f"(rounded up to nearest {duration_range_round_base})."
+            )
+            max_trackduration = new_max
+            # Propagate the updated value back into config so that downstream
+            # functions called in the same run (e.g. identifymcs) see the
+            # correct max_trackduration when they read duration_range.
+            config["duration_range"] = [min(duration_range), max_trackduration]
+        else:
+            logger.critical(f"WARNING: Max track duration in data ({data_max_trackduration}) " +
+                            f"exceeds 'duration_range' ({duration_range}) in the config file!")
+            logger.critical(f"This would cause missing statistics in long-lived tracks!")
+            logger.critical(f"Increase 'duration_range' in the config file, or set "
+                            f"'duration_range_auto_update: True' to allow automatic expansion.")
+            logger.critical(f"Tracking will now exit.")
+            sys.exit()
+
+    # Filter row/col indices and variable data to the (possibly updated) max_trackduration.
+    # This is the single, correct filtering point — data was collected unconditionally above.
+    valid_mask = col_idx < max_trackduration
+    for ivar in var_names:
+        out_dict[ivar] = out_dict[ivar][valid_mask]
+    row_idx = row_idx[valid_mask].astype(int)
+    col_idx = col_idx[valid_mask].astype(int)
 
     # Convert 2D variables to sparse arrays
     row_col_ind = (row_idx, col_idx)

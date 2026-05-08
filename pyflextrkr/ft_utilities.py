@@ -702,7 +702,9 @@ def load_sparse_trackstats(
     # Drop all sparse variables and dimension
     ds_1d = ds_all.drop_dims(sparse_dimname)
     ds_all.close()
-    return ds_1d, sparse_attrs_dict, sparse_dict
+    # Return max_trackduration as 4th value so callers always use the correct
+    # size even when the file was written with duration_range_auto_update.
+    return ds_1d, sparse_attrs_dict, sparse_dict, max_trackduration
 
 
 def convert_trackstats_sparse2dense(

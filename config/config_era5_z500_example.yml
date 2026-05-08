@@ -65,6 +65,8 @@ othresh: 0.3           # overlap percentage threshold
 maxnclouds: 60       # Maximum number of features in one snapshot
 nmaxlinks: 4          # Maximum number of overlaps that any single feature can be linked to
 duration_range: [3, 100]   # A vector [minlength,maxlength] to specify the duration range for the tracks
+duration_range_auto_update: True  # Auto-expand max_trackduration if data exceeds duration_range max
+duration_range_round_base: 10     # Round up to nearest multiple of this value when auto-updating
 # Flag to remove short-lived tracks [< min(duration_range)] that are not mergers/splits with other tracks
 # 0:keep all tracks; 1:remove short tracks
 remove_shorttracks: 1
