@@ -57,12 +57,15 @@ def identifymcs_tb(config):
     statistics_file = f"{stats_path}{trackstats_sparse_filebase}{startdate}_{enddate}.nc"
     logger.debug(statistics_file)
 
-    # Load sparse tracks statistics file and convert to sparse arrays
+    # Load sparse tracks statistics file and convert to sparse arrays.
+    # max_trackduration is returned as 4th value (derived from the file) so
+    # that files written with duration_range_auto_update are handled correctly.
     ds_1d, \
     sparse_attrs_dict, \
-    sparse_dict = load_sparse_trackstats(max_trackduration, statistics_file,
-                                         times_idx_varname, tracks_dimname,
-                                         tracks_idx_varname)
+    sparse_dict, \
+    max_trackduration = load_sparse_trackstats(max_trackduration, statistics_file,
+                                               times_idx_varname, tracks_dimname,
+                                               tracks_idx_varname)
 
     # Get necessary variables
     ntracks_all = ds_1d.sizes[tracks_dimname]

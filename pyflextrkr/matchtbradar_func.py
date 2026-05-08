@@ -296,16 +296,14 @@ def matchtbpf_singlefile(
                         # A gap > 50% of domain length indicates a boundary crossing.
                         sorted_x = np.sort(np.unique(icloudlocationx))
                         gap_x    = np.diff(sorted_x)
-                        max_gap_x_idx = np.argmax(gap_x)
-                        if gap_x[max_gap_x_idx] > xdim * 0.5:
-                            shift_x_right = xdim - int(sorted_x[max_gap_x_idx + 1])
+                        if len(gap_x) > 0 and gap_x[np.argmax(gap_x)] > xdim * 0.5:
+                            shift_x_right = xdim - int(sorted_x[np.argmax(gap_x) + 1])
                         else:
                             shift_x_right = 0
                         sorted_y = np.sort(np.unique(icloudlocationy))
                         gap_y    = np.diff(sorted_y)
-                        max_gap_y_idx = np.argmax(gap_y)
-                        if gap_y[max_gap_y_idx] > ydim * 0.5:
-                            shift_y_top = ydim - int(sorted_y[max_gap_y_idx + 1])
+                        if len(gap_y) > 0 and gap_y[np.argmax(gap_y)] > ydim * 0.5:
+                            shift_y_top = ydim - int(sorted_y[np.argmax(gap_y) + 1])
                         else:
                             shift_y_top = 0
                         rolled_x = (icloudlocationx + shift_x_right) % xdim
