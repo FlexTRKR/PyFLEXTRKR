@@ -1,6 +1,8 @@
 from pathlib import Path
 import re
 
+from packaging.requirements import Requirement
+
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
@@ -23,4 +25,7 @@ def test_requirements_keep_zarr_python310_compatible():
             break
 
     assert zarr_line is not None, "requirements.txt should declare a zarr dependency"
-    assert zarr_line == "zarr<3.0.0"
+    requirement = Requirement(zarr_line)
+    assert requirement.name == "zarr"
+    assert requirement.specifier.contains("2.18.7")
+    assert not requirement.specifier.contains("3.0.0")
