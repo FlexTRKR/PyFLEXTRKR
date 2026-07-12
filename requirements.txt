@@ -15,4 +15,5 @@ scikit-learn
 scipy>=1.4
 xarray>=2025.1.2
 xesmf>=0.8
+# zarr>=3 requires Python >=3.11, while this package still declares Python 3.10 support.
 zarr<3.0.0
