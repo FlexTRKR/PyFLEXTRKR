@@ -142,7 +142,7 @@ def calc_rainrate_tb_ze(filepairnames, outdir, inbasename, outbasename, config):
 
     # Convert np.datetime64 to Epoch time in seconds since 1970-01-01T00:00:00 and put into a numpy array
     ntimes = len(wrftimes)
-    basetimes = np.full(ntimes, np.NAN, dtype=np.float64)
+    basetimes = np.full(ntimes, np.nan, dtype=np.float64)
     # Loop over each time
     for tt in range(0, ntimes):
         basetimes[tt] = wrftimes[tt].values.tolist()/1.e9

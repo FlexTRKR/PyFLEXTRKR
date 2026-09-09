@@ -107,7 +107,7 @@ def gettracknumbers(config):
 
     temp_referencefile = os.path.basename(ref_file)
     strlength = len(temp_referencefile)
-    cloudidfiles = np.chararray((nfiles_m, int(strlength)))
+    cloudidfiles = np.zeros((nfiles_m, int(strlength)), dtype="S1")
     cloudidfiles[0, :] = list(os.path.basename(ref_file))
 
     # Initate track numbers

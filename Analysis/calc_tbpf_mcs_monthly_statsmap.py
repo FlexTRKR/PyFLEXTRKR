@@ -154,7 +154,7 @@ if __name__ == "__main__":
 
     # Create variables for maps
     nt_uniq = len(np.unique(base_times))
-    map_lifetime_all = np.zeros((nmcs, ny, nx))*np.NAN
+    map_lifetime_all = np.zeros((nmcs, ny, nx))*np.nan
     map_ccsarea = np.zeros((ny, nx))
     map_pfarea = np.zeros((ny, nx))
     map_rainrateheavy = np.zeros((ny, nx))
@@ -229,15 +229,15 @@ if __name__ == "__main__":
                 imaxrainrate = np.nanmax(pf_maxrainrate.values[imcs, it, :])
 
                 # Put stats value onto the map
-                temp_c = np.full((ny, nx), np.NAN)
-                temp_p = np.full((ny, nx), np.NAN)
-                temp_totalrain = np.full((ny, nx), np.NAN)
-                temp_totalrainheavy = np.full((ny, nx), np.NAN)
-                temp_rainrateheavy = np.full((ny, nx), np.NAN)
-                temp_rainratemax = np.full((ny, nx), np.NAN)
-                temp_pfspeed = np.full((ny, nx), np.NAN)
-                temp_uspeed = np.full((ny, nx), np.NAN)
-                temp_vspeed = np.full((ny, nx), np.NAN)
+                temp_c = np.full((ny, nx), np.nan)
+                temp_p = np.full((ny, nx), np.nan)
+                temp_totalrain = np.full((ny, nx), np.nan)
+                temp_totalrainheavy = np.full((ny, nx), np.nan)
+                temp_rainrateheavy = np.full((ny, nx), np.nan)
+                temp_rainratemax = np.full((ny, nx), np.nan)
+                temp_pfspeed = np.full((ny, nx), np.nan)
+                temp_uspeed = np.full((ny, nx), np.nan)
+                temp_vspeed = np.full((ny, nx), np.nan)
 
                 temp_c[idx_c] = iccsarea
                 temp_p[idx_p] = ipfarea

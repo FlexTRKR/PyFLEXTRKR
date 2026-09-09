@@ -215,7 +215,7 @@ def get_track_stats(trackstats_file, start_datetime, end_datetime, dt_thres):
         track_pf_lon = dss['meanlon'].isel(tracks=idx)
         track_pf_lat = dss['meanlat'].isel(tracks=idx)
         # Replace all valid values as NaN (PF diameter circles will not be plotted)
-        track_pf_diam = track_pf_lon.where(np.isnan(track_pf_lon), other=np.NAN)
+        track_pf_diam = track_pf_lon.where(np.isnan(track_pf_lon), other=np.nan)
 
     # Subset these tracks and put in a dictionary    
     track_dict = {
