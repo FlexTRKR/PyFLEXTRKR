@@ -164,10 +164,10 @@ def label_and_grow_cold_clouds(
             cloud_indices, cloud_sizes = np.unique(
                 labelcorecold_number2d, return_counts=True
             )
-            for index in cloud_indices:
+            for i, index in enumerate(cloud_indices):
                 if index == 0:
                     continue
-                labelcorecold_npix[index - 1] = cloud_sizes[index]
+                labelcorecold_npix[index - 1] = cloud_sizes[i]
 
 
         ############################################################

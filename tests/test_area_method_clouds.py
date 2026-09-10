@@ -175,6 +175,66 @@ def test_consistency():
     print()
 
 
+def make_ir_field_all_cold(ny=30, nx=30):
+    """
+    Create a synthetic IR Tb field with NO pixel warmer than thresh_cold.
+
+    This is the actual trigger for the issue #146 IndexError: it does not
+    require two cores to merge (grow_cells() cannot make a label vanish by
+    merging - it never overwrites an existing positive label, and masked-out
+    pixels are always restored). It only requires background label 0 to be
+    absent from the grown label array, which happens whenever every pixel in
+    the domain is within the cold-anvil threshold.
+    """
+    ir = np.full((ny, nx), 230.0)  # everywhere colder than thresh_cold=241
+    ir[5:12, 5:12] = 210.0  # core 1
+    ir[18:26, 18:26] = 208.0  # core 2
+    return ir
+
+
+def test_all_cold_domain_no_background():
+    """
+    Regression test for GitHub issue #146.
+
+    Reported traceback: label_and_grow_cold_clouds.py:170,
+    IndexError: index N is out of bounds for axis 0 with size N.
+
+    Before the fix, cloud_sizes[index] assumed cloud_indices is exactly
+    [0, 1, ..., N] (position == label value). cloud_sizes is actually
+    positional (aligned with cloud_indices by position, not by label value),
+    so this breaks whenever label 0 is absent - here, because every pixel in
+    the domain is colder than thresh_cold, so nothing is left unlabeled after
+    growth.
+    """
+    ir = make_ir_field_all_cold()
+    tb_threshs = [225.0, 241.0, 261.0, 261.0]
+    config = {"pbc_direction": "none"}
+
+    # Must not raise IndexError.
+    result = label_and_grow_cold_clouds(
+        ir, 10.0, tb_threshs, 100.0,
+        mincoldcorepix=4, smoothsize=3, warmanvilexpansion=0,
+        config=config,
+    )
+
+    nclouds = result["final_nclouds"]
+    npix = result["final_ncorecoldpix"]
+    mask = result["final_convcold_cloudnumber"]
+
+    assert nclouds == 2, f"Expected 2 clouds, got {nclouds}"
+    assert len(npix) == nclouds, (
+        f"final_ncorecoldpix length {len(npix)} != final_nclouds {nclouds}"
+    )
+    # Every npix value must match the actual pixel count for that label -
+    # this is what the buggy positional/value-indexing confusion got wrong.
+    for k in range(1, nclouds + 1):
+        actual = np.count_nonzero(mask == k)
+        assert npix[k - 1] == actual, (
+            f"label {k}: final_ncorecoldpix reports {npix[k - 1]}, "
+            f"actual pixel count is {actual}"
+        )
+
+
 if __name__ == "__main__":
     print("\n" + "=" * 60)
     print("Phase 3 Tests: label_and_grow_cold_clouds")
@@ -184,6 +244,7 @@ if __name__ == "__main__":
     test_fixed_mode_with_scalar()
     test_latlon_mode()
     test_consistency()
+    test_all_cold_domain_no_background()
 
     print("=" * 60)
     print("All Phase 3 tests PASSED!")
