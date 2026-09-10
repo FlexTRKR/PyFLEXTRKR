@@ -34,3 +34,16 @@ jobs:
       - name: Run Tests
         run: |
           pytest tests/
+
+  ci-success:
+    name: CI Success
+    needs: build
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check matrix status
+        run: |
+          if [ "${{ needs.build.result }}" != "success" ]; then
+            echo "One or more matrix jobs failed or were cancelled."
+            exit 1
+          fi
