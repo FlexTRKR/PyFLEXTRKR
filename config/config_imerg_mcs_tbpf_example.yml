@@ -79,13 +79,51 @@ medfiltsize: 5      # Window size to perform medfilt2d to fill missing Tb pixels
 geolimits: [-60, -360, 60, 360] # 4-element array to subset domain boundaries [lat_min, lon_min, lat_max, lon_max]
 area_thresh:  800  # [km^2] Minimum area to define a cloud
 miss_thresh:  0.4  # Missing data fraction threshold. If missing data exceeds this, the time frame will be omitted.
+# -----------------------------------------------------------------------
+# Feature labeling and growth options
+# (used by idclouds_tbpf via label_and_grow_features)
+# -----------------------------------------------------------------------
+# core_operator: defines which direction of the field intensity forms cores.
+#
+#   lt    (default) — field LESS THAN the core threshold defines a core.
+#         Use for brightness temperature (Tb): cold, low-Tb pixels are cores.
+#         Example: core_thresh=225 K means pixels with Tb < 225 K are cores.
+#
+#   gt    — field GREATER THAN the core threshold defines a core.
+#         Use for radar reflectivity (Ze), updraft speed, vorticity, etc.
+#         Example: core_thresh=40 dBZ means pixels with Ze > 40 dBZ are cores.
+#
+# Threshold ordering: always from most intense (core) to least intense (edge),
+# regardless of direction.  For Tb: [225, 241, 261, 261].
+# For Ze: [40, 20, 10, 10].
+core_operator: lt
 cloudtb_core:  225.0  # [K]
 cloudtb_cold:  241.0  # [K]
 cloudtb_warm:  261.0  # [K]
 cloudtb_cloud:  261.0  # [K]
 absolutetb_threshs: [160, 330]  # K [min, max] absolute Tb range allowed.
 warmanvilexpansion:  0  # Not working yet, set this to 0 for now
-cloudidmethod: 'label_grow'
+# growth_method: algorithm used to grow labeled cores outward to the secondary threshold.
+#
+#   bfs    (default) — Breadth-first search with majority-voting tie-breaking
+#          (original algorithm, via grow_cells).  Produces bit-identical
+#          results to prior versions of PyFLEXTRKR.  Slower on large domains.
+#
+#   edt    — Euclidean distance transform / Voronoi growth
+#          (scipy.ndimage.distance_transform_edt).  Each unlabeled valid pixel
+#          is assigned to the nearest core (Euclidean distance), processed
+#          per connected component so connectivity barriers are respected.
+#          ~2x faster than BFS on global 0.1° IMERG domains.
+#          Pixel-level differences vs BFS are small and usually at equidistant
+#          feature boundaries.  Recommended for new applications and large
+#          domains where performance matters.
+#
+# Note: switching from 'bfs' to 'edt' on an existing dataset will produce
+# minor label differences (< 0.2% of labeled pixels) at feature boundaries,
+# which may cause small changes in track statistics.  For strict
+# reproducibility of prior results, keep 'bfs'.
+cloudidmethod: label_grow   # Method to identify clouds. Recommend: label_grow, legacy option: futyan3
+growth_method: edt
 # Specific parameters to link cloud objects using PF
 linkpf:  1  # Set to 1 to turn on linkpf option; default: 0
 pf_smooth_window:  5  # Smoothing window for identifying PF

@@ -10,7 +10,7 @@ from astropy.convolution import Box2DKernel, convolve
 from pyflextrkr import netcdf_io as net
 from pyflextrkr.ftfunctions import olr_to_tb
 from pyflextrkr.futyan3 import futyan3
-from pyflextrkr.label_and_grow_cold_clouds import label_and_grow_cold_clouds
+from pyflextrkr.label_and_grow_features import label_and_grow_features
 from pyflextrkr.ftfunctions import sort_renumber, sort_renumber2vars, link_pf_tb, pad_and_extend, call_adjust_axis 
 from pyflextrkr.sl3d_func import run_sl3d
 from pyflextrkr.ft_utilities import get_timestamp_from_filename_single, get_pixel_area
@@ -297,7 +297,7 @@ def idclouds_tbpf(
                     ######################################################
                     # Call idclouds subroutine
                     if cloudidmethod == "label_grow":
-                        clouddata = label_and_grow_cold_clouds(
+                        clouddata = label_and_grow_features(
                             out_ir,
                             pixel_radius,
                             cloudtb_threshs,
@@ -307,6 +307,8 @@ def idclouds_tbpf(
                             warmanvilexpansion,
                             config,
                             pixel_area=pixel_area,
+                            core_operator=config.get('core_operator', 'lt'),
+                            growth_method=config.get('growth_method', 'bfs'),
                         )
                     elif cloudidmethod == "futyan3":
                         clouddata = futyan3(
@@ -325,15 +327,15 @@ def idclouds_tbpf(
 
                     ######################################################
                     # Separate output into the separate variables
-                    final_nclouds = int(clouddata["final_nclouds"])
-                    # final_ncorepix = clouddata["final_ncorepix"] not used
-                    # final_ncoldpix = clouddata["final_ncoldpix"] not used
-                    final_ncorecoldpix = clouddata["final_ncorecoldpix"]
-                    # final_nwarmpix = clouddata["final_nwarmpix"] not used
-                    final_cloudtype = np.array([clouddata["final_cloudtype"]])
-                    final_cloudnumber = np.array([clouddata["final_cloudnumber"]])
+                    final_nclouds = int(clouddata["final_nFeature"])
+                    # final_Core_npix = clouddata["final_Core_npix"] not used
+                    # final_Secondary_npix = clouddata["final_Secondary_npix"] not used
+                    final_ncorecoldpix = clouddata["final_CoreSecondary_npix"]
+                    # final_Tertiary_npix = clouddata["final_Tertiary_npix"] not used
+                    final_cloudtype = np.array([clouddata["final_Feature_Type"]])
+                    final_cloudnumber = np.array([clouddata["final_Feature_Number"]])
                     final_convcold_cloudnumber = np.array(
-                        [clouddata["final_convcold_cloudnumber"]]
+                        [clouddata["final_CoreSecondary_Number"]]
                     )
 
                     # Option to linkpf

@@ -219,12 +219,12 @@ def futyan3(ir, pixel_radius, tb_threshs, area_thresh, warmanvilexpansion, pixel
         ##################################################################
         # Output data
         return {
-            "final_nclouds": final_nclouds,
-            "final_ncorepix": final_ncorepix,
-            "final_ncoldpix": final_ncoldpix,
-            "final_ncorecoldpix": final_ncorecoldpix,
-            "final_nwarmpix": final_nwarmpix,
-            "final_cloudnumber": final_cloudnumber,
-            "final_cloudtype": final_cloudtype,
-            "final_convcold_cloudnumber": final_convcold_cloudnumber,
+            "final_nFeature": final_nclouds,
+            "final_Core_npix": final_ncorepix,
+            "final_Secondary_npix": final_ncoldpix,
+            "final_CoreSecondary_npix": final_ncorecoldpix,
+            "final_Tertiary_npix": final_nwarmpix,
+            "final_Feature_Number": final_cloudnumber,
+            "final_Feature_Type": final_cloudtype,
+            "final_CoreSecondary_Number": final_convcold_cloudnumber,
         }
