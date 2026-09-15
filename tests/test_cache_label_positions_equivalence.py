@@ -22,8 +22,12 @@ final_CoreSecondary_Number).
 The rewrite makes the cache lazy (pyflextrkr.ftfunctions._LazyLabelPositions,
 a dict subclass computing np.where(...) on first access via __missing__,
 memoizing after), so only labels actually looked up ever get computed -
-same values, none of the wasted work. adjust_axis's own code is completely
-unchanged; only what cache_label_positions returns changes.
+same values, none of the wasted work. adjust_axis's own code was
+unchanged by *that* rewrite (only what cache_label_positions returns
+changed) - though it has since been fixed separately, in this same file,
+for the real UnboundLocalError bug documented below
+(test_adjust_axis_full_domain_spanning_label), found while writing this
+file and hit for real in production shortly after.
 
 This file proves equivalence two ways:
 1. Value-level: the new lazy cache returns identical np.where(...) tuples
@@ -357,15 +361,27 @@ def test_adjust_axis_full_domain_spanning_label():
     branch, which `continue`s without ever touching label_positions_cache
     for that label.
 
-    Note: when *every* label in shared_labels hits this branch, `min_pos`
-    is never assigned inside the loop, yet is read unconditionally right
-    after it (`dx = ext_size - min_pos`) - an UnboundLocalError. This is a
-    genuine, pre-existing bug in adjust_axis's own logic (unchanged by the
-    cache_label_positions rewrite - verified below that both the live and
-    frozen-reference implementations raise identically), not something
-    introduced here. Flagged to the user rather than fixed in this pass,
-    which is scoped to cache_label_positions/adjust_axis's *caching*
-    behavior, not this unrelated control-flow bug."""
+    When *every* label in shared_labels hits this branch, `min_pos` is
+    never assigned inside the loop. This used to be read unconditionally
+    right after (`dx = ext_size - min_pos`), raising UnboundLocalError - a
+    genuine, pre-existing bug, flagged (not fixed) when this file was first
+    written, then hit for real in production (a completely cloud-free
+    DP-SCREAM RCE frame: a pixel-classification map's "clear" category
+    trivially spans the whole domain when there's nothing else to classify)
+    and fixed directly in adjust_axis: the crop/roll block is now gated on
+    `adjusted` rather than on `shared_labels.size > 0`, so it's skipped
+    entirely (falling back to call_adjust_axis's standard unrefined crop,
+    the same fallback already used for "no shared labels at all") when no
+    usable label was found - see ftfunctions.py's own comments at that
+    branch for the full reasoning.
+
+    This test now documents a deliberate one-sided divergence: the frozen
+    _adjust_axis_reference above is adjust_axis's logic *before* this fix
+    (same frozen-reference role as everywhere else in this file), so it
+    still raises UnboundLocalError here, unchanged. The live adjust_axis no
+    longer does - same pattern as test_float_dtype_with_nan in
+    test_sort_renumber_equivalence.py (old crashes, new is a deliberate,
+    disclosed improvement, checked in both directions)."""
     ny, nx = 20, 30
     field = np.ones((ny, nx), dtype=int)  # the entire domain is label 1
     config = {"pbc_direction": "x", "pbc_extended_fraction": 0.5,
@@ -375,9 +391,58 @@ def test_adjust_axis_full_domain_spanning_label():
     relabeled, _ = ndi_label(padded > 0, structure=np.ones((3, 3), dtype=bool))
 
     with pytest.raises(UnboundLocalError):
-        adjust_axis(relabeled.copy(), 1, (ny, nx), 0.5, config)
-    with pytest.raises(UnboundLocalError):
         _adjust_axis_reference(relabeled.copy(), 1, (ny, nx), 0.5, config)
+
+    new_segments, new_adjusted = adjust_axis(relabeled.copy(), 1, (ny, nx), 0.5, config)
+    assert new_adjusted is False, (
+        "no usable (non-full-span) label was found, so no crop refinement "
+        "should have been applied"
+    )
+    assert np.array_equal(new_segments, relabeled), (
+        "segments should be returned unchanged - call_adjust_axis (not "
+        "exercised by this unit test) is what applies the standard "
+        "unrefined crop when adjusted=False"
+    )
+
+
+def test_adjust_axis_uniform_clear_classification_no_crash():
+    """Real-world-flavored reproduction of the actual production trigger,
+    found live on a DP-SCREAM RCE simulation's clear-sky frame (Tb ~299 K
+    domain-wide, warmer than even the outermost/'clear' threshold): runs
+    the *actual* production classification function
+    (classify_pixels_by_thresholds, label_and_grow_features.py) on a
+    synthetic uniform Tb field - no external file needed, but exercises the
+    real code path that produces the real array type that crashed
+    (feature_type_map), rather than a generic hand-labeled proxy array like
+    the test above.
+
+    A cloud-free frame isn't a rare edge case here - it's the expected
+    state at simulation spin-up or during any clear-sky period - so this
+    is exercising a realistic, not contrived, scenario."""
+    from pyflextrkr.label_and_grow_features import classify_pixels_by_thresholds
+
+    ny, nx = 20, 30
+    tb = np.full((ny, nx), 299.0)  # warmer than every threshold below
+    core_thresh, secondary_thresh, tertiary_thresh, edge_thresh = 225.0, 241.0, 281.0, 281.0
+    _, _, cloud_type_map = classify_pixels_by_thresholds(
+        tb, nx, ny, edge_thresh, secondary_thresh, core_thresh, tertiary_thresh, "lt",
+    )
+    assert np.array_equal(np.unique(cloud_type_map), [5]), (
+        "test setup check: every pixel should classify as category 5 (clear)"
+    )
+
+    config = {"pbc_direction": "x", "pbc_extended_fraction": 0.5,
+              "pixel_radius": 10.0, "area_thresh": 20.0}
+    padded, padded_x, padded_y = pad_and_extend(cloud_type_map, config)
+
+    # Must not raise UnboundLocalError; must fall back cleanly (both axes).
+    new_segments, new_adjusted = adjust_axis(padded.copy(), 1, (ny, nx), 0.5, config)
+    assert new_adjusted is False
+    assert np.array_equal(new_segments, padded)
+
+    new_segments_y, new_adjusted_y = adjust_axis(padded.copy(), 0, (ny, nx), 0.5, config)
+    assert new_adjusted_y is False
+    assert np.array_equal(new_segments_y, padded)
 
 
 def test_adjust_axis_randomized():
