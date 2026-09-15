@@ -821,12 +821,24 @@ def adjust_axis(segments, axis, original_shape, ext_frac, config):
         for label in shared_labels:
             # Verify if the label spans the middle slice in Y direction
             if np.all(middle_slice == label):
-                logger.warning(f"Full-domain spanning feature detected in axis {axis} with label {label}.")
+                # No meaningful seam position exists to refine toward for a label
+                # that already covers the entire (unpadded) domain along this axis -
+                # e.g. a fully clear/cloud-free frame, where a pixel-classification
+                # map's "clear" category trivially spans everything. Skip this label
+                # and leave `adjusted` (and thus min_pos/dx/dy below) untouched; if
+                # every shared label hits this branch, the block below is skipped
+                # entirely and the caller (call_adjust_axis) falls back to its
+                # standard, unrefined crop - the same fallback already used when
+                # there are no shared labels at all.
+                logger.warning(
+                    f"Full-domain spanning feature detected in axis {axis} with "
+                    f"label {label}; skipping refinement for this label."
+                )
                 continue
             adjusted = True
             # Start with initial min_pos for the label
             min_pos = np.min(label_positions_cache[label][axis])
-            
+
             # Iteratively refine min_pos using cache
             while True:
                 # Find all labels at the current min_pos slice
@@ -834,7 +846,7 @@ def adjust_axis(segments, axis, original_shape, ext_frac, config):
                 non_zero_labels = current_labels[current_labels != 0]
                 unique_labels, unique_npix = np.unique(non_zero_labels, return_counts=True)
                 max_unique_npix = np.max(unique_npix)
-                # If position includes multiple labels and the largest width > width_thresh, 
+                # If position includes multiple labels and the largest width > width_thresh,
                 # keep searching to refine min_pos
                 if (unique_labels.size > 1) and (max_unique_npix > width_thresh):
                     min_positions = [np.min(label_positions_cache[ul][axis]) for ul in unique_labels]
@@ -844,16 +856,24 @@ def adjust_axis(segments, axis, original_shape, ext_frac, config):
                     min_pos = new_min_pos
                 else:
                     break
-        # Calculate cropping and rolling adjustments
-        if axis == 1:
-            dx = ext_size - min_pos
-            segments = segments[:, min_pos:ext_size + original_shape[1] - dx]
-            segments = np.roll(segments, shift=-dx, axis=1)
-        elif axis == 0:
-            dy = ext_size - min_pos
-            segments = segments[min_pos:ext_size + original_shape[0] - dy, :]
-            segments = np.roll(segments, shift=-dy, axis=0)
-        
+        # Calculate cropping and rolling adjustments - only if at least one label
+        # actually produced a min_pos above (min_pos/dx/dy are otherwise undefined,
+        # e.g. when every shared label was full-domain spanning and hit `continue`).
+        if adjusted:
+            if axis == 1:
+                dx = ext_size - min_pos
+                segments = segments[:, min_pos:ext_size + original_shape[1] - dx]
+                segments = np.roll(segments, shift=-dx, axis=1)
+            elif axis == 0:
+                dy = ext_size - min_pos
+                segments = segments[min_pos:ext_size + original_shape[0] - dy, :]
+                segments = np.roll(segments, shift=-dy, axis=0)
+        else:
+            logger.debug(
+                f"All shared labels in axis {axis} are full-domain spanning; "
+                f"skipping crop refinement (falls back to the standard crop in "
+                f"call_adjust_axis)."
+            )
     else:
         logger.debug(f"No shared labels found in axis {axis}.")
     return segments, adjusted
