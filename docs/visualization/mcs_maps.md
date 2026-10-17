@@ -120,7 +120,7 @@ file. It applies to the whole domain (not with `--subset 1`). The default `none`
 The wrapper scripts make the PNG files, the mp4 and, if you ask for it, a GIF in one go. Each has the parameters (dates, config, output folders,
 products, map and track style, ffmpeg settings) as variables at the top of the file; `--set NAME=VALUE` overrides one without editing the file. The work is done in
 [`mcs_animation.py`](../../pyflextrkr/visualization/mcs_animation.py) (`DEFAULTS` lists every parameter with its default):
-`options_to_argv(...)` -> `mcs_cli.main(argv)` -> `animation.make_mp4` -> `animation.make_gif`.
+`options_to_argv(...)` -> `mcs_cli.main(argv)` -> `animation.make_animation` (`make_mp4`, then `make_gif`).
 
 | script | makes |
 |---|---|
@@ -130,8 +130,10 @@ products, map and track style, ffmpeg settings) as variables at the top of the f
 | [`examples/make_mcs_animation_himawari_tb.py`](../../visualization/examples/make_mcs_animation_himawari_tb.py) | the Himawari demo: Tb only |
 
 The demo wrappers read the config file that the demo script leaves in `config/` (`bash config/demo_mcs_imerg.sh`, ...); the animations of the three are in the
-[README](../../visualization/README.md#more-mcs-looks). The mp4 keeps the frame rate of the old wrapper (`input_framerate` 2, `output_framerate` 10, `crf` 20);
-`gif_width` makes the GIF from the mp4 (the settings and their test are in [animations.md](animations.md)). Animations are about 2 days long: a longer run
+[README](../../visualization/README.md#more-mcs-looks). The video settings are those of the CONUS wrapper: `playback_fps = 2` (PNG files per second = the speed: hourly files, 2 hours of data per second,
+2 days in 24 s), `video_quality = 24`, `output_width = 1920` (never enlarged), `video_fps = None` (automatic, 10 frames per second); `gif_width` makes the GIF from the mp4 (`gif_duration = 8` for the README
+GIFs of 1.6-2.3 MB). The settings, what they do, the test of size and quality and the ffmpeg commands for PNG files that already exist are in [animations.md](animations.md) (`pngs_to_animation.py` makes the mp4 from any PNG files).
+Animations are about 2 days long: a longer run
 is not needed to see how a style looks (to find a good time for an example, plot a week of frames with `-p 1 --workers 32` and look at them).
 
 ## Old commands

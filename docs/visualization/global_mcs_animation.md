@@ -71,11 +71,11 @@ python visualization/make_mcs_animation.py --set start_date=2025-01-01T00 --set 
 ```
 
 The wrapper makes the PNG files `fig_root/quicklooks_2panel_tbpf/2025/mcs_tbpf_YYYYMMDD_HHMMSS.png` and the mp4
-`fig_root/animations_2panel_tbpf/mcs_tbpf_2025-01-01_2025-01-03.mp4` (the ffmpeg settings are those of the old wrapper: 2 PNG files per second read, 10 frames
-per second written, crf 20, 1920 pixels wide, x264 default preset: [animations.md](animations.md)). `--set run_ffmpeg=false` makes the PNG files only; `--set run_plotting=false`
-makes the mp4 from existing PNG files; `--set gif_width=900` also makes a GIF; `--set NAME=VALUE` changes any parameter of the block (`--set lat_range=[-30,30]`, `--set track_halo_color=white`,
+`fig_root/animations_2panel_tbpf/mcs_tbpf_2025-01-01_2025-01-03.mp4` (the video settings: `playback_fps = 2` PNG files per second, which is 2 hours of data per second, so the 2 days take 24 s;
+written at 10 frames per second, `video_quality = 24`, at most 1920 pixels wide (the PNG files are 2800), x264 default preset: [animations.md](animations.md)). `--set run_ffmpeg=false` makes the PNG files only; `--set run_plotting=false`
+makes the mp4 from existing PNG files; `--set gif_width=900 --set gif_duration=8` also makes a GIF of the first 8 seconds; `--set NAME=VALUE` changes any parameter of the block (`--set lat_range=[-30,30]`, `--set track_halo_color=white`,
 `--set show_track_numbers=[true,true]`, `--set fontsize=16`, `--set show_pfdiam=true`, `--set data_type=tb`). The 2 days (48 frames, `n_workers=32`) took 1.5 minutes
-on one node including the start of the Dask workers and the mp4 (16 MB).
+on one node including the start of the Dask workers and the mp4 (11.8 MB at the default CRF 24, 16.3 MB at CRF 20).
 
 ## How the global map is made
 

@@ -35,7 +35,7 @@ The building blocks that all families use, one topic per file (`pyflextrkr/visua
 | `pixelio.py` | the data extent, the index window of a map extent (`find_subset_window`, dateline safe), the figure name and title |
 | `colors.py` | `concat_cmaps`, `truncate_colormap`, `named_colormap` |
 | `runner.py` | `run_frames`: the loop over the pixel-level files, serial or on Dask workers |
-| `animation.py` | ffmpeg: `frames_in_range`, `make_mp4`, `make_gif` |
+| `animation.py` | ffmpeg: `frames_in_range`, `list_png_files`, `make_mp4` (PNG files -> mp4: speed, file frame rate, quality, even sizes, width), `make_gif`, `make_animation` (both, with the settings printed), `main` (the command line of `visualization/pngs_to_animation.py`) |
 | `mcs_animation.py` | the animation of the MCS maps from the parameters of a wrapper script: the PNG files (`mcs_cli.main`), the mp4 and the GIF (`DEFAULTS` lists the parameters) |
 | `cli_common.py` | the arguments that all families share, `options_to_argv`, `apply_track_style_args` |
 | `legacy.py` | the defaults of the 12 old `Analysis/plot_subset_*.py` scripts (used only by their stubs) |
@@ -45,40 +45,46 @@ The building blocks that all families use, one topic per file (`pyflextrkr/visua
 Every block has its own color: **blue** the scripts in `visualization/`, **amber** the old `Analysis/` names (stubs), **green** the command lines,
 **pink** the building blocks (twice: what the command line uses, and what the plot functions use), **purple** the plot modules. A node that lists
 four names stands for the four families (the table above has one row for each); the arrows are the same for each of them.
+**Click a name to open its source file** (in the preview of VS Code; GitHub does not make links in diagrams clickable, use the list below the diagram).
 
 ```mermaid
-%%{init: {"theme": "base", "themeVariables": {"fontSize": "20px", "lineColor": "#6b7280", "primaryTextColor": "#111111", "edgeLabelBackground": "#f3f4f6"}, "flowchart": {"htmlLabels": true, "nodeSpacing": 40, "rankSpacing": 56, "padding": 16, "curve": "basis", "subGraphTitleMargin": {"top": 10, "bottom": 22}}}}%%
+%%{init: {"theme": "base", "themeVariables": {"fontSize": "20px", "lineColor": "#4b5563", "primaryTextColor": "#111111", "edgeLabelBackground": "#ffffff"}, "flowchart": {"htmlLabels": true, "nodeSpacing": 40, "rankSpacing": 56, "padding": 22, "diagramPadding": 0, "curve": "basis", "subGraphTitleMargin": {"top": 12, "bottom": 30}}}}%%
 flowchart TB
-  subgraph vis["<b style='font-size:26px;color:#111111'>visualization/ (scripts)</b>"]
-    PS["plot_mcs_tracks.py<br/>plot_cell_tracks.py<br/>plot_generic_tracks.py<br/>plot_cartesian_tracks.py"]
-    WR["make_mcs_animation.py<br/>make_cell_animation.py<br/>examples/make_mcs_animation_*.py"]
-  end
-  subgraph old["<b style='font-size:26px;color:#111111'>Analysis/ (old names, stubs)</b>"]
-    ST["12 plot_subset_*.py<br/>main(legacy_name=...)"]
-  end
-  subgraph cli["<b style='font-size:26px;color:#111111'>pyflextrkr/visualization: command lines</b>"]
-    CL["mcs_cli.main<br/>cell_cli.main<br/>generic_cli.main<br/>cartesian_cli.main"]
-  end
-  subgraph run["<b style='font-size:26px;color:#111111'>building blocks: arguments, tracks, loop</b>"]
-    CC[cli_common]
-    LG[legacy]
-    TS[trackstats]
-    RUN[runner.run_frames]
-    AN[animation]
-  end
-  subgraph plot["<b style='font-size:26px;color:#111111'>pyflextrkr/visualization: plot modules</b>"]
-    MP["mcs_map  cell_map<br/>generic_map  cartesian_map<br/>work_for_time_loop, plot_map"]
-  end
-  subgraph maps["<b style='font-size:26px;color:#111111'>building blocks: map, masks, halo</b>"]
-    MC[mapcore]
-    MK[masks]
-    TD[trackdraw]
-    PX2[pixelio]
+  subgraph all["&nbsp;"]
+    direction TB
+    subgraph vis["<b style='font-size:26px;color:#111111'>visualization/ (scripts)</b>"]
+      PS["<a href='../../visualization/plot_mcs_tracks.py' style='color:inherit;text-decoration:underline dotted'>plot_mcs_tracks.py</a><br/><a href='../../visualization/plot_cell_tracks.py' style='color:inherit;text-decoration:underline dotted'>plot_cell_tracks.py</a><br/><a href='../../visualization/plot_generic_tracks.py' style='color:inherit;text-decoration:underline dotted'>plot_generic_tracks.py</a><br/><a href='../../visualization/plot_cartesian_tracks.py' style='color:inherit;text-decoration:underline dotted'>plot_cartesian_tracks.py</a>"]
+      WR["<a href='../../visualization/make_mcs_animation.py' style='color:inherit;text-decoration:underline dotted'>make_mcs_animation.py</a><br/><a href='../../visualization/make_cell_animation.py' style='color:inherit;text-decoration:underline dotted'>make_cell_animation.py</a><br/>examples/: <a href='../../visualization/examples/make_mcs_animation_wrf_tbze.py' style='color:inherit;text-decoration:underline dotted'>wrf_tbze</a> · <a href='../../visualization/examples/make_mcs_animation_imerg_1panel.py' style='color:inherit;text-decoration:underline dotted'>imerg_1panel</a> · <a href='../../visualization/examples/make_mcs_animation_himawari_tb.py' style='color:inherit;text-decoration:underline dotted'>himawari_tb</a>"]
+      PA["<a href='../../visualization/pngs_to_animation.py' style='color:inherit;text-decoration:underline dotted'>pngs_to_animation.py</a><br/>PNG files to mp4, GIF"]
+    end
+    subgraph old["<b style='font-size:26px;color:#111111'>Analysis/ (old names, stubs)</b>"]
+      ST["<a href='inventory.md#old-script---new-command' style='color:inherit;text-decoration:underline dotted'>12 plot_subset_*.py</a><br/>main(legacy_name=...)"]
+    end
+    subgraph cli["<b style='font-size:26px;color:#111111'>pyflextrkr/visualization: command lines</b>"]
+      CL["<a href='../../pyflextrkr/visualization/mcs_cli.py' style='color:inherit;text-decoration:underline dotted'>mcs_cli.main</a><br/><a href='../../pyflextrkr/visualization/cell_cli.py' style='color:inherit;text-decoration:underline dotted'>cell_cli.main</a><br/><a href='../../pyflextrkr/visualization/generic_cli.py' style='color:inherit;text-decoration:underline dotted'>generic_cli.main</a><br/><a href='../../pyflextrkr/visualization/cartesian_cli.py' style='color:inherit;text-decoration:underline dotted'>cartesian_cli.main</a>"]
+    end
+    subgraph run["<b style='font-size:26px;color:#111111'>building blocks: arguments, tracks, loop</b>"]
+      CC["<a href='../../pyflextrkr/visualization/cli_common.py' style='color:inherit;text-decoration:underline dotted'>cli_common</a>"]
+      LG["<a href='../../pyflextrkr/visualization/legacy.py' style='color:inherit;text-decoration:underline dotted'>legacy</a>"]
+      TS["<a href='../../pyflextrkr/visualization/trackstats.py' style='color:inherit;text-decoration:underline dotted'>trackstats</a>"]
+      RUN["<a href='../../pyflextrkr/visualization/runner.py' style='color:inherit;text-decoration:underline dotted'>runner</a>.run_frames"]
+      AN["<a href='../../pyflextrkr/visualization/animation.py' style='color:inherit;text-decoration:underline dotted'>animation</a>"]
+    end
+    subgraph plot["<b style='font-size:26px;color:#111111'>pyflextrkr/visualization: plot modules</b>"]
+      MP["<a href='../../pyflextrkr/visualization/mcs_map.py' style='color:inherit;text-decoration:underline dotted'>mcs_map</a> · <a href='../../pyflextrkr/visualization/cell_map.py' style='color:inherit;text-decoration:underline dotted'>cell_map</a><br/><a href='../../pyflextrkr/visualization/generic_map.py' style='color:inherit;text-decoration:underline dotted'>generic_map</a> · <a href='../../pyflextrkr/visualization/cartesian_map.py' style='color:inherit;text-decoration:underline dotted'>cartesian_map</a><br/>work_for_time_loop, plot_map"]
+    end
+    subgraph maps["<b style='font-size:26px;color:#111111'>building blocks: map, masks, halo</b>"]
+      MC["<a href='../../pyflextrkr/visualization/mapcore.py' style='color:inherit;text-decoration:underline dotted'>mapcore</a>"]
+      MK["<a href='../../pyflextrkr/visualization/masks.py' style='color:inherit;text-decoration:underline dotted'>masks</a>"]
+      TD["<a href='../../pyflextrkr/visualization/trackdraw.py' style='color:inherit;text-decoration:underline dotted'>trackdraw</a>"]
+      PX2["<a href='../../pyflextrkr/visualization/pixelio.py' style='color:inherit;text-decoration:underline dotted'>pixelio</a>"]
+    end
   end
   PS --> CL
-  WR -->|"mcs_animation.main"| CL
+  WR -->|"<a href='../../pyflextrkr/visualization/mcs_animation.py' style='color:inherit;text-decoration:underline dotted'>mcs_animation.main</a>"| CL
   ST --> CL
   WR --> AN
+  PA --> AN
   CL --> CC & LG & TS & RUN
   RUN -->|"one call per frame"| MP
   MP --> MC & MK & TD & PX2
@@ -87,18 +93,32 @@ flowchart TB
   classDef ccli fill:#bbf7d0,stroke:#15803d,stroke-width:2px,color:#052e16
   classDef cplot fill:#e9d5ff,stroke:#7e22ce,stroke-width:2px,color:#2e0a4f
   classDef cblk fill:#fecdd3,stroke:#be123c,stroke-width:2px,color:#4c0519
-  class PS,WR cvis
+  class PS,WR,PA cvis
   class ST cold
   class CL ccli
   class MP cplot
   class CC,LG,TS,RUN,AN,MC,MK,TD,PX2 cblk
+  style all fill:#ffffff,stroke:#ffffff
   style vis fill:#eff6ff,stroke:#1d4ed8,stroke-width:3px
   style old fill:#fffbeb,stroke:#b45309,stroke-width:3px
   style cli fill:#f0fdf4,stroke:#15803d,stroke-width:3px
   style plot fill:#faf5ff,stroke:#7e22ce,stroke-width:3px
   style run fill:#fff1f2,stroke:#be123c,stroke-width:3px
   style maps fill:#fff1f2,stroke:#be123c,stroke-width:3px
+  linkStyle default stroke-width:3px
 ```
+
+Source files: scripts [plot_mcs_tracks.py](../../visualization/plot_mcs_tracks.py), [plot_cell_tracks.py](../../visualization/plot_cell_tracks.py),
+[plot_generic_tracks.py](../../visualization/plot_generic_tracks.py), [plot_cartesian_tracks.py](../../visualization/plot_cartesian_tracks.py);
+wrappers [make_mcs_animation.py](../../visualization/make_mcs_animation.py), [make_cell_animation.py](../../visualization/make_cell_animation.py),
+[examples](../../visualization/examples), [pngs_to_animation.py](../../visualization/pngs_to_animation.py); command lines [mcs_cli.py](../../pyflextrkr/visualization/mcs_cli.py), [cell_cli.py](../../pyflextrkr/visualization/cell_cli.py),
+[generic_cli.py](../../pyflextrkr/visualization/generic_cli.py), [cartesian_cli.py](../../pyflextrkr/visualization/cartesian_cli.py);
+plot modules [mcs_map.py](../../pyflextrkr/visualization/mcs_map.py), [cell_map.py](../../pyflextrkr/visualization/cell_map.py),
+[generic_map.py](../../pyflextrkr/visualization/generic_map.py), [cartesian_map.py](../../pyflextrkr/visualization/cartesian_map.py); building blocks
+[cli_common.py](../../pyflextrkr/visualization/cli_common.py), [legacy.py](../../pyflextrkr/visualization/legacy.py), [trackstats.py](../../pyflextrkr/visualization/trackstats.py),
+[runner.py](../../pyflextrkr/visualization/runner.py), [animation.py](../../pyflextrkr/visualization/animation.py), [mcs_animation.py](../../pyflextrkr/visualization/mcs_animation.py),
+[mapcore.py](../../pyflextrkr/visualization/mapcore.py), [masks.py](../../pyflextrkr/visualization/masks.py), [trackdraw.py](../../pyflextrkr/visualization/trackdraw.py),
+[pixelio.py](../../pyflextrkr/visualization/pixelio.py); old names: [inventory.md](inventory.md#old-script---new-command).
 
 The same chain as a tree (MCS maps; the other families replace the `mcs_*` names):
 
@@ -119,31 +139,50 @@ visualization/plot_mcs_tracks.py
 
 ## Call chain of one run
 
-What `python visualization/plot_mcs_tracks.py -s ... -e ... -c config.yml` does, in order:
+What `python visualization/plot_mcs_tracks.py -s ... -e ... -c config.yml` does, in order. Follow the numbers 1-6 from the top; the **yellow block** is the work for
+one frame, done for every pixel-level file (serial, or on Dask workers); the two functions in it are in `mcs_map.py`. Click a name to open its source file (VS Code preview).
 
 ```mermaid
-%%{init: {"theme": "base", "themeVariables": {"fontSize": "20px", "actorBkg": "#bfdbfe", "actorBorder": "#1d4ed8", "actorTextColor": "#0b1f4d", "noteBkgColor": "#fef9c3", "noteBorderColor": "#a16207", "signalColor": "#333333", "activationBkgColor": "#e0e7ff"}, "sequence": {"actorFontSize": 20, "actorFontWeight": "bold", "messageFontSize": 17, "noteFontSize": 17, "width": 150, "height": 60, "actorMargin": 6, "messageMargin": 34, "boxMargin": 8, "mirrorActors": false, "wrap": false}}}%%
-sequenceDiagram
-  participant S as plot_mcs_<br/>tracks.py
-  participant C as mcs_cli<br/>.main
-  participant T as trackstats
-  participant R as runner<br/>.run_frames
-  participant W as mcs_map<br/>.work_for_<br/>time_loop
-  participant P as mcs_map<br/>.plot_map_<br/>2panels
-  S->>C: main()
-  C->>C: parse_cmd_args<br/>(cli_common, legacy)
-  C->>C: product block ->plot_info<br/>(levels, colormaps, titles)
-  C->>C: load_config,<br/>subset_files_timerange
-  C->>T: get_mcs_track_stats(period)<br/>-> track_dict
-  C->>R: run_frames(work_for_time_loop,<br/>files, track_dict, ...)
-  loop every pixel-level file (serial or Dask)
-    R->>W: work_for_time_loop(file, ...)
-    W->>W: open file, subset window,<br/>label_perimeter, figure name
-    W->>P: plot_map_2panels(pixel_dict,<br/>plot_info, map_info, track_dict)
-    P->>P: projection, domain, pcolormesh,<br/>tracks, colorbars
-    P-->>W: fig (PNG per time)
+%%{init: {"theme": "base", "themeVariables": {"fontSize": "20px", "lineColor": "#4b5563", "primaryTextColor": "#111111", "edgeLabelBackground": "#ffffff"}, "flowchart": {"htmlLabels": true, "nodeSpacing": 40, "rankSpacing": 46, "padding": 22, "diagramPadding": 0, "curve": "basis", "subGraphTitleMargin": {"top": 6, "bottom": 6}}}}%%
+flowchart TB
+  subgraph all["&nbsp;"]
+    direction TB
+    S["<b><a href='../../visualization/plot_mcs_tracks.py' style='color:inherit;text-decoration:underline dotted'>plot_mcs_tracks.py</a></b><br/>the command you run"]
+    C["<b><a href='../../pyflextrkr/visualization/mcs_cli.py' style='color:inherit;text-decoration:underline dotted'>mcs_cli.main</a></b><br/>parse_cmd_args (<a href='../../pyflextrkr/visualization/cli_common.py' style='color:inherit;text-decoration:underline dotted'>cli_common</a>, <a href='../../pyflextrkr/visualization/legacy.py' style='color:inherit;text-decoration:underline dotted'>legacy</a>)<br/>product block → plot_info<br/>load_config, subset_files_timerange → files"]
+    T["<b><a href='../../pyflextrkr/visualization/trackstats.py' style='color:inherit;text-decoration:underline dotted'>trackstats</a></b><br/>get_mcs_track_stats → track_dict"]
+    R["<b><a href='../../pyflextrkr/visualization/runner.py' style='color:inherit;text-decoration:underline dotted'>runner.run_frames</a></b><br/>serial loop or Dask workers"]
+    subgraph frame["&nbsp;"]
+      W["<b><a href='../../pyflextrkr/visualization/mcs_map.py' style='color:inherit;text-decoration:underline dotted'>mcs_map.work_for_time_loop</a></b><br/>open file, subset window (<a href='../../pyflextrkr/visualization/pixelio.py' style='color:inherit;text-decoration:underline dotted'>pixelio</a>)<br/><a href='../../pyflextrkr/visualization/masks.py' style='color:inherit;text-decoration:underline dotted'>label_perimeter</a> outlines, figure name"]
+      PL["<b><a href='../../pyflextrkr/visualization/mcs_map.py' style='color:inherit;text-decoration:underline dotted'>mcs_map.plot_map_2panels</a></b><br/>projection, domain (<a href='../../pyflextrkr/visualization/mapcore.py' style='color:inherit;text-decoration:underline dotted'>mapcore</a>)<br/>pcolormesh, tracks (<a href='../../pyflextrkr/visualization/trackdraw.py' style='color:inherit;text-decoration:underline dotted'>trackdraw</a>), colorbars<br/>savefig"]
+    end
+    O["<b>PNG file</b> (one per time)"]
   end
+  S -->|"<b>1</b> · main(argv)"| C
+  C -->|"<b>2</b> · tracks of the period"| T
+  C -->|"<b>3</b> · run_frames(...)"| R
+  R -->|"<b>4</b> · one call per file"| W
+  W -->|"<b>5</b> · plot_map_2panels"| PL
+  PL -->|"<b>6</b> · savefig"| O
+  classDef cvis fill:#bfdbfe,stroke:#1d4ed8,stroke-width:2px,color:#0b1f4d
+  classDef ccli fill:#bbf7d0,stroke:#15803d,stroke-width:2px,color:#052e16
+  classDef cblk fill:#fecdd3,stroke:#be123c,stroke-width:2px,color:#4c0519
+  classDef cplot fill:#e9d5ff,stroke:#7e22ce,stroke-width:2px,color:#2e0a4f
+  classDef cout fill:#f3f4f6,stroke:#4b5563,stroke-width:2px,color:#111827
+  class S cvis
+  class C ccli
+  class T,R cblk
+  class W,PL cplot
+  class O cout
+  style all fill:#ffffff,stroke:#ffffff
+  style frame fill:#fef08a,stroke:#ca8a04,stroke-width:4px
+  linkStyle default stroke-width:3px
 ```
+
+Source files: [plot_mcs_tracks.py](../../visualization/plot_mcs_tracks.py), [mcs_cli.py](../../pyflextrkr/visualization/mcs_cli.py)
+([cli_common.py](../../pyflextrkr/visualization/cli_common.py), [legacy.py](../../pyflextrkr/visualization/legacy.py)),
+[trackstats.py](../../pyflextrkr/visualization/trackstats.py), [runner.py](../../pyflextrkr/visualization/runner.py),
+[mcs_map.py](../../pyflextrkr/visualization/mcs_map.py) (`work_for_time_loop`, `plot_map_2panels`), [pixelio.py](../../pyflextrkr/visualization/pixelio.py),
+[masks.py](../../pyflextrkr/visualization/masks.py), [mapcore.py](../../pyflextrkr/visualization/mapcore.py), [trackdraw.py](../../pyflextrkr/visualization/trackdraw.py).
 
 - The four dictionaries are the interface between the steps: `pixel_dict` (arrays of one frame), `plot_info` (look and options of the plot),
   `map_info` (extent, projection, coastlines, gridlines), `track_dict` (tracks of the period). Each plot function documents the keys it reads;
@@ -161,12 +200,15 @@ visualization/examples/make_mcs_animation_*.py   the same for the demo data (WRF
 └─ mcs_animation.main(globals())                 the parameters (DEFAULTS for those a script leaves out) -> the plot options
    ├─ cli_common.options_to_argv(options)        the parameters -> the list of arguments
    ├─ mcs_cli.main(argv)                         the same chain as above: one PNG per time
-   └─ animation.frames_in_range / make_mp4 / make_gif      the PNG files of the period -> mp4 (ffmpeg) -> GIF
+   └─ animation.frames_in_range / make_animation           the PNG files of the period -> mp4 (make_mp4, ffmpeg) -> GIF (make_gif)
 
 visualization/make_cell_animation.py             parameter block at the top (or --set NAME=VALUE)
 ├─ cli_common.options_to_argv(options)
 ├─ cell_cli.main(argv)
-└─ animation.frames_in_range / animation.make_mp4
+└─ animation.frames_in_range / animation.make_animation
+
+visualization/pngs_to_animation.py               PNG files that are already plotted (a directory, a pattern, a list)
+└─ animation.main(argv)                          -> make_animation: mp4 (and GIF); --print_command: the plain ffmpeg commands
 
 Analysis/plot_subset_tbze_mcs_tracks_demo.py     12 stubs, one per old script name, 4 lines each
 └─ mcs_cli.main(legacy_name="plot_subset_tbze_mcs_tracks_demo")
@@ -206,7 +248,7 @@ Typical steps in the editor: open `visualization/plot_mcs_tracks.py` -> *Go to D
 | change how the MCS outline is computed | `label_perimeter` in `masks.py` |
 | change which tracks are drawn for a period | `get_*_track_stats` in `trackstats.py`; `--track_lookback_days`; `dt_thres` in `main()` |
 | change the halo | `halo_effects` in `trackdraw.py` |
-| change the animation (frame rate, size, quality, GIF) | the parameter block of `make_mcs_animation.py` / `examples/make_mcs_animation_*.py` / `make_cell_animation.py`; `DEFAULTS` of the parameters in `mcs_animation.py`; `make_mp4`, `make_gif` in `animation.py` |
+| change the animation (frame rate, size, quality, GIF) | the parameter block of `make_mcs_animation.py` / `examples/make_mcs_animation_*.py` / `make_cell_animation.py`; `DEFAULTS` of the parameters in `mcs_animation.py`; `make_mp4`, `make_gif`, `make_animation` in `animation.py` (the settings and their tests: [animations.md](animations.md)) |
 | change how frames are run in parallel | `run_frames` in `runner.py` |
 | restore a default of an old command | `legacy.py` |
 

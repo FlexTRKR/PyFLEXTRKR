@@ -58,5 +58,5 @@ python ../visualization/plot_cell_tracks.py -s 2019-01-25T16 -e 2019-01-25T19 -c
 ## Animations
 
 [`visualization/make_cell_animation.py`](../../visualization/make_cell_animation.py): parameter block (dates, config, radar location, domain around it, products, output
-folders, ffmpeg) -> `cell_cli.main(argv)` -> `animation.make_mp4`; `--set NAME=VALUE` overrides a parameter. Map projection and track style
+folders, ffmpeg) -> `cell_cli.main(argv)` -> `animation.make_animation`; `--set NAME=VALUE` overrides a parameter. Map projection and track style
 parameters are in the block too (`projection`, `central_longitude`, `track_color`, `track_halo_color`, ...). Code map: [structure.md](structure.md).

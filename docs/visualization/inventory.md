@@ -76,7 +76,7 @@ Everything not listed here is the same figure (checked pixel by pixel, below).
 | the tracks are sent to the Dask workers once (`scatter`) | instead of with every frame; same figures |
 | `--lat_range` with a projection whose y is not a function of the latitude only (conic, polar, orthographic) | an error with the reason, instead of a map cut at the wrong place |
 | shell examples and demos | the `${extent}` typo, an uncommented prose line in `demo_mcs_gridrad.sh` and `demo_mcs_pinacles_tracking.sh`, absolute paths of another user in `demo_coldpool_tracking.sh` |
-| `Analysis/make_*_animation.py` | call the plot code directly (no subprocess), the ffmpeg settings are those of the old wrapper |
+| `Analysis/make_*_animation.py` | call the plot code directly (no subprocess); the video settings follow the CONUS wrapper: `input_framerate` -> `playback_fps`, `output_framerate` -> `video_fps` (automatic), the default CRF 20 -> 24 (23-33 % smaller files), a width that is never enlarged, `frame_stride`, GIF settings ([animations.md](animations.md)) |
 
 `load_config(config_file, make_dirs=True)` has a new keyword: the plot commands read the config with `make_dirs=False`, so reading a config no longer creates the folders
 `tracking/`, `stats/` and `pixel...` below `root_path` (the tracking pipeline still creates them). For tracking outputs in a read-only folder (CFS) a config file with
