@@ -22,12 +22,13 @@ animation_filename=${animation_dir}mcs_tbdbz_${start_date}_${end_date}.mp4
 # Tracking pixel-level time format
 time_format='yyyymodd_hhmmss'
 # Plotting code
-code_name='/global/homes/f/feng045/program/PyFLEXTRKR-dev/Analysis/plot_subset_tbze_mcs_tracks_1panel_demo.py'
+code_name='/global/homes/f/feng045/program/PyFLEXTRKR-dev/visualization/plot_mcs_tracks.py'
 
 # Make quicklook plots
 echo 'Making quicklook plots ...'
 python ${code_name} -s ${start_date} -e ${end_date} -c ${config_file} \
-    --extent ${extent} ${lon_min} ${lon_max} ${lat_min} ${lat_max} \
+    --product tbze --panels 1 \
+    --extent ${lon_min} ${lon_max} ${lat_min} ${lat_max} \
     --subset 1 \
     --time_format ${time_format} \
     -p ${run_parallel} \

@@ -137,8 +137,8 @@ DEMOS: Dict[str, DemoInfo] = {
         pixel_filebase="mcstrack_",
         lat_range=(-60, 20),
         lon_range=(-80, 10),
-        plot_script="Analysis/plot_subset_tbpf_mcs_tracks_demo.py",
-        plot_args="-s '2019-01-25T00' -e '2019-01-27T00' -o vertical -p 1 --figsize 10 8",
+        plot_script="visualization/plot_mcs_tracks.py",
+        plot_args="-s '2019-01-25T00' -e '2019-01-27T00' --layout left_right -p 1 --figsize 10 8",
     ),
     "demo_mcs_imerg_mcsmip": DemoInfo(
         name="demo_mcs_imerg_mcsmip",
@@ -151,8 +151,8 @@ DEMOS: Dict[str, DemoInfo] = {
         pixel_filebase="mcstrack_",
         lat_range=(-60, 60),
         lon_range=(-200, 200),  # periodic boundary handling could make tracks extend beyond 180E/W
-        plot_script="Analysis/plot_subset_tbpf_mcs_tracks_demo.py",
-        plot_args="-s '2020-01-01T00' -e '2020-01-03T00' -o horizontal -p 1 --extent 140.0 -140.0 -20.0 20.0",
+        plot_script="visualization/plot_mcs_tracks.py",
+        plot_args="-s '2020-01-01T00' -e '2020-01-03T00' --layout top_bottom -p 1 --extent 140.0 -140.0 -20.0 20.0",
     ),
     "demo_mcs_wrf_tbpf": DemoInfo(
         name="demo_mcs_wrf_tbpf",
@@ -165,8 +165,8 @@ DEMOS: Dict[str, DemoInfo] = {
         pixel_filebase="mcstrack_",
         lat_range=(-20, 5),
         lon_range=(-80, -40),
-        plot_script="Analysis/plot_subset_tbpf_mcs_tracks_demo.py",
-        plot_args="-s '2014-03-19T00' -e '2014-03-21T00' -o horizontal -p 1 --figsize 9 10",
+        plot_script="visualization/plot_mcs_tracks.py",
+        plot_args="-s '2014-03-19T00' -e '2014-03-21T00' --layout top_bottom -p 1 --figsize 9 10",
     ),
     "demo_mcs_model25km": DemoInfo(
         name="demo_mcs_model25km",
@@ -180,8 +180,8 @@ DEMOS: Dict[str, DemoInfo] = {
         lat_range=(-60, 60),
         lon_range=(-180, 360),
         quicklook_subdir="quicklooks_robust",
-        plot_script="Analysis/plot_subset_tbpf_mcs_tracks_demo.py",
-        plot_args="-s '2007-05-07T00' -e '2007-05-12T00' -o horizontal -p 1 --figsize 10 10",
+        plot_script="visualization/plot_mcs_tracks.py",
+        plot_args="-s '2007-05-07T00' -e '2007-05-12T00' --layout top_bottom -p 1 --figsize 10 10",
         animation_name="mcs_robust_animation.mp4",
     ),
     "demo_mcs_tbpf_idealized": DemoInfo(
@@ -196,8 +196,8 @@ DEMOS: Dict[str, DemoInfo] = {
         pixel_filebase="mcstrack_",
         lat_range=(-90, 90),
         lon_range=(-180, 360),
-        plot_script="Analysis/plot_subset_tbpf_mcs_tracks_demo.py",
-        plot_args="-s '2020-01-01T00' -e '2020-01-03T00' -o vertical -p 1 --figsize 10 8",
+        plot_script="visualization/plot_mcs_tracks.py",
+        plot_args="-s '2020-01-01T00' -e '2020-01-03T00' --layout left_right -p 1 --figsize 10 8",
     ),
     # ── MCS Tb+Radar demos ──────────────────────────────────────────
     "demo_mcs_wrf_tbradar": DemoInfo(
@@ -211,8 +211,8 @@ DEMOS: Dict[str, DemoInfo] = {
         pixel_filebase="mcstrack_",
         lat_range=(25, 55),
         lon_range=(-115, -75),
-        plot_script="Analysis/plot_subset_tbze_mcs_tracks_demo.py",
-        plot_args="-s '2015-05-06T00' -e '2015-05-10T00' -o horizontal -p 1 --figsize 8 12",
+        plot_script="visualization/plot_mcs_tracks.py",
+        plot_args="--product tbze --draw_state 1 -s '2015-05-06T00' -e '2015-05-10T00' --layout top_bottom -p 1 --figsize_x 8 --projection LambertConformal --central_longitude -97 --standard_parallels 31 35",
     ),
     "demo_mcs_gridrad": DemoInfo(
         name="demo_mcs_gridrad",
@@ -225,8 +225,8 @@ DEMOS: Dict[str, DemoInfo] = {
         pixel_filebase="mcstrack_",
         lat_range=(20, 55),
         lon_range=(-130, -60),
-        plot_script="Analysis/plot_subset_tbze_mcs_tracks_demo.py",
-        plot_args="-s '2020-08-10T00' -e '2020-08-13T00' -o horizontal -p 1 --figsize 10 13",
+        plot_script="visualization/plot_mcs_tracks.py",
+        plot_args="--product tbze --draw_state 1 -s '2020-08-10T00' -e '2020-08-13T00' --layout top_bottom -p 1 --figsize 10 13",
     ),
     # ── MCS Tb-only demo ────────────────────────────────────────────
     "demo_mcs_himawari": DemoInfo(
@@ -241,8 +241,8 @@ DEMOS: Dict[str, DemoInfo] = {
         pixel_path_name="mcstracking_tb",
         lat_range=(-60, 60),
         lon_range=(80, 200),
-        plot_script="Analysis/plot_subset_tb_mcs_tracks_demo.py",
-        plot_args="-s '2021-10-24T00' -e '2021-10-25T00' -p 1 --figsize 10 10",
+        plot_script="visualization/plot_mcs_tracks.py",
+        plot_args="--product tb -s '2021-10-24T00' -e '2021-10-25T00' -p 1 --figsize 10 10",
     ),
     # ── Cell tracking demos ─────────────────────────────────────────
     "demo_cell_nexrad": DemoInfo(
@@ -259,7 +259,7 @@ DEMOS: Dict[str, DemoInfo] = {
         lon_var="cell_meanlon",
         lat_range=(28, 32),
         lon_range=(-97, -93),
-        plot_script="Analysis/plot_subset_cell_tracks_demo.py",
+        plot_script="visualization/plot_cell_tracks.py",
         plot_args="-s '2014-08-07T12' -e '2014-08-07T15' --radar_lat 29.4719 --radar_lon -95.0787 -p 1 --figsize 8 7",
         ffmpeg_framerate=4,
     ),
@@ -277,7 +277,7 @@ DEMOS: Dict[str, DemoInfo] = {
         lon_var="cell_meanlon",
         lat_range=(-35, -30),
         lon_range=(-67, -62),
-        plot_script="Analysis/plot_subset_cell_tracks_demo.py",
+        plot_script="visualization/plot_cell_tracks.py",
         plot_args="-s '2019-01-25T12' -e '2019-01-26T00' --radar_lat -32.12641 --radar_lon -64.72837 -p 1 --figsize 8 7",
     ),
     # ── Generic tracking demo ───────────────────────────────────────
@@ -293,7 +293,7 @@ DEMOS: Dict[str, DemoInfo] = {
         pixel_filebase="z500tracks_",
         lat_range=(-90, 90),
         lon_range=(-180, 360),
-        plot_script="Analysis/plot_subset_generic_tracks_demo.py",
+        plot_script="visualization/plot_generic_tracks.py",
         plot_args="-s '1979-06-01' -e '1979-08-31' --figsize 8 4 -p 1",
         ffmpeg_framerate=4,
     ),

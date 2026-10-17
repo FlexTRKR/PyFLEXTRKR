@@ -49,8 +49,8 @@ echo 'Tracking is done.'
 
 # Make quicklook plots
 quicklook_dir=${dir_demo}'/quicklooks_trackpaths/'
-python ../Analysis/plot_subset_tb_mcs_tracks_demo.py -s '2021-10-24T00' -e '2021-10-25T00' \
-   -c ${config_demo} -p 1 --figsize 10 10 --output ${quicklook_dir}
+python ../visualization/plot_mcs_tracks.py -s '2021-10-24T00' -e '2021-10-25T00' \
+   -c ${config_demo} --product tb -p 1 --figsize 10 10 --output ${quicklook_dir}
 echo 'View quicklook plots here: '${quicklook_dir}
 
 # Make animation using ffmpeg

@@ -54,8 +54,9 @@ echo 'Tracking is done.'
 # Make quicklook plots
 echo 'Making quicklook plots ...'
 quicklook_dir=${dir_demo}'/quicklooks_trackpaths/'
-python ../Analysis/plot_subset_tbze_mcs_tracks_demo.py -s '2015-05-06T00' -e '2015-05-10T00' \
-    -c ${config_demo} -o horizontal -p 1 --workers 8 --figsize 8 12 --output ${quicklook_dir}
+python ../visualization/plot_mcs_tracks.py -s '2015-05-06T00' -e '2015-05-10T00' \
+    -c ${config_demo} --product tbze --draw_state 1 --layout top_bottom -p 1 --workers 8 --figsize_x 8 --output ${quicklook_dir} \
+    --projection LambertConformal --central_longitude -97 --standard_parallels 31 35   # the Lambert conformal grid of the WRF domain
 echo 'View quicklook plots here: '${quicklook_dir}
 
 # Make animation using ffmpeg

@@ -58,8 +58,8 @@ echo 'Tracking is done.'
 # Make quicklook plots
 echo 'Making quicklook plots ...'
 quicklook_dir=${dir_demo}'/quicklooks_trackpaths/'
-python ../Analysis/plot_subset_tbpf_mcs_tracks_demo.py -s '2019-01-25T00' -e '2019-01-27T00' \
-    -c ${config_demo} -o vertical -p 1 --figsize 10 8 --output ${quicklook_dir}
+python ../visualization/plot_mcs_tracks.py -s '2019-01-25T00' -e '2019-01-27T00' \
+    -c ${config_demo} --layout left_right -p 1 --figsize 10 8 --output ${quicklook_dir}
     # --figbasename 'image' --figname_type 'sequence'
 echo 'View quicklook plots here: '${quicklook_dir}
 

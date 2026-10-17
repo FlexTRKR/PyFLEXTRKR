@@ -62,9 +62,9 @@ enddate='2020-02-02T00'
 
 echo 'Making quicklook plots ...'
 quicklook_dir=${dir_demo}'/quicklooks_trackpaths/'
-python ../Analysis/plot_subset_tbpf_mcs_tracks_demo.py -s ${startdate} -e ${enddate} \
+python ../visualization/plot_mcs_tracks.py -s ${startdate} -e ${enddate} \
     -c ${config_demo} \
-    -o horizontal --figsize 10 10 \
+    --layout top_bottom --figsize 10 10 \
     -p 1 \
     --extent ${minlon} ${maxlon} ${minlat} ${maxlat} \
     --figbasename ${figbasename} \

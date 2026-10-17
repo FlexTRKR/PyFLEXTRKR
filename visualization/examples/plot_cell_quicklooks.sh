@@ -21,7 +21,7 @@ time_format='yyyymodd_hhmmss'
 # varname='comp_ref'
 varname='dbz_comp'
 # Plotting code
-code_name='/ccsopen/home/zhe1feng1/program/PyFLEXTRKR-dev/Analysis/plot_subset_cell_tracks_demo.py'
+code_name='/ccsopen/home/zhe1feng1/program/PyFLEXTRKR-dev/visualization/plot_cell_tracks.py'
 
 # Make quicklook plots
 echo 'Making quicklook plots ...'

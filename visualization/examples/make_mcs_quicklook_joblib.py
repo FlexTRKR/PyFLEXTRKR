@@ -2,8 +2,8 @@
 Make task list and slurm script (Job Array) to plot GridRad MCS track path quicklooks.
 
 Example task list:
-python plot_subset_tbze_mcs_tracks_demo.py -s 2018-04-01T00 -e 2018-09-01T00 -c config.yml -o horizontal -p 1 --figsize 10 13 --output /figdir/ --figbasename mcs_
-python plot_subset_tbze_mcs_tracks_demo.py -s 2019-04-01T00 -e 2019-09-01T00 -c config.yml -o horizontal -p 1 --figsize 10 13 --output /figdir/ --figbasename mcs_
+python plot_mcs_tracks.py -s 2018-04-01T00 -e 2018-09-01T00 -c config.yml --product tbze --layout top_bottom -p 1 --figsize 10 13 --output /figdir/ --figbasename mcs_
+python plot_mcs_tracks.py -s 2019-04-01T00 -e 2019-09-01T00 -c config.yml --product tbze --layout top_bottom -p 1 --figsize 10 13 --output /figdir/ --figbasename mcs_
 ...
 
 Each line will be submitted as a slurm job using Job Array.
@@ -32,8 +32,8 @@ if __name__ == "__main__":
     task_type = f"mcs_tbze_quicklook"
 
     # Python analysis code name
-    code_dir = "/global/homes/f/feng045/program/PyFLEXTRKR-dev/Analysis/"
-    python_codename = f"{code_dir}plot_subset_tbze_mcs_tracks_demo.py"
+    code_dir = "/global/homes/f/feng045/program/PyFLEXTRKR-dev/visualization/"
+    python_codename = f"{code_dir}plot_mcs_tracks.py"
 
     # Tracking config file
     config_dir = "/global/homes/f/feng045/program/pyflex_config/config/"
@@ -71,7 +71,7 @@ if __name__ == "__main__":
         config = f"{config_dir}/{config_basename}{iyear}.yml"
         print(sdate, edate)
         cmd = f"python {python_codename} -s {sdate} -e {edate} -c {config} " + \
-            f"-o horizontal -p 1 --figsize {figsize} --output {out_dir} --figbasename {figbasename}"
+            f"--product tbze --layout top_bottom -p 1 --figsize {figsize} --output {out_dir} --figbasename {figbasename}"
         task_file.write(f"{cmd}\n")
         ntasks += 1
     task_file.close()

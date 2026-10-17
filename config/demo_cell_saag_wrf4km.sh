@@ -47,7 +47,7 @@ echo 'Tracking is done.'
 
 # Make quicklook plots
 echo 'Making quicklook plots ...'
-python ${pyflex_dir}/Analysis/plot_subset_cell_tracks_demo.py -s ${start_date} -e ${end_date} \
+python ${pyflex_dir}/visualization/plot_cell_tracks.py -s ${start_date} -e ${end_date} \
     -c ${config_file} --radar_lat ${radar_lat} --radar_lon ${radar_lon} -p 1 --figsize 8 7 --output ${quicklook_dir}
 echo 'View quicklook plots here: '${quicklook_dir}
 
