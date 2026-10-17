@@ -10,7 +10,7 @@ line (--set NAME=VALUE), and call main(globals()):
     visualization/examples/make_mcs_animation_himawari_tb.py      Himawari Tb only
 A wrapper sets the parameters it needs; DEFAULTS below lists all of them (a parameter left out has the value listed there).
 
-Called by: the wrapper scripts above. Calls: mcs_cli.main (the PNG frames), animation.make_mp4 / make_gif (ffmpeg).
+Called by: the wrapper scripts above. Calls: mcs_cli.main (the PNG frames), animation.make_animation (mp4 and GIF with ffmpeg).
 """
 import argparse
 import datetime
@@ -20,7 +20,7 @@ import sys
 import yaml
 from pyflextrkr.visualization.cli_common import options_to_argv, layout_name
 from pyflextrkr.visualization.mcs_cli import main as plot_mcs_tracks
-from pyflextrkr.visualization.animation import frames_in_range, make_mp4, make_gif
+from pyflextrkr.visualization.animation import frames_in_range, make_animation
 
 # All parameters and their values when a wrapper does not set them (None: the default of plot_mcs_tracks.py)
 DEFAULTS = dict(
@@ -56,14 +56,19 @@ DEFAULTS = dict(
     # What to run
     run_plotting=True,                                    # False: use the PNG files that exist
     run_ffmpeg=True,                                      # False: only the PNG files
-    # mp4 (ffmpeg): PNG files per second, frame rate of the file, quality (CRF, lower = better), width in pixels, x264 preset
-    input_framerate=2, output_framerate=10, video_quality=20, output_width=1920, video_preset=None,
-    # GIF from the mp4 (for READMEs): width in pixels (None: no GIF), frames per second (None: input_framerate), the part of the mp4
+    # mp4 (ffmpeg), see pyflextrkr/visualization/animation.py: PNG files per second (the speed), use every Nth PNG file, frame rate of the
+    # video file (None: playback_fps repeated to at least 10 per second), quality (CRF, lower = better and larger), width in pixels, x264 preset
+    playback_fps=2, frame_stride=1, video_fps=None, video_quality=24, output_width=1920, video_preset=None,
+    # GIF from the mp4 (for READMEs): width in pixels (None: no GIF), frames per second (None: playback_fps), the part of the mp4
     # (start and duration in seconds, None: to the end), colors, dither
     gif_width=None, gif_fps=None, gif_start=0.0, gif_duration=None, gif_colors=256, gif_dither='none',
     # Output: the PNG files are in figdir, the animation in animation_dir; both default to folders in fig_root
     fig_root=None, figdir=None, animation_dir=None, fig_basename=None,
 )
+
+# Old parameter names -> the names that replace them. orientation -> layout (horizontal -> top_bottom, vertical -> left_right);
+# input_framerate -> playback_fps (PNG files per second); output_framerate -> video_fps (frame rate of the video file; now automatic if None)
+DEPRECATED_NAMES = {'orientation': 'layout', 'input_framerate': 'playback_fps', 'output_framerate': 'video_fps'}
 
 #-----------------------------------------------------------------------
 def to_plain(value):
@@ -75,8 +80,8 @@ def to_plain(value):
 #-----------------------------------------------------------------------
 def apply_overrides(params, argv=None, description=None):
     """
-    Set parameters from the command line: --set NAME=VALUE (a value is read as yaml: numbers, true, null, lists). `orientation`
-    is the old name of `layout` (horizontal -> top_bottom, vertical -> left_right).
+    Set parameters from the command line: --set NAME=VALUE (a value is read as yaml: numbers, true, null, lists). The old names
+    in DEPRECATED_NAMES still work (with a warning when a wrapper still has the variable).
 
     Args:
         params: dictionary of the parameters (changed in place)
@@ -89,8 +94,9 @@ def apply_overrides(params, argv=None, description=None):
                     help='set a parameter, e.g. --set start_date=2025-01-02T00 --set n_workers=32 --set lat_range=[-30,30]')
     for item in ap.parse_args(argv).set:
         name, sep, value = item.partition('=')
-        if name == 'orientation':
-            name = 'layout'
+        if name in DEPRECATED_NAMES:
+            print(f"DeprecationWarning: the parameter {name} is now called {DEPRECATED_NAMES[name]}")
+            name = DEPRECATED_NAMES[name]
         if not sep or name not in DEFAULTS:
             sys.exit(f"ERROR: --set {item}: expected NAME=VALUE with NAME one of the parameters of the script "
                      f"(pyflextrkr.visualization.mcs_animation.DEFAULTS)")
@@ -101,8 +107,10 @@ def apply_overrides(params, argv=None, description=None):
 def complete_parameters(params):
     """The parameters of a wrapper with the defaults filled in, checked, and the names that depend on them."""
     params = dict(params)
-    if 'orientation' in params:                           # the old name of layout (horizontal -> top_bottom, vertical -> left_right)
-        params['layout'] = params.pop('orientation')
+    for old_name, new_name in DEPRECATED_NAMES.items():
+        if old_name in params:
+            print(f"DeprecationWarning: the parameter {old_name} is now called {new_name}")
+            params[new_name] = params.pop(old_name)
     unknown = [k for k in params if k not in DEFAULTS]
     if unknown:
         print(f"WARNING: not a parameter of the animation (ignored): {', '.join(unknown)}")
@@ -258,30 +266,12 @@ def main(params, argv=None, description=None):
         print(f"   Expected pattern: {p['fig_basename']}YYYYMMDD_HHMMSS.png")
         sys.exit(1)
 
-    print(f"🎬 Animation settings:")
-    print(f"   Input framerate: {p['input_framerate']} fps (PNG reading speed)")
-    print(f"   Output framerate: {p['output_framerate']} fps (video playback speed)")
-    print(f"   Video quality (CRF): {p['video_quality']} (lower=better), x264 preset {p['video_preset']}")
-    print(f"   Output width: {p['output_width'] if p['output_width'] else 'original'} pixels (height auto-scaled)")
-    print(f"Using {len(expected_files)} PNG files from {expected_files[0]} to {expected_files[-1]}")
-
     mp4_file = f"{animation_name}.mp4"
-    returncode, ffmpeg_cmd = make_mp4(expected_files, mp4_file, input_framerate=p['input_framerate'],
-                                      output_framerate=p['output_framerate'], crf=p['video_quality'], width=p['output_width'],
-                                      preset=p['video_preset'])
-    print(f"FFmpeg command: {' '.join(ffmpeg_cmd)}")
+    returncode = make_animation(expected_files, mp4_file, playback_fps=p['playback_fps'], frame_stride=p['frame_stride'],
+                                video_fps=p['video_fps'], video_quality=p['video_quality'], output_width=p['output_width'],
+                                video_preset=p['video_preset'], gif_width=p['gif_width'], gif_fps=p['gif_fps'],
+                                gif_start=p['gif_start'], gif_duration=p['gif_duration'], gif_colors=p['gif_colors'],
+                                gif_dither=p['gif_dither'])
     if returncode != 0:
-        print(f"❌ Error: FFmpeg failed with exit code {returncode}")
         sys.exit(1)
-    print(f"✅ Animation created successfully!")
     print(f"🎬 View animation here: {mp4_file}")
-
-    if p['gif_width']:
-        gif_file = f"{animation_name}.gif"
-        fps = p['gif_fps'] or p['input_framerate']
-        returncode, gif_cmd = make_gif(mp4_file, gif_file, start=p['gif_start'], duration=p['gif_duration'], fps=fps, width=p['gif_width'],
-                                       colors=p['gif_colors'], dither=p['gif_dither'])
-        if returncode != 0:
-            print(f"❌ Error: FFmpeg failed to make the GIF with exit code {returncode}")
-            sys.exit(1)
-        print(f"✅ GIF created: {gif_file} ({os.path.getsize(gif_file) / 1e6:.1f} MB)")

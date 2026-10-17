@@ -14,6 +14,16 @@ command line without editing the file:
 Examples for other data (WRF, IMERG over South America, Himawari) are in examples/make_mcs_animation_*.py. Every parameter
 that is left out of a script has the value in DEFAULTS of pyflextrkr/visualization/mcs_animation.py, where the work is done.
 
+The mp4 of PNG files that are already plotted, with ffmpeg alone (the same file as run_plotting = False gives; a directory or a
+list of PNG files works with `python pngs_to_animation.py FRAMES movie.mp4`, which also makes the GIF):
+>ffmpeg -framerate 2 -pattern_type glob -i '/pscratch/sd/f/feng045/waccem/mcs_global/quicklooks_2panel_tbpf/2025/mcs_tbpf_*.png' \\
+>       -vf "scale='min(1920,trunc(iw/2)*2)':-2" -c:v libx264 -r 10 -crf 24 -pix_fmt yuv420p -y movie.mp4
+  -framerate 2 (before -i): PNG files per second = playback_fps. -vf scale: at most 1920 pixels wide (output_width), never enlarged,
+  and even sizes, which yuv420p needs (a PNG file with an odd number of pixels fails without it). -r 10 (after the codec): frames per
+  second of the file (video_fps), each PNG file is repeated 5 times. -crf 24: video_quality. -pix_fmt yuv420p: plays in every player.
+The GIF from that mp4, 480 pixels wide, the first 8 s, 2 frames per second, one palette of 256 colors, no dither (gif_width = 480, gif_duration = 8):
+>ffmpeg -t 8 -i movie.mp4 -vf "fps=2,scale='min(480,iw)':-1:flags=lanczos,split[a][b];[a]palettegen=max_colors=256:stats_mode=full[p];[b][p]paletteuse=dither=none" -loop 0 -y movie.gif
+
 Author: Zhe Feng | zhe.feng@pnnl.gov
 """
 
@@ -126,14 +136,30 @@ run_plotting = True   # Set to False to skip plotting and use existing PNG files
 run_ffmpeg = True     # Set to False to skip animation creation (plotting only)
 
 # FFmpeg animation parameters
-input_framerate = 2    # (frames per second) - how fast to transition between frames
-output_framerate = 10  # (frames per second) - video playback speed (lower values = smaller file size, e.g., 24 fps is cinema)
-video_quality = 20     # CRF value (lower = better quality, range 0-51, 18-28 is good)
-output_width = 1920    # Output video width in pixels (height auto-calculated to maintain aspect ratio, set to None to keep original size)
-video_preset = None    # x264 preset (ultrafast ... medium ... veryslow); None = no -preset option (x264 default, medium). A slower preset
-                       # makes the file only about 1 % smaller, see docs/visualization/animations.md
-# GIF made from the mp4 (for a README): width in pixels, None: no GIF; gif_fps None: input_framerate; the part of the mp4 to
-# use: gif_start and gif_duration in seconds (None: to the end); a GIF has 256 colors at most (gif_colors)
+playback_fps = 2       # PNG files shown per second = the playback speed of the animation (larger = faster). Hourly files: 2 means
+                       # 2 hours of data per second, so the 48 files of 2 days take 24 s
+frame_stride = 1       # use every Nth PNG file (2 = every second file): the other way to shorten a long period
+video_fps = None       # frame rate of the video file. None = automatic: playback_fps repeated to at least 10 fps with a whole
+                       # number of repeats per PNG file (2 -> 10). It does not change the speed; players handle very low frame
+                       # rates badly, so every PNG file is repeated. Keep it a whole multiple of playback_fps (in between, the
+                       # PNG files are repeated unevenly)
+video_quality = 24     # CRF value of libx264 (lower = better quality and larger file, range 0-51; 18-28 is the useful range).
+                       # +6 CRF makes the file 33-55 % smaller. Measured on the 48 PNG files of the global default (2800 x 2304
+                       # pixels, scaled to 1920) against the source PNG files:
+                       #   CRF 20: 16.3 MB (SSIM 0.9964)   CRF 22: 13.9 MB (0.9947)
+                       #   CRF 24: 11.8 MB (0.9923, -28 %, thin lines and numbers look the same)
+                       #   CRF 26: 9.8 MB (0.9891, -40 %)  CRF 28: 7.9 MB (0.9849, -51 %)
+                       # Maps with fine detail (the Himawari example) lose more at the same CRF: use 22 for them
+output_width = 1920    # Output video width in pixels, never enlarged: smaller PNG files keep their size (height auto-calculated to
+                       # maintain aspect ratio; None: the size of the PNG files). At CRF 24 this global map is 11.8 MB at 1920 pixels,
+                       # 6.7 MB at 1400 and 24.7 MB at its full 2800
+video_preset = None    # x264 preset: ultrafast ... fast, medium (x264 default), slow, slower, veryslow; None = no -preset option (medium).
+                       # 'slow' makes the file only about 1 % smaller; 'slower' 1-12 % and 'veryslow' 4-19 % smaller, for 1.1-2.4 and
+                       # 1.2-3.6 times the encoding time (docs/visualization/animations.md). Use them only if the size matters more
+# GIF made from the mp4 (for a README): width in pixels, None: no GIF. A GIF is big: its size is about proportional to the number of
+# frames and of pixels, so make it short and narrow. gif_fps None: playback_fps (the same speed); the part of the mp4 to use:
+# gif_start and gif_duration in seconds (None: to the end); gif_colors up to 256 (128 saves 13-23 %, but the gradient colorbars
+# band); gif_dither 'none' (the maps are flat colors, dither only adds dots)
 gif_width = None
 gif_fps = None
 gif_start = 0.0

@@ -191,7 +191,7 @@ def test_stubs_in_analysis_forward_to_their_own_name():
 #-----------------------------------------------------------------------
 ENTRY_SCRIPTS = ['plot_mcs_tracks.py', 'plot_cell_tracks.py', 'plot_generic_tracks.py', 'plot_cartesian_tracks.py',
                  'make_mcs_animation.py', 'make_cell_animation.py', 'examples/make_mcs_animation_wrf_tbze.py',
-                 'examples/make_mcs_animation_imerg_1panel.py', 'examples/make_mcs_animation_himawari_tb.py']
+                 'examples/make_mcs_animation_imerg_1panel.py', 'examples/make_mcs_animation_himawari_tb.py', 'pngs_to_animation.py']
 
 
 def python_files_of_the_visualization_entry_points():

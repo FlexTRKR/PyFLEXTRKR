@@ -16,7 +16,7 @@ pytest.importorskip("cartopy")
 pytest.importorskip("yaml")
 
 from pyflextrkr.ft_utilities import load_config
-from pyflextrkr.visualization import mcs_cli, cell_cli, mcs_animation
+from pyflextrkr.visualization import mcs_cli, cell_cli, mcs_animation, animation
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 EXAMPLES = ['make_mcs_animation_wrf_tbze', 'make_mcs_animation_imerg_1panel', 'make_mcs_animation_himawari_tb']
@@ -136,8 +136,18 @@ def test_mcs_wrappers_have_the_video_and_gif_parameters():
         assert not [k for k in names if k not in mcs_animation.DEFAULTS], name         # every variable of a wrapper is a parameter
     assert mcs_animation.DEFAULTS['video_preset'] is None        # no -preset option: the x264 default (docs/visualization/animations.md)
     assert mcs_animation.DEFAULTS['gif_width'] is None and mcs_animation.DEFAULTS['gif_dither'] == 'none'
+    # the video settings of the reference wrapper (conus_tracking): playback_fps (PNG files per second), a quality of CRF 24, 1920 pixels at most
+    defaults = {k: mcs_animation.DEFAULTS[k] for k in ('playback_fps', 'frame_stride', 'video_fps', 'video_quality', 'output_width')}
+    assert defaults == dict(playback_fps=2, frame_stride=1, video_fps=None, video_quality=24, output_width=1920)
+    for name in ['make_mcs_animation'] + EXAMPLES:                # hourly files: 2 PNG files per second, the settings are in every wrapper
+        module = load_wrapper(name)
+        assert (module.playback_fps, module.frame_stride, module.video_fps, module.video_quality, module.output_width, module.video_preset) == \
+            (2, 1, None, 24, 1920, None), name
+        assert not [k for k in ('input_framerate', 'output_framerate') if hasattr(module, k)], name
     module = load_wrapper('make_cell_animation')
     assert module.video_preset is None and 'video_preset' in module._PARAMETERS
+    assert (module.playback_fps, module.frame_stride, module.video_fps, module.video_quality, module.output_width) == (12, 1, None, 24, 1920)
+    assert not [k for k in ('input_framerate', 'output_framerate') if k in module._PARAMETERS]
 
 
 def test_example_wrappers_give_their_maps(monkeypatch, tmp_path):
@@ -161,33 +171,79 @@ def test_mp4_and_gif_steps(monkeypatch, tmp_path):
     module = load_wrapper('make_mcs_animation_imerg_1panel')
     calls = {}
     monkeypatch.setattr(mcs_animation, 'plot_mcs_tracks', lambda argv: None)
-    monkeypatch.setattr(mcs_animation, 'frames_in_range', lambda figdir, base, start, end: calls.setdefault('frames', [f'{figdir}{base}1.png']))
+    frames = lambda figdir, base, start, end: calls.setdefault('frames', [f'{figdir}{base}{i}.png' for i in range(1, 5)])
+    monkeypatch.setattr(mcs_animation, 'frames_in_range', frames)
 
     def fake_mp4(files, out, **kwargs):
         calls['mp4'] = (files, out, kwargs)
+        open(out, 'wb').write(b'MP4')
         return 0, ['ffmpeg']
 
     def fake_gif(source, out, **kwargs):
         calls['gif'] = (source, out, kwargs)
         open(out, 'wb').write(b'GIF')
         return 0, ['ffmpeg']
-    monkeypatch.setattr(mcs_animation, 'make_mp4', fake_mp4)
-    monkeypatch.setattr(mcs_animation, 'make_gif', fake_gif)
-    mcs_animation.main(vars(module), ['--set', f'fig_root={tmp_path}/', '--set', 'run_plotting=false'])
+    monkeypatch.setattr(animation, 'make_mp4', fake_mp4)           # mcs_animation.make_animation calls these two
+    monkeypatch.setattr(animation, 'make_gif', fake_gif)
+    set_args = ['--set', f'fig_root={tmp_path}/', '--set', 'run_plotting=false']
+    mcs_animation.main(vars(module), set_args)
     files, mp4, kwargs = calls['mp4']
-    assert mp4.endswith('animations_1panel_tbpf/mcs_tbpf_2019-01-25_2019-01-27.mp4') and files[0].endswith('mcs_tbpf_1.png')
-    assert (kwargs['input_framerate'], kwargs['output_framerate'], kwargs['crf'], kwargs['width'], kwargs['preset']) == (2, 10, 20, 800, None)
+    assert mp4.endswith('animations_1panel_tbpf/mcs_tbpf_2019-01-25_2019-01-27.mp4') and len(files) == 4 and files[0].endswith('mcs_tbpf_1.png')
+    assert (kwargs['playback_fps'], kwargs['video_fps'], kwargs['crf'], kwargs['width'], kwargs['preset']) == (2, None, 24, 1920, None)
     source, gif, kwargs = calls['gif']
     assert source == mp4 and gif == mp4[:-4] + '.gif'
-    assert (kwargs['fps'], kwargs['width'], kwargs['start'], kwargs['duration'], kwargs['colors'], kwargs['dither']) == (2, 480, 0.0, 12, 256, 'none')
+    assert (kwargs['fps'], kwargs['width'], kwargs['start'], kwargs['duration'], kwargs['colors'], kwargs['dither']) == (2, 480, 0.0, 8, 256, 'none')
     # no gif_width: no GIF
     calls.clear()
-    mcs_animation.main(vars(module), ['--set', f'fig_root={tmp_path}/', '--set', 'run_plotting=false', '--set', 'gif_width=null'])
+    mcs_animation.main(vars(module), set_args + ['--set', 'gif_width=null'])
     assert 'mp4' in calls and 'gif' not in calls
-    # gif_fps replaces the frame rate of the GIF
+    # gif_fps replaces the frame rate of the GIF; the video settings can be set from the command line
     calls.clear()
-    mcs_animation.main(vars(module), ['--set', f'fig_root={tmp_path}/', '--set', 'run_plotting=false', '--set', 'gif_fps=5'])
+    mcs_animation.main(vars(module), set_args + ['--set', 'gif_fps=5', '--set', 'playback_fps=4', '--set', 'video_quality=20',
+                                                 '--set', 'output_width=1000', '--set', 'video_preset=slow', '--set', 'video_fps=8'])
     assert calls['gif'][2]['fps'] == 5
+    kwargs = calls['mp4'][2]
+    assert (kwargs['playback_fps'], kwargs['video_fps'], kwargs['crf'], kwargs['width'], kwargs['preset']) == (4, 8, 20, 1000, 'slow')
+    # frame_stride: every 2nd PNG file; the GIF follows the playback rate when gif_fps is not set
+    calls.clear()
+    mcs_animation.main(vars(module), set_args + ['--set', 'frame_stride=2', '--set', 'playback_fps=3'])
+    assert [os.path.basename(f) for f in calls['mp4'][0]] == ['mcs_tbpf_1.png', 'mcs_tbpf_3.png'] and calls['gif'][2]['fps'] == 3
+
+
+def test_the_old_framerate_parameters_are_playback_fps_and_video_fps_with_a_deprecation_warning(monkeypatch, tmp_path, capsys):
+    """input_framerate (PNG files per second) is playback_fps, output_framerate (file frame rate) is video_fps: in a wrapper and with --set."""
+    module = load_wrapper('make_mcs_animation_himawari_tb')
+    calls = {}
+    monkeypatch.setattr(mcs_animation, 'plot_mcs_tracks', lambda argv: None)
+    monkeypatch.setattr(mcs_animation, 'frames_in_range', lambda figdir, base, start, end: [f'{figdir}{base}1.png'])
+    monkeypatch.setattr(mcs_animation, 'make_animation', lambda files, out, **kwargs: calls.update(kwargs) or 0)
+    capsys.readouterr()
+    values = dict(vars(module))                                    # an old copy of the script has the old variables
+    values.pop('playback_fps'); values.pop('video_fps')
+    values.update(input_framerate=3, output_framerate=12)
+    mcs_animation.main(values, ['--set', f'fig_root={tmp_path}/', '--set', 'run_plotting=false'])
+    assert (calls['playback_fps'], calls['video_fps']) == (3, 12)
+    out = capsys.readouterr().out
+    assert 'input_framerate is now called playback_fps' in out and 'output_framerate is now called video_fps' in out
+    mcs_animation.main(vars(module), ['--set', f'fig_root={tmp_path}/', '--set', 'run_plotting=false', '--set', 'input_framerate=4'])
+    assert calls['playback_fps'] == 4 and 'input_framerate is now called playback_fps' in capsys.readouterr().out
+
+
+def test_cell_wrapper_makes_the_mp4_with_the_video_settings(monkeypatch, tmp_path):
+    module = load_wrapper('make_cell_animation')
+    calls = {}
+    monkeypatch.setattr(module, 'frames_in_range', lambda figdir, base, start, end: [f'{figdir}{base}1.png', f'{figdir}{base}2.png'])
+    monkeypatch.setattr(module, 'make_animation', lambda files, out, **kwargs: calls.update(files=files, out=out, **kwargs) or 0)
+    monkeypatch.setattr(sys, 'argv', ['wrapper', '--set', f'figdir={tmp_path}/frames/', '--set', f'animation_dir={tmp_path}/anim/',
+                                      '--set', 'run_plotting=false', '--set', 'video_quality=22'])
+    module.main()
+    assert calls['out'].endswith('anim/cell_tracks_2020-06-13T00_2020-06-16T00.mp4') and len(calls['files']) == 2
+    assert (calls['playback_fps'], calls['frame_stride'], calls['video_fps'], calls['video_quality'], calls['output_width'], calls['video_preset']) == \
+        (12, 1, None, 22, 1920, None)
+    # ffmpeg fails: the script exits with an error
+    monkeypatch.setattr(module, 'make_animation', lambda files, out, **kwargs: 1)
+    with pytest.raises(SystemExit):
+        module.main()
 
 
 def test_cell_wrapper_options_parse(monkeypatch, tmp_path):

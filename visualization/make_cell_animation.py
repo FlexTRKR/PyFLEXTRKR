@@ -7,6 +7,11 @@ Make cell tracking animation
 Edit the parameters below, or set them on the command line without editing the file:
 >python make_cell_animation.py --set start_date=2020-06-14T00:00 --set end_date=2020-06-14T06:00 --set n_workers=32
 
+The mp4 of PNG files that are already plotted, with ffmpeg alone (explained in visualization/make_mcs_animation.py; a directory
+or a list of PNG files works with `python pngs_to_animation.py FRAMES movie.mp4 --playback_fps 12`):
+>ffmpeg -framerate 12 -pattern_type glob -i '/global/cfs/cdirs/m1657/zfeng/SCREAMv1-cess2/cell_conus/quicklooks/cell_tracks_*.png' \\
+>       -vf "scale='min(1920,trunc(iw/2)*2)':-2" -c:v libx264 -r 12 -crf 24 -pix_fmt yuv420p -y movie.mp4
+
 Author: Zhe Feng | zhe.feng@pnnl.gov
 """
 
@@ -17,7 +22,7 @@ import inspect
 import yaml
 from pyflextrkr.visualization.cli_common import options_to_argv
 from pyflextrkr.visualization.cell_cli import main as plot_cell_tracks
-from pyflextrkr.visualization.animation import frames_in_range, make_mp4
+from pyflextrkr.visualization.animation import frames_in_range, make_animation
 
 ###############################################################################################
 # Script parameters
@@ -94,13 +99,20 @@ animation_dir = f"/global/cfs/cdirs/m1657/zfeng/SCREAMv1-cess2/cell_conus/animat
 run_plotting = True   # Set to False to skip plotting and use existing PNG files
 run_ffmpeg = True     # Set to False to skip animation creation (plotting only)
 
-# FFmpeg animation parameters
-input_framerate = 2    # (frames per second) - how fast to transition between frames
-output_framerate = 10  # (frames per second) - video playback speed (lower values = smaller file size, e.g., 24 fps is cinema)
-video_quality = 20     # CRF value (lower = better quality, range 0-51, 18-28 is good)
-output_width = 1920    # Output video width in pixels (height auto-calculated to maintain aspect ratio, set to None to keep original size)
-video_preset = None    # x264 preset (ultrafast ... medium ... veryslow); None = no -preset option (x264 default, medium). A slower preset
-                       # makes the file only about 1 % smaller, see docs/visualization/animations.md
+# FFmpeg animation parameters (explained in visualization/make_mcs_animation.py, tested in docs/visualization/animations.md)
+playback_fps = 12      # PNG files shown per second = the playback speed of the animation (larger = faster). 5-minute files: 12 means
+                       # 1 hour of data per second, so 3 days (864 files) take 72 s; hourly files would use 2
+frame_stride = 1       # use every Nth PNG file (2 = every second file): the other way to shorten a long period
+video_fps = None       # frame rate of the video file. None = automatic: playback_fps repeated to at least 10 fps with a whole
+                       # number of repeats per PNG file (12 -> 12, 2 -> 10). It does not change the speed; players handle very
+                       # low frame rates badly. Keep it a whole multiple of playback_fps
+video_quality = 24     # CRF value of libx264 (lower = better quality and larger file, range 0-51; 18-28 is the useful range).
+                       # +6 CRF makes the file 33-55 % smaller. The CONUS MRMS maps (288 frames, 1920 px): CRF 20: 33.7 MB (SSIM 0.9952),
+                       # 22: 28.2 MB (0.9935), 24: 23.5 MB (0.9911, -30 %, thin lines and markers look the same), 26: 19.2 MB (0.9878, -43 %)
+output_width = 1920    # Output video width in pixels, never enlarged (height auto-calculated to maintain aspect ratio; None: the size
+                       # of the PNG files)
+video_preset = None    # x264 preset: ultrafast ... fast, medium (x264 default), slow, slower, veryslow; None = no -preset option (medium).
+                       # A slower preset makes the file only about 1 % smaller, see docs/visualization/animations.md
 
 ###############################################################################################
 # Main execution
@@ -220,23 +232,14 @@ def main():
             print(f"   Expected pattern: {fig_basename}YYYYMMDD_HHMMSS.png")
             sys.exit(1)
 
-        print(f"🎬 Animation settings:")
-        print(f"   Input framerate: {input_framerate} fps (PNG reading speed)")
-        print(f"   Output framerate: {output_framerate} fps (video playback speed)")
-        print(f"   Video quality (CRF): {video_quality} (lower=better), x264 preset {video_preset}")
-        print(f"   Output width: {output_width if output_width else 'original'} pixels (height auto-scaled)")
-        print(f"Using {len(expected_files)} PNG files from {expected_files[0]} to {expected_files[-1]}")
-
-        returncode, ffmpeg_cmd = make_mp4(expected_files, animation_filename, input_framerate=input_framerate,
-                                          output_framerate=output_framerate, crf=video_quality, width=output_width,
-                                          preset=video_preset)
-        print(f"FFmpeg command: {' '.join(ffmpeg_cmd)}")
-
+        # The settings are printed, then the mp4 is made (animation.make_animation)
+        returncode = make_animation(expected_files, animation_filename, playback_fps=playback_fps, frame_stride=frame_stride,
+                                    video_fps=video_fps, video_quality=video_quality, output_width=output_width,
+                                    video_preset=video_preset)
         if returncode == 0:
-            print(f"✅ Animation created successfully!")
             print(f"🎬 View animation here: {animation_filename}")
         else:
-            print(f"❌ Error: FFmpeg failed with exit code {returncode}")
+            sys.exit(1)
 
     else:
         print("⏭️  Skipping animation creation - PNG files ready for manual processing")
