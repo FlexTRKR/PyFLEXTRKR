@@ -121,6 +121,8 @@ bash demo_cell_nexrad.sh
 
 The demo script downloads and untar the sample data, runs the tracking code, and generates visualizations. Once the demo script finishes running, a sub-directory within the `dir_demo` named `quicklooks_trackpaths` will be created that contains quicklook visualization of the tracking results, as shown in the example animations above.
 
+The quicklook maps are made by the scripts in [`visualization/`](visualization) (MCS, convective cells, generic features, idealized domains; map projections, track style options, animations): see [`visualization/README.md`](visualization/README.md). The old `Analysis/plot_subset_*.py` commands still work.
+
 
 # **5. Running PyFLEXTRKR**
 
