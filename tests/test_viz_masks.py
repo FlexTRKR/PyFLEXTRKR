@@ -5,7 +5,7 @@ Needs numpy and scipy only.
 """
 import numpy as np
 import pytest
-from scipy.ndimage import binary_erosion, generate_binary_structure
+from scipy.ndimage import binary_dilation, binary_erosion, generate_binary_structure
 
 from pyflextrkr.visualization import masks
 
@@ -133,3 +133,42 @@ def test_cell_and_track_centers_equal_plain_loops():
     # no object: empty arrays
     out = masks.calc_track_center(np.full((4, 4), np.nan), lon[:4, :4], lat[:4, :4])
     assert all(len(a) == 0 for a in out)
+
+
+#-----------------------------------------------------------------------
+def outer_ring_loop(tracknumber, dilationstructure):
+    """The ring just outside every object, the object grown by the structure without the object, on the whole grid."""
+    tracknumber_unique = np.unique(tracknumber[~np.isnan(tracknumber)]).astype(np.int32)
+    ring = np.zeros(tracknumber.shape, dtype=np.int32)
+    for ii in tracknumber_unique:
+        itn = tracknumber == ii
+        ring[np.logical_and(binary_dilation(itn, structure=dilationstructure), ~itn)] = ii
+    return ring
+
+
+@pytest.mark.parametrize("structure", [generate_binary_structure(2, 1), masks.make_perimeter_structure(3), masks.make_dilation_structure(20, 10, 10)])
+@pytest.mark.parametrize("seed", [0, 1, 2])
+def test_outer_ring_equals_loop_over_whole_grid(seed, structure):
+    tn = random_objects(seed)
+    assert np.array_equal(masks.label_perimeter(tn, structure, outer=True), outer_ring_loop(tn, structure))
+
+
+def test_outer_ring_is_outside_the_object_and_one_pixel_wide():
+    st = generate_binary_structure(2, 1)
+    tn = np.full((12, 12), np.nan)
+    tn[4:8, 4:8] = 3                                   # a square of 4 x 4 pixels
+    ring = masks.label_perimeter(tn, st, outer=True)
+    assert set(np.unique(ring)) == {0, 3}
+    assert not (ring[4:8, 4:8] > 0).any()              # nothing on the object
+    assert (ring > 0).sum() == 16                      # the 4 pixels along each of the 4 sides
+    obj = ~np.isnan(tn)
+    assert np.array_equal(ring > 0, binary_dilation(obj, structure=st) & ~obj)
+    # the default is still the outline inside the object
+    inner = masks.label_perimeter(tn, st)
+    assert (inner > 0).sum() == 12 and not (inner[4:8, 4:8] == 0).all()
+    # at the edge of the array the ring is cut; with a periodic edge it continues on the other side
+    corner = np.full((6, 6), np.nan)
+    corner[0:2, 0:2] = 1
+    assert (masks.label_perimeter(corner, st, outer=True) > 0).sum() == 4
+    wrapped = masks.label_perimeter(corner, st, periodic=(True, False), outer=True)
+    assert wrapped[0, 5] == 1 and wrapped[1, 5] == 1 and (wrapped > 0).sum() == 6

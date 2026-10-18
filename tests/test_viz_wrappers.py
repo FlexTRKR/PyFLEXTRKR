@@ -254,6 +254,15 @@ def test_cell_wrapper_options_parse(monkeypatch, tmp_path):
     args = cell_cli.parse_cmd_args(run_cell_wrapper(module, monkeypatch, tmp_path,
                                                     ['projection=LambertConformal', 'central_longitude=-90', 'track_halo_color=white']))
     assert args['projection'] == 'LambertConformal' and args['central_longitude'] == -90 and args['track_halo_color'] == 'white'
+    # the options of plotmap: off by default; a list of lists of places repeats --city / --radar_site
+    assert (args['perim_cmap'], args['perim_halo'], args['min_hours'], args['show_terrain']) == (None, None, 0.0, 0)
+    assert args['city'] is None and args['radar_site'] is None and args['radar_site_radius'] == 150
+    args = cell_cli.parse_cmd_args(run_cell_wrapper(module, monkeypatch, tmp_path,
+                                                    ['perim_cmap=glasbey_dark', 'perim_halo=white', 'min_hours=1.5', 'show_terrain=true',
+                                                     'grid_linestyle=":"', 'cities=[["A",10,20],["B",11,21]]', 'radar_sites=[["R",5,6]]',
+                                                     'radar_site_radius=40']))
+    assert (args['perim_cmap'], args['perim_halo'], args['min_hours'], args['show_terrain'], args['grid_linestyle']) == ('glasbey_dark', 'white', 1.5, 1, ':')
+    assert args['city'] == [['A', '10', '20'], ['B', '11', '21']] and args['radar_site'] == [['R', '5', '6']] and args['radar_site_radius'] == 40
 
 
 #-----------------------------------------------------------------------

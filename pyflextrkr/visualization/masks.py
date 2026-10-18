@@ -9,7 +9,7 @@ objects); the result is the same as the loop over the whole grid (checked in tes
 Called by: mcs_map, cell_map, generic_map (work_for_time_loop). Calls: numpy, scipy.ndimage.
 """
 import numpy as np
-from scipy.ndimage import binary_erosion, generate_binary_structure, find_objects
+from scipy.ndimage import binary_dilation, binary_erosion, generate_binary_structure, find_objects
 
 #--------------------------------------------------------------------------
 def make_dilation_structure(dilate_radius, dx, dy):
@@ -63,9 +63,9 @@ def _object_boxes(tracknumber):
     return tracknumber_unique, compact, slices
 
 #-----------------------------------------------------------------------
-def label_perimeter(tracknumber, dilationstructure, periodic=(False, False)):
+def label_perimeter(tracknumber, dilationstructure, periodic=(False, False), outer=False):
     """
-    Labels the perimeter on a 2D map from object tracknumber masks.
+    Labels the perimeter on a 2D map from object tracknumber masks (outer=True: the ring just outside the objects).
 
     Args:
         tracknumber: 2D array
@@ -76,6 +76,9 @@ def label_perimeter(tracknumber, dilationstructure, periodic=(False, False)):
             (x, y) The grid is periodic in x (columns) and/or y (rows): an object that crosses the edge continues on
             the other side, so there is no perimeter along the edge of the array (global grids, periodic boundary
             conditions). Default: not periodic, the edge of the array is an object boundary.
+        outer: bool, optional
+            True: label the ring of pixels just outside each object (the object grown by the structure, without the
+            object) instead of the perimeter inside it, e.g. for a halo under the outline. Default: the perimeter inside.
 
     Returns:
         tracknumber_perim: 2D int32 array
@@ -86,7 +89,7 @@ def label_perimeter(tracknumber, dilationstructure, periodic=(False, False)):
         pad_y = (dilationstructure.shape[0] // 2 + 1) if periodic[1] else 0
         pad_x = (dilationstructure.shape[1] // 2 + 1) if periodic[0] else 0
         padded = np.pad(tracknumber, ((pad_y, pad_y), (pad_x, pad_x)), mode='wrap')
-        perim = label_perimeter(padded, dilationstructure)
+        perim = label_perimeter(padded, dilationstructure, outer=outer)
         return np.ascontiguousarray(perim[pad_y:perim.shape[0]-pad_y, pad_x:perim.shape[1]-pad_x])
 
     # Make an array to store the perimeter
@@ -96,17 +99,24 @@ def label_perimeter(tracknumber, dilationstructure, periodic=(False, False)):
     tracknumber_unique, compact, slices = _object_boxes(tracknumber)
     ny, nx = tracknumber.shape
 
+    # The box of an object has a margin of 1 pixel; the ring outside the object reaches as far as the structure
+    pad = dilationstructure.shape[0] // 2 + 1 if outer else 1
+
     # Loop over each tracknumbers
     for kk, ii in enumerate(tracknumber_unique.astype(np.int32)):
         sl = slices[kk]
-        ys = slice(max(sl[0].start - 1, 0), min(sl[0].stop + 1, ny))
-        xs = slice(max(sl[1].start - 1, 0), min(sl[1].stop + 1, nx))
+        ys = slice(max(sl[0].start - pad, 0), min(sl[0].stop + pad, ny))
+        xs = slice(max(sl[1].start - pad, 0), min(sl[1].stop + pad, nx))
         # Isolate the track mask
         itn = compact[ys, xs] == (kk + 1)
-        # Erode the mask by 1 pixel
-        itn_erode = binary_erosion(itn, structure=dilationstructure).astype(itn.dtype)
-        # Subtract the eroded area to get the perimeter
-        iperim = np.logical_xor(itn, itn_erode)
+        if outer:
+            # The ring outside the object: the object grown by the structure, without the object
+            iperim = np.logical_and(binary_dilation(itn, structure=dilationstructure), ~itn)
+        else:
+            # Erode the mask by 1 pixel
+            itn_erode = binary_erosion(itn, structure=dilationstructure).astype(itn.dtype)
+            # Subtract the eroded area to get the perimeter
+            iperim = np.logical_xor(itn, itn_erode)
         # Label the perimeter pixels with the track number
         sub = tracknumber_perim[ys, xs]
         sub[iperim == 1] = ii

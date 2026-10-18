@@ -127,6 +127,15 @@ def write_cell_pixel_files(pixel_dir, filebase='celltracking_'):
         files.append(path)
     return files
 
+def write_terrain_file(path):
+    """Terrain height [m] on the grid of the cell pixel files (0 at the west edge to 3000 m at the east edge), with the
+    variable names of the CSAPR terrain file: hgt, longitude, latitude."""
+    _, _, lon2d, lat2d = _grid()
+    hgt = 3000.0 * (lon2d - LON0) / (NX * DLON)
+    xr.Dataset({'hgt': (('y', 'x'), hgt.astype('float32')), 'longitude': (('y', 'x'), lon2d),
+                'latitude': (('y', 'x'), lat2d)}).to_netcdf(path)
+    return path
+
 #-----------------------------------------------------------------------
 def write_track_stats(path, mcs=True):
     """
@@ -198,7 +207,9 @@ def build(root):
         'datatimeresolution': 1.0,
         'field_varname': 'tb',
     }
+    terrain_file = write_terrain_file(f"{root}/terrain.nc")
     cell_config = dict(mcs_config, pixeltracking_outpath=cell_pixel_dir, pixeltracking_filebase='celltracking_',
-                       trackstats_filebase='trackstats_final_')
-    paths = {'mcs_stats': mcs_stats, 'cell_stats': cell_stats, 'mcs_pixel_dir': mcs_pixel_dir, 'cell_pixel_dir': cell_pixel_dir}
+                       trackstats_filebase='trackstats_final_', terrain_file=terrain_file, elev_varname='hgt')
+    paths = {'mcs_stats': mcs_stats, 'cell_stats': cell_stats, 'mcs_pixel_dir': mcs_pixel_dir, 'cell_pixel_dir': cell_pixel_dir,
+             'terrain_file': terrain_file}
     return {'mcs': mcs_config, 'cell': cell_config}, paths

@@ -144,7 +144,8 @@ def options_to_argv(options):
     Command-line arguments from a dictionary of options, for the wrapper scripts that call main(argv) of a family:
     {'start': '2025-06-01T00', 'extent': [140., 220., -20., 20.], 'draw_border': True, 'track_color': None} ->
     ['--start', '2025-06-01T00', '--extent', '140.0', '220.0', '-20.0', '20.0', '--draw_border', '1'].
-    The keys are the long option names without the dashes; None values are left out (the default of the option applies).
+    The keys are the long option names without the dashes; None values are left out (the default of the option applies);
+    a list of lists repeats the option: {'city': [['A', 1, 2], ['B', 3, 4]]} -> ['--city', 'A', '1', '2', '--city', 'B', '3', '4'].
     """
     argv = []
     for key, value in options.items():
@@ -152,7 +153,10 @@ def options_to_argv(options):
             continue
         if isinstance(value, bool):
             value = int(value)
-        if isinstance(value, (list, tuple)):
+        if isinstance(value, (list, tuple)) and value and all(isinstance(v, (list, tuple)) for v in value):
+            for item in value:
+                argv += [f'--{key}'] + [str(v) for v in item]
+        elif isinstance(value, (list, tuple)):
             argv += [f'--{key}'] + [str(int(v)) if isinstance(v, bool) else str(v) for v in value]
         elif isinstance(value, str) and value.startswith('-'):
             argv.append(f'--{key}={value}')

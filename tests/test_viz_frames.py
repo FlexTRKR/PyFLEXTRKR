@@ -326,6 +326,57 @@ def test_cell_frames(run):
     assert mean_difference(base, halo) > 0
 
 
+def test_cell_options_of_plotmap_change_the_picture_as_intended(run, data, monkeypatch):
+    # no circles and lines (they are tested above); the 01:30 frame has both cells
+    options = SMALL + ['--radar_lat', '0.0', '--radar_lon', '115.0', '--show_rangecircle', '0', '--show_azimuth', '0', '--perim_alpha', '1']
+    base = load(run(cell_cli, 'cell', options, period=ONE_FRAME)[0])
+    dark = lambda img: count_color(img, (0, 0, 0), tol=30)             # the outlines (opaque), the numbers, the text
+    # only the cells of tracks that live at least 2.5 hours: the cell of track 2 (2 hours) has no outline, number or path
+    long_only = load(run(cell_cli, 'cell', options + ['--min_hours', '2.5'], period=ONE_FRAME)[0])
+    assert dark(long_only) < dark(base)
+    assert mean_difference(long_only, load(run(cell_cli, 'cell', options + ['--cell_min_hours', '2.5'], period=ONE_FRAME)[0])) == 0   # plotmap's name
+    # one outline color per track: no longer black; the same colors with the other cell removed (the first track keeps its color)
+    colored = load(run(cell_cli, 'cell', options + ['--perim_cmap', 'tab10'], period=ONE_FRAME)[0])
+    assert mean_difference(colored, base) > 0 and dark(colored) < dark(base)
+    # a ring just outside the outlines (red here), under the outlines
+    ring = load(run(cell_cli, 'cell', options + ['--perim_halo', 'red'], period=ONE_FRAME)[0])
+    assert count_color(ring, (255, 0, 0), tol=30) > count_color(base, (255, 0, 0), tol=30)
+    # terrain under the reflectivity (the file of the synthetic data: 0 to 3000 m from west to east)
+    terrain = load(run(cell_cli, 'cell', options + ['--show_terrain', '1'], period=ONE_FRAME)[0])
+    assert mean_difference(terrain, base) > 0
+    configs, _ = data
+    no_terrain = {k: v for k, v in configs['cell'].items() if k != 'terrain_file'}
+    monkeypatch.setattr(cell_cli, 'load_config', lambda f, make_dirs=True: dict(no_terrain))
+    with pytest.raises(SystemExit):
+        cell_cli.main(['-s', ONE_FRAME[0], '-e', ONE_FRAME[1], '-c', 'unused.yml', '-p', '0', '--output', '/nonexistent/', '--show_terrain', '1'] + SMALL)
+    # the line style of the gridlines
+    grid = options + ['--grid_linewidth', '1', '--dpi', '100']
+    solid = load(run(cell_cli, 'cell', grid + ['--grid_linestyle', '-'], period=ONE_FRAME)[0])
+    dotted = load(run(cell_cli, 'cell', grid + ['--grid_linestyle', ':'], period=ONE_FRAME)[0])
+    assert mean_difference(solid, dotted) > 0
+
+
+def test_cell_cities_and_other_radars_are_marked(run, data):
+    configs, _ = data
+    configs['cell_clear'] = dict(configs['cell'], radar_sensitivity=6.0)       # the 5 dBZ background is not drawn: white, the cells stay
+    options = SMALL + ['--radar_lat', '0.0', '--radar_lon', '115.0', '--show_rangecircle', '0', '--show_azimuth', '0', '--dpi', '100']
+    run_clear = lambda extra: load(run(cell_cli, 'cell_clear', options + extra, period=ONE_FRAME)[0])
+    base = run_clear([])
+    yellow, cyan = (255, 255, 0), (0, 255, 255)
+    # a city: a yellow diamond and its name; the name is black
+    city = run_clear(['--city', 'Town', '125', '-5'])
+    assert count_color(city, yellow) > count_color(base, yellow) + 10
+    assert count_color(city, cyan) == count_color(base, cyan)
+    # another radar: a cyan circle with its name and a range circle (radius 0: no circle)
+    marker = run_clear(['--radar_site', 'Radar', '110', '6', '--radar_site_radius', '0'])
+    ring = run_clear(['--radar_site', 'Radar', '110', '6', '--radar_site_radius', '500'])
+    assert count_color(marker, cyan) > count_color(base, cyan) + 10
+    assert count_color(ring, cyan) > count_color(marker, cyan)
+    # a place outside the map is not drawn (and has no label in the margin)
+    outside = run_clear(['--city', 'Far', '40', '50'])
+    assert np.array_equal(outside, base)
+
+
 @pytest.mark.parametrize("projection", [[], ['--projection', 'LambertConformal', '--central_longitude', '115', '--standard_parallels', '30', '40']])
 def test_cell_range_circles_and_azimuth_lines_are_centered_on_the_radar(run, monkeypatch, projection):
     """

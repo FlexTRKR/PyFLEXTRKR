@@ -29,11 +29,11 @@ The building blocks that all families use, one topic per file (`pyflextrkr/visua
 | module | what is in it |
 |---|---|
 | `mapcore.py` | projections by name (`PROJECTIONS`), the central longitude and the dateline set-up (`get_projections`), the visible domain with the latitude-band crop (`set_map_domain`), the domain of the data in the coordinates of the projection (`data_extent_xy`, `auto_map_domain`), figure size from the shape of the map (`projected_aspect`, `panel_fractions`, `figsize_for_aspect`), the colorbars that follow a map that keeps its shape (`fit_colorbars_to_maps`) and keep their text inside the figure (`keep_colorbar_text_inside`), the margins of a short figure (`figure_margins`), the latitude labels of whole-world maps (`lat_labels_on_boundary`), longitude helpers (`norm_lon`, `in_map_extent`), geodesic circles and lines for range rings, PF circles and azimuth lines (`geodesic_circle`, `geodesic_ray`) |
-| `masks.py` | perimeter of every tracked object (`label_perimeter`, on the bounding box of each object, optional periodic wrap), the structuring elements, the center of every object |
+| `masks.py` | perimeter of every tracked object (`label_perimeter`, on the bounding box of each object, optional periodic wrap, `outer=True`: the ring just outside the objects), the structuring elements, the center of every object |
 | `trackstats.py` | the tracks of a period as dictionaries: `get_mcs_track_stats`, `get_cell_track_stats`, `get_generic_track_stats`, `get_cartesian_track_stats` |
-| `trackdraw.py` | the halo (path effects with their own alpha) of track paths, symbols and numbers; the colour levels of the track numbers |
+| `trackdraw.py` | the halo (path effects with their own alpha) of track paths, symbols and numbers; the colour levels of the track numbers; `draw_perimeter` (the outlines in one color or one color per track) |
 | `pixelio.py` | the data extent, the index window of a map extent (`find_subset_window`, dateline safe), the figure name and title |
-| `colors.py` | `concat_cmaps`, `truncate_colormap`, `named_colormap` |
+| `colors.py` | `concat_cmaps`, `truncate_colormap`, `named_colormap`, `cmap_colors` (all the colors of a colormap) |
 | `runner.py` | `run_frames`: the loop over the pixel-level files, serial or on Dask workers |
 | `animation.py` | ffmpeg: `frames_in_range`, `list_png_files`, `make_mp4` (PNG files -> mp4: speed, file frame rate, quality, even sizes, width), `make_gif`, `make_animation` (both, with the settings printed), `main` (the command line of `visualization/pngs_to_animation.py`) |
 | `mcs_animation.py` | the animation of the MCS maps from the parameters of a wrapper script: the PNG files (`mcs_cli.main`), the mp4 and the GIF (`DEFAULTS` lists the parameters) |

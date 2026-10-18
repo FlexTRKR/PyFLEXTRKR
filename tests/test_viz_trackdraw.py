@@ -91,3 +91,45 @@ def test_track_number_levels():
     assert len(levels) == 256 and levels[0] == 1 and levels[-1] == 1000
     # no track
     assert len(trackdraw.track_number_levels({'lifetime': make_lifetime(0)})) == 2
+
+
+#-----------------------------------------------------------------------
+def perimeter_mesh(perim, **kwargs):
+    """draw_perimeter on a small axes: the QuadMesh and its RGBA color of every pixel (masked pixels are transparent)."""
+    fig = plt.figure(figsize=(4, 3), dpi=50)
+    ax = fig.add_axes([0, 0, 1, 1])
+    mesh = trackdraw.draw_perimeter(ax, np.arange(perim.shape[1], dtype=float), np.arange(perim.shape[0], dtype=float), perim, **kwargs)
+    rgba = np.asarray(mesh.to_rgba(mesh.get_array(), alpha=mesh.get_alpha())).reshape(perim.shape + (4,))
+    plt.close(fig)
+    return rgba
+
+
+def test_draw_perimeter_in_one_color_and_in_one_color_per_track():
+    perim = np.zeros((6, 8), dtype=np.int32)
+    perim[1:3, 1:3] = 1
+    perim[3:5, 4:7] = 2
+    perim[0, 7] = 7
+    drawn = perim > 0
+    # one color, with the transparency of the drawing
+    rgba = perimeter_mesh(perim, color='red', alpha=0.5)
+    np.testing.assert_allclose(rgba[drawn], [[1, 0, 0, 0.5]] * int(drawn.sum()))
+    assert (rgba[~drawn][:, 3] == 0).all()                     # nothing where there is no perimeter
+    assert trackdraw.draw_perimeter(None, None, None, None) is None
+    # one color per track: the color index is the track number - 1, modulo the number of colors
+    colors = np.array([[1, 0, 0, 1], [0, 1, 0, 1], [0, 0, 1, 1]], dtype=float)
+    rgba = perimeter_mesh(perim, cmap_colors=colors)
+    np.testing.assert_allclose(rgba[1, 1], colors[0])          # track 1
+    np.testing.assert_allclose(rgba[3, 4], colors[1])          # track 2
+    np.testing.assert_allclose(rgba[0, 7], colors[0])          # track 7: index 6 % 3 = 0
+    # with the track numbers that are drawn: the color is their rank, so the colors do not depend on the other tracks
+    rgba = perimeter_mesh(perim, cmap_colors=colors, rank_tracknumbers=np.array([2, 7]))
+    np.testing.assert_allclose(rgba[3, 4], colors[0])          # track 2 is the first
+    np.testing.assert_allclose(rgba[0, 7], colors[1])          # track 7 is the second
+    assert (rgba[~drawn][:, 3] == 0).all()
+
+
+def test_cmap_colors_are_all_the_colors_of_a_colormap():
+    from pyflextrkr.visualization import colors
+    tab10 = colors.cmap_colors('tab10')
+    assert tab10.shape == (10, 4) and tab10[0] == pytest.approx((31 / 255, 119 / 255, 180 / 255, 1.0))
+    assert colors.cmap_colors('viridis').shape == (256, 4)

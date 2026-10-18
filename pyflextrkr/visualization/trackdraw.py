@@ -7,10 +7,13 @@ trackpath_alpha, track_marker, marker_size, track_marker_color, tracknumber_font
 tracknumber_weight, tracknumber_alpha, track_halo_color, track_halo_width, track_halo_alpha), draw the artists
 themselves (ax.plot, ax.scatter, ax.text as in the original scripts) and pass the path effects from here as path_effects=.
 
+draw_perimeter draws the outlines of the tracked objects (masks.label_perimeter) in one color, or one color for each track.
+
 Called by: mcs_map, cell_map, generic_map, cartesian_map (plot functions). Calls: matplotlib.patheffects.
 """
 import numpy as np
 import matplotlib.patheffects as pe
+from matplotlib.colors import ListedColormap
 
 #-----------------------------------------------------------------------
 def track_number_levels(track_dict):
@@ -52,3 +55,37 @@ def halo_effects(halo_color=None, halo_width=2.0, halo_alpha=1.0, path_linewidth
     halo_marker = [pe.withStroke(linewidth=2 * halo_width, foreground=halo_color, alpha=halo_alpha)]
     halo_text = [pe.withStroke(linewidth=2 * halo_width, foreground=halo_color, alpha=halo_alpha)]
     return halo_path, halo_marker, halo_text
+
+#-----------------------------------------------------------------------
+def draw_perimeter(ax, xx, yy, perim, color='k', alpha=1.0, zorder=3, transform=None, cmap_colors=None, rank_tracknumbers=None):
+    """
+    Draw the perimeter pixels of tracked objects (masks.label_perimeter: the track number on the perimeter, 0 elsewhere) in one
+    color, or, with cmap_colors, in one color for each track: the color of a track is its rank among rank_tracknumbers modulo
+    the number of colors, so a track keeps its color from frame to frame and neighboring tracks have different colors.
+
+    Args:
+        ax: map axes
+        xx, yy: coordinates of the pixels (as for pcolormesh)
+        perim: 2D array, track number on the perimeter, 0 elsewhere (None: nothing is drawn)
+        color: color of the perimeter
+        alpha, zorder, transform: of the drawing (the transform is that of the data)
+        cmap_colors: (N, 4) RGBA array (colors.cmap_colors), optional; the colors of the tracks instead of color
+        rank_tracknumbers: sorted 1D array of the track numbers of all tracks that are drawn, optional (None: the track number
+            minus 1 is the index of the color)
+
+    Returns:
+        The drawing (QuadMesh), or None.
+    """
+    if perim is None:
+        return None
+    if cmap_colors is None:
+        return ax.pcolormesh(xx, yy, np.ma.masked_where(perim == 0, np.ones(perim.shape)), cmap=ListedColormap([color]),
+                             vmin=0, vmax=1, transform=transform, zorder=zorder, alpha=alpha)
+    ncolors = len(cmap_colors)
+    if rank_tracknumbers is None:
+        index = (perim - 1) % ncolors
+    else:
+        index = np.searchsorted(rank_tracknumbers, perim) % ncolors
+    # index k is the k-th color of the ListedColormap (vmin = -0.5, vmax = N - 0.5)
+    return ax.pcolormesh(xx, yy, np.ma.masked_where(perim == 0, index), cmap=ListedColormap(cmap_colors),
+                         vmin=-0.5, vmax=ncolors - 0.5, transform=transform, zorder=zorder, alpha=alpha)

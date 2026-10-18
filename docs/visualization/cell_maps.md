@@ -1,7 +1,8 @@
 # Convective cell maps: `plot_cell_tracks.py`
 
 Maps of radar convective cells: the composite reflectivity (or the 10 dBZ echo-top height) with the outline of each tracked cell, the cell
-track paths (symbols colored by lifetime), the track numbers, the radar range rings and azimuth lines. One PNG per pixel-level file.
+track paths (symbols colored by lifetime), the track numbers, the radar range rings and azimuth lines, and optionally the terrain, one outline color per track, only the
+cells of long-lived tracks, and cities and other radars (the functions of the cell part of `plotmap.py` of conus_tracking). One PNG per pixel-level file.
 
 ```
 python visualization/plot_cell_tracks.py -s START -e END -c CONFIG.yml [--product refl|eth] [--radar_lat LAT --radar_lon LON] [options]
@@ -47,6 +48,26 @@ the old stretched look is `--map_aspect auto`.
 | `--perim_color` | — | color of the cell outlines (default: black) |
 | `--perim_alpha` | — | transparency of the cell outlines (default 0.6) |
 | `--perim_width` | `1` | cell outline width in pixels |
+| `--perim_cmap` (`--cell_perim_cmap`) | — | colormap of the cell outlines: one color per track (e.g. `glasbey_dark`; colorcet or matplotlib names), instead of `--perim_color` |
+| `--perim_halo` (`--cell_halo`) | — | color of a ring just outside the cell outlines (default: none) |
+| `--min_hours` (`--cell_min_hours`) | `0` | draw only the cells of tracks that live at least this long [hour] (0: all) |
+| `--show_terrain` | `0` | draw the terrain height (gray) under the reflectivity, from `terrain_file` and `elev_varname` of the config (0:no, 1:yes) |
+| `--grid_linestyle` | `--` | line style of the lat/lon gridlines (they are drawn with `--grid_linewidth`) |
+| `--city NAME LON LAT` | — | mark a city: a yellow diamond and its name (repeat the option for more cities) |
+| `--radar_site NAME LON LAT` | — | mark another radar: a cyan circle, its name and its range circle (repeat the option for more radars) |
+| `--radar_site_radius` | `150` | radius of the range circle of the `--radar_site` radars [km] (0: no circle) |
+
+These options are the functions of the cell part of `plotmap.py` (conus_tracking), with the names of the options above (`--cell_halo`, `--cell_perim_cmap`, `--cell_min_hours`
+are the names there and work here too). `--min_hours` removes the cells of the shorter tracks from the whole picture (outline, number, path, symbol), the outline colors of
+`--perim_cmap` are the same for a track in every frame, the ring (`--perim_halo`) is drawn under the outlines, and the terrain (`--show_terrain 1`, white below 500 m, then
+gray getting darker to 4000 m) needs `terrain_file` and `elev_varname` in the config (the CACTI CSAPR configs have them). plotmap has the Arizona sites hard-coded; here the cities and radars
+are given on the command line (or `cities` and `radar_sites` as lists of `[name, lon, lat]` in `make_cell_animation.py`). The names of the other radars are cyan with a thin black
+outline and their range circle too, because the light cyan can not be read on the reflectivity otherwise.
+
+![cell options](../figures/visualization/cell_options.png)
+
+The four pictures are the CACTI CSAPR2 frame of 2019-01-25 18:45 UTC (the options at the top of each, on top of `-s 2019-01-25T18 -e 2019-01-25T19 -c config_csapr_demo.yml --radar_lat -32.12641 --radar_lon -64.72837`):
+(a) none, (b) `--show_terrain 1 --min_hours 1`, (c) `--perim_cmap glasbey_dark --perim_halo white --perim_alpha 1`, (d) `--city Cordoba -64.19 -31.42 --city "Alta Gracia" -64.43 -31.65 --radar_site "Radar B" -64.0 -32.5 --radar_site_radius 40`.
 
 ## Examples
 
@@ -64,4 +85,5 @@ python ../visualization/plot_cell_tracks.py -s 2019-01-25T16 -e 2019-01-25T19 -c
 
 [`visualization/make_cell_animation.py`](../../visualization/make_cell_animation.py): parameter block (dates, config, radar location, domain around it, products, output
 folders, ffmpeg) -> `cell_cli.main(argv)` -> `animation.make_animation`; `--set NAME=VALUE` overrides a parameter. Map projection and track style
-parameters are in the block too (`projection`, `central_longitude`, `track_color`, `track_halo_color`, ...). Code map: [structure.md](structure.md).
+parameters are in the block too (`projection`, `central_longitude`, `track_color`, `track_halo_color`, ...), and so are the options of plotmap (`perim_cmap`, `perim_halo`, `min_hours`,
+`show_terrain`, `grid_linestyle`, `cities` and `radar_sites` as lists of `[name, lon, lat]`, `radar_site_radius`). Code map: [structure.md](structure.md).

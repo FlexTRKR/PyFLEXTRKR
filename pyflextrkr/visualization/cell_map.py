@@ -1,6 +1,7 @@
 """
 Convective cell track maps: a radar field (composite reflectivity, echo-top height, ...) with the tracked cells (outline,
-track path and symbols colored by lifetime, cell numbers) and optional radar range circles and azimuth lines.
+track path and symbols colored by lifetime, cell numbers) and optional radar range circles and azimuth lines, terrain height,
+outlines in one color per track with a ring around them, and cities and other radars.
 
 This is the plotting code of the former Analysis/plot_subset_cell_tracks_demo.py and plot_subset_cell_tracks_ETH_demo.py
 (the echo-top map is the same code with another variable, levels and colormap).
@@ -16,6 +17,7 @@ import xarray as xr
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
+import matplotlib.patheffects as pe
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 import cartopy.feature as cfeature
 from cartopy.mpl.ticker import LongitudeFormatter, LatitudeFormatter
@@ -23,12 +25,13 @@ from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
 import warnings
 warnings.filterwarnings("ignore")
 from pyflextrkr.visualization.mapcore import (
-    get_projections, set_map_domain, projection_key, in_map_extent, geodesic_circle, geodesic_ray, fit_colorbars_to_maps,
+    get_projections, set_map_domain, projection_key, in_map_extent, norm_lon, geodesic_circle, geodesic_ray, fit_colorbars_to_maps,
     lat_labels_on_boundary,
 )
+from pyflextrkr.visualization.colors import cmap_colors
 from pyflextrkr.visualization.masks import make_perimeter_structure, label_perimeter, calc_cell_center
 from pyflextrkr.visualization.pixelio import get_data_extent, find_subset_window, make_figure_name
-from pyflextrkr.visualization.trackdraw import halo_effects
+from pyflextrkr.visualization.trackdraw import halo_effects, draw_perimeter
 
 # Grid layout of the figure: map + colorbar (also used by cell_cli to compute the figure size from the map aspect)
 GRID_MAP = dict(
@@ -50,6 +53,9 @@ def plot_map(pixel_dict, plot_info, map_info, track_dict):
                 track_marker, tracknumber_color, tracknumber_weight, tracknumber_alpha: symbols and cell numbers
                 track_halo_color, track_halo_width, track_halo_alpha: halo around paths, symbols and numbers
                 perim_color, perim_alpha: color and transparency of the cell outlines (default black, mask_alpha)
+                perim_cmap: colormap name, one outline color per track (track_dict['tracknumbers_all'] gives the order)
+                perim_halo: color of a ring just outside the outlines (pixel_dict['tn_halo'] has the ring)
+                cities, radar_sites: lists of (name, lon, lat); radar_site_radius: radius [km] of the range circle of the radar sites
                 show_legend: no legend in this map
                 map_aspect: 'equal' (the map keeps its shape, the colorbar follows it) or 'auto' (default: the map fills its panel)
         map_info: dictionary
@@ -126,6 +132,12 @@ def plot_map(pixel_dict, plot_info, map_info, track_dict):
     tracknumber_alpha = plot_info.get('tracknumber_alpha', 1.0)
     show_tracknumbers = plot_info.get('show_tracknumbers', True)
     perim_color = plot_info.get('perim_color', None)
+    perim_halo = plot_info.get('perim_halo')
+    perim_cmap = plot_info.get('perim_cmap')
+    tracknumbers_all = track_dict.get('tracknumbers_all')
+    cities = plot_info.get('cities') or []
+    radar_sites = plot_info.get('radar_sites') or []
+    radar_site_radius = plot_info.get('radar_site_radius', 150)
     # Halo around the track paths, symbols and numbers (path effects; None: no halo)
     halo_path, halo_marker, halo_text = halo_effects(
         plot_info.get('track_halo_color'), plot_info.get('track_halo_width', 2.0),
@@ -144,6 +156,7 @@ def plot_map(pixel_dict, plot_info, map_info, track_dict):
     lat_range = map_info.get('lat_range', None)
     grid_linewidth = map_info.get('grid_linewidth', 0.)
     grid_alpha = map_info.get('grid_alpha', None)
+    grid_linestyle = map_info.get('grid_linestyle', '--')
     land_linewidth = plot_info.get('land_linewidth', 1)
     is_platecarree = projection_key(projection) == 'platecarree'
     extent_xy = map_info.get('map_extent_xy', None)       # the domain in projected coordinates (the data, no --extent)
@@ -189,7 +202,7 @@ def plot_map(pixel_dict, plot_info, map_info, track_dict):
     if draw_river == True:
         ax1.add_feature(rivers, edgecolor='gray', facecolor='none', linewidth=0.5, zorder=4)
     # Gridlines and lat/lon labels
-    gl = ax1.gridlines(crs=data_proj, draw_labels=True, linestyle='--', linewidth=grid_linewidth, alpha=grid_alpha)
+    gl = ax1.gridlines(crs=data_proj, draw_labels=True, linestyle=grid_linestyle, linewidth=grid_linewidth, alpha=grid_alpha)
     gl.right_labels = False
     gl.top_labels = False
     if not is_platecarree:
@@ -208,6 +221,12 @@ def plot_map(pixel_dict, plot_info, map_info, track_dict):
         ax1.xaxis.set_major_formatter(lon_formatter)
         ax1.yaxis.set_major_formatter(lat_formatter)
 
+    # Terrain height under the reflectivity (optional, gray)
+    if pixel_dict.get('HGT') is not None:
+        cmap_ter = plt.get_cmap('Greys')
+        norm_ter = mpl.colors.BoundaryNorm(boundaries=np.arange(500, 4001, 500), ncolors=cmap_ter.N)
+        ax1.pcolormesh(pixel_dict['lon_ter'], pixel_dict['lat_ter'], pixel_dict['HGT'], shading='nearest', norm=norm_ter, cmap=cmap_ter,
+                       transform=data_proj, zorder=0)
     # Colorfill variable
     cmap = plt.get_cmap(cmaps)
     norm_pcm = mpl.colors.BoundaryNorm(levels, ncolors=cmap.N, clip=True)
@@ -217,15 +236,11 @@ def plot_map(pixel_dict, plot_info, map_info, track_dict):
     var_fill = var_fill * var_scale
     var_fill = np.ma.masked_where(var_fill < min(levels), var_fill)
     cf1 = ax1.pcolormesh(xx, yy, var_fill, norm=norm_pcm, cmap=cmap, transform=data_proj, zorder=2, alpha=shade_alpha)
-    # Overplot cell tracknumber perimeters
-    Tn = np.ma.masked_where(tn_perim == 0, tn_perim)
-    Tn[Tn > 0] = 10
-    if perim_color is None:
-        tn1 = ax1.pcolormesh(xx, yy, Tn, cmap='gray', transform=data_proj, zorder=3, alpha=mask_alpha)
-    else:
-        # Outline in a color of your choice
-        tn1 = ax1.pcolormesh(xx, yy, Tn, cmap=mpl.colors.ListedColormap([perim_color]), vmin=0, vmax=20,
-                             transform=data_proj, zorder=3, alpha=mask_alpha)
+    # Overplot cell tracknumber perimeters: a ring just outside them (optional, under the outlines), then the outlines in one
+    # color (default black) or in one color for each track
+    draw_perimeter(ax1, xx, yy, pixel_dict.get('tn_halo'), perim_halo, mask_alpha, 2.9, data_proj)
+    draw_perimeter(ax1, xx, yy, tn_perim, perim_color or 'k', mask_alpha, 3, data_proj,
+                   cmap_colors=None if perim_cmap is None else cmap_colors(perim_cmap), rank_tracknumbers=tracknumbers_all)
 
     # Plot track centroids and paths
     if show_tracks:
@@ -301,6 +316,24 @@ def plot_map(pixel_dict, plot_info, map_info, track_dict):
     if show_azimuth:
         for ii in range(0, len(azimuths)):
             ax1.plot(*geodesic_ray(radar_lon, radar_lat, azimuths[ii], 200), color='k', lw=0.4, transform=data_proj, zorder=5)
+    # Cities and other radars: the marker, the name and (radars) the range circle
+    for name, lon, lat in cities:
+        lon = float(norm_lon(lon))
+        ax1.plot(lon, lat, marker='D', color='yellow', markersize=6, markeredgecolor='k', markeredgewidth=0.8, transform=data_proj, zorder=9)
+        if in_map_extent(lon, lat, map_extent):
+            ax1.text(lon + 0.05, lat + 0.05, name, color='k', size=fontsize * 1.2, weight='bold', ha='left', va='bottom',
+                     transform=data_proj, zorder=9)
+    # (the cyan of the radars gets a thin black outline: it is as light as the weak echo of the reflectivity)
+    outline = [pe.withStroke(linewidth=2.2, foreground='k')]
+    for name, lon, lat in radar_sites:
+        lon = float(norm_lon(lon))
+        ax1.plot(lon, lat, marker='o', color='cyan', markersize=6, markeredgecolor='k', markeredgewidth=0.8, transform=data_proj, zorder=9)
+        if in_map_extent(lon, lat, map_extent):
+            ax1.text(lon + 0.05, lat + 0.05, name, color='cyan', size=fontsize * 0.8, weight='bold', ha='left', va='bottom',
+                     path_effects=outline, transform=data_proj, zorder=9)
+        if radar_site_radius > 0:
+            ax1.plot(*geodesic_circle(lon, lat, radar_site_radius), color='cyan', lw=0.6, path_effects=[pe.withStroke(linewidth=1.8, foreground='k')],
+                     transform=data_proj, zorder=8)
     # Reflectivity colorbar
     cb1 = plt.colorbar(cf1, cax=cax1, label=cblabels, ticks=cbticks, extend='both')
     # Set title with optional prefix
@@ -332,7 +365,7 @@ def work_for_time_loop(datafile, track_dict, map_info, plot_info, config, ifile)
         plot_info: dictionary
             Dictionary containing plotting variables
         config: dictionary
-            Dictionary containing config parameters (not used)
+            Dictionary containing config parameters (terrain_file and elev_varname for the terrain)
         ifile: int
             Index of the file in the series
 
@@ -419,14 +452,29 @@ def work_for_time_loop(datafile, track_dict, map_info, plot_info, config, ifile)
         convmask_sub = ds['conv_mask'].squeeze()
         tracknumber_sub = ds['tracknumber'].squeeze()
 
-    # Get object perimeters
-    tn_perim = label_perimeter(tracknumber_sub.data, dilationstructure)
+    # Only the cells of the tracks that live at least min_hours (their track numbers are in track_dict; None: all)
+    tn_data = tracknumber_sub.data
+    tracknumbers_all = track_dict.get('tracknumbers_all')
+    if tracknumbers_all is not None:
+        tn_data = np.where(np.isin(tn_data, tracknumbers_all), tn_data, np.nan)
+
+    # Get object perimeters, and the ring just outside them (optional)
+    tn_perim = label_perimeter(tn_data, dilationstructure)
+    tn_halo = label_perimeter(tn_data, make_perimeter_structure(1), outer=True) if plot_info.get('perim_halo') else None
 
     # Apply tracknumber to conv_mask
-    tnconv = tracknumber_sub.where(convmask_sub > 0).data
+    tnconv = np.where(convmask_sub.data > 0, tn_data, np.nan)
 
     # Calculates cell center locations
     lon_tn, lat_tn, xx_tn, yy_tn, tnconv_unique = calc_cell_center(tnconv, lon_sub, lat_sub, xx_sub, yy_sub)
+
+    # Terrain height (optional)
+    lon_ter = lat_ter = HGT = None
+    if plot_info.get('show_terrain'):
+        with xr.open_dataset(config['terrain_file']) as ds_ter:
+            lon_ter = ds_ter['longitude'].squeeze().values
+            lat_ter = ds_ter['latitude'].squeeze().values
+            HGT = ds_ter[config.get('elev_varname', 'hgt')].squeeze().values
 
     # titles = [timestr]
     figname, timestr, suptitle = make_figure_name(ds, figdir, figbasename, figname_type, ifile, title_prefix)
@@ -441,9 +489,13 @@ def work_for_time_loop(datafile, track_dict, map_info, plot_info, config, ifile)
         'tn': tracknumber_sub,
         'conv_mask': convmask_sub,
         'tn_perim': tn_perim,
+        'tn_halo': tn_halo,
         'lon_tn': lon_tn,
         'lat_tn': lat_tn,
         'tracknumber_unique': tnconv_unique,
+        'lon_ter': lon_ter,
+        'lat_ter': lat_ter,
+        'HGT': HGT,
     }
     plot_info['timestr'] = timestr
     plot_info['title_prefix'] = title_prefix

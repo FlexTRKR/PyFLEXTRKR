@@ -87,6 +87,19 @@ track_lw = None              # path line width
 track_halo_color = None      # halo (outline) around paths and numbers (None: no halo)
 track_halo_width = None
 track_halo_alpha = None
+# Cell outlines: one color per track (a colormap name, e.g. 'glasbey_dark'; None: all outlines in one color), a ring just outside
+# them (a color; None: no ring), and only the cells of the tracks that live at least min_hours [hour] (0: all)
+perim_cmap = None
+perim_halo = None
+min_hours = 0.0
+# Terrain height under the reflectivity (terrain_file and elev_varname of the tracking config file)
+show_terrain = False
+# Cities and other radars: [['name', lon, lat], ...]; a radar gets a range circle of radar_site_radius [km] (0: none)
+cities = None
+radar_sites = None
+radar_site_radius = 150
+# Line style of the lat/lon gridlines (None: '--')
+grid_linestyle = None
 # Figure parameters
 subset = 1  # Subset data before plotting (0:no, 1:yes)
 fig_basename = "cell_tracks_"
@@ -199,6 +212,14 @@ def main():
             track_halo_color=track_halo_color,
             track_halo_width=track_halo_width,
             track_halo_alpha=track_halo_alpha,
+            perim_cmap=perim_cmap,
+            perim_halo=perim_halo,
+            min_hours=min_hours,
+            show_terrain=show_terrain,
+            city=cities,
+            radar_site=radar_sites,
+            radar_site_radius=radar_site_radius,
+            grid_linestyle=grid_linestyle,
         )
         argv = options_to_argv(options)
 

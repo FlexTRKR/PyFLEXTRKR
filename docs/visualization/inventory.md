@@ -53,6 +53,7 @@ The 20 `config/demo_*.sh` scripts and the registry of `tests/run_demo_tests.py` 
 - The global MCS animation ([global_mcs_animation.md](global_mcs_animation.md)), and animations of three more kinds of MCS maps with a wrapper script each
   (WRF Tb + radar, IMERG 1 panel, Himawari Tb only: [visualization/examples](../../visualization/examples), GIFs in the [README](../../visualization/README.md#more-mcs-looks)).
 - `--layout top_bottom|left_right` for 2 panels, `--cbar_thickness` and `--cbar_spacing` for the colorbars of the MCS maps, `--show_pfdiam 0` also takes the PF circles out of the legend.
+- The convective cell maps have the functions of the cell part of `plotmap.py` (conus_tracking): terrain height, one outline color per track, a ring around the outlines, only the cells of tracks that live long enough, the line style of the gridlines, cities and other radars ([cell_maps.md](cell_maps.md#options-of-this-family)).
 - Tests: `tests/test_viz_*.py` ([testing.md](testing.md)).
 
 ## What differs from the old scripts

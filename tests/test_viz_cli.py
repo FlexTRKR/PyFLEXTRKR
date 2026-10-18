@@ -189,6 +189,31 @@ def test_stubs_in_analysis_forward_to_their_own_name():
 
 
 #-----------------------------------------------------------------------
+def test_cell_options_of_plotmap_and_their_names():
+    """terrain, outline colors per track, a ring around the outlines, tracks that live long enough, cities and other radars."""
+    args = cell_cli.parse_cmd_args(REQUIRED)
+    assert (args['perim_cmap'], args['perim_halo'], args['min_hours'], args['show_terrain'], args['grid_linestyle']) == (None, None, 0.0, 0, '--')
+    assert args['city'] is None and args['radar_site'] is None and args['radar_site_radius'] == 150.
+    args = cell_cli.parse_cmd_args(REQUIRED + ['--perim_cmap', 'glasbey_dark', '--perim_halo', 'white', '--min_hours', '1.5', '--show_terrain', '1',
+                                               '--grid_linestyle', ':', '--city', 'A', '10', '20', '--city', 'Alta Gracia', '-64.4', '-31.6',
+                                               '--radar_site', 'R', '12', '22', '--radar_site_radius', '40'])
+    assert (args['perim_cmap'], args['perim_halo'], args['min_hours'], args['show_terrain'], args['grid_linestyle']) == ('glasbey_dark', 'white', 1.5, 1, ':')
+    assert args['city'] == [['A', '10', '20'], ['Alta Gracia', '-64.4', '-31.6']] and args['radar_site'] == [['R', '12', '22']]
+    assert args['radar_site_radius'] == 40.
+    # the names that plotmap.py of conus_tracking uses
+    args = cell_cli.parse_cmd_args(REQUIRED + ['--cell_perim_cmap', 'tab10', '--cell_halo', 'red', '--cell_min_hours', '2'])
+    assert (args['perim_cmap'], args['perim_halo'], args['min_hours']) == ('tab10', 'red', 2.0)
+    # the places become (name, lon, lat); a wrapper gives a list of lists, which repeats the option
+    assert cell_cli.parse_sites([['A', '10', '20'], ['B', '-1.5', '2']], '--city') == [('A', 10., 20.), ('B', -1.5, 2.)]
+    assert cell_cli.parse_sites(None, '--city') == []
+    with pytest.raises(SystemExit):
+        cell_cli.parse_sites([['A', 'east', '20']], '--city')
+    argv = cli_common.options_to_argv({'city': [['A', 10, 20], ['B', -1.5, 2]], 'min_hours': 1.5, 'perim_cmap': None})
+    assert argv == ['--city', 'A', '10', '20', '--city', 'B', '-1.5', '2', '--min_hours', '1.5']
+    assert cell_cli.parse_cmd_args(REQUIRED + argv)['city'] == [['A', '10', '20'], ['B', '-1.5', '2']]
+
+
+#-----------------------------------------------------------------------
 ENTRY_SCRIPTS = ['plot_mcs_tracks.py', 'plot_cell_tracks.py', 'plot_generic_tracks.py', 'plot_cartesian_tracks.py',
                  'make_mcs_animation.py', 'make_cell_animation.py', 'examples/make_mcs_animation_wrf_tbze.py',
                  'examples/make_mcs_animation_imerg_1panel.py', 'examples/make_mcs_animation_himawari_tb.py', 'pngs_to_animation.py']

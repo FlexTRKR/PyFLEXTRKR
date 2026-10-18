@@ -100,7 +100,7 @@ def get_mcs_track_stats(trackstats_file, start_datetime, end_datetime, dt_thres,
     return track_dict
 
 #-----------------------------------------------------------------------
-def get_cell_track_stats(trackstats_file, start_datetime, end_datetime, dt_thres):
+def get_cell_track_stats(trackstats_file, start_datetime, end_datetime, dt_thres, min_hours=0.0):
     """
     Subset tracks statistics data within start/end datetime
 
@@ -113,6 +113,10 @@ def get_cell_track_stats(trackstats_file, start_datetime, end_datetime, dt_thres
             End datetime to subset tracks.
         dt_thres: timedelta
             A timedelta threshold to retain tracks.
+        min_hours: float, optional
+            Only the tracks that live at least this long [hour] (0: all). The track numbers (track index + 1 in the
+            whole file) of these tracks are returned as 'tracknumbers_all' (None: all tracks), to take the other
+            tracks out of the pixel-level masks.
 
     Returns:
         track_dict: dictionary
@@ -121,6 +125,17 @@ def get_cell_track_stats(trackstats_file, start_datetime, end_datetime, dt_thres
     # Read track stats file
     dss = xr.open_dataset(trackstats_file)
     idx, ntracks, time_res = _select_tracks(dss, start_datetime, end_datetime)
+
+    # Only the tracks that live at least min_hours
+    tracknumbers_all = None
+    if min_hours and min_hours > 0:
+        tracknumbers_all = np.where(dss['track_duration'].values * time_res >= min_hours)[0] + 1
+        if ntracks > 0:
+            idx = idx[np.isin(idx + 1, tracknumbers_all)]
+            ntracks = len(idx)
+            if ntracks == 0:
+                idx = slice(0, 0)
+        print(f'Number of tracks that live at least {min_hours} h: {ntracks}')
 
     # Calculate cell lifetime
     lifetime = dss.track_duration.isel(tracks=idx) * time_res
@@ -134,6 +149,7 @@ def get_cell_track_stats(trackstats_file, start_datetime, end_datetime, dt_thres
     # Subset these tracks and put in a dictionary
     track_dict = {
         'ntracks' : ntracks,
+        'tracknumbers_all' : tracknumbers_all,
         'lifetime' : lifetime,
         'cell_bt' : dss['base_time'].isel(tracks=idx),
         'cell_lon' : dss['cell_meanlon'].isel(tracks=idx),

@@ -78,6 +78,25 @@ def test_cell_generic_and_cartesian_track_stats(synthetic):
     assert 'track_pflon' not in trackstats.get_cartesian_track_stats(paths['mcs_stats'], *period, with_pf=False)
 
 
+def test_cell_track_stats_min_hours(synthetic):
+    _, paths = synthetic
+    period = ('2025-06-01T00:00:00', '2025-06-01T04:00:00', DT)
+    every = trackstats.get_cell_track_stats(paths['cell_stats'], *period)
+    assert every['tracknumbers_all'] is None and every['ntracks'] == 2                # the default: all tracks
+    # track 1 lives 3 hours, track 2 lives 2 hours; "at least" includes the track of exactly min_hours
+    long_ = trackstats.get_cell_track_stats(paths['cell_stats'], *period, min_hours=2.5)
+    assert long_['ntracks'] == 1 and list(long_['tracknumbers_all']) == [1]
+    assert long_['cell_lon'].shape == (1, S.NFRAMES) and float(long_['lifetime'][0]) == 3.0
+    both = trackstats.get_cell_track_stats(paths['cell_stats'], *period, min_hours=2.0)
+    assert both['ntracks'] == 2 and list(both['tracknumbers_all']) == [1, 2]
+    # no track long enough: no track and no track number
+    none = trackstats.get_cell_track_stats(paths['cell_stats'], *period, min_hours=10)
+    assert none['ntracks'] == 0 and len(none['tracknumbers_all']) == 0
+    # no track in the period: still a valid answer
+    empty = trackstats.get_cell_track_stats(paths['cell_stats'], '2025-07-01T00:00:00', '2025-07-01T04:00:00', DT, min_hours=2.5)
+    assert empty['ntracks'] == 0 and list(empty['tracknumbers_all']) == [1]
+
+
 #-----------------------------------------------------------------------
 def make_grid_dataset(lon, lat, name='tb'):
     """Pixel file like dataset on a rectilinear grid given as 2D longitude / latitude."""

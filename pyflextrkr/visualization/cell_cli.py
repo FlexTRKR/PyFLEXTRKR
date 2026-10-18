@@ -3,7 +3,9 @@ Command line of the convective cell track maps (visualization/plot_cell_tracks.p
 the tracks and files of the period, and the loop over the pixel-level files.
 
 Plots cell tracks (paths and symbols colored by lifetime, cell outlines and numbers) on radar reflectivity snapshots
-(--product refl, default) or on echo-top height snapshots (--product eth) for a single radar domain.
+(--product refl, default) or on echo-top height snapshots (--product eth) for a single radar domain, with the radar range
+circles and azimuth lines, and optionally the terrain, outlines in one color per track, a ring around the outlines, only the
+cells of the tracks that live long enough, and cities and other radars.
 
 Usage:
 >python plot_cell_tracks.py -s STARTDATE -e ENDDATE -c CONFIG.yml --radar_lat LAT --radar_lon LON
@@ -52,11 +54,37 @@ def parse_cmd_args(argv=None, legacy_name=None):
     parser.add_argument("--perim_color", default=None, help="color of the cell outlines (default: black)")
     parser.add_argument("--perim_alpha", type=float, default=None, help="transparency of the cell outlines (default 0.6)")
     parser.add_argument("--perim_width", type=int, default=1, help="cell outline width in pixels")
+    parser.add_argument("--perim_cmap", "--cell_perim_cmap", default=None,
+                        help="colormap of the cell outlines: one color per track (e.g. glasbey_dark; colorcet or matplotlib names), "
+                             "instead of --perim_color")
+    parser.add_argument("--perim_halo", "--cell_halo", default=None, help="color of a ring just outside the cell outlines (default: none)")
+    parser.add_argument("--min_hours", "--cell_min_hours", type=float, default=0.0,
+                        help="draw only the cells of tracks that live at least this long [hour] (default 0: all)")
+    parser.add_argument("--show_terrain", type=int, default=0,
+                        help="Draw the terrain height (gray) under the reflectivity, from terrain_file and elev_varname of the config (0:no, 1:yes)")
+    parser.add_argument("--grid_linestyle", default='--', help="line style of the lat/lon gridlines (default '--')")
+    parser.add_argument("--city", nargs=3, action='append', metavar=('NAME', 'LON', 'LAT'), default=None,
+                        help="mark a city: a yellow diamond and its name (repeat the option for more cities)")
+    parser.add_argument("--radar_site", nargs=3, action='append', metavar=('NAME', 'LON', 'LAT'), default=None,
+                        help="mark another radar: a cyan circle, its name and its range circle (repeat the option for more radars)")
+    parser.add_argument("--radar_site_radius", type=float, default=150.,
+                        help="radius of the range circle of the --radar_site radars [km] (default 150, 0: no circle)")
     if legacy_name is not None:
         # Defaults of the old script that is being replaced
         parser.set_defaults(**legacy.defaults(legacy_name))
     args = parser.parse_args(argv)
     return cli_common.args_to_dict(args)
+
+#-----------------------------------------------------------------------
+def parse_sites(values, option):
+    """The places of --city or --radar_site (NAME LON LAT, repeated) as a list of (name, lon, lat); none: an empty list."""
+    sites = []
+    for name, lon, lat in values or []:
+        try:
+            sites.append((name, float(lon), float(lat)))
+        except ValueError:
+            sys.exit(f"ERROR: {option} {name} {lon} {lat}: the longitude and the latitude have to be numbers")
+    return sites
 
 #-----------------------------------------------------------------------
 def main(argv=None, legacy_name=None):
@@ -110,6 +138,10 @@ def main(argv=None, legacy_name=None):
     fontsize_tracks_arg = args_dict.get('fontsize_tracks', None)
     map_resolution = args_dict.get('map_resolution', '50m')
     lookback_days = args_dict.get('track_lookback_days') if args_dict.get('track_lookback_days') is not None else 0
+    min_hours = args_dict.get('min_hours') or 0.0
+    show_terrain = args_dict.get('show_terrain') or 0
+    cities = parse_sites(args_dict.get('city'), '--city')
+    radar_sites = parse_sites(args_dict.get('radar_site'), '--radar_site')
 
     if time_format is None: time_format = "yyyymodd_hhmmss"
 
@@ -212,6 +244,12 @@ def main(argv=None, legacy_name=None):
         'perim_width': args_dict.get('perim_width', 1),
         'skip_empty': bool(args_dict.get('skip_empty') or 0),
         'map_aspect': map_aspect,
+        'perim_cmap': args_dict.get('perim_cmap'),
+        'perim_halo': args_dict.get('perim_halo'),
+        'show_terrain': bool(show_terrain),
+        'cities': cities,
+        'radar_sites': radar_sites,
+        'radar_site_radius': args_dict.get('radar_site_radius'),
     }
     plot_info['title_prefix'] = title_prefix
     if args_dict.get('dpi') is not None:
@@ -250,6 +288,7 @@ def main(argv=None, legacy_name=None):
         'central_latitude': args_dict.get('central_latitude'),
         'standard_parallels': args_dict.get('standard_parallels'),
         'lat_range': lat_range,
+        'grid_linestyle': args_dict.get('grid_linestyle') or '--',
     }
     if args_dict.get('grid_linewidth') is not None:
         map_info['grid_linewidth'] = args_dict['grid_linewidth']
@@ -274,6 +313,8 @@ def main(argv=None, legacy_name=None):
     enddate = config["enddate"]
     radar_sensitivity = config.get("radar_sensitivity", 0)
     plot_info['radar_sensitivity'] = radar_sensitivity
+    if show_terrain and not config.get('terrain_file'):
+        sys.exit("ERROR: --show_terrain 1 needs terrain_file (and elev_varname) in the config file")
 
     if trackstats_file is None:
         trackstats_file = f"{stats_path}{trackstats_filebase}{startdate}_{enddate}.nc"
@@ -328,7 +369,7 @@ def main(argv=None, legacy_name=None):
 
     # Get track stats data (cell tracks initiated within the period, or lookback_days before it)
     start_datetime_4stats = (pd.to_datetime(start_datetime) - pd.Timedelta(days=lookback_days)).strftime('%Y-%m-%dT%H:%M:%S')
-    track_dict = get_cell_track_stats(trackstats_file, start_datetime_4stats, end_datetime, dt_thres)
+    track_dict = get_cell_track_stats(trackstats_file, start_datetime_4stats, end_datetime, dt_thres, min_hours=min_hours)
 
     # Serial option (run_parallel=0) or parallel option (run_parallel=1)
     run_frames(cell_map.work_for_time_loop, datafiles, track_dict, map_info, plot_info, config,

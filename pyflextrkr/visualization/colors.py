@@ -63,3 +63,9 @@ def named_colormap(name):
     except ImportError:
         pass
     return mpl.colormaps[name]
+
+#-----------------------------------------------------------------------
+def cmap_colors(name):
+    """The colors of a colormap by name (named_colormap) as an (N, 4) RGBA array: all N colors, in order."""
+    cmap = named_colormap(name)
+    return np.asarray(cmap(np.arange(cmap.N)))
