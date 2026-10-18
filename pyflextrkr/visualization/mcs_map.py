@@ -28,7 +28,7 @@ import warnings
 warnings.filterwarnings("ignore")
 from pyflextrkr.visualization.mapcore import (
     get_projections, set_map_domain, projection_key, norm_lon, in_map_extent, fit_colorbars_to_maps, keep_colorbar_text_inside,
-    lat_labels_on_boundary,
+    lat_labels_on_boundary, geodesic_circle,
 )
 from pyflextrkr.visualization.masks import make_dilation_structure, make_perimeter_structure, label_perimeter
 from pyflextrkr.visualization.pixelio import get_data_extent, find_subset_window, make_figure_name
@@ -546,8 +546,9 @@ def plot_map_2panels(pixel_dict, plot_info, map_info, track_dict):
                 # Positions of global tracks are not limited to -180~+180 (periodic domain)
                 if not is_platecarree:
                     _ilon = norm_lon(_ilon)
-                ipfcircle = ax2.tissot(rad_km=_irad*pfdiam_scale, lons=_ilon, lats=_ilat, n_samples=100,
-                                       facecolor='None', edgecolor=pfdiam_color, lw=pfdiam_linewidth, zorder=3)
+                # (a geodesic circle drawn with the transform of the data, not ax.tissot: see mapcore.geodesic_circle)
+                ax2.plot(*geodesic_circle(_ilon, _ilat, _irad*pfdiam_scale), color=pfdiam_color, lw=pfdiam_linewidth,
+                         transform=data_proj, zorder=3)
             # Overplot tracknumbers at current frame
             # Normalize to 0-360 for dateline-safe lon check (in_map_extent)
             if show_tracknumbers and in_map_extent(_iccslon, _iccslat, map_extent):
@@ -876,10 +877,6 @@ def plot_map_1panel(pixel_dict, plot_info, map_info, track_dict):
         _ilat = track_pf_lat.data[itrack,idx_match]
         # Proceed if time difference is < dt_match
         if (idt_match < dt_match):
-            # # Plot PF diameter circle
-            # if ~np.isnan(_irad):
-            #     ipfcircle = ax1.tissot(rad_km=_irad*2, lons=_ilon, lats=_ilat, n_samples=100,
-            #                            facecolor='None', edgecolor=pfdiam_color, lw=pfdiam_linewidth, zorder=3)
             # Overplot tracknumbers at current frame
             # Normalize to 0-360 for dateline-safe lon check (in_map_extent)
             if show_tracknumbers and in_map_extent(_iccslon, _iccslat, map_extent):

@@ -17,14 +17,14 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes
-import cartopy.crs as ccrs
 import cartopy.feature as cfeature
 from cartopy.mpl.ticker import LongitudeFormatter, LatitudeFormatter
 from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
 import warnings
 warnings.filterwarnings("ignore")
 from pyflextrkr.visualization.mapcore import (
-    get_projections, set_map_domain, projection_key, in_map_extent, calc_latlon, fit_colorbars_to_maps, lat_labels_on_boundary,
+    get_projections, set_map_domain, projection_key, in_map_extent, geodesic_circle, geodesic_ray, fit_colorbars_to_maps,
+    lat_labels_on_boundary,
 )
 from pyflextrkr.visualization.masks import make_perimeter_structure, label_perimeter, calc_cell_center
 from pyflextrkr.visualization.pixelio import get_data_extent, find_subset_window, make_figure_name
@@ -292,15 +292,15 @@ def plot_map(pixel_dict, plot_info, map_info, track_dict):
                          weight=tracknumber_weight, ha='left', va='center', alpha=tracknumber_alpha,
                          path_effects=halo_text, clip_on=not is_platecarree, transform=data_proj, zorder=4)
 
-    # Plot range circles around radar
+    # Plot range circles and azimuth lines around radar: geodesic circles and lines as lon/lat points, drawn with the transform of
+    # the data like everything else on the map (not ax.tissot and transform=ccrs.Geodetic(): PROJ 9.8 moves those north or south
+    # by up to 0.19 degree, so they would not be centered on the radar, see mapcore.geodesic_circle)
     if show_rangecircle:
         for ii in range(0, len(radii)):
-            rr = ax1.tissot(rad_km=radii[ii], lons=radar_lon, lats=radar_lat, n_samples=100, facecolor='None', edgecolor='k', lw=0.4, zorder=3)
-    # Plot azimuth lines
+            ax1.plot(*geodesic_circle(radar_lon, radar_lat, radii[ii]), color='k', lw=0.4, transform=data_proj, zorder=3)
     if show_azimuth:
         for ii in range(0, len(azimuths)):
-            lon2, lat2 = calc_latlon(radar_lon, radar_lat, 200, azimuths[ii])
-            ax1.plot([radar_lon,lon2], [radar_lat,lat2], color='k', lw=0.4, transform=ccrs.Geodetic(), zorder=5)
+            ax1.plot(*geodesic_ray(radar_lon, radar_lat, azimuths[ii], 200), color='k', lw=0.4, transform=data_proj, zorder=5)
     # Reflectivity colorbar
     cb1 = plt.colorbar(cf1, cax=cax1, label=cblabels, ticks=cbticks, extend='both')
     # Set title with optional prefix

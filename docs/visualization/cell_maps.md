@@ -14,7 +14,12 @@ python visualization/plot_cell_tracks.py -s START -e END -c CONFIG.yml [--produc
 
 ![cell reflectivity](../figures/visualization/cell_refl.png)
 
-The radar location (`--radar_lat`, `--radar_lon`) defaults to the pixel closest to the center of the domain. The cell center for the numbers is
+The radar location (`--radar_lat`, `--radar_lon`) defaults to the pixel closest to the center of the domain. The range rings (20-100 km) and the
+azimuth lines (every 90 degrees, 200 km) are geodesic lines on the WGS84 ellipsoid (`mapcore.geodesic_circle`, `geodesic_ray`) drawn with the transform of the data like
+everything else on the map, so they are centered on the radar (in frames with echo all around the radar, the white hole of the blind zone above it is in the middle of the
+rings). They are not made with `ax.tissot` and `transform=ccrs.Geodetic()` (the first version of these maps): with PROJ 9.8 (cartopy 0.25, the `pyflex26.3` environment)
+the transform from Geodetic to PlateCarree moves a point north or south by up to 0.19 degree, so the radar at 32.13S was drawn at 31.94S, 20 km off (on a Lambert map
+too); the older PROJ of the `pyflex-dev` environment does not do it. The cell center for the numbers is
 the mean position of the pixels with the convective mask, the cell tracks are in the cell statistics file (`trackstats_*.nc`) with `cell_meanlon`,
 `cell_meanlat`, `base_time`, `track_duration`. The pixel-level files have `tracknumber`, `conv_mask`, the field, `longitude`, `latitude` and the
 radar-relative `lon` / `lat` (km).

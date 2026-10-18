@@ -360,9 +360,65 @@ def test_longitude_helpers():
     assert not mapcore.in_map_extent(-10., 0., [0., 30., -5., 5.])
 
 
-def test_calc_latlon_distance_and_bearing():
-    # 1 degree of latitude is 111.2 km on the sphere of radius 6374.2 km
-    lon, lat = mapcore.calc_latlon(0., 0., 2. * np.pi * 6374.2 / 360., 0.)
-    assert (lon, lat) == pytest.approx((0., 1.), abs=1e-6)
-    lon, lat = mapcore.calc_latlon(10., 0., 2. * np.pi * 6374.2 / 360., 90.)
-    assert (lon, lat) == pytest.approx((11., 0.), abs=1e-6)
+def test_geodesic_circle_has_the_radius_around_the_center():
+    from cartopy.geodesic import Geodesic
+    lon0, lat0 = -64.72837, -32.12641                       # the CSAPR2 radar of CACTI
+    for radius_km in (20., 100.):
+        lons, lats = mapcore.geodesic_circle(lon0, lat0, radius_km, n_samples=100)
+        assert len(lons) == len(lats) == 100
+        assert (lons[0], lats[0]) == pytest.approx((lons[-1], lats[-1]))        # closed curve
+        distance = Geodesic().inverse(np.tile([lon0, lat0], (len(lons), 1)), np.column_stack([lons, lats]))[:, 0]
+        np.testing.assert_allclose(distance, radius_km * 1e3, atol=1.)           # on the ellipsoid, within 1 m
+        # centered: the mean of the points is the center up to the curvature of the meridians (about 250 m for 100 km at 32S)
+        assert np.mean(lons[:-1]) == pytest.approx(lon0, abs=5e-3)
+        assert np.mean(lats[:-1]) == pytest.approx(lat0, abs=5e-3)
+    # the center in 0-360 degrees (some radar locations are given that way): the circle is at the same place
+    lons360, lats360 = mapcore.geodesic_circle(lon0 + 360., lat0, 100.)
+    lons, lats = mapcore.geodesic_circle(lon0, lat0, 100.)
+    np.testing.assert_allclose(lons360, lons, atol=1e-9)
+    np.testing.assert_allclose(lats360, lats, atol=1e-9)
+
+
+def test_geodesic_circle_at_the_dateline_is_one_continuous_curve():
+    lons, lats = mapcore.geodesic_circle(179.9, 10., 150.)
+    assert np.abs(np.diff(lons)).max() < 5.                       # no jump from +180 to -180
+    assert lons.max() > 180. and lons.min() < 179.9               # it passes the dateline
+    assert (np.mean(lons[:-1]), np.mean(lats[:-1])) == pytest.approx((179.9, 10.), abs=5e-3)
+    # ... and is drawn on the other side of a PlateCarree map centered on the dateline
+    proj = ccrs.PlateCarree(central_longitude=180)
+    x = proj.transform_points(ccrs.PlateCarree(), lons, lats)[:, 0]
+    assert np.abs(x).max() < 2.
+
+
+def test_geodesic_ray_has_the_azimuth_and_the_length():
+    from cartopy.geodesic import Geodesic
+    lon0, lat0 = 100., -20.
+    for azimuth in (0., 90., 225., 360.):
+        lons, lats = mapcore.geodesic_ray(lon0, lat0, azimuth, 200., n_samples=21)
+        assert len(lons) == len(lats) == 21
+        assert (lons[0], lats[0]) == pytest.approx((lon0, lat0))
+        out = Geodesic().inverse(np.array([[lon0, lat0]]), np.array([[lons[-1], lats[-1]]]))
+        assert out[0, 0] == pytest.approx(200e3, abs=1.)
+        assert (out[0, 1] % 360.) == pytest.approx(azimuth % 360., abs=1e-4)
+        # equally spaced along the line
+        step = Geodesic().inverse(np.column_stack([lons[:-1], lats[:-1]]), np.column_stack([lons[1:], lats[1:]]))[:, 0]
+        np.testing.assert_allclose(step, 10e3, atol=1.)
+    # north goes to higher latitude, east to higher longitude
+    assert mapcore.geodesic_ray(lon0, lat0, 0., 200.)[1][-1] > lat0
+    assert mapcore.geodesic_ray(lon0, lat0, 90., 200.)[0][-1] > lon0
+
+
+def test_the_plot_code_has_no_tissot_circles_and_no_geodetic_transform():
+    """
+    ax.tissot and transform=ccrs.Geodetic() are moved north or south by up to 0.19 degree with PROJ 9.8 (Geodetic -> PlateCarree), so
+    circles and lines made with them are not where the data are: the circles and lines are geodesic points in the transform of the data
+    (mapcore.geodesic_circle, geodesic_ray). The calls are searched in the syntax tree (comments may mention them).
+    """
+    import ast
+    import glob
+    import os
+    for path in sorted(glob.glob(os.path.join(os.path.dirname(mapcore.__file__), '*.py'))):
+        for node in ast.walk(ast.parse(open(path).read())):
+            if isinstance(node, ast.Call):
+                name = getattr(node.func, 'attr', None) or getattr(node.func, 'id', None)
+                assert name not in ('tissot', 'Geodetic'), f"{os.path.basename(path)} line {node.lineno} calls {name}"

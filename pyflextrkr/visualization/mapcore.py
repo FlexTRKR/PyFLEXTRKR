@@ -1,14 +1,14 @@
 """
 Map utilities shared by all plot families: projections by name, the dateline-aware PlateCarree setup of the original
-scripts, the map domain (set_extent / set_global and the latitude-band crop), the figure size from the domain, and
-longitude helpers.
+scripts, the map domain (set_extent / set_global and the latitude-band crop), the figure size from the domain,
+longitude helpers, and geodesic circles and lines (range rings, PF circles, azimuth lines).
 
 Called by: mcs_map, cell_map, generic_map (the plot functions) and mcs_cli, cell_cli, generic_cli (figure size).
-Calls: cartopy.crs, matplotlib (for the grid layout only).
+Calls: cartopy.crs, cartopy.geodesic, matplotlib (for the grid layout only).
 """
-import math
 import numpy as np
 import cartopy.crs as ccrs
+from cartopy.geodesic import Geodesic
 import matplotlib as mpl
 import matplotlib.gridspec as gridspec
 from matplotlib.figure import Figure
@@ -504,31 +504,49 @@ def in_map_extent(lon, lat, map_extent):
     return _in_lon and (lat > map_extent[2]) and (lat < map_extent[3])
 
 #-----------------------------------------------------------------------
-def calc_latlon(lon1, lat1, dist, angle):
+def _continuous_lon(lon):
+    """Longitudes [degree] without the jump of 360 degrees at the dateline (they can pass 180)."""
+    return np.rad2deg(np.unwrap(np.deg2rad(lon)))
+
+#-----------------------------------------------------------------------
+def geodesic_circle(lon, lat, radius_km, n_samples=100):
     """
-    Haversine formula to calculate lat/lon locations from distance and angle.
+    Longitudes and latitudes [degree] of the circle of radius radius_km around (lon, lat): the points at that geodesic
+    distance on the WGS84 ellipsoid (the first and the last point are the same). The longitudes are continuous, so a
+    circle at the dateline is one curve.
 
-    lon1:   longitude in [degree]
-    lat1:   latitude in [degree]
-    dist:   distance in [km]
-    angle:  angle in [degree]
+    Draw it with the transform of the data (ax.plot(*geodesic_circle(...), transform=data_proj)), not with ax.tissot or
+    transform=ccrs.Geodetic(): with PROJ 9.8 the transform from Geodetic to PlateCarree moves a point north or south
+    by up to 0.19 degree (20 km, measured at 32S and 35N), so such circles do not sit on the cells that are drawn with
+    the transform of the data.
+
+    Args:
+        lon, lat: center [degree]
+        radius_km: radius [km]
+        n_samples: number of points of the circle
+
+    Returns:
+        lons, lats: 1D arrays
     """
+    circle = Geodesic().circle(lon, lat, radius_km * 1e3, n_samples=n_samples, endpoint=True)
+    return _continuous_lon(circle[:, 0]), circle[:, 1]
 
-    # Earth radius
-    # R_earth = 6378.39  # at Equator [km]
-    R_earth = 6374.2  # at 40 degree latitude [km]
-#     R_earth = 6356.91  # at the pole [km]
+#-----------------------------------------------------------------------
+def geodesic_ray(lon, lat, azimuth, length_km, n_samples=21):
+    """
+    Longitudes and latitudes [degree] of the geodesic line that starts at (lon, lat) and goes length_km in the
+    direction azimuth [degree clockwise from north] (WGS84 ellipsoid). Draw it with the transform of the data (see
+    geodesic_circle).
 
-    # Conver degrees to radians
-    lat1 = math.radians(lat1)
-    lon1 = math.radians(lon1)
-    bearing = math.radians(angle)
+    Args:
+        lon, lat: start [degree]
+        azimuth: direction [degree clockwise from north]
+        length_km: length [km]
+        n_samples: number of points of the line
 
-    lat2 = math.asin(math.sin(lat1) * math.cos(dist/R_earth) +
-                     math.cos(lat1) * math.sin(dist/R_earth) * math.cos(bearing))
-    lon2 = lon1 + math.atan2(math.sin(bearing) * math.sin(dist/R_earth) * math.cos(lat1),
-                             math.cos(dist/R_earth) - math.sin(lat1) * math.sin(lat2))
-    lat2 = math.degrees(lat2)
-    lon2 = math.degrees(lon2)
-
-    return lon2, lat2
+    Returns:
+        lons, lats: 1D arrays
+    """
+    distances = np.linspace(0., length_km * 1e3, n_samples)
+    line = Geodesic().direct(np.tile([lon, lat], (n_samples, 1)), azimuth, distances)
+    return _continuous_lon(line[:, 0]), line[:, 1]

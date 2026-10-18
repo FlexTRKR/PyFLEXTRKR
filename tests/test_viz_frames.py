@@ -17,8 +17,11 @@ pytest.importorskip("colormaps")
 pytest.importorskip("colorcet")
 Image = pytest.importorskip("PIL.Image")
 
+import cartopy.crs as ccrs
+from cartopy.geodesic import Geodesic
+
 import viz_synthetic as S
-from pyflextrkr.visualization import mcs_cli, cell_cli, generic_cli, cartesian_cli, mcs_map
+from pyflextrkr.visualization import mcs_cli, cell_cli, generic_cli, cartesian_cli, mcs_map, cell_map
 
 SMALL = ['--draw_land', '0', '--dpi', '50']      # small pictures, no coastline files
 ONE_FRAME = ('2025-06-01T01', '2025-06-01T02')   # the 01:30 frame only
@@ -321,6 +324,44 @@ def test_cell_frames(run):
     base = load(run(cell_cli, 'cell', options, period=ONE_FRAME)[0])
     halo = load(run(cell_cli, 'cell', options + ['--track_halo_color', 'white', '--track_halo_alpha', '0.5'], period=ONE_FRAME)[0])
     assert mean_difference(base, halo) > 0
+
+
+@pytest.mark.parametrize("projection", [[], ['--projection', 'LambertConformal', '--central_longitude', '115', '--standard_parallels', '30', '40']])
+def test_cell_range_circles_and_azimuth_lines_are_centered_on_the_radar(run, monkeypatch, projection):
+    """
+    The range circles and the azimuth lines are geodesic lines in lon / lat, drawn with the transform of the data: the right radius
+    around the radar, and registered like the data. (ax.tissot and transform=ccrs.Geodetic() were not: with PROJ 9.8 they are
+    moved north or south by up to 0.19 degree, most at mid-latitudes, so the radar is at 35N. With the older PROJ of this test
+    environment the display checks pass for both ways of drawing: they are the guard where PROJ 9.8 is used.)
+    """
+    figures = []
+    plot_map = cell_map.plot_map
+    monkeypatch.setattr(cell_map, 'plot_map', lambda *args, **kwargs: figures.append(plot_map(*args, **kwargs)) or figures[-1])
+    radar = np.array([115.0, 35.0])
+    run(cell_cli, 'cell', ['--draw_land', '0', '--dpi', '100', '--figsize', '10', '8', '--radar_lon', '115', '--radar_lat', '35'] + projection,
+        period=ONE_FRAME)
+    ax = figures[0].axes[0]
+    thin = [line for line in ax.lines if line.get_linewidth() == pytest.approx(0.4) and line.get_color() == 'k']
+    rings = [line for line in thin if len(line.get_xdata()) == 100]
+    rays = [line for line in thin if len(line.get_xdata()) == 21]
+    assert len(rings) == 5 and len(rays) == 5
+    # where things are on the figure: the transform of the data, as the clouds and the tracks are drawn
+    def placed_like_the_data(points):
+        return ax.transData.transform(ax.projection.transform_points(ccrs.PlateCarree(), points[:, 0], points[:, 1])[:, :2])
+    radar_xy = placed_like_the_data(radar[None, :])[0]
+    for line, radius_km in zip(rings, range(20, 101, 20)):
+        points = np.column_stack([line.get_xdata(), line.get_ydata()])
+        np.testing.assert_allclose(Geodesic().inverse(np.tile(radar, (len(points), 1)), points)[:, 0], radius_km * 1e3, atol=1.)   # the radius
+        shown = line.get_transform().transform(points)
+        np.testing.assert_allclose(shown, placed_like_the_data(points), atol=1e-6)                       # drawn with the transform of the data
+        radius_px = np.hypot(*(shown - radar_xy).T).mean()
+        assert np.hypot(*(shown[:-1].mean(axis=0) - radar_xy)) < 0.005 * radius_px                      # centered on the radar
+    for line, azimuth in zip(rays, (0, 90, 180, 270, 360)):
+        points = np.column_stack([line.get_xdata(), line.get_ydata()])
+        np.testing.assert_allclose(line.get_transform().transform(points), placed_like_the_data(points), atol=1e-6)
+        np.testing.assert_allclose(placed_like_the_data(points[:1])[0], radar_xy, atol=1e-6)            # starts at the radar
+        out = Geodesic().inverse(radar[None, :], points[-1][None, :])
+        assert out[0, 0] == pytest.approx(200e3, abs=1.) and out[0, 1] % 360 == pytest.approx(azimuth % 360, abs=1e-4)
 
 
 def test_generic_frames(run):
