@@ -63,10 +63,19 @@ family page), so that a command without these options makes the same figure as t
 | `--map_aspect` | `equal` | shape of the map: 'equal' (default) keeps the true shape of the domain (a map that does not fill its panel is centered in it and the colorbars follow it); 'auto' stretches the map to fill its panel (the old scripts) |
 | `--map_resolution` | `50m` | Map resolution for Natural Earth features ('10m', '50m', '110m') |
 | `--draw_land` | — | Draw coastlines (0:no, 1:yes; default 1, 0 for the cell maps) |
-| `--land_linewidth` | — | line width of the coastlines [points] (default: 2 for MCS maps, 1 for the others) |
 | `--draw_border` | — | Draw country borders (0:no, 1:yes; default 0, 1 for the generic maps) |
 | `--draw_state` | — | Draw state/province borders (0:no, 1:yes; default 0) |
 | `--draw_river` | `0` | Draw rivers (0:no, 1:yes) |
+| `--land_color`, `--land_linewidth`, `--land_alpha` | `gray` (MCS maps: `k`), `0.8`, `1` | color, line width [points] and transparency (1: opaque) of the coastlines |
+| `--border_color`, `--border_linewidth`, `--border_alpha` | `gray` (MCS maps: `k`), `0.8`, `1` | the same for the country borders |
+| `--state_color`, `--state_linewidth`, `--state_alpha` | `gray` (MCS maps: `k`), `0.8`, `1` | the same for the state / province borders |
+| `--river_color`, `--river_linewidth`, `--river_alpha` | `gray` (MCS maps: `k`), `0.8`, `1` | the same for the rivers |
+
+The four map features have the same default style (0.8 points, opaque; gray in the cell and generic maps, black in the MCS maps, where gray lines are hard to see on the Tb colormaps: contrast 1.4-3 : 1 against 7-16 : 1 for black) and are drawn in the same order, from top to bottom: coastlines,
+country borders, state borders, rivers, all above the shading, the outlines, the track paths, symbols and numbers, the gridlines and the range circles
+(only the markers of cities and radars of the cell maps are above them). The old `Analysis/plot_subset_*.py` commands keep the style they had
+(black or gray lines, 2 or 1 points for the coastlines, 0.5 points for rivers and the states of the cell maps): [inventory.md](inventory.md).
+
 | `--box` LON0 LON1 LAT0 LAT1 | — | draw a rectangle (e.g. the domain of a regional plot on a global map) |
 | `--show_legend` | `1` | Show the legend (0:no, 1:yes) |
 | `--legend_loc` | `lower right` | Legend location (matplotlib loc string) |

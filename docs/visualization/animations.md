@@ -1,9 +1,15 @@
 # Animations: playback speed, video quality and file size
 
-The wrappers (`visualization/make_mcs_animation.py`, `examples/make_mcs_animation_*.py`, `make_cell_animation.py`) make the PNG frames and then an mp4 with ffmpeg
-(`animation.make_animation`, which calls `make_mp4`) and, if `gif_width` is set, a GIF of it for a README. The settings are the same in every wrapper and in the command
+The wrappers (`visualization/examples/make_mcs_animation*.py`, `make_cell_animation_nexrad.py`) make the PNG frames and then an mp4 with ffmpeg
+(`animation.make_animation`, which calls `make_mp4`) and, only if `gif_width` is set (`--set gif_width=480`; the default is no GIF), a GIF of it for a README. The settings are the same in every wrapper and in the command
 line [`visualization/pngs_to_animation.py`](../../visualization/pngs_to_animation.py), which makes the mp4 from PNG files you already have. The names and explanations
 follow the wrapper of the CONUS tracking (`conus_tracking/visualizations/make_mcs_multicell_animation.py`).
+
+**Where the files go.** Without `fig_root`, `figdir` and `animation_dir` the PNG files and the animation (`{fig_basename}{start}_{end}.mp4` and `.gif`) go to
+`{root_path}/quicklooks_trackpaths/` of the tracking config file, next to the tracking output: the folder that the demo scripts (`config/demo_*.sh`) use for their
+quicklooks, and the PNG file names are the same (`--figbasename` of the demo command = `fig_basename` of the wrapper), so a demo run and a wrapper run share the
+folder. If that folder cannot be written (the read-only outputs of someone else's run, as with the global V3 config of `make_mcs_animation.py`), the wrapper stops and asks for
+`fig_root`: `{fig_root}/quicklooks_{plot_type}_{data_type}/{year}/` for the PNG files of the MCS maps (`quicklooks_cell/` for the cell maps) and `{fig_root}/animations_.../` for the animation.
 
 ## The settings
 
@@ -21,7 +27,7 @@ The old `input_framerate` is `playback_fps`, and `output_framerate` is `video_fp
 24: the mp4 files of the examples are 23-33 % smaller (set 20 to get the old files back).
 
 **Recommended (the defaults of the wrappers):** hourly MCS files `playback_fps = 2`, `video_quality = 24`, `output_width = 1920`, `video_fps = None`, `video_preset = None`; CRF 22 for maps with a lot of fine detail
-(the IR brightness temperature of Himawari). The GIF for a README: `gif_width` 480-720 pixels, `gif_duration = 8` seconds (16 frames), 256 colors, no dither: 1.6-2.3 MB each (below).
+(the IR brightness temperature of Himawari). The GIF for a README (opt-in, `--set gif_width=...`): `gif_width` 480-720 pixels, `gif_duration = 8` seconds (16 frames), 256 colors, no dither: 1.6-2.3 MB each (below).
 
 ### What `playback_fps` means
 
@@ -31,7 +37,7 @@ The speed of the animation is `playback_fps` times the time step of the PNG file
 |---|---|---|---|
 | hourly (the MCS examples), 2 days = 48 files | 2 | 2 hours of data per second | 24 s |
 | hourly, 2 days | 4 | 4 hours per second | 12 s |
-| 5-minute (the cell tracking of `make_cell_animation.py`), 3 days = 864 files | 12 | 1 hour per second | 72 s |
+| 5-minute (the cell tracking of `make_cell_animation_nexrad.py`), 3 days = 864 files | 12 | 1 hour per second | 72 s |
 
 ## Make an mp4 or a GIF from PNG files you already have
 

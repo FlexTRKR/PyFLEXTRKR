@@ -8,8 +8,8 @@ Replaces Analysis/plot_subset_tbpf_demo_pbc.py, plot_subset_tbpf_tracks_pinacles
 plot_subset_coldpool_tracks_nomap.py (those names still work, see docs/visualization/inventory.md).
 
 Usage:
->python plot_cartesian_tracks.py -s STARTDATE -e ENDDATE -c CONFIG.yml --extent "0. 1500 0. 1500"
->python plot_cartesian_tracks.py -s STARTDATE -e ENDDATE -c CONFIG.yml --product field --field_varname cp_intensity --xscale 1e-3
+    python plot_cartesian_tracks.py -s STARTDATE -e ENDDATE -c CONFIG.yml --extent "0. 1500 0. 1500"
+    python plot_cartesian_tracks.py -s STARTDATE -e ENDDATE -c CONFIG.yml --product field --field_varname cp_intensity --xscale 1e-3
 
 Required arguments:
 -s, --start           Start time (format: YYYY-mm-ddTHH:MM:SS)

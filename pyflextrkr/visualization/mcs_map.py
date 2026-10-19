@@ -21,13 +21,12 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 import matplotlib.patches as mpatches
-import cartopy.feature as cfeature
 from cartopy.mpl.ticker import LongitudeFormatter, LatitudeFormatter
 from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
 import warnings
 warnings.filterwarnings("ignore")
 from pyflextrkr.visualization.mapcore import (
-    get_projections, set_map_domain, projection_key, norm_lon, in_map_extent, fit_colorbars_to_maps, keep_colorbar_text_inside,
+    get_projections, set_map_domain, add_map_features, projection_key, norm_lon, in_map_extent, fit_colorbars_to_maps, keep_colorbar_text_inside,
     lat_labels_on_boundary, geodesic_circle,
 )
 from pyflextrkr.visualization.masks import make_dilation_structure, make_perimeter_structure, label_perimeter
@@ -140,7 +139,6 @@ def plot_map_2panels(pixel_dict, plot_info, map_info, track_dict):
                 mcsperim_color: color for MCS perimeter (legend)
                 pfdiam_color: color for PF diameter circles
                 pfdiam_scale: scaling factor for PF diameter
-                map_edgecolor: color for map edges
                 map_resolution: resolution for map features
                 suptitle: figure title
                 figname: output figure filename
@@ -171,7 +169,8 @@ def plot_map_2panels(pixel_dict, plot_info, map_info, track_dict):
                 draw_border: boolean to draw country borders (optional)
                 draw_state: boolean to draw state borders (optional)
                 draw_river: boolean to draw rivers (optional)
-                river_color: color for rivers (optional, default='gray')
+                map_feature_styles: color, linewidth and alpha of each map feature, from mapcore.map_feature_styles (optional,
+                    default: gray, 0.8 points, opaque)
                 box_lon: longitude values for box overlay (optional)
                 box_lat: latitude values for box overlay (optional)
                 projection, central_longitude, central_latitude, standard_parallels: map projection (optional,
@@ -232,7 +231,6 @@ def plot_map_2panels(pixel_dict, plot_info, map_info, track_dict):
     mcsperim_color = plot_info['mcsperim_color']
     pfdiam_color = plot_info['pfdiam_color']
     pfdiam_scale = plot_info['pfdiam_scale']
-    map_edgecolor = plot_info['map_edgecolor']
     map_resolution = plot_info['map_resolution']
     # timestr = plot_info['timestr']
     suptitle = plot_info['suptitle']
@@ -259,8 +257,6 @@ def plot_map_2panels(pixel_dict, plot_info, map_info, track_dict):
     tn_norm = plot_info.get('tn_norm', 'continuous')
     var2_mask_le = plot_info.get('var2_mask_le', False)
     # Details of the look that differ between the products (see the product blocks of mcs_cli.main)
-    land_linewidth = plot_info.get('land_linewidth', 2)
-    land_linewidth2 = plot_info.get('land_linewidth2', land_linewidth)    # coastline of the second panel
     grid_zorder = plot_info.get('grid_zorder', None)    # None: the gridlines are drawn after the data (above them)
     cb_minorticks_off = plot_info.get('cb_minorticks_off', True)
     # Halo around the track paths, symbols and numbers (path effects; None: no halo)
@@ -276,7 +272,8 @@ def plot_map_2panels(pixel_dict, plot_info, map_info, track_dict):
     draw_border = map_info.get('draw_border', False)
     draw_state = map_info.get('draw_state', False)
     draw_river = map_info.get('draw_river', False)
-    river_color = map_info.get('river_color', 'gray')
+    draw_features = dict(land=draw_land, border=draw_border, state=draw_state, river=draw_river)
+    feature_styles = map_info.get('map_feature_styles')    # from the command line (None: the default style)
     box_lon = map_info.get('box_lon', None)
     box_lat = map_info.get('box_lat', None)
     projection = map_info.get('projection', 'PlateCarree')
@@ -298,10 +295,6 @@ def plot_map_2panels(pixel_dict, plot_info, map_info, track_dict):
         map_extent, projection, map_info.get('central_longitude'), map_info.get('central_latitude'),
         map_info.get('standard_parallels'),
     )
-    land = cfeature.NaturalEarthFeature('physical', 'land', map_resolution)
-    borders = cfeature.NaturalEarthFeature('cultural', 'admin_0_boundary_lines_land', map_resolution)
-    states = cfeature.NaturalEarthFeature('cultural', 'admin_1_states_provinces_lakes', map_resolution)
-    rivers = cfeature.NaturalEarthFeature('physical', 'rivers_lake_centerlines', map_resolution)
 
     # Set up figure
     mpl.rcParams['font.size'] = fontsize
@@ -353,14 +346,7 @@ def plot_map_2panels(pixel_dict, plot_info, map_info, track_dict):
     # Tb Panel
     ax1 = plt.subplot(gs[0,0], projection=proj)
     set_map_domain(ax1, proj, map_extent, _ext_lon0, _ext_lon1, lat_range, extent_xy)
-    if draw_land == True:
-        ax1.add_feature(land, facecolor='none', edgecolor=map_edgecolor, linewidth=land_linewidth, zorder=3)
-    if draw_border == True:
-        ax1.add_feature(borders, edgecolor=map_edgecolor, facecolor='none', linewidth=0.8, zorder=3)
-    if draw_state == True:
-        ax1.add_feature(states, edgecolor=map_edgecolor, facecolor='none', linewidth=0.8, zorder=3)
-    if draw_river == True:
-        ax1.add_feature(rivers, edgecolor=river_color, facecolor='none', linewidth=0.5, zorder=3)
+    add_map_features(ax1, draw_features, feature_styles, map_resolution)
     if rect1 is not None:
         ax1.add_patch(rect1)
     if is_platecarree and map_aspect == 'auto':
@@ -417,14 +403,7 @@ def plot_map_2panels(pixel_dict, plot_info, map_info, track_dict):
     #################################################################
     # Second Field Panel (precipitation, reflectivity)
     set_map_domain(ax2, proj, map_extent, _ext_lon0, _ext_lon1, lat_range, extent_xy)
-    if draw_land == True:
-        ax2.add_feature(land, facecolor='none', edgecolor=map_edgecolor, linewidth=land_linewidth2, zorder=3)
-    if draw_border == True:
-        ax2.add_feature(borders, edgecolor=map_edgecolor, facecolor='none', linewidth=0.8, zorder=3)
-    if draw_state == True:
-        ax2.add_feature(states, edgecolor=map_edgecolor, facecolor='none', linewidth=0.8, zorder=3)
-    if draw_river == True:
-        ax2.add_feature(rivers, edgecolor=river_color, facecolor='none', linewidth=0.5, zorder=3)
+    add_map_features(ax2, draw_features, feature_styles, map_resolution)
     if rect2 is not None:
         ax2.add_patch(rect2)
     if is_platecarree and map_aspect == 'auto':
@@ -641,7 +620,6 @@ def plot_map_1panel(pixel_dict, plot_info, map_info, track_dict):
     trackpath_linewidth = plot_info['trackpath_linewidth']
     trackpath_color = plot_info['trackpath_color']
     mcsperim_color = plot_info['mcsperim_color']
-    map_edgecolor = plot_info['map_edgecolor']
     map_resolution = plot_info['map_resolution']
     # timestr = plot_info['timestr']
     suptitle = plot_info['suptitle']
@@ -664,8 +642,6 @@ def plot_map_1panel(pixel_dict, plot_info, map_info, track_dict):
     var2_zorder = plot_info.get('var2_zorder', 2)
     var2_mask_le = plot_info.get('var2_mask_le', False)
     # Details of the look that differ between the products (see the product blocks of mcs_cli.main)
-    land_linewidth = plot_info.get('land_linewidth', 2)
-    map_zorder = plot_info.get('map_zorder', 3)         # zorder of the coastlines, borders, states
     perim_zorder = plot_info.get('perim_zorder', 4)     # zorder of the MCS outlines
     grid_zorder = plot_info.get('grid_zorder', None)    # None: the gridlines are drawn after the data (above them)
     cb_minorticks_off = plot_info.get('cb_minorticks_off', True)
@@ -683,7 +659,8 @@ def plot_map_1panel(pixel_dict, plot_info, map_info, track_dict):
     draw_border = map_info.get('draw_border', False)
     draw_state = map_info.get('draw_state', False)
     draw_river = map_info.get('draw_river', False)
-    river_color = map_info.get('river_color', 'gray')
+    draw_features = dict(land=draw_land, border=draw_border, state=draw_state, river=draw_river)
+    feature_styles = map_info.get('map_feature_styles')    # from the command line (None: the default style)
     box_lon = map_info.get('box_lon', None)
     box_lat = map_info.get('box_lat', None)
     projection = map_info.get('projection', 'PlateCarree')
@@ -705,10 +682,6 @@ def plot_map_1panel(pixel_dict, plot_info, map_info, track_dict):
         map_extent, projection, map_info.get('central_longitude'), map_info.get('central_latitude'),
         map_info.get('standard_parallels'),
     )
-    land = cfeature.NaturalEarthFeature('physical', 'land', map_resolution)
-    borders = cfeature.NaturalEarthFeature('cultural', 'admin_0_boundary_lines_land', map_resolution)
-    states = cfeature.NaturalEarthFeature('cultural', 'admin_1_states_provinces_lakes', map_resolution)
-    rivers = cfeature.NaturalEarthFeature('physical', 'rivers_lake_centerlines', map_resolution)
 
     # Set up figure
     mpl.rcParams['font.size'] = fontsize
@@ -753,14 +726,7 @@ def plot_map_1panel(pixel_dict, plot_info, map_info, track_dict):
     #################################################################
     # Tb Panel
     set_map_domain(ax1, proj, map_extent, _ext_lon0, _ext_lon1, lat_range, extent_xy)
-    if draw_land == True:
-        ax1.add_feature(land, facecolor='none', edgecolor=map_edgecolor, linewidth=land_linewidth, zorder=map_zorder)
-    if draw_border == True:
-        ax1.add_feature(borders, edgecolor=map_edgecolor, facecolor='none', linewidth=0.8, zorder=map_zorder)
-    if draw_state == True:
-        ax1.add_feature(states, edgecolor=map_edgecolor, facecolor='none', linewidth=0.8, zorder=map_zorder)
-    if draw_river == True:
-        ax1.add_feature(rivers, edgecolor=river_color, facecolor='none', linewidth=0.5, zorder=map_zorder)
+    add_map_features(ax1, draw_features, feature_styles, map_resolution)
     if rect1 is not None:
         ax1.add_patch(rect1)
     if is_platecarree and map_aspect == 'auto':

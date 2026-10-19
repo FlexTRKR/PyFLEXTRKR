@@ -5,9 +5,9 @@ make_mcs_animation.py makes (animation.make_mp4), its size, the encoding time an
 a smaller file is not a worse video).
 
 Usage (the login node is enough for a few dozen frames; 100-200 frames are enough for a test):
->python compare_x264_presets.py '/path/to/frames/mcs_tbpf_*.png' --start 100 --n 120 --crf 24 --playback_fps 6 --width 1920
->python compare_x264_presets.py '/path/to/frames/*.png' --presets none slow --crf 20 22 24 26 28
->python compare_x264_presets.py '/path/to/frames/*.png' --crf 24 --playback_fps 2 --video_fps 2 10      # file frame rate 2 or 10
+    python compare_x264_presets.py '/path/to/frames/mcs_tbpf_*.png' --start 100 --n 120 --crf 24 --playback_fps 6 --width 1920
+    python compare_x264_presets.py '/path/to/frames/*.png' --presets none slow --crf 20 22 24 26 28
+    python compare_x264_presets.py '/path/to/frames/*.png' --crf 24 --playback_fps 2 --video_fps 2 10      # file frame rate 2 or 10
 
 --presets: x264 presets; none = no -preset option (the x264 default, medium; video_preset = None in the wrappers).
 The result of this test on the example frames of the CONUS and global MCS maps is in docs/visualization/animations.md.

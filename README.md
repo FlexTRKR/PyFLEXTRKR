@@ -111,23 +111,25 @@ Several scripts are provided to download example input data, run tracking, and p
 
 ![](docs/figures/readme/mcs_global_imerg_2days.gif)
 
-*Global MCS tracking from GPM Tb + IMERG precipitation, 1-2 January 2025: Tb with the track numbers (top), precipitation with the tracked MCSs shaded (bottom). Made with [`visualization/make_mcs_animation.py`](visualization/make_mcs_animation.py) (Robinson projection centered at 225E, 60S-60N), see [global_mcs_animation.md](docs/visualization/global_mcs_animation.md).*
+*Global MCS tracking from GPM Tb + IMERG precipitation, 1-2 January 2025: Tb with the track numbers (top), precipitation with the tracked MCSs shaded (bottom). Made with [`visualization/examples/make_mcs_animation.py`](visualization/examples/make_mcs_animation.py) (Robinson projection centered at 225E, 60S-60N), see [global_mcs_animation.md](docs/visualization/global_mcs_animation.md).*
+
+5. [MCS tracking over the Sahel from 10 km GPM IMERG V07B Tb + precipitation data](https://github.com/FlexTRKR/PyFLEXTRKR/blob/main/config/demo_mcs_imergv7_sahel.sh)
 
 ![](docs/figures/readme/mcs_sahel_2days.gif)
 
-*The same tracking over the Sahel, 22-23 August 2025, with a white halo around the tracks (`--track_halo_color white --track_halo_alpha 0.7`).*
+*Regional MCS tracking from the sample data of the demo (GPM IMERG V07B Tb + precipitation of 22-23 August 2025, cropped to 0-30N, 20W-60E): Tb (top) and precipitation with the tracked MCSs shaded (bottom), with a white halo around the tracks. Made with [`visualization/examples/make_mcs_animation_imergv7_sahel.py`](visualization/examples/make_mcs_animation_imergv7_sahel.py); the sample data are made by [`preprocess/crop_imergv7_sahel_sample.py`](preprocess/crop_imergv7_sahel_sample.py).*
 
-5. [MCS tracking from 4 km WRF Tb + precipitation data](https://github.com/FlexTRKR/PyFLEXTRKR/blob/main/config/demo_mcs_wrf_tbpf.sh)
+6. [MCS tracking from 4 km WRF Tb + precipitation data](https://github.com/FlexTRKR/PyFLEXTRKR/blob/main/config/demo_mcs_wrf_tbpf.sh)
 
-6. [MCS tracking from 4 km WRF Tb + 3D reflectivity data](https://github.com/FlexTRKR/PyFLEXTRKR/blob/main/config/demo_mcs_wrf_tbradar.sh)
+7. [MCS tracking from 4 km WRF Tb + 3D reflectivity data](https://github.com/FlexTRKR/PyFLEXTRKR/blob/main/config/demo_mcs_wrf_tbradar.sh)
 
 ![](docs/figures/readme/mcs_wrf_tbze_2days.gif)
 
 *WRF Tb (left) and composite reflectivity with the tracked MCSs shaded (right), 7-8 May 2015, on the Lambert conformal grid of the simulation. Made with [`visualization/examples/make_mcs_animation_wrf_tbze.py`](visualization/examples/make_mcs_animation_wrf_tbze.py).*
 
-7. [MCS tracking from 25 km model OLR + precipitation data](https://github.com/FlexTRKR/PyFLEXTRKR/blob/main/config/demo_mcs_model25km.sh)
+8. [MCS tracking from 25 km model OLR + precipitation data](https://github.com/FlexTRKR/PyFLEXTRKR/blob/main/config/demo_mcs_model25km.sh)
 
-8. [Generic feature tracking (e.g., 500 hPa geopotential height anomaly)](https://github.com/FlexTRKR/PyFLEXTRKR/blob/main/config/demo_generic_tracking.sh)
+9. [Generic feature tracking (e.g., 500 hPa geopotential height anomaly)](https://github.com/FlexTRKR/PyFLEXTRKR/blob/main/config/demo_generic_tracking.sh)
 
 ![](docs/figures/readme/generic_z500_1979.gif)
 

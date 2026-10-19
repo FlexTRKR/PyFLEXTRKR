@@ -1,6 +1,6 @@
 ---
 # Global MCS tracking V3 (Feng21), 2025: the tracking configuration, with the paths of the finished outputs.
-# This is the config file of the global MCS animation (visualization/make_mcs_animation.py): the plot scripts read the track
+# This is the config file of the global MCS animation (visualization/examples/make_mcs_animation.py): the plot scripts read the track
 # statistics and the pixel-level files from it:
 #   {root_path}/{stats_path_name}/mcs_tracks_final_{startdate}_{enddate}.nc
 #   {root_path}/{pixel_path_name}/{startdate}_{enddate}/mcstrack_YYYYMMDD_HHMMSS.nc

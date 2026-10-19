@@ -1,7 +1,11 @@
 #!/bin/bash
 ###############################################################################################
 # This script plots MCS tracking animations
+# Set config_file, quicklook_dir and animation_dir to your own tracking run: the /path/to/... values are placeholders.
 ###############################################################################################
+
+# The PyFLEXTRKR repository (this script is in visualization/examples/)
+repo_dir=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)
 
 # Specify start/end datetime
 start_date='2020-06-21T00'
@@ -14,15 +18,15 @@ lat_max=25.0
 # Run in parallel
 run_parallel=1
 # Tracking config file
-config_file='/global/homes/f/feng045/program/PyFLEXTRKR-dev/config/config_mcs_tbpf_scream_healpix9.yml'
+config_file="${repo_dir}/config/config_mcs_tbpf_scream_healpix9.yml"
 # Quicklook/animation output directories
-quicklook_dir='/pscratch/sd/w/wcmca1/scream-cess-healpix/mcs_tracking_hp9/quicklooks/'
-animation_dir='/pscratch/sd/w/wcmca1/scream-cess-healpix/mcs_tracking_hp9/animation/'
+quicklook_dir='/path/to/mcs_tracking_hp9/quicklooks/'
+animation_dir='/path/to/mcs_tracking_hp9/animation/'
 animation_filename=${animation_dir}mcs_tbpf_${start_date}_${end_date}.mp4
 # Tracking pixel-level time format
 time_format='yyyymodd_hhmmss'
-# Plotting code
-code_name='/global/homes/f/feng045/program/PyFLEXTRKR-dev/visualization/plot_mcs_tracks.py'
+# Plotting code: in the repository, found from the location of this script (so it runs from any folder)
+code_name=${repo_dir}/visualization/plot_mcs_tracks.py
 
 # Make quicklook plots
 echo 'Making quicklook plots ...'

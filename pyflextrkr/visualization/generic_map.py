@@ -16,13 +16,12 @@ import xarray as xr
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
-import cartopy.feature as cfeature
 from cartopy.mpl.ticker import LongitudeFormatter, LatitudeFormatter
 from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
 import warnings
 warnings.filterwarnings("ignore")
 from pyflextrkr.visualization.mapcore import (
-    get_projections, set_map_domain, projection_key, in_map_extent, fit_colorbars_to_maps, lat_labels_on_boundary,
+    get_projections, set_map_domain, add_map_features, projection_key, in_map_extent, fit_colorbars_to_maps, lat_labels_on_boundary,
 )
 from pyflextrkr.visualization.masks import make_perimeter_structure, label_perimeter, calc_track_center
 from pyflextrkr.visualization.pixelio import get_data_extent, find_subset_window, make_figure_name
@@ -91,7 +90,6 @@ def plot_map(pixel_dict, plot_info, map_info, track_dict):
     tracknumber_fontsize = plot_info['tracknumber_fontsize']
     trackpath_linewidth = plot_info['trackpath_linewidth']
     trackpath_color = plot_info['trackpath_color']
-    map_edgecolor = plot_info['map_edgecolor']
     map_resolution = plot_info['map_resolution']
     timestr = plot_info['timestr']
     figname = plot_info['figname']
@@ -127,7 +125,6 @@ def plot_map(pixel_dict, plot_info, map_info, track_dict):
     lat_range = map_info.get('lat_range', None)
     grid_linewidth = map_info.get('grid_linewidth', 0.5)
     grid_alpha = map_info.get('grid_alpha', None)
-    land_linewidth = plot_info.get('land_linewidth', 1)
     is_platecarree = projection_key(projection) == 'platecarree'
     extent_xy = map_info.get('map_extent_xy', None)       # the domain in projected coordinates (the data, no --extent)
     map_aspect = plot_info.get('map_aspect', 'auto')     # 'equal': the map keeps its shape, 'auto': it fills its cell
@@ -143,10 +140,6 @@ def plot_map(pixel_dict, plot_info, map_info, track_dict):
         map_extent, projection, map_info.get('central_longitude'), map_info.get('central_latitude'),
         map_info.get('standard_parallels'),
     )
-    land = cfeature.NaturalEarthFeature('physical', 'land', map_resolution)
-    borders = cfeature.NaturalEarthFeature('cultural', 'admin_0_boundary_lines_land', map_resolution)
-    states = cfeature.NaturalEarthFeature('cultural', 'admin_1_states_provinces_lakes', map_resolution)
-    rivers = cfeature.NaturalEarthFeature('physical', 'rivers_lake_centerlines', map_resolution)
 
     # Set up figure
     mpl.rcParams['font.size'] = fontsize
@@ -164,14 +157,8 @@ def plot_map(pixel_dict, plot_info, map_info, track_dict):
     else:
         # the map keeps its shape (the axes shrink to fit its cell of the figure); the colorbar follows it (fit_colorbars_to_maps)
         ax1.set_aspect('equal', adjustable='box')
-    if draw_land == True:
-        ax1.add_feature(land, facecolor='none', edgecolor=map_edgecolor, linewidth=land_linewidth, zorder=3)
-    if draw_border == True:
-        ax1.add_feature(borders, edgecolor=map_edgecolor, facecolor='none', linewidth=0.8, zorder=3)
-    if draw_state == True:
-        ax1.add_feature(states, edgecolor=map_edgecolor, facecolor='none', linewidth=0.8, zorder=3)
-    if draw_river == True:
-        ax1.add_feature(rivers, edgecolor=map_edgecolor, facecolor='none', linewidth=0.5, zorder=3)
+    add_map_features(ax1, dict(land=draw_land, border=draw_border, state=draw_state, river=draw_river),
+                     map_info.get('map_feature_styles'), map_resolution)
     # Grid lines
     gl = ax1.gridlines(crs=data_proj, draw_labels=True, linestyle='--', linewidth=grid_linewidth, alpha=grid_alpha)
     gl.right_labels = False

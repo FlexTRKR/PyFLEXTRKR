@@ -1,4 +1,4 @@
-"""
+r"""
 Animations from PNG files with ffmpeg: an mp4 (H.264) with the settings of the make_*_animation.py wrappers, and small GIFs
 for documents. The functions work on any PNG files, not only on those of the plot scripts:
 
@@ -17,15 +17,15 @@ The settings (the same names in the wrappers and in the command line):
     video_preset   x264 preset; None = no -preset option (the x264 default, medium)
 
 The same mp4 by hand, for the PNG files frames/mcs_*.png (2 PNG files per second, written at 10 frames per second):
-    ffmpeg -framerate 2 -pattern_type glob -i 'frames/mcs_*.png' -vf "scale='min(1920,trunc(iw/2)*2)':-2" \\
+    ffmpeg -framerate 2 -pattern_type glob -i 'frames/mcs_*.png' -vf "scale='min(1920,trunc(iw/2)*2)':-2" \
            -c:v libx264 -r 10 -crf 24 -pix_fmt yuv420p -y movie.mp4
 (-framerate before -i = PNG files per second; the scale filter keeps the width at 1920 pixels or less and makes both sizes even,
 which yuv420p needs; -r after the codec = frames per second of the file, each PNG is repeated; -crf = quality; yuv420p = plays everywhere)
 and the GIF from it (2 frames per second, 480 pixels wide, one palette of 256 colors, no dither):
-    ffmpeg -i movie.mp4 -vf "fps=2,scale='min(480,iw)':-1:flags=lanczos,split[a][b];[a]palettegen=max_colors=256:stats_mode=full[p];[b][p]paletteuse=dither=none" \\
+    ffmpeg -i movie.mp4 -vf "fps=2,scale='min(480,iw)':-1:flags=lanczos,split[a][b];[a]palettegen=max_colors=256:stats_mode=full[p];[b][p]paletteuse=dither=none" \
            -loop 0 -y movie.gif
 
-Called by: visualization/make_mcs_animation.py and make_cell_animation.py (through mcs_animation.py), visualization/pngs_to_animation.py.
+Called by: visualization/examples/make_mcs_animation*.py and make_cell_animation_nexrad.py (through mcs_animation.py and cell_animation.py), visualization/pngs_to_animation.py.
 Calls: ffmpeg, pandas.
 """
 import argparse

@@ -5,8 +5,8 @@ makes from the mp4 (animation.make_gif), its size and its SSIM / PSNR against th
 GIF). Look at the colorbars and the gray shades of the GIFs too (--keep): a GIF has 256 colors at most.
 
 Usage (a compute node is not needed, the GIFs are small):
->python compare_gif_settings.py /path/to/animation.mp4 --width 560 --fps 2
->python compare_gif_settings.py animation.mp4 --width 800 --fps 2 --settings global/256/none global/256/sierra2_4a frame/256/bayer:bayer_scale=3 --keep
+    python compare_gif_settings.py /path/to/animation.mp4 --width 560 --fps 2
+    python compare_gif_settings.py animation.mp4 --width 800 --fps 2 --settings global/256/none global/256/sierra2_4a frame/256/bayer:bayer_scale=3 --keep
 
 --settings: palette/colors/dither[/diff_mode], palette = global (one palette for all frames) or frame (a palette for each
 frame); dither as in the ffmpeg filter paletteuse (none, bayer:bayer_scale=N, sierra2_4a, floyd_steinberg, ...); diff_mode

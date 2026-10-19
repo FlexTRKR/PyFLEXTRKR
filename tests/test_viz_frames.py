@@ -21,7 +21,7 @@ import cartopy.crs as ccrs
 from cartopy.geodesic import Geodesic
 
 import viz_synthetic as S
-from pyflextrkr.visualization import mcs_cli, cell_cli, generic_cli, cartesian_cli, mcs_map, cell_map
+from pyflextrkr.visualization import mcs_cli, cell_cli, generic_cli, cartesian_cli, mcs_map, cell_map, generic_map
 
 SMALL = ['--draw_land', '0', '--dpi', '50']      # small pictures, no coastline files
 ONE_FRAME = ('2025-06-01T01', '2025-06-01T02')   # the 01:30 frame only
@@ -464,3 +464,28 @@ def test_old_command_through_its_stub_defaults(run, capsys):
     assert [os.path.basename(f) for f in new] == [os.path.basename(f) for f in stub]
     for a, b in zip(stub, new):
         assert np.array_equal(load(a), load(b))
+
+
+#-----------------------------------------------------------------------
+@pytest.mark.parametrize("module, key, family, argv, per_frame", [
+    (mcs_cli, 'mcs', mcs_map, ['--product', 'tbpf'], 2),                      # 2 panels: the same style on both maps
+    (mcs_cli, 'mcs', mcs_map, ['--product', 'tbze', '--panels', '1'], 1),
+    (mcs_cli, 'mcs', mcs_map, ['--product', 'tb'], 1),
+    (cell_cli, 'cell', cell_map, [], 1),
+    (generic_cli, 'mcs', generic_map, ['--field_varname', 'tb', '--levels', '200', '300', '5', '--cbticks', '200', '300', '20'], 1),
+], ids=['mcs_2panel', 'mcs_1panel', 'mcs_tb', 'cell', 'generic'])
+def test_the_map_feature_options_reach_every_map(run, monkeypatch, module, key, family, argv, per_frame):
+    """--draw_* and the style options of the map features arrive at every map of a frame (both panels of a 2-panel figure)."""
+    recorded = []
+    monkeypatch.setattr(family, 'add_map_features', lambda ax, draw, styles, resolution: recorded.append((dict(draw), styles, resolution)))
+    options = ['--dpi', '50', '--draw_land', '1', '--draw_border', '1', '--draw_state', '0', '--map_resolution', '110m',
+               '--land_color', 'red', '--land_linewidth', '3', '--border_alpha', '0.5', '--river_color', 'blue'] + argv
+    run(module, key, options, period=ONE_FRAME)
+    assert len(recorded) == per_frame
+    for draw, styles, resolution in recorded:
+        assert (draw['land'], draw['border'], draw['state']) == (True, True, False) and resolution == '110m'
+        assert styles['land'] == dict(color='red', linewidth=3.0, alpha=1.0)
+        default = 'k' if module is mcs_cli else 'gray'                      # the MCS maps are black, the other maps gray
+        assert styles['border'] == dict(color=default, linewidth=0.8, alpha=0.5)
+        assert styles['state'] == dict(color=default, linewidth=0.8, alpha=1.0)
+        assert styles['river'] == dict(color='blue', linewidth=0.8, alpha=1.0)

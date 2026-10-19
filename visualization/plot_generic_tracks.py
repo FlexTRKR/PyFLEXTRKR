@@ -7,8 +7,8 @@ Replaces Analysis/plot_subset_generic_tracks_demo.py and plot_subset_psi_tracks_
 docs/visualization/inventory.md).
 
 Usage:
->python plot_generic_tracks.py -s STARTDATE -e ENDDATE -c CONFIG.yml
->python plot_generic_tracks.py -s STARTDATE -e ENDDATE -c CONFIG.yml --cmap gist_ncar --levels 0 70 5 --cbticks 0 70 10 --cblabel 'Reflectivity (dBZ)'
+    python plot_generic_tracks.py -s STARTDATE -e ENDDATE -c CONFIG.yml
+    python plot_generic_tracks.py -s STARTDATE -e ENDDATE -c CONFIG.yml --cmap gist_ncar --levels 0 70 5 --cbticks 0 70 10 --cblabel 'Reflectivity (dBZ)'
 
 Required arguments:
 -s, --start           Start time (format: YYYY-mm-ddTHH:MM:SS)

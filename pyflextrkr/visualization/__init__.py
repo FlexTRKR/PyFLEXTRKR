@@ -24,7 +24,9 @@ Module map (a family = one kind of plot; each family has a plot module and a com
     pixelio.py     reading and subsetting a pixel-level file, figure names
     runner.py      the loop over the pixel-level files, serial or on Dask workers
     animation.py   ffmpeg: mp4 / GIF from the PNG files
-    mcs_animation.py  the MCS animation of a wrapper script (visualization/make_mcs_animation.py and examples/): PNG files, mp4, GIF
+    mcs_animation.py  the MCS animation of a wrapper script (visualization/examples/make_mcs_animation*.py): PNG files, mp4, GIF
+    cell_animation.py the cell animation of a wrapper script (visualization/examples/make_cell_animation_nexrad.py): PNG files, mp4, GIF
+    wrapper_common.py what the two animation libraries share: the --set NAME=VALUE overrides, the default output folder (next to the tracking output)
     cli_common.py  the command-line arguments that all families share
     legacy.py      the defaults of the old Analysis/plot_subset_*.py scripts (used by the stubs that keep them working)
 

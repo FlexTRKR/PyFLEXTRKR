@@ -10,7 +10,7 @@ that a track continues), no halo and no PF diameter circles (too small to see at
 It is the 2-panel `tbpf` map of [mcs_maps.md](mcs_maps.md) with the map options of [options.md](options.md): `--projection Robinson --central_longitude 225
 --lat_range -60 60`, the track style options (`--track_marker_size 4 --track_text_size 7 --track_text_alpha 0.6`, no `--track_halo_color`), `--show_pfdiam 0`,
 `--show_track_numbers 1 0` (numbers on panel (a) only), a larger `--fontsize` and `--periodic_perimeter x`.
-[`visualization/make_mcs_animation.py`](../../visualization/make_mcs_animation.py) has these settings as its defaults.
+[`visualization/examples/make_mcs_animation.py`](../../visualization/examples/make_mcs_animation.py) has these settings as its defaults.
 
 - [Data](#data)
 - [The config file](#the-config-file)
@@ -67,13 +67,13 @@ title (`--title_prefix`), and the seam of the map at 45E (the edge of the Robins
 
 ```bash
 # a compute node: 32 workers, one frame per task (the frames are independent); the parameters are at the top of the file
-python visualization/make_mcs_animation.py --set start_date=2025-01-01T00 --set end_date=2025-01-03T00 --set n_workers=32
+python visualization/examples/make_mcs_animation.py --set start_date=2025-01-01T00 --set end_date=2025-01-03T00 --set n_workers=32 --set fig_root=/path/to/figures/
 ```
 
 The wrapper makes the PNG files `fig_root/quicklooks_2panel_tbpf/2025/mcs_tbpf_YYYYMMDD_HHMMSS.png` and the mp4
 `fig_root/animations_2panel_tbpf/mcs_tbpf_2025-01-01_2025-01-03.mp4` (the video settings: `playback_fps = 2` PNG files per second, which is 2 hours of data per second, so the 2 days take 24 s;
 written at 10 frames per second, `video_quality = 24`, at most 1920 pixels wide (the PNG files are 2800), x264 default preset: [animations.md](animations.md)). `--set run_ffmpeg=false` makes the PNG files only; `--set run_plotting=false`
-makes the mp4 from existing PNG files; `--set gif_width=900 --set gif_duration=8` also makes a GIF of the first 8 seconds; `--set NAME=VALUE` changes any parameter of the block (`--set lat_range=[-30,30]`, `--set track_halo_color=white`,
+makes the mp4 from existing PNG files; `--set gif_width=900 --set gif_duration=8` also makes a GIF of the first 8 seconds (no GIF by default); `--set NAME=VALUE` changes any parameter of the block (`--set lat_range=[-30,30]`, `--set track_halo_color=white`,
 `--set show_track_numbers=[true,true]`, `--set fontsize=16`, `--set show_pfdiam=true`, `--set data_type=tb`). The 2 days (48 frames, `n_workers=32`) took 1.5 minutes
 on one node including the start of the Dask workers and the mp4 (11.8 MB at the default CRF 24, 16.3 MB at CRF 20).
 

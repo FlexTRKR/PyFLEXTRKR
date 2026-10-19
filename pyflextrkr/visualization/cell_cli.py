@@ -8,9 +8,9 @@ circles and azimuth lines, and optionally the terrain, outlines in one color per
 cells of the tracks that live long enough, and cities and other radars.
 
 Usage:
->python plot_cell_tracks.py -s STARTDATE -e ENDDATE -c CONFIG.yml --radar_lat LAT --radar_lon LON
+    python plot_cell_tracks.py -s STARTDATE -e ENDDATE -c CONFIG.yml --radar_lat LAT --radar_lon LON
 
-Called by: visualization/plot_cell_tracks.py, visualization/make_cell_animation.py (main(argv=[...])), and the stubs in
+Called by: visualization/plot_cell_tracks.py, cell_animation.py (main(argv=[...])), and the stubs in
 Analysis/ that keep the old plot_subset_cell_tracks_*.py commands working (main(legacy_name=...)).
 Calls: cli_common (arguments), trackstats.get_cell_track_stats, runner.run_frames(cell_map.work_for_time_loop).
 """
@@ -27,6 +27,7 @@ from pyflextrkr.ft_utilities import load_config, subset_files_timerange
 from pyflextrkr.visualization import cli_common, legacy
 from pyflextrkr.visualization.mapcore import (
     projection_key, extent_aspect, panel_fractions, figsize_for_aspect, check_lat_range, auto_map_domain, min_figure_height,
+    map_feature_styles,
 )
 from pyflextrkr.visualization.runner import run_frames
 from pyflextrkr.visualization.trackstats import get_cell_track_stats
@@ -232,7 +233,6 @@ def main(argv=None, legacy_name=None):
         'lw_centroid': lw_centroid,    # track path line width
         'radii': np.arange(20,101,20),  # radii for the radar range rings [km]
         'azimuths': np.arange(0,361,90),   # azimuth angles for HSRHI scans [degree]
-        'map_edgecolor': 'k',
         'map_resolution': map_resolution,
         'figbasename': figbasename,
         'figname_type': figname_type,
@@ -254,8 +254,6 @@ def main(argv=None, legacy_name=None):
     plot_info['title_prefix'] = title_prefix
     if args_dict.get('dpi') is not None:
         plot_info['dpi'] = args_dict['dpi']
-    if args_dict.get('land_linewidth') is not None:
-        plot_info['land_linewidth'] = args_dict['land_linewidth']
     if args_dict.get('perim_color') is not None:
         plot_info['perim_color'] = args_dict['perim_color']
     if args_dict.get('perim_alpha') is not None:
@@ -283,6 +281,7 @@ def main(argv=None, legacy_name=None):
         'draw_border': bool(draw_border),
         'draw_state': bool(draw_state),
         'draw_river': bool(draw_river),
+        'map_feature_styles': map_feature_styles(args_dict),
         'projection': projection,
         'central_longitude': args_dict.get('central_longitude'),
         'central_latitude': args_dict.get('central_latitude'),

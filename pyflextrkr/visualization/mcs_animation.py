@@ -4,23 +4,23 @@ optionally a GIF (animation.py).
 
 The wrapper scripts keep the parameters as variables at the top of the file, so you can edit them or set them on the command
 line (--set NAME=VALUE), and call main(globals()):
-    visualization/make_mcs_animation.py                           all parameters, the global Robinson map as default
+    visualization/examples/make_mcs_animation.py                  all parameters, the global Robinson map as default
     visualization/examples/make_mcs_animation_wrf_tbze.py         WRF Tb + radar reflectivity on a Lambert conformal map
     visualization/examples/make_mcs_animation_imerg_1panel.py     IMERG over South America, 1 panel
     visualization/examples/make_mcs_animation_himawari_tb.py      Himawari Tb only
 A wrapper sets the parameters it needs; DEFAULTS below lists all of them (a parameter left out has the value listed there).
+The PNG files and the animation go to {root_path}/quicklooks_trackpaths/ of the tracking config file (the folder of the demo scripts)
+unless fig_root, or figdir and animation_dir, are set.
 
 Called by: the wrapper scripts above. Calls: mcs_cli.main (the PNG frames), animation.make_animation (mp4 and GIF with ffmpeg).
 """
-import argparse
-import datetime
-import inspect
 import os
 import sys
-import yaml
 from pyflextrkr.visualization.cli_common import options_to_argv, layout_name
 from pyflextrkr.visualization.mcs_cli import main as plot_mcs_tracks
 from pyflextrkr.visualization.animation import frames_in_range, make_animation
+from pyflextrkr.visualization import wrapper_common
+from pyflextrkr.visualization.wrapper_common import to_plain
 
 # All parameters and their values when a wrapper does not set them (None: the default of plot_mcs_tracks.py)
 DEFAULTS = dict(
@@ -45,7 +45,10 @@ DEFAULTS = dict(
     projection=None, central_longitude=None, central_latitude=None, standard_parallels=None, lat_range=None,
     periodic_perimeter=None,                              # 'x': the MCS outlines continue across the edges of a global domain
     map_aspect=None,                                      # 'equal' (default) or 'auto'
-    draw_border=False, draw_state=False, draw_river=False, land_linewidth=None, map_resolution=None,
+    draw_border=None, draw_state=None, draw_river=None, map_resolution=None,       # None: the default of plot_mcs_tracks.py (no)
+    # Style of each map feature (None: gray, 0.8 points, opaque, the same in every map): color, line width [points], transparency
+    land_color=None, land_linewidth=None, land_alpha=None, border_color=None, border_linewidth=None, border_alpha=None,
+    state_color=None, state_linewidth=None, state_alpha=None, river_color=None, river_linewidth=None, river_alpha=None,
     # Style of the tracks (None: the default look)
     track_color=None, track_lw=None, track_ls=None, track_alpha=None, track_marker=None, track_marker_size=None,
     track_text_size=None, track_text_color=None, track_text_alpha=None,
@@ -62,7 +65,9 @@ DEFAULTS = dict(
     # GIF from the mp4 (for READMEs): width in pixels (None: no GIF), frames per second (None: playback_fps), the part of the mp4
     # (start and duration in seconds, None: to the end), colors, dither
     gif_width=None, gif_fps=None, gif_start=0.0, gif_duration=None, gif_colors=256, gif_dither='none',
-    # Output: the PNG files are in figdir, the animation in animation_dir; both default to folders in fig_root
+    # Output: the PNG files are in figdir, the animation in animation_dir. Default (all None): both in {root_path}/quicklooks_trackpaths/ of the
+    # config file (the folder of the demo scripts). fig_root: the PNG files in {fig_root}/quicklooks_{plot_type}_{data_type}/{year}/, the
+    # animation in {fig_root}/animations_{plot_type}_{data_type}/ (for runs whose folder is read-only or that you keep apart)
     fig_root=None, figdir=None, animation_dir=None, fig_basename=None,
 )
 
@@ -71,37 +76,9 @@ DEFAULTS = dict(
 DEPRECATED_NAMES = {'orientation': 'layout', 'input_framerate': 'playback_fps', 'output_framerate': 'video_fps'}
 
 #-----------------------------------------------------------------------
-def to_plain(value):
-    """A date in a yaml value (2025-01-02T00:00) as the string the plot command reads."""
-    if isinstance(value, (datetime.datetime, datetime.date)):
-        return value.isoformat()
-    return value
-
-#-----------------------------------------------------------------------
 def apply_overrides(params, argv=None, description=None):
-    """
-    Set parameters from the command line: --set NAME=VALUE (a value is read as yaml: numbers, true, null, lists). The old names
-    in DEPRECATED_NAMES still work (with a warning when a wrapper still has the variable).
-
-    Args:
-        params: dictionary of the parameters (changed in place)
-        argv: list of strings (default: sys.argv[1:])
-        description: text for --help
-    """
-    ap = argparse.ArgumentParser(description=description or "Make an MCS tracking animation. The parameters are the variables at the top of the script.",
-                                 formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument('--set', action='append', default=[], metavar='NAME=VALUE',
-                    help='set a parameter, e.g. --set start_date=2025-01-02T00 --set n_workers=32 --set lat_range=[-30,30]')
-    for item in ap.parse_args(argv).set:
-        name, sep, value = item.partition('=')
-        if name in DEPRECATED_NAMES:
-            print(f"DeprecationWarning: the parameter {name} is now called {DEPRECATED_NAMES[name]}")
-            name = DEPRECATED_NAMES[name]
-        if not sep or name not in DEFAULTS:
-            sys.exit(f"ERROR: --set {item}: expected NAME=VALUE with NAME one of the parameters of the script "
-                     f"(pyflextrkr.visualization.mcs_animation.DEFAULTS)")
-        params[name] = to_plain(yaml.safe_load(value))
-    return params
+    """Set parameters from the command line, --set NAME=VALUE (wrapper_common.apply_overrides); the old names in DEPRECATED_NAMES still work."""
+    return wrapper_common.apply_overrides(params, DEFAULTS, 'pyflextrkr.visualization.mcs_animation.DEFAULTS', argv, description, DEPRECATED_NAMES)
 
 #-----------------------------------------------------------------------
 def complete_parameters(params):
@@ -129,13 +106,18 @@ def complete_parameters(params):
     if p['fig_basename'] is None:
         p['fig_basename'] = f"mcs_{p['data_type']}_"
     if p['figdir'] is None or p['animation_dir'] is None:
-        if p['fig_root'] is None:
-            raise ValueError("Set fig_root (the folder for the PNG files and the animation) or figdir and animation_dir")
-        root = p['fig_root'].rstrip('/') + '/'
-        if p['figdir'] is None:
-            p['figdir'] = f"{root}quicklooks_{p['plot_type']}_{p['data_type']}/{p['start_year']}/"
-        if p['animation_dir'] is None:
-            p['animation_dir'] = f"{root}animations_{p['plot_type']}_{p['data_type']}/"
+        if p['fig_root'] is not None:
+            root = p['fig_root'].rstrip('/') + '/'
+            if p['figdir'] is None:
+                p['figdir'] = f"{root}quicklooks_{p['plot_type']}_{p['data_type']}/{p['start_year']}/"
+            if p['animation_dir'] is None:
+                p['animation_dir'] = f"{root}animations_{p['plot_type']}_{p['data_type']}/"
+        else:
+            # next to the tracking output of the config file, like the demo scripts
+            folder = wrapper_common.default_output_folder(p['config_file'])
+            wrapper_common.check_writable(folder)
+            p['figdir'] = p['figdir'] or folder
+            p['animation_dir'] = p['animation_dir'] or folder
     return p
 
 #-----------------------------------------------------------------------
@@ -174,7 +156,10 @@ def plot_options(p):
         periodic_perimeter=p['periodic_perimeter'],
         map_aspect=p['map_aspect'],
         map_resolution=p['map_resolution'],
-        land_linewidth=p['land_linewidth'],
+        land_color=p['land_color'], land_linewidth=p['land_linewidth'], land_alpha=p['land_alpha'],
+        border_color=p['border_color'], border_linewidth=p['border_linewidth'], border_alpha=p['border_alpha'],
+        state_color=p['state_color'], state_linewidth=p['state_linewidth'], state_alpha=p['state_alpha'],
+        river_color=p['river_color'], river_linewidth=p['river_linewidth'], river_alpha=p['river_alpha'],
         track_color=p['track_color'],
         track_lw=p['track_lw'],
         track_ls=p['track_ls'],
@@ -210,7 +195,7 @@ def main(params, argv=None, description=None):
         argv: command line (default: sys.argv[1:]), --set NAME=VALUE changes a parameter
         description: text of --help (the docstring of the wrapper)
     """
-    values = {k: v for k, v in params.items() if not k.startswith('_') and not callable(v) and not inspect.ismodule(v)}
+    values = wrapper_common.parameters_of(params)
     apply_overrides(values, argv, description)
     p = complete_parameters(values)
 

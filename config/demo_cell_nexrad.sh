@@ -53,13 +53,21 @@ echo 'Tracking is done.'
 # Make quicklook plots
 echo 'Making quicklook plots ...'
 quicklook_dir=${dir_demo}'/quicklooks_trackpaths/'
+# The options of ../visualization/examples/make_cell_animation_nexrad.py: a square map of 2 x 105 km around the radar on a LambertConformal projection
+# centered on it (round range circles), title, coastlines, country and state borders
 python ../visualization/plot_cell_tracks.py -s '2014-08-07T12' -e '2014-08-07T15' \
-    -c ${config_demo} --radar_lat 29.4719 --radar_lon -95.0787 -p 1 --figsize 8 7 --output ${quicklook_dir}
+    -c ${config_demo} --radar_lat 29.4719 --radar_lon -95.0787 --extent -96.163 -93.994 28.528 30.416 --subset 1 \
+    --projection LambertConformal --central_longitude -95.0787 --central_latitude 29.4719 --standard_parallels 29.4719 \
+    --title_prefix 'NEXRAD (KHGX)' --figsize 8 7.2 --lon_ticks -96 -95.5 -95 -94.5 -94 --lat_ticks 28.5 29 29.5 30 \
+    --draw_land 1 --land_linewidth 1 --draw_border 1 --draw_state 1 --map_resolution 10m --figbasename cell_tracks_ \
+    -p 1 --output ${quicklook_dir}
 echo 'View quicklook plots here: '${quicklook_dir}
 
 # Make animation using ffmpeg
 echo 'Making animations from quicklook plots ...'
-ffmpeg -framerate 4 -pattern_type glob -i ${quicklook_dir}'*.png' -c:v libx264 -r 10 -crf 20 -pix_fmt yuv420p \
+# (the scale filter makes the width and height even, which yuv420p needs: the figure sizes of these plots are not always even)
+ffmpeg -framerate 4 -pattern_type glob -i ${quicklook_dir}'*.png' -vf "scale=trunc(iw/2)*2:trunc(ih/2)*2" \
+    -c:v libx264 -r 10 -crf 20 -pix_fmt yuv420p \
     -y ${quicklook_dir}quicklook_animation.mp4
 echo 'View animation here: '${quicklook_dir}quicklook_animation.mp4
 

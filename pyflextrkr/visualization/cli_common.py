@@ -109,10 +109,14 @@ def add_common_arguments(parser, cartesian=False):
                                  "centered in it and the colorbars follow it); 'auto' stretches the map to fill its panel (the old scripts)")
         parser.add_argument("--map_resolution", help="Map resolution for Natural Earth features ('10m', '50m', '110m')", default='50m')
         parser.add_argument("--draw_land", type=int, default=None, help="Draw coastlines (0:no, 1:yes; default 1, 0 for the cell maps)")
-        parser.add_argument("--land_linewidth", type=float, default=None, help="line width of the coastlines [points] (default: 2 for MCS maps, 1 for the others)")
         parser.add_argument("--draw_border", type=int, help="Draw country borders (0:no, 1:yes; default 0, 1 for the generic maps)", default=None)
         parser.add_argument("--draw_state", type=int, help="Draw state/province borders (0:no, 1:yes; default 0)", default=None)
         parser.add_argument("--draw_river", type=int, help="Draw rivers (0:no, 1:yes)", default=0)
+        # Style of each map feature on its own (default for all four: gray, 0.8 points, opaque; drawn in the order land > border > state > river)
+        for name, label in (('land', 'coastlines'), ('border', 'country borders'), ('state', 'state / province borders'), ('river', 'rivers')):
+            parser.add_argument(f"--{name}_color", default=None, help=f"color of the {label} (default: gray)")
+            parser.add_argument(f"--{name}_linewidth", type=float, default=None, help=f"line width of the {label} [points] (default: 0.8)")
+            parser.add_argument(f"--{name}_alpha", type=float, default=None, help=f"transparency of the {label}, 1 = opaque (default: 1)")
         parser.add_argument("--box", type=float, nargs=4, default=None, metavar=('LON0', 'LON1', 'LAT0', 'LAT1'),
                             help="draw a rectangle (e.g. the domain of a regional plot on a global map)")
         parser.add_argument("--show_legend", type=int, default=1, help="Show the legend (0:no, 1:yes)")

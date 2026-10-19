@@ -1,28 +1,40 @@
 #!/usr/bin/env python
-"""
+r"""
 Make MCS tracking animation
 - Plot the PNG frames: calls main() of pyflextrkr/visualization/mcs_cli.py (the options of plot_mcs_tracks.py)
 - Options to make 1-panel or 2-panel plots
 - Options to plot Tb + Precipitation, Tb + Reflectivity or Tb only
-- Options for the map projection (e.g. a global Robinson map) and the style of the tracks (colors, symbols, halo)
+- Options for the map projection (e.g. a global Robinson map) and the style of the tracks (colors, symbols, halo) and of the map features
 - Create a video animation using FFmpeg (pyflextrkr/visualization/animation.py), and a GIF of it if you set gif_width
 
 The defaults below make the global MCS animation (V3 tracking, Robinson map, 2 days). Edit the parameters, or set them on the
-command line without editing the file:
->python make_mcs_animation.py --set start_date=2025-01-05T00 --set end_date=2025-01-07T00 --set n_workers=32
+command line without editing the file (run it from this folder or give the path of the script):
+    python make_mcs_animation.py --set start_date=2025-01-05T00 --set end_date=2025-01-07T00 --set n_workers=32 --set fig_root=/path/to/figures/
 
-Examples for other data (WRF, IMERG over South America, Himawari) are in examples/make_mcs_animation_*.py. Every parameter
-that is left out of a script has the value in DEFAULTS of pyflextrkr/visualization/mcs_animation.py, where the work is done.
+Examples for other data (WRF, IMERG over South America, Himawari, NEXRAD cells) are in make_mcs_animation_*.py and make_cell_animation_*.py
+next to this file. Every parameter that is left out of a script has the value in DEFAULTS of pyflextrkr/visualization/mcs_animation.py,
+where the work is done.
+
+The PNG files go to {fig_root}/quicklooks_2panel_tbpf/{year}/ and the animation to {fig_root}/animations_2panel_tbpf/. The config file below
+points to the read-only global outputs, so give a fig_root; a run with its own config file and no fig_root puts the figures in
+{root_path}/quicklooks_trackpaths/, like the demo scripts.
+
+The same frames with plot_mcs_tracks.py alone (these are the options of the `Options:` line that this script prints):
+    python ../plot_mcs_tracks.py -s 2025-01-01T00 -e 2025-01-03T00 -c ../../config/config_imerg_global_mcs_v3_2025.yml --product tbpf \
+        --panels 2 --layout top_bottom --track_lookback_days 7 --figsize_x 14 --fontsize 14 --title_prefix "GPM Tb+IMERGv07" \
+        --projection Robinson --central_longitude 225 --lat_range -60 60 --periodic_perimeter x --map_resolution 110m \
+        --track_marker_size 4 --track_text_size 7 --track_text_alpha 0.6 --show_track_numbers 1 0 --show_pfdiam 0 \
+        --figbasename mcs_tbpf_ --output /path/to/figures/quicklooks_2panel_tbpf/2025/
 
 The mp4 of PNG files that are already plotted, with ffmpeg alone (the same file as run_plotting = False gives; a directory or a
-list of PNG files works with `python pngs_to_animation.py FRAMES movie.mp4`, which also makes the GIF):
->ffmpeg -framerate 2 -pattern_type glob -i '/pscratch/sd/f/feng045/waccem/mcs_global/quicklooks_2panel_tbpf/2025/mcs_tbpf_*.png' \\
->       -vf "scale='min(1920,trunc(iw/2)*2)':-2" -c:v libx264 -r 10 -crf 24 -pix_fmt yuv420p -y movie.mp4
+list of PNG files works with `python ../pngs_to_animation.py FRAMES movie.mp4`, which also makes the GIF):
+    ffmpeg -framerate 2 -pattern_type glob -i '/path/to/figures/quicklooks_2panel_tbpf/2025/mcs_tbpf_*.png' \
+        -vf "scale='min(1920,trunc(iw/2)*2)':-2" -c:v libx264 -r 10 -crf 24 -pix_fmt yuv420p -y movie.mp4
   -framerate 2 (before -i): PNG files per second = playback_fps. -vf scale: at most 1920 pixels wide (output_width), never enlarged,
   and even sizes, which yuv420p needs (a PNG file with an odd number of pixels fails without it). -r 10 (after the codec): frames per
   second of the file (video_fps), each PNG file is repeated 5 times. -crf 24: video_quality. -pix_fmt yuv420p: plays in every player.
 The GIF from that mp4, 480 pixels wide, the first 8 s, 2 frames per second, one palette of 256 colors, no dither (gif_width = 480, gif_duration = 8):
->ffmpeg -t 8 -i movie.mp4 -vf "fps=2,scale='min(480,iw)':-1:flags=lanczos,split[a][b];[a]palettegen=max_colors=256:stats_mode=full[p];[b][p]paletteuse=dither=none" -loop 0 -y movie.gif
+    ffmpeg -t 8 -i movie.mp4 -vf "fps=2,scale='min(480,iw)':-1:flags=lanczos,split[a][b];[a]palettegen=max_colors=256:stats_mode=full[p];[b][p]paletteuse=dither=none" -loop 0 -y movie.gif
 
 Author: Zhe Feng | zhe.feng@pnnl.gov
 """
@@ -72,8 +84,8 @@ layout = 'top_bottom'
 # Tracking config file: the global MCS tracking V3 (Feng21) of 2025, in /global/cfs/cdirs/wcm_shr/gsharing/MCS_Global/V3/Feng21/
 # (read-only: the config only points to the outputs, it does not make folders). The track statistics file and the pixel-level
 # files directory come from the config file (trackstats_file = None, pixel_path = None); give them to use others
-config_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'config', 'config_imerg_global_mcs_v3_2025.yml')
-# config_file = "/global/homes/f/feng045/program/pyflex_config/config/config_imerg_mcs_tbpf_2025.yml"
+# Another config file without editing this script: --set config_file=/path/to/config.yml
+config_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', 'config', 'config_imerg_global_mcs_v3_2025.yml')
 trackstats_file = None
 pixel_path = None
 # Days before start_date from which the tracks are drawn (None: 4 days), for long-lived tracks
@@ -108,8 +120,9 @@ periodic_perimeter = 'x'
 draw_border = False  # Draw country borders
 draw_state = False   # Draw state/province borders
 draw_river = False   # Draw rivers (only for data_type='tbpf')
-land_linewidth = 0.8   # Coastline width (None: 2)
 map_resolution = '110m'   # Natural Earth resolution of the coastlines ('110m', '50m', '10m')
+# Style of each feature (None: gray, 0.8 points, opaque, the same in every map): color, line width [points], transparency, for the
+# coastlines (land_), country borders (border_), state borders (state_) and rivers (river_): land_color, land_linewidth, land_alpha, ...
 
 # Style of the tracks (None: the default look). On a global map the clouds matter most: no halo, small numbers that let the
 # clouds show through, a small symbol at the initiation location, no PF diameter circles (too small to see)
@@ -165,9 +178,14 @@ gif_fps = None
 gif_start = 0.0
 gif_duration = None
 
-# Output directories (set the paths for your data): the PNG files go to {fig_root}quicklooks_{plot_type}_{data_type}/{year}/ and the
-# animation to {fig_root}animations_{plot_type}_{data_type}/
-fig_root = "/pscratch/sd/f/feng045/waccem/mcs_global/"
+# Where the PNG frames and the animation go. None (default): both in {root_path}/quicklooks_trackpaths/ of the tracking config file, the folder of the demo
+# script. A path replaces that default: fig_root puts the frames in {fig_root}/quicklooks_.../ and the animation in {fig_root}/animations_.../ (subfolders named
+# after the plot); figdir is the folder of the PNG frames only and animation_dir the folder of the mp4 / GIF only (each one wins over fig_root).
+# Here the config file points to the read-only global outputs, so give a path: --set fig_root=/path/to/figures/ (or edit fig_root). With None the
+# frames would go next to those outputs ({root_path}/quicklooks_trackpaths/), and the script stops if that folder cannot be written.
+fig_root = None
+figdir = None
+animation_dir = None
 
 ###############################################################################################
 # Main execution

@@ -54,7 +54,7 @@ flowchart TB
     direction TB
     subgraph vis["<b style='font-size:26px;color:#111111'>visualization/ (scripts)</b>"]
       PS["<a href='../../visualization/plot_mcs_tracks.py' style='color:inherit;text-decoration:underline dotted'>plot_mcs_tracks.py</a><br/><a href='../../visualization/plot_cell_tracks.py' style='color:inherit;text-decoration:underline dotted'>plot_cell_tracks.py</a><br/><a href='../../visualization/plot_generic_tracks.py' style='color:inherit;text-decoration:underline dotted'>plot_generic_tracks.py</a><br/><a href='../../visualization/plot_cartesian_tracks.py' style='color:inherit;text-decoration:underline dotted'>plot_cartesian_tracks.py</a>"]
-      WR["<a href='../../visualization/make_mcs_animation.py' style='color:inherit;text-decoration:underline dotted'>make_mcs_animation.py</a><br/><a href='../../visualization/make_cell_animation.py' style='color:inherit;text-decoration:underline dotted'>make_cell_animation.py</a><br/>examples/: <a href='../../visualization/examples/make_mcs_animation_wrf_tbze.py' style='color:inherit;text-decoration:underline dotted'>wrf_tbze</a> · <a href='../../visualization/examples/make_mcs_animation_imerg_1panel.py' style='color:inherit;text-decoration:underline dotted'>imerg_1panel</a> · <a href='../../visualization/examples/make_mcs_animation_himawari_tb.py' style='color:inherit;text-decoration:underline dotted'>himawari_tb</a>"]
+      WR["examples/: <a href='../../visualization/examples/make_mcs_animation.py' style='color:inherit;text-decoration:underline dotted'>make_mcs_animation</a> · <a href='../../visualization/examples/make_cell_animation_nexrad.py' style='color:inherit;text-decoration:underline dotted'>cell_nexrad</a> · <a href='../../visualization/examples/make_mcs_animation_wrf_tbze.py' style='color:inherit;text-decoration:underline dotted'>wrf_tbze</a> · <a href='../../visualization/examples/make_mcs_animation_imerg_1panel.py' style='color:inherit;text-decoration:underline dotted'>imerg_1panel</a> · <a href='../../visualization/examples/make_mcs_animation_himawari_tb.py' style='color:inherit;text-decoration:underline dotted'>himawari_tb</a>"]
       PA["<a href='../../visualization/pngs_to_animation.py' style='color:inherit;text-decoration:underline dotted'>pngs_to_animation.py</a><br/>PNG files to mp4, GIF"]
     end
     subgraph old["<b style='font-size:26px;color:#111111'>Analysis/ (old names, stubs)</b>"]
@@ -110,8 +110,7 @@ flowchart TB
 
 Source files: scripts [plot_mcs_tracks.py](../../visualization/plot_mcs_tracks.py), [plot_cell_tracks.py](../../visualization/plot_cell_tracks.py),
 [plot_generic_tracks.py](../../visualization/plot_generic_tracks.py), [plot_cartesian_tracks.py](../../visualization/plot_cartesian_tracks.py);
-wrappers [make_mcs_animation.py](../../visualization/make_mcs_animation.py), [make_cell_animation.py](../../visualization/make_cell_animation.py),
-[examples](../../visualization/examples), [pngs_to_animation.py](../../visualization/pngs_to_animation.py); command lines [mcs_cli.py](../../pyflextrkr/visualization/mcs_cli.py), [cell_cli.py](../../pyflextrkr/visualization/cell_cli.py),
+wrappers [examples](../../visualization/examples) ([make_mcs_animation.py](../../visualization/examples/make_mcs_animation.py), [make_cell_animation_nexrad.py](../../visualization/examples/make_cell_animation_nexrad.py), ...), [pngs_to_animation.py](../../visualization/pngs_to_animation.py); command lines [mcs_cli.py](../../pyflextrkr/visualization/mcs_cli.py), [cell_cli.py](../../pyflextrkr/visualization/cell_cli.py),
 [generic_cli.py](../../pyflextrkr/visualization/generic_cli.py), [cartesian_cli.py](../../pyflextrkr/visualization/cartesian_cli.py);
 plot modules [mcs_map.py](../../pyflextrkr/visualization/mcs_map.py), [cell_map.py](../../pyflextrkr/visualization/cell_map.py),
 [generic_map.py](../../pyflextrkr/visualization/generic_map.py), [cartesian_map.py](../../pyflextrkr/visualization/cartesian_map.py); building blocks
@@ -195,17 +194,18 @@ Source files: [plot_mcs_tracks.py](../../visualization/plot_mcs_tracks.py), [mcs
 ## Wrappers (animations) and the old `Analysis/` scripts
 
 ```
-visualization/make_mcs_animation.py              parameter block at the top (or --set NAME=VALUE): the global Robinson map
+visualization/examples/make_mcs_animation.py     parameter block at the top (or --set NAME=VALUE): the global Robinson map
 visualization/examples/make_mcs_animation_*.py   the same for the demo data (WRF Tb + reflectivity, IMERG 1 panel, Himawari Tb only)
 └─ mcs_animation.main(globals())                 the parameters (DEFAULTS for those a script leaves out) -> the plot options
    ├─ cli_common.options_to_argv(options)        the parameters -> the list of arguments
    ├─ mcs_cli.main(argv)                         the same chain as above: one PNG per time
    └─ animation.frames_in_range / make_animation           the PNG files of the period -> mp4 (make_mp4, ffmpeg) -> GIF (make_gif)
 
-visualization/make_cell_animation.py             parameter block at the top (or --set NAME=VALUE)
-├─ cli_common.options_to_argv(options)
-├─ cell_cli.main(argv)
-└─ animation.frames_in_range / animation.make_animation
+visualization/examples/make_cell_animation_nexrad.py   parameter block at the top (or --set NAME=VALUE): the NEXRAD demo
+└─ cell_animation.main(globals())                the parameters (DEFAULTS) -> the plot options; fig_root None: {root_path}/quicklooks_trackpaths/
+   ├─ cli_common.options_to_argv(options)
+   ├─ cell_cli.main(argv)
+   └─ animation.frames_in_range / animation.make_animation
 
 visualization/pngs_to_animation.py               PNG files that are already plotted (a directory, a pattern, a list)
 └─ animation.main(argv)                          -> make_animation: mp4 (and GIF); --print_command: the plain ffmpeg commands
@@ -248,7 +248,7 @@ Typical steps in the editor: open `visualization/plot_mcs_tracks.py` -> *Go to D
 | change how the MCS outline is computed | `label_perimeter` in `masks.py` |
 | change which tracks are drawn for a period | `get_*_track_stats` in `trackstats.py`; `--track_lookback_days`; `dt_thres` in `main()` |
 | change the halo | `halo_effects` in `trackdraw.py` |
-| change the animation (frame rate, size, quality, GIF) | the parameter block of `make_mcs_animation.py` / `examples/make_mcs_animation_*.py` / `make_cell_animation.py`; `DEFAULTS` of the parameters in `mcs_animation.py`; `make_mp4`, `make_gif`, `make_animation` in `animation.py` (the settings and their tests: [animations.md](animations.md)) |
+| change the animation (frame rate, size, quality, GIF) | the parameter block of `examples/make_mcs_animation*.py` / `examples/make_cell_animation_nexrad.py`; `DEFAULTS` of the parameters in `mcs_animation.py` / `cell_animation.py`; `make_mp4`, `make_gif`, `make_animation` in `animation.py` (the settings and their tests: [animations.md](animations.md)) |
 | change how frames are run in parallel | `run_frames` in `runner.py` |
 | restore a default of an old command | `legacy.py` |
 

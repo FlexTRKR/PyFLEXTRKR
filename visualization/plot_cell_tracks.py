@@ -8,7 +8,7 @@ Replaces Analysis/plot_subset_cell_tracks_demo.py and plot_subset_cell_tracks_ET
 docs/visualization/inventory.md).
 
 Usage:
->python plot_cell_tracks.py -s STARTDATE -e ENDDATE -c CONFIG.yml --radar_lat LAT --radar_lon LON
+    python plot_cell_tracks.py -s STARTDATE -e ENDDATE -c CONFIG.yml --radar_lat LAT --radar_lon LON
 
 Required arguments:
 -s, --start           Start time (format: YYYY-mm-ddTHH:MM:SS)

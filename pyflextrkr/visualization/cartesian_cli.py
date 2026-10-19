@@ -7,8 +7,8 @@ Plots the tracks of an idealized or cloud-resolving simulation domain without a 
 (--product field).
 
 Usage:
->python plot_cartesian_tracks.py -s STARTDATE -e ENDDATE -c CONFIG.yml --extent "0. 1500 0. 1500"
->python plot_cartesian_tracks.py -s STARTDATE -e ENDDATE -c CONFIG.yml --product field --field_varname cp_intensity
+    python plot_cartesian_tracks.py -s STARTDATE -e ENDDATE -c CONFIG.yml --extent "0. 1500 0. 1500"
+    python plot_cartesian_tracks.py -s STARTDATE -e ENDDATE -c CONFIG.yml --product field --field_varname cp_intensity
 
 Called by: visualization/plot_cartesian_tracks.py, and the stubs in Analysis/ that keep the old plot_subset_tbpf_demo_pbc.py,
 plot_subset_tbpf_tracks_pinacles_pbc.py and plot_subset_coldpool_tracks_nomap.py commands working (main(legacy_name=...)).

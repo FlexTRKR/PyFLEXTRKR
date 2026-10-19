@@ -12,7 +12,7 @@ python visualization/plot_generic_tracks.py -s START -e END -c CONFIG.yml [--fie
 
 Pixel-level files: `time`, `longitude`, `latitude`, the field, `cloudtracknumber`; track statistics: `meanlon`, `meanlat`, `base_time`,
 `track_duration` of the `finalstats_*.nc` file (or `trackstats_*.nc`) of the config. Defaults of this family: `dpi` 200, font size 13, coastlines
-and country borders on, tracks of the previous 4 days, track path color blueviolet, `--workers` from `nprocesses` of the config. The map keeps
+and country borders on (gray, 0.8 points like in every map, see [options.md](options.md)), tracks of the previous 4 days, track path color blueviolet, `--workers` from `nprocesses` of the config. The map keeps
 its true shape (`--map_aspect equal`, the colorbar follows it); the old stretched look is `--map_aspect auto`.
 
 ## Options of this family

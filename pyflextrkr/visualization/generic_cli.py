@@ -1,4 +1,4 @@
-"""
+r"""
 Command line of the generic feature track maps (visualization/plot_generic_tracks.py): arguments, the plotting information,
 the tracks and files of the period, and the loop over the pixel-level files.
 
@@ -7,8 +7,8 @@ tracked 2D field. The field is `field_varname` of the tracking config; levels, c
 are for the Z500 anomaly demo).
 
 Usage:
->python plot_generic_tracks.py -s STARTDATE -e ENDDATE -c CONFIG.yml
->python plot_generic_tracks.py -s STARTDATE -e ENDDATE -c CONFIG.yml --cmap RdBu_r --levels -4 4 0.2 --cbticks -4 4 1 \
+    python plot_generic_tracks.py -s STARTDATE -e ENDDATE -c CONFIG.yml
+    python plot_generic_tracks.py -s STARTDATE -e ENDDATE -c CONFIG.yml --cmap RdBu_r --levels -4 4 0.2 --cbticks -4 4 1 \
         --cblabel 'Z500 Anomaly (m$^{2}$ s$^{-1}$)'
 
 Called by: visualization/plot_generic_tracks.py, and the stubs in Analysis/ that keep the old plot_subset_generic_tracks_demo.py
@@ -28,6 +28,7 @@ from pyflextrkr.ft_utilities import load_config, subset_files_timerange
 from pyflextrkr.visualization import cli_common, legacy
 from pyflextrkr.visualization.mapcore import (
     projection_key, panel_fractions, figsize_for_aspect, check_lat_range, auto_map_domain, min_figure_height,
+    map_feature_styles,
 )
 from pyflextrkr.visualization.runner import run_frames
 from pyflextrkr.visualization.trackstats import get_generic_track_stats
@@ -146,7 +147,6 @@ def main(argv=None, legacy_name=None):
         'perim_width': args_dict.get('perim_width', 1),  # width of the track feature perimeter (number of pixels)
         'trackpath_linewidth': 1.5, # track path line width
         'trackpath_color': 'blueviolet',    # track path color
-        'map_edgecolor': 'gray',    # background map edge color
         'map_resolution': args_dict.get('map_resolution'),   # background map resolution ('110m', '50m', 10m')
         'figsize': figsize,
         'figbasename': figbasename,
@@ -157,8 +157,6 @@ def main(argv=None, legacy_name=None):
         'time_label_format': args_dict.get('time_label_format'),
         'figname_time_format': args_dict.get('figname_time_format'),
     }
-    if args_dict.get('land_linewidth') is not None:
-        plot_info['land_linewidth'] = args_dict['land_linewidth']
     if args_dict.get('dpi') is not None:
         plot_info['dpi'] = args_dict['dpi']
     if args_dict.get('fontsize') is not None:
@@ -178,6 +176,7 @@ def main(argv=None, legacy_name=None):
         'draw_border': bool(draw_border),
         'draw_state': bool(draw_state),
         'draw_river': bool(draw_river),
+        'map_feature_styles': map_feature_styles(args_dict),
         'projection': projection,
         'central_longitude': args_dict.get('central_longitude'),
         'central_latitude': args_dict.get('central_latitude'),

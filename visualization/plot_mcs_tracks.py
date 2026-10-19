@@ -7,8 +7,8 @@ Replaces Analysis/plot_subset_tbpf_mcs_tracks_demo.py, ..._1panel_demo.py, plot_
 ..._1panel_demo.py and plot_subset_tb_mcs_tracks_demo.py (those names still work, see docs/visualization/inventory.md).
 
 Usage:
->python plot_mcs_tracks.py -s STARTDATE -e ENDDATE -c CONFIG.yaml --layout top_bottom
->python plot_mcs_tracks.py -s STARTDATE -e ENDDATE -c CONFIG.yaml --product tbze --panels 1
+    python plot_mcs_tracks.py -s STARTDATE -e ENDDATE -c CONFIG.yaml --layout top_bottom
+    python plot_mcs_tracks.py -s STARTDATE -e ENDDATE -c CONFIG.yaml --product tbze --panels 1
 
 Required arguments:
 -s, --start           Start time (format: YYYY-mm-ddTHH:MM:SS)

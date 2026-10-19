@@ -6,10 +6,10 @@ Plots MCS tracks on Tb snapshots with a second field (precipitation 'tbpf', rada
 on 2 panels (--layout top_bottom: panel (a) above panel (b); --layout left_right: left + right) or 1 panel (--panels 1).
 
 Usage:
->python plot_mcs_tracks.py -s STARTDATE -e ENDDATE -c CONFIG.yaml --layout top_bottom
->python plot_mcs_tracks.py -s STARTDATE -e ENDDATE -c CONFIG.yaml --product tbze --panels 1
+    python plot_mcs_tracks.py -s STARTDATE -e ENDDATE -c CONFIG.yaml --layout top_bottom
+    python plot_mcs_tracks.py -s STARTDATE -e ENDDATE -c CONFIG.yaml --product tbze --panels 1
 
-Called by: visualization/plot_mcs_tracks.py, visualization/make_mcs_animation.py (main(argv=[...])), and the stubs in
+Called by: visualization/plot_mcs_tracks.py, mcs_animation.py (main(argv=[...])), and the stubs in
 Analysis/ that keep the old plot_subset_tb*_mcs_tracks_*.py commands working (main(legacy=...)).
 Calls: cli_common (arguments), trackstats.get_mcs_track_stats, runner.run_frames(mcs_map.work_for_time_loop).
 """
@@ -27,6 +27,7 @@ from pyflextrkr.visualization import cli_common, legacy
 from pyflextrkr.visualization.colors import truncate_colormap, concat_cmaps
 from pyflextrkr.visualization.mapcore import (
     projection_key, extent_aspect, panel_fractions, figsize_for_aspect, check_lat_range, auto_map_domain, figure_margins,
+    map_feature_styles, MCS_MAP_FEATURE_COLOR,
 )
 from pyflextrkr.visualization.runner import run_frames
 from pyflextrkr.visualization.trackstats import get_mcs_track_stats
@@ -155,7 +156,7 @@ def main(argv=None, legacy_name=None):
         # tn_cmap = cc.cm["glasbey_light"]
         # tn_cmap = cc.cm["glasbey"]
         titles = {'tb_title': '(a) IR Brightness Temperature', 'var2_title': '(b) Precipitation (Tracked MCSs Shaded)'}
-        extra = {'dpi': 200, 'fontsize': 10, 'tracknumber_fontsize': 12, 'perim_thick': 10, 'map_edgecolor': 'k'}
+        extra = {'dpi': 200, 'fontsize': 10, 'tracknumber_fontsize': 12, 'perim_thick': 10}
     elif product == 'tbze' and panels == 2:
         import colormaps
         # Reflectivity color levels
@@ -184,8 +185,8 @@ def main(argv=None, legacy_name=None):
             title_b = f'(b) Reflectivity {var2_varname} (Tracked MCSs Shaded)'
         titles = {'tb_title': '(a) IR Brightness Temperature', 'var2_title': title_b}
         # (gridlines below the data, coastline of the second panel 1 point, track-number shading of one color per level, colorbar minor ticks)
-        extra = {'dpi': 200, 'fontsize': 10, 'tracknumber_fontsize': 12, 'perim_thick': 10, 'map_edgecolor': 'k',
-                 'var2_mask_le': True, 'grid_zorder': 1, 'land_linewidth2': 1, 'tn_norm': 'boundary', 'cb_minorticks_off': False}
+        extra = {'dpi': 200, 'fontsize': 10, 'tracknumber_fontsize': 12, 'perim_thick': 10,
+                 'var2_mask_le': True, 'grid_zorder': 1, 'tn_norm': 'boundary', 'cb_minorticks_off': False}
     elif product == 'tbpf' and panels == 1:
         import colorcet as cc
         # Precipitation color levels
@@ -202,7 +203,7 @@ def main(argv=None, legacy_name=None):
         tn_cmap = cc.cm["glasbey_dark"]
         # tn_cmap = cc.cm["glasbey"]
         titles = {'tb_title': 'IR Brightness Temperature, Precipitation, Tracked MCS (Outline)'}
-        extra = {'dpi': 200, 'fontsize': 10, 'tracknumber_fontsize': 12, 'perim_thick': 10, 'map_edgecolor': 'k',
+        extra = {'dpi': 200, 'fontsize': 10, 'tracknumber_fontsize': 12, 'perim_thick': 10,
                  'tb_alpha': 0.7, 'var2_alpha': 0.9}
     elif product == 'tbze' and panels == 1:
         import colorcet as cc
@@ -222,9 +223,9 @@ def main(argv=None, legacy_name=None):
             titles = {'tb_title': 'Tb, Low-level Reflectivity (Tracked MCSs)'}
         else:
             titles = {'tb_title': 'Tb, Composite Reflectivity (Tracked MCSs)'}
-        extra = {'dpi': 200, 'fontsize': 10, 'tracknumber_fontsize': 10, 'perim_thick': 6, 'map_edgecolor': 'k',
+        extra = {'dpi': 200, 'fontsize': 10, 'tracknumber_fontsize': 10, 'perim_thick': 6,
                  'tb_alpha': 0.7, 'var2_alpha': 0.9, 'var2_mask_le': True, 'var2_zorder': 3, 'grid_top': 0.92,
-                 'map_zorder': 4, 'grid_zorder': 1, 'cb_minorticks_off': False}
+                 'grid_zorder': 1, 'cb_minorticks_off': False}
     else:
         import colorcet as cc
         # Tb only
@@ -240,8 +241,8 @@ def main(argv=None, legacy_name=None):
         # tn_cmap = cc.cm["glasbey_light"]
         tn_cmap = cc.cm["glasbey"]
         titles = {'tb_title': 'IR Brightness Temperature (Tracked MCS Outline)'}
-        extra = {'dpi': 200, 'fontsize': 13, 'tracknumber_fontsize': 10, 'perim_width': 6, 'map_edgecolor': 'dimgray',
-                 'tb_alpha': 0.7, 'land_linewidth': 1, 'grid_zorder': 1, 'cb_minorticks_off': False, 'title_style': 'plain',
+        extra = {'dpi': 200, 'fontsize': 13, 'tracknumber_fontsize': 10, 'perim_width': 6,
+                 'tb_alpha': 0.7, 'grid_zorder': 1, 'cb_minorticks_off': False, 'title_style': 'plain',
                  'perim_zorder': 2}
     if var2_varname is not None:
         levels = {'tb_levels': tb_levels, 'var2_levels': var2_levels}
@@ -313,9 +314,6 @@ def main(argv=None, legacy_name=None):
                         ('pfdiam_lw', 'pfdiam_linewidth'), ('pfdiam_scale', 'pfdiam_scale')]:
         if args_dict.get(option) is not None:
             plot_info[key] = args_dict[option]
-    if args_dict.get('land_linewidth') is not None:
-        plot_info['land_linewidth'] = args_dict['land_linewidth']
-        plot_info.pop('land_linewidth2', None)
     if args_dict.get('perim_width') is not None:
         plot_info.pop('perim_thick', None)
     elif args_dict.get('perim_thick') is not None:
@@ -340,6 +338,7 @@ def main(argv=None, legacy_name=None):
         'draw_border': bool(draw_border),
         'draw_state': bool(draw_state),
         'draw_river': bool(draw_river),
+        'map_feature_styles': map_feature_styles(args_dict, color=MCS_MAP_FEATURE_COLOR),
         'box_lon': box_lon,
         'box_lat': box_lat,
         'projection': projection,

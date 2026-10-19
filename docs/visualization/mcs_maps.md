@@ -80,7 +80,10 @@ The look of each product (levels, colormaps, titles, colorbar labels, outline wi
 | tbze, 2 | 200 | 10 | 10 km | the second field is masked where it is below the lowest level |
 | tbpf, 1 | 200 | 10 | 10 km, a color per track | Tb alpha 0.7, precipitation alpha 0.9 |
 | tbze, 1 | 200 | 10 | 6 km, a color per track | |
-| tb | 200 | 13 | 6 pixels, a color per track | coastlines 1 point, plain title |
+| tb | 200 | 13 | 6 pixels, a color per track | plain title |
+
+Coastlines, country and state borders are black and 0.8 points wide in these maps (gray lines are hard to see on the Tb colormaps); `--land_color`, `--border_linewidth`, `--state_alpha`, ... change each
+feature on its own ([options.md](options.md)).
 
 ## Examples
 
@@ -124,14 +127,15 @@ products, map and track style, ffmpeg settings) as variables at the top of the f
 
 | script | makes |
 |---|---|
-| [`visualization/make_mcs_animation.py`](../../visualization/make_mcs_animation.py) | all the parameters, with the defaults of the global Robinson map of [global_mcs_animation.md](global_mcs_animation.md) (2 days) |
+| [`visualization/examples/make_mcs_animation.py`](../../visualization/examples/make_mcs_animation.py) | all the parameters, with the defaults of the global Robinson map of [global_mcs_animation.md](global_mcs_animation.md) (2 days) |
 | [`examples/make_mcs_animation_wrf_tbze.py`](../../visualization/examples/make_mcs_animation_wrf_tbze.py) | the WRF demo: Tb + radar reflectivity on the Lambert conformal grid of the data, 2 panels side by side |
 | [`examples/make_mcs_animation_imerg_1panel.py`](../../visualization/examples/make_mcs_animation_imerg_1panel.py) | the IMERG demo over South America: Tb + precipitation on 1 panel |
 | [`examples/make_mcs_animation_himawari_tb.py`](../../visualization/examples/make_mcs_animation_himawari_tb.py) | the Himawari demo: Tb only |
+| [`examples/make_mcs_animation_imergv7_sahel.py`](../../visualization/examples/make_mcs_animation_imergv7_sahel.py) | the Sahel demo (IMERG V07B, 22-23 August 2025): Tb + precipitation on 2 panels, white track halo |
 
 The demo wrappers read the config file that the demo script leaves in `config/` (`bash config/demo_mcs_imerg.sh`, ...); the animations of the three are in the
 [README](../../visualization/README.md#more-mcs-looks). The video settings are those of the CONUS wrapper: `playback_fps = 2` (PNG files per second = the speed: hourly files, 2 hours of data per second,
-2 days in 24 s), `video_quality = 24`, `output_width = 1920` (never enlarged), `video_fps = None` (automatic, 10 frames per second); `gif_width` makes the GIF from the mp4 (`gif_duration = 8` for the README
+2 days in 24 s), `video_quality = 24`, `output_width = 1920` (never enlarged), `video_fps = None` (automatic, 10 frames per second); `gif_width` (default `None`: mp4 only) makes a GIF from the mp4 (`--set gif_width=480 --set gif_duration=8` for README
 GIFs of 1.6-2.3 MB). The settings, what they do, the test of size and quality and the ffmpeg commands for PNG files that already exist are in [animations.md](animations.md) (`pngs_to_animation.py` makes the mp4 from any PNG files).
 Animations are about 2 days long: a longer run
 is not needed to see how a style looks (to find a good time for an example, plot a week of frames with `-p 1 --workers 32` and look at them).

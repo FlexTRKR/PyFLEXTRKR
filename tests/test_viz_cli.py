@@ -215,8 +215,8 @@ def test_cell_options_of_plotmap_and_their_names():
 
 #-----------------------------------------------------------------------
 ENTRY_SCRIPTS = ['plot_mcs_tracks.py', 'plot_cell_tracks.py', 'plot_generic_tracks.py', 'plot_cartesian_tracks.py',
-                 'make_mcs_animation.py', 'make_cell_animation.py', 'examples/make_mcs_animation_wrf_tbze.py',
-                 'examples/make_mcs_animation_imerg_1panel.py', 'examples/make_mcs_animation_himawari_tb.py', 'pngs_to_animation.py']
+                 'examples/make_mcs_animation.py', 'examples/make_mcs_animation_wrf_tbze.py', 'examples/make_mcs_animation_imerg_1panel.py',
+                 'examples/make_mcs_animation_himawari_tb.py', 'examples/make_cell_animation_nexrad.py', 'pngs_to_animation.py']
 
 
 def python_files_of_the_visualization_entry_points():
@@ -250,6 +250,6 @@ def test_entry_points_use_static_imports_only(path):
 def test_library_modules_import_only_what_they_use_without_cycles():
     """Every module of the package imports on its own (no import cycle, no missing name)."""
     for name in ['mapcore', 'masks', 'colors', 'trackstats', 'trackdraw', 'pixelio', 'runner', 'animation', 'cli_common',
-                 'legacy', 'mcs_map', 'mcs_cli', 'mcs_animation', 'cell_map', 'cell_cli', 'generic_map', 'generic_cli', 'cartesian_map',
-                 'cartesian_cli']:
+                 'legacy', 'mcs_map', 'mcs_cli', 'mcs_animation', 'cell_map', 'cell_cli', 'cell_animation', 'wrapper_common', 'generic_map',
+                 'generic_cli', 'cartesian_map', 'cartesian_cli']:
         importlib.import_module(f'pyflextrkr.visualization.{name}')

@@ -64,7 +64,7 @@ These options are the functions of the cell part of `plotmap.py` (conus_tracking
 are the names there and work here too). `--min_hours` removes the cells of the shorter tracks from the whole picture (outline, number, path, symbol), the outline colors of
 `--perim_cmap` are the same for a track in every frame, the ring (`--perim_halo`) is drawn under the outlines, and the terrain (`--show_terrain 1`, white below 500 m, then
 gray getting darker to 4000 m) needs `terrain_file` and `elev_varname` in the config (the CACTI CSAPR configs have them). plotmap has the Arizona sites hard-coded; here the cities and radars
-are given on the command line (or `cities` and `radar_sites` as lists of `[name, lon, lat]` in `make_cell_animation.py`). The names of the other radars are cyan with a thin black
+are given on the command line (or `cities` and `radar_sites` as lists of `[name, lon, lat]` in a wrapper such as `make_cell_animation_nexrad.py`). The names of the other radars are cyan with a thin black
 outline and their range circle too, because the light cyan can not be read on the reflectivity otherwise.
 
 ![cell options](../figures/visualization/cell_options.png)
@@ -84,9 +84,29 @@ python ../visualization/plot_cell_tracks.py -s 2019-01-25T16 -e 2019-01-25T19 -c
     --extent -66 -63 -34 -31 --subset 1 --draw_land 1 --draw_border 1 --draw_state 1 --track_halo_color white --track_halo_alpha 0.6
 ```
 
+## A square map around the radar (NEXRAD)
+
+The NEXRAD demo (KHGX, Houston, 7 August 2014; `config/demo_cell_nexrad.sh`) on a square map of 2 x 105 km around the radar. A PlateCarree map keeps 1 degree of longitude as wide as 1 degree of latitude,
+but at 29.5N a degree of longitude is 0.87 times as long, so the range circles would be 15 % too wide; on a LambertConformal map centered on the radar they are round. The frame is 13:42 UTC of the animation,
+with the title prefix `NEXRAD (KHGX)`, the coastline and the state borders (1 point, gray: `--land_linewidth 1`, the cell maps draw them in gray, the MCS maps in black), and tick labels every 0.5 degree:
+
+![NEXRAD cell tracking](../figures/visualization/cell_nexrad.png)
+
+![NEXRAD cell tracking animation](../figures/readme/cell_nexrad_20140807.gif)
+
+```bash
+python ../visualization/plot_cell_tracks.py -s 2014-08-07T12:00 -e 2014-08-07T15:00 -c config_cell_demo.yml \
+    --radar_lat 29.4719 --radar_lon -95.0787 --extent -96.163 -93.994 28.528 30.416 --subset 1 \
+    --projection LambertConformal --central_longitude -95.0787 --central_latitude 29.4719 --standard_parallels 29.4719 \
+    --title_prefix 'NEXRAD (KHGX)' --figsize 8 7.2 --lon_ticks -96 -95.5 -95 -94.5 -94 --lat_ticks 28.5 29 29.5 30 \
+    --draw_land 1 --land_linewidth 1 --draw_border 1 --draw_state 1 --map_resolution 10m --figbasename cell_tracks_ --output quicklooks/
+```
+
+`--figsize 8 7.2` makes the map panel of the layout square (the automatic height is not shorter than 9.2 inches, with white space above and below a square map). The animation is made by the example below.
+
 ## Animations
 
-[`visualization/make_cell_animation.py`](../../visualization/make_cell_animation.py) (and the example [`visualization/examples/make_cell_animation_nexrad.py`](../../visualization/examples/make_cell_animation_nexrad.py), with the title prefix `NEXRAD (KHGX)`, borders, states, coastlines of 2 points width and a GIF): parameter block (dates, config, radar location, domain around it, products, output
+[`visualization/examples/make_cell_animation_nexrad.py`](../../visualization/examples/make_cell_animation_nexrad.py) (the NEXRAD demo above; the animation is an mp4, `--set gif_width=800` also makes the GIF; `map_half_width_km` makes the square map from the radar location; the code is `pyflextrkr/visualization/cell_animation.py`): parameter block (dates, config, radar location, domain around it, products, output
 folders, ffmpeg) -> `cell_cli.main(argv)` -> `animation.make_animation`; `--set NAME=VALUE` overrides a parameter. Map projection and track style
 parameters are in the block too (`projection`, `central_longitude`, `track_color`, `track_halo_color`, ...), and so are the options of plotmap (`perim_cmap`, `perim_halo`, `min_hours`,
 `show_terrain`, `grid_linestyle`, `cities` and `radar_sites` as lists of `[name, lon, lat]`, `radar_site_radius`). Code map: [structure.md](structure.md).

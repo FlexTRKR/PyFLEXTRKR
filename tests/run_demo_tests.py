@@ -138,7 +138,21 @@ DEMOS: Dict[str, DemoInfo] = {
         lat_range=(-60, 20),
         lon_range=(-80, 10),
         plot_script="visualization/plot_mcs_tracks.py",
-        plot_args="-s '2019-01-25T00' -e '2019-01-27T00' --layout left_right -p 1 --figsize 10 8",
+        plot_args="-s '2019-01-25T00' -e '2019-01-27T00' --product tbpf --panels 1 --figsize_x 8 --dpi 100 --cbar_thickness 0.02 --cbar_spacing 0.1 --figbasename mcs_tbpf_ -p 1",
+    ),
+    "demo_mcs_imergv7_sahel": DemoInfo(
+        name="demo_mcs_imergv7_sahel",
+        description="MCS tracking – GPM IMERG V07B Tb+Precip over the Sahel (22-23 August 2025)",
+        data_subdir="mcs_tbpf/imergv7_sahel",
+        data_url="https://portal.nersc.gov/project/m1867/PyFLEXTRKR/sample_data/tb_pcp/gpm_tb_imergv7_sahel.tar.gz",
+        config_template="config_imergv7_mcs_tbpf_sahel.yml",
+        runscript="runscripts/run_mcs_tbpf.py",
+        stats_pattern="mcs_tracks_final_*.nc",
+        pixel_filebase="mcstrack_",
+        lat_range=(0, 30),
+        lon_range=(-20, 60),
+        plot_script="visualization/plot_mcs_tracks.py",
+        plot_args="-s '2025-08-22T00' -e '2025-08-24T00' --product tbpf --panels 2 --layout top_bottom --title_prefix 'GPM Tb+IMERGv07' --draw_border 1 --track_halo_color white --track_halo_alpha 0.7 --track_text_alpha 0.7 --show_pfdiam 1 --map_resolution 50m --figsize_x 10 --dpi 100 --fontsize 12 --figbasename mcs_tbpf_ -p 1",
     ),
     "demo_mcs_imerg_mcsmip": DemoInfo(
         name="demo_mcs_imerg_mcsmip",
@@ -212,7 +226,7 @@ DEMOS: Dict[str, DemoInfo] = {
         lat_range=(25, 55),
         lon_range=(-115, -75),
         plot_script="visualization/plot_mcs_tracks.py",
-        plot_args="--product tbze --draw_state 1 -s '2015-05-06T00' -e '2015-05-10T00' --layout top_bottom -p 1 --figsize_x 8 --projection LambertConformal --central_longitude -97 --standard_parallels 31 35",
+        plot_args="-s '2015-05-06T00' -e '2015-05-10T00' --product tbze --panels 2 --layout left_right --var2_varname reflectivity_comp --projection LambertConformal --central_longitude -97 --standard_parallels 31 35 --draw_state 1 --figsize_x 12 --dpi 100 --figbasename mcs_tbze_ -p 1",
     ),
     "demo_mcs_gridrad": DemoInfo(
         name="demo_mcs_gridrad",
@@ -242,7 +256,7 @@ DEMOS: Dict[str, DemoInfo] = {
         lat_range=(-60, 60),
         lon_range=(80, 200),
         plot_script="visualization/plot_mcs_tracks.py",
-        plot_args="--product tb -s '2021-10-24T00' -e '2021-10-25T00' -p 1 --figsize 10 10",
+        plot_args="-s '2021-10-24T00' -e '2021-10-25T00' --product tb --panels 1 --figsize 8 8 --dpi 100 --figbasename mcs_tb_ -p 1",
     ),
     # ── Cell tracking demos ─────────────────────────────────────────
     "demo_cell_nexrad": DemoInfo(
@@ -260,7 +274,7 @@ DEMOS: Dict[str, DemoInfo] = {
         lat_range=(28, 32),
         lon_range=(-97, -93),
         plot_script="visualization/plot_cell_tracks.py",
-        plot_args="-s '2014-08-07T12' -e '2014-08-07T15' --radar_lat 29.4719 --radar_lon -95.0787 -p 1 --figsize 8 7",
+        plot_args="-s '2014-08-07T12' -e '2014-08-07T15' --radar_lat 29.4719 --radar_lon -95.0787 --extent -96.163 -93.994 28.528 30.416 --subset 1 --projection LambertConformal --central_longitude -95.0787 --central_latitude 29.4719 --standard_parallels 29.4719 --title_prefix 'NEXRAD (KHGX)' --figsize 8 7.2 --lon_ticks -96 -95.5 -95 -94.5 -94 --lat_ticks 28.5 29 29.5 30 --draw_land 1 --land_linewidth 1 --draw_border 1 --draw_state 1 --map_resolution 10m --figbasename cell_tracks_ -p 1",
         ffmpeg_framerate=4,
     ),
     "demo_cell_csapr": DemoInfo(

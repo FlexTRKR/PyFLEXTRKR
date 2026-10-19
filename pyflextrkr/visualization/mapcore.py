@@ -1,13 +1,15 @@
 """
 Map utilities shared by all plot families: projections by name, the dateline-aware PlateCarree setup of the original
 scripts, the map domain (set_extent / set_global and the latitude-band crop), the figure size from the domain,
-longitude helpers, and geodesic circles and lines (range rings, PF circles, azimuth lines).
+longitude helpers, geodesic circles and lines (range rings, PF circles, azimuth lines), and the background map features
+(coastlines, country and state borders, rivers: one style and drawing order for every map).
 
 Called by: mcs_map, cell_map, generic_map (the plot functions) and mcs_cli, cell_cli, generic_cli (figure size).
 Calls: cartopy.crs, cartopy.geodesic, matplotlib (for the grid layout only).
 """
 import numpy as np
 import cartopy.crs as ccrs
+import cartopy.feature as cfeature
 from cartopy.geodesic import Geodesic
 import matplotlib as mpl
 import matplotlib.gridspec as gridspec
@@ -26,6 +28,22 @@ PROJECTIONS = {
     'northpolarstereo': (ccrs.NorthPolarStereo, ('central_longitude',)),
     'southpolarstereo': (ccrs.SouthPolarStereo, ('central_longitude',)),
 }
+
+# Background map features (Natural Earth): name -> (category, data set). The names are the prefixes of the options --land_color,
+# --border_linewidth, --state_alpha, ... and of the draw flags --draw_land, --draw_border, --draw_state, --draw_river
+MAP_FEATURES = {
+    'land': ('physical', 'land'),                                   # coastlines
+    'border': ('cultural', 'admin_0_boundary_lines_land'),          # country borders
+    'state': ('cultural', 'admin_1_states_provinces_lakes'),        # state / province borders
+    'river': ('physical', 'rivers_lake_centerlines'),               # rivers
+}
+# Default style of every feature (each can be changed on its own with --<feature>_color, --<feature>_linewidth, --<feature>_alpha).
+# The color is the default of the cell and generic maps; the MCS maps (mcs_cli) default to black: gray lines are hard to see on the Tb colormaps
+MAP_FEATURE_STYLE = dict(color='gray', linewidth=0.8, alpha=1.0)
+MCS_MAP_FEATURE_COLOR = 'k'
+# Drawing order from top to bottom: land, border, state, river, all above the shading (zorder 2), the MCS / cell outlines,
+# the track paths, symbols and numbers (3-5), the gridlines and the range circles; the markers of cities and radars (8-9) stay on top
+MAP_FEATURE_ZORDER = {'land': 6.3, 'border': 6.2, 'state': 6.1, 'river': 6.0}
 
 # Projections whose y coordinate depends on the latitude only (so a latitude band is a band of y; --lat_range)
 LAT_BAND_PROJECTIONS = ('platecarree', 'robinson', 'mollweide', 'equalearth', 'mercator')
@@ -550,3 +568,43 @@ def geodesic_ray(lon, lat, azimuth, length_km, n_samples=21):
     distances = np.linspace(0., length_km * 1e3, n_samples)
     line = Geodesic().direct(np.tile([lon, lat], (n_samples, 1)), azimuth, distances)
     return _continuous_lon(line[:, 0]), line[:, 1]
+
+#-----------------------------------------------------------------------
+def map_feature_styles(args_dict=None, color=None):
+    """
+    Style of each background map feature from the command line options.
+
+    Args:
+        args_dict: the parsed options (or None); --<feature>_color, --<feature>_linewidth, --<feature>_alpha that are not None
+            replace the default MAP_FEATURE_STYLE of that feature (the old Analysis/plot_subset_*.py stubs give their old
+            style as the defaults of these options, see legacy.py)
+        color: the default color of the family of maps (None: the gray of MAP_FEATURE_STYLE; the MCS maps pass MCS_MAP_FEATURE_COLOR)
+
+    Returns:
+        dictionary {'land': {'color': ..., 'linewidth': ..., 'alpha': ...}, 'border': {...}, 'state': {...}, 'river': {...}}
+    """
+    args_dict = args_dict or {}
+    styles = {}
+    for name in MAP_FEATURES:
+        defaults = dict(MAP_FEATURE_STYLE, color=color or MAP_FEATURE_STYLE['color'])
+        styles[name] = {key: (args_dict.get(f'{name}_{key}') if args_dict.get(f'{name}_{key}') is not None else default)
+                        for key, default in defaults.items()}
+    return styles
+
+#-----------------------------------------------------------------------
+def add_map_features(ax, draw, styles, resolution):
+    """
+    Draw the background map features on an axes, each with its own style, in the order of MAP_FEATURE_ZORDER.
+
+    Args:
+        ax: cartopy GeoAxes
+        draw: dictionary {'land': bool, 'border': bool, 'state': bool, 'river': bool} (a missing name is not drawn)
+        styles: from map_feature_styles (None: the default style of every feature)
+        resolution: Natural Earth resolution, '110m', '50m' or '10m'
+    """
+    styles = styles or map_feature_styles()
+    for name, (category, dataset) in MAP_FEATURES.items():
+        if draw.get(name):
+            style = styles[name]
+            ax.add_feature(cfeature.NaturalEarthFeature(category, dataset, resolution), facecolor='none', edgecolor=style['color'],
+                           linewidth=style['linewidth'], alpha=style['alpha'], zorder=MAP_FEATURE_ZORDER[name])

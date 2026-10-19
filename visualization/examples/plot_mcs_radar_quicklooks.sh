@@ -1,7 +1,11 @@
 #!/bin/bash
 ###############################################################################################
 # This script plots MCS tracking animations
+# Set config_file, quicklook_dir and animation_dir to your own tracking run: the /path/to/... values are placeholders.
 ###############################################################################################
+
+# The PyFLEXTRKR repository (this script is in visualization/examples/)
+repo_dir=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)
 
 # Specify start/end datetime
 start_date='2004-06-27T00'
@@ -14,15 +18,15 @@ lat_max=40
 # Run in parallel
 run_parallel=0
 # Tracking config file
-config_file='/global/homes/f/feng045/program/PyFLEXTRKR-dev/config/config_gridrad_mcs_2004.yml'
+config_file='/path/to/config_gridrad_mcs_2004.yml'
 # Quicklook/animation output directories
-quicklook_dir='/pscratch/sd/f/feng045/usa/gridrad_v3/v3_final/quicklook_test/2004/'
-animation_dir='/pscratch/sd/f/feng045/usa/gridrad_v3/v3_final/quicklook_test/'
+quicklook_dir='/path/to/gridrad/quicklooks/2004/'
+animation_dir='/path/to/gridrad/quicklooks/'
 animation_filename=${animation_dir}mcs_tbdbz_${start_date}_${end_date}.mp4
 # Tracking pixel-level time format
 time_format='yyyymodd_hhmmss'
-# Plotting code
-code_name='/global/homes/f/feng045/program/PyFLEXTRKR-dev/visualization/plot_mcs_tracks.py'
+# Plotting code: in the repository, found from the location of this script (so it runs from any folder)
+code_name=${repo_dir}/visualization/plot_mcs_tracks.py
 
 # Make quicklook plots
 echo 'Making quicklook plots ...'
