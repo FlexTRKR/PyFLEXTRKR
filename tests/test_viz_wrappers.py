@@ -6,6 +6,7 @@ line parses; --set NAME=VALUE changes a parameter. The plot function and ffmpeg 
 Skipped where matplotlib / cartopy are not installed (the CI environment has neither).
 """
 import importlib.util
+import math
 import os
 import sys
 
@@ -20,11 +21,12 @@ from pyflextrkr.visualization import mcs_cli, cell_cli, mcs_animation, animation
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 EXAMPLES = ['make_mcs_animation_wrf_tbze', 'make_mcs_animation_imerg_1panel', 'make_mcs_animation_himawari_tb']
+CELL_EXAMPLES = ['make_cell_animation_nexrad']
 
 
 def load_wrapper(name):
     """The wrapper script as a module (its parameter block runs, main() does not)."""
-    folder = 'visualization/examples' if name in EXAMPLES else 'visualization'
+    folder = 'visualization/examples' if name in EXAMPLES + CELL_EXAMPLES else 'visualization'
     spec = importlib.util.spec_from_file_location(name, os.path.join(REPO, folder, f'{name}.py'))
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
@@ -263,6 +265,49 @@ def test_cell_wrapper_options_parse(monkeypatch, tmp_path):
                                                      'radar_site_radius=40']))
     assert (args['perim_cmap'], args['perim_halo'], args['min_hours'], args['show_terrain'], args['grid_linestyle']) == ('glasbey_dark', 'white', 1.5, 1, ':')
     assert args['city'] == [['A', '10', '20'], ['B', '11', '21']] and args['radar_site'] == [['R', '5', '6']] and args['radar_site_radius'] == 40
+
+
+def test_nexrad_cell_example_makes_a_square_map_with_round_range_circles(monkeypatch, tmp_path):
+    module = load_wrapper('make_cell_animation_nexrad')
+    recorded = []
+    monkeypatch.setattr(module, 'plot_cell_tracks', lambda argv: recorded.append(list(argv)))
+    monkeypatch.setattr(sys, 'argv', ['wrapper', '--set', f'fig_root={tmp_path}/', '--set', 'run_ffmpeg=false'])
+    module.main()
+    args = cell_cli.parse_cmd_args(recorded[0])
+    # the title, the features and their line widths
+    assert args['title_prefix'] == 'NEXRAD (KHGX)'
+    assert (args['draw_land'], args['land_linewidth'], args['draw_border'], args['draw_state']) == (1, 2.0, 1, 1)
+    # a LambertConformal map centered on the radar, a square of 2 * half_width_km around it: as long in km east-west as north-south
+    assert args['projection'] == 'LambertConformal' and args['central_longitude'] == module.radar_lon
+    assert args['central_latitude'] == module.radar_lat and args['standard_parallels'] == [module.radar_lat]
+    lon0, lon1, lat0, lat1 = args['extent']
+    assert (lon0 + lon1) / 2 == pytest.approx(module.radar_lon, abs=1e-3) and (lat0 + lat1) / 2 == pytest.approx(module.radar_lat, abs=1e-3)
+    west_east_km = (lon1 - lon0) * 111.19 * math.cos(math.radians(module.radar_lat))
+    south_north_km = (lat1 - lat0) * 111.19
+    assert west_east_km == pytest.approx(2 * module.half_width_km, abs=0.5) and south_north_km == pytest.approx(2 * module.half_width_km, abs=0.5)
+    assert args['figsize'] == [8.0, 7.2]
+    assert args['lon_ticks'] == module.lon_ticks and args['lat_ticks'] == module.lat_ticks
+    # another half width moves the extent; projection=null: PlateCarree (no projection parameters)
+    recorded.clear()
+    monkeypatch.setattr(sys, 'argv', ['wrapper', '--set', f'fig_root={tmp_path}/', '--set', 'run_ffmpeg=false', '--set', 'projection=null'])
+    module.main()
+    args = cell_cli.parse_cmd_args(recorded[0])
+    assert args['projection'] == 'PlateCarree' and args['central_longitude'] is None and args['standard_parallels'] is None
+
+
+def test_nexrad_cell_example_makes_the_mp4_and_the_gif(monkeypatch, tmp_path):
+    module = load_wrapper('make_cell_animation_nexrad')
+    calls = {}
+    monkeypatch.setattr(module, 'frames_in_range', lambda figdir, base, start, end: [f'{figdir}{base}1.png', f'{figdir}{base}2.png'])
+    monkeypatch.setattr(module, 'make_animation', lambda files, out, **kwargs: calls.update(files=files, out=out, **kwargs) or 0)
+    monkeypatch.setattr(sys, 'argv', ['wrapper', '--set', f'fig_root={tmp_path}/', '--set', 'run_plotting=false', '--set', 'gif_width=800'])
+    module.main()
+    assert calls['out'] == f'{tmp_path}/animations_cell/cell_tracks_2014-08-07T12_2014-08-07T15.mp4'
+    assert (calls['playback_fps'], calls['video_quality'], calls['output_width'], calls['gif_width'], calls['gif_duration']) == (4, 18, None, 800, None)
+    # a parameter that does not exist is an error
+    monkeypatch.setattr(sys, 'argv', ['wrapper', '--set', 'no_such_parameter=1'])
+    with pytest.raises(SystemExit):
+        module.main()
 
 
 #-----------------------------------------------------------------------

@@ -20,7 +20,10 @@ azimuth lines (every 90 degrees, 200 km) are geodesic lines on the WGS84 ellipso
 everything else on the map, so they are centered on the radar (in frames with echo all around the radar, the white hole of the blind zone above it is in the middle of the
 rings). They are not made with `ax.tissot` and `transform=ccrs.Geodetic()` (the first version of these maps): with PROJ 9.8 (cartopy 0.25, the `pyflex26.3` environment)
 the transform from Geodetic to PlateCarree moves a point north or south by up to 0.19 degree, so the radar at 32.13S was drawn at 31.94S, 20 km off (on a Lambert map
-too); the older PROJ of the `pyflex-dev` environment does not do it. The cell center for the numbers is
+too); the older PROJ of the `pyflex-dev` environment does not do it. On a PlateCarree map (the default) the range rings are ellipses, because the map keeps 1 degree of longitude as wide as 1 degree of
+latitude (at 29.5N a degree of longitude is only 0.87 of a degree of latitude): a map in a projection that keeps the distances, centered on the radar (`--projection LambertConformal
+--central_longitude RADAR_LON --central_latitude RADAR_LAT --standard_parallels RADAR_LAT`) with an `--extent` of the same length in km to the east, west, north and south of the
+radar, has round rings and a square domain; [`examples/make_cell_animation_nexrad.py`](../../visualization/examples/make_cell_animation_nexrad.py) is the NEXRAD demo this way. The cell center for the numbers is
 the mean position of the pixels with the convective mask, the cell tracks are in the cell statistics file (`trackstats_*.nc`) with `cell_meanlon`,
 `cell_meanlat`, `base_time`, `track_duration`. The pixel-level files have `tracknumber`, `conv_mask`, the field, `longitude`, `latitude` and the
 radar-relative `lon` / `lat` (km).
@@ -83,7 +86,7 @@ python ../visualization/plot_cell_tracks.py -s 2019-01-25T16 -e 2019-01-25T19 -c
 
 ## Animations
 
-[`visualization/make_cell_animation.py`](../../visualization/make_cell_animation.py): parameter block (dates, config, radar location, domain around it, products, output
+[`visualization/make_cell_animation.py`](../../visualization/make_cell_animation.py) (and the example [`visualization/examples/make_cell_animation_nexrad.py`](../../visualization/examples/make_cell_animation_nexrad.py), with the title prefix `NEXRAD (KHGX)`, borders, states, coastlines of 2 points width and a GIF): parameter block (dates, config, radar location, domain around it, products, output
 folders, ffmpeg) -> `cell_cli.main(argv)` -> `animation.make_animation`; `--set NAME=VALUE` overrides a parameter. Map projection and track style
 parameters are in the block too (`projection`, `central_longitude`, `track_color`, `track_halo_color`, ...), and so are the options of plotmap (`perim_cmap`, `perim_halo`, `min_hours`,
 `show_terrain`, `grid_linestyle`, `cities` and `radar_sites` as lists of `[name, lon, lat]`, `radar_site_radius`). Code map: [structure.md](structure.md).

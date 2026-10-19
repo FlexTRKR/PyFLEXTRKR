@@ -12,7 +12,8 @@
 ###############################################################################################
 
 # Specify directory for the demo data
-dir_demo='/Users/feng045/data/demo/cell_radar/nexrad/'
+# dir_demo='/Users/feng045/data/demo/cell_radar/nexrad/'
+dir_demo='/pscratch/sd/f/feng045/demo/cell_radar/nexrad/'
 
 # Example config file name
 config_demo='config_cell_demo.yml'
