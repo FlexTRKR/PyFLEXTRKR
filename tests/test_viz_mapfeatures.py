@@ -2,7 +2,7 @@
 Tests of the background map features (coastlines, country borders, state borders, rivers): the same default style for every
 feature (gray, 0.8 points, opaque), a style option for each feature (--land_color, --border_linewidth, --state_alpha, ...), the drawing
 order land > border > state > river above everything that is plotted, and the old look of the Analysis/plot_subset_*.py stubs.
-Skipped where matplotlib / cartopy are not installed (the CI environment has neither). Nothing is downloaded: the axes are replaced
+Skipped where matplotlib / cartopy are not installed (the CI environment has both, cartopy through easygems, so they run there). Nothing is downloaded: the axes are replaced
 by a recorder.
 """
 import ast

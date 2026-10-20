@@ -27,8 +27,10 @@ python -m pytest tests/ -m "not local and not demo"
 without an object), their statistics files (MCS and cells), and the config dictionaries that the command lines read (the tests replace `load_config`, so no
 config file or tracking run is needed). Coastlines are switched off (`--draw_land 0`): nothing is downloaded.
 
-The CI environment installs neither matplotlib nor cartopy, so the tests that need them are skipped there (`pytest.importorskip`); `test_viz_masks.py`,
-`test_viz_trackstats.py` and the frame-filter part of `test_viz_animation.py` run everywhere.
+The CI environment (`requirements-ci.txt` and `pip install -e .`) has matplotlib, cartopy (through easygems), pillow and dask, but not `distributed`, `colormaps`, `colorcet` or
+ffmpeg: the tests that need those are skipped there (`pytest.importorskip`, `shutil.which`), the others run with the versions of the day (cartopy 0.26 and matplotlib 3.11 in
+October 2026), so a change in cartopy shows up in the CI first. `test_viz_imports.py` checks that the runner imports without `distributed`; `test_viz_masks.py`,
+`test_viz_trackstats.py` and the frame-filter part of `test_viz_animation.py` need no plotting package.
 
 ## Comparison with the old scripts
 

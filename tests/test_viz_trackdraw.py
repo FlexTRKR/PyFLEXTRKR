@@ -1,7 +1,7 @@
 """
 Tests of pyflextrkr.visualization.trackdraw: the halo (a contrasting outline with its own transparency) of the track
 paths, initiation symbols and track numbers, and the colour levels of the track numbers.
-Skipped where matplotlib is not installed (the CI environment has none).
+Skipped where matplotlib is not installed (the CI environment has it, so they run there).
 """
 import numpy as np
 import pytest

@@ -3,7 +3,7 @@ Tests of the animation wrappers in visualization/examples/: make_mcs_animation.p
 the top of the file, mcs_animation.main(globals()) turns them into the plot options, the mp4 and the GIF) and make_cell_animation_nexrad.py
 (the same with cell_animation.main). The parameter block becomes the arguments of the plot command (options_to_argv), which the real command
 line parses; --set NAME=VALUE changes a parameter. The plot function and ffmpeg are replaced, so nothing is plotted or encoded.
-Skipped where matplotlib / cartopy are not installed (the CI environment has neither).
+Skipped where matplotlib / cartopy are not installed (the CI environment has both, cartopy through easygems, so they run there).
 """
 import importlib.util
 import math

@@ -2,7 +2,7 @@
 End-to-end tests of the plot families on the synthetic data of tests/viz_synthetic.py: each command line (main(argv))
 makes the PNG files of four frames, and the options of the new code change the pictures as they should.
 
-The tests need matplotlib, cartopy, colormaps and colorcet (not in the CI environment: skipped there). Coastlines are
+The tests need matplotlib, cartopy, colormaps and colorcet (the CI environment has matplotlib and cartopy but not colormaps and colorcet: skipped there). Coastlines are
 off (--draw_land 0), so no Natural Earth file is read and nothing is downloaded.
 """
 import glob

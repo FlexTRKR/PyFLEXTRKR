@@ -3,7 +3,7 @@ Tests of the command lines of the plot families (pyflextrkr/visualization/*_cli.
 numbers or as one quoted string, the conversion of an options dictionary for the wrapper scripts, the defaults that keep
 the old Analysis/plot_subset_*.py commands working, and the layout rules that keep "Go to Definition" working in the
 scripts (static imports, no sys.path edits, no subprocess).
-Skipped where matplotlib / cartopy are not installed (the CI environment has neither).
+Skipped where matplotlib / cartopy are not installed (the CI environment has both, cartopy through easygems, so they run there).
 """
 import argparse
 import ast

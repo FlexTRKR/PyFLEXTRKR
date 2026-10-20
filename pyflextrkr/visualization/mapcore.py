@@ -47,8 +47,10 @@ MAP_FEATURE_ZORDER = {'land': 6.3, 'border': 6.2, 'state': 6.1, 'river': 6.0}
 
 # Projections whose y coordinate depends on the latitude only (so a latitude band is a band of y; --lat_range)
 LAT_BAND_PROJECTIONS = ('platecarree', 'robinson', 'mollweide', 'equalearth', 'mercator')
-# Projections that show the whole globe in one shape: set_global() is the whole-globe domain (the others use set_extent of the box)
-WORLD_PROJECTIONS = ('robinson', 'mollweide', 'equalearth', 'orthographic')
+# Projections that show the whole globe in one shape: set_global() is the whole-globe domain (the others use set_extent of the box).
+# Mercator is one of them: with cartopy 0.26, set_extent of the box -180 to 180 on a Mercator with central longitude 180 (both
+# ends on the seam) makes a map of zero width, set_global() gives the full width in cartopy 0.24 to 0.26
+WORLD_PROJECTIONS = ('robinson', 'mollweide', 'equalearth', 'orthographic', 'mercator')
 
 #-----------------------------------------------------------------------
 def _is_projection(proj, keys):
@@ -163,12 +165,12 @@ def set_map_domain(ax, proj, map_extent, ext_lon0=None, ext_lon1=None, lat_range
     PlateCarree (ext_lon0 / ext_lon1 given): set_extent in the proj frame, as in the original scripts; an extent that
     covers all longitudes (both ends equal in the proj frame) is the whole globe: set_global().
     Other projections: for the projections that show the whole world in one shape (Robinson, Mollweide, EqualEarth,
-    Orthographic) an extent of 360 degrees of longitude is set_global(); everything else (regional extents, and the
-    360-degree extent of Mercator, the conic and the polar projections) is set_extent of the lon/lat box (polar cap:
+    Orthographic, Mercator) an extent of 360 degrees of longitude is set_global(); everything else (regional extents, and the
+    360-degree extent of the conic and the polar projections) is set_extent of the lon/lat box (polar cap:
     --extent -180 180 20 90).
     lat_range: (lat_min, lat_max), crop the visible latitude band after that (the projected y-limits of the two
-    latitudes), e.g. the 60S-60N band of a global Robinson map. Without lat_range a global map of Robinson, Mollweide or
-    EqualEarth shows the latitudes of map_extent. Only for the projections whose y depends on the latitude only
+    latitudes), e.g. the 60S-60N band of a global Robinson map. Without lat_range a global map of Robinson, Mollweide,
+    EqualEarth or Mercator shows the latitudes of map_extent. Only for the projections whose y depends on the latitude only
     (LAT_BAND_PROJECTIONS); for the others it is an error (it would cut the map at the wrong place).
 
     Args:

@@ -1,7 +1,9 @@
 """
 Tests of pyflextrkr.visualization.mapcore: projections by name, the dateline set-up of PlateCarree, the map domain with
 the latitude-band crop, the figure size from the domain and the longitude helpers.
-Skipped where cartopy / matplotlib are not installed (the CI environment has neither).
+Skipped where cartopy / matplotlib are not installed. The CI environment has both (cartopy 0.26 comes with easygems), so these tests run
+there with the cartopy of that day: the parameters of a projection are read through central_longitude() below, because PlateCarree has
+`lon_0` in cartopy up to 0.25 and the prime meridian `pm` in 0.26.
 """
 import numpy as np
 import pytest
@@ -16,6 +18,14 @@ from pyflextrkr.visualization import mapcore
 
 
 #-----------------------------------------------------------------------
+def central_longitude(proj):
+    """The central longitude of a cartopy projection from its proj4 parameters: `lon_0`, or for the PlateCarree of cartopy 0.26 (a
+    'latlong' CRS) the prime meridian `pm`."""
+    params = proj.proj4_params
+    return params['lon_0'] if 'lon_0' in params else params['pm']
+
+
+#-----------------------------------------------------------------------
 def test_projection_key_normalizes_names():
     assert mapcore.projection_key('Robinson') == 'robinson'
     assert mapcore.projection_key('Lambert_Conformal') == 'lambertconformal'
@@ -27,11 +37,11 @@ def test_projection_key_normalizes_names():
 def test_make_projection_passes_only_given_parameters():
     proj = mapcore.make_projection('Robinson', central_longitude=225)
     assert isinstance(proj, ccrs.Robinson)
-    assert proj.proj4_params['lon_0'] == 225
+    assert central_longitude(proj) == 225
     # the cartopy defaults apply when nothing is given
-    assert mapcore.make_projection('Robinson').proj4_params['lon_0'] == 0
+    assert central_longitude(mapcore.make_projection('Robinson')) == 0
     lcc = mapcore.make_projection('LambertConformal', central_longitude=-100, central_latitude=40, standard_parallels=[30, 50])
-    assert lcc.proj4_params['lon_0'] == -100 and lcc.proj4_params['lat_0'] == 40
+    assert central_longitude(lcc) == -100 and lcc.proj4_params['lat_0'] == 40
     # a parameter that the projection does not take is an error, not silently ignored
     with pytest.raises(ValueError, match='central_latitude'):
         mapcore.make_projection('Robinson', central_latitude=10)
@@ -57,24 +67,24 @@ def test_get_projections_platecarree_dateline():
     # extent that crosses the dateline: central longitude 180, set_extent bounds in that frame (both 0-360 and -180~180)
     for extent in ([140., -140., -20., 20.], [140., 220., -20., 20.]):
         proj, data_proj, lon0, lon1 = mapcore.get_projections(extent)
-        assert proj.proj4_params['lon_0'] == 180
+        assert central_longitude(proj) == 180
         assert (lon0, lon1) == pytest.approx((-40., 40.))
-        assert data_proj.proj4_params['lon_0'] == 0
+        assert central_longitude(data_proj) == 0
     # regional extent: central longitude 0
     proj, _, lon0, lon1 = mapcore.get_projections([-80., -35., -55., 12.])
-    assert proj.proj4_params['lon_0'] == 0
+    assert central_longitude(proj) == 0
     assert (lon0, lon1) == pytest.approx((-80., -35.))
     # explicit central longitude
     proj, _, lon0, lon1 = mapcore.get_projections([100., 130., -10., 10.], central_longitude=115)
-    assert proj.proj4_params['lon_0'] == 115
+    assert central_longitude(proj) == 115
     assert (lon0, lon1) == pytest.approx((-15., 15.))
 
 
 def test_get_projections_other_projection_has_no_set_extent_longitudes():
     proj, data_proj, lon0, lon1 = mapcore.get_projections([0., 360., -90., 90.], 'Robinson', central_longitude=225)
-    assert proj.proj4_params['lon_0'] == 225
+    assert central_longitude(proj) == 225
     assert lon0 is None and lon1 is None
-    assert data_proj.proj4_params['lon_0'] == 0
+    assert central_longitude(data_proj) == 0
 
 
 def test_set_map_domain_lat_band_crop():

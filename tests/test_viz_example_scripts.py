@@ -2,7 +2,7 @@
 Tests of the batch example scripts in visualization/examples/: make_mcs_quicklook_slurm_tasks.py (the task list and the Slurm job array
 script of the quicklooks of several years: no account, environment, e-mail or path of a person in it, only what is given as an option)
 and make_gridrad_mcstracks_animation.py (one mp4 per month of the quicklooks of a year). Nothing is plotted, encoded or submitted.
-Skipped where matplotlib / cartopy are not installed (the CI environment has neither).
+Skipped where matplotlib / cartopy are not installed (the CI environment has both, cartopy through easygems, so they run there).
 """
 import importlib.util
 import os

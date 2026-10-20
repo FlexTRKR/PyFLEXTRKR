@@ -52,9 +52,14 @@ def make_pngs(directory, n=4, size=(90, 60)):
 
 
 def need_ffmpeg():
-    if shutil.which(animation.find_ffmpeg()) is None:
+    """Skip the test without ffmpeg, or with an ffmpeg that has no libx264 encoder (every mp4 here is made with it)."""
+    ffmpeg = animation.find_ffmpeg()
+    if shutil.which(ffmpeg) is None:
         pytest.skip("ffmpeg is not installed")
-    return animation.find_ffmpeg()
+    encoders = subprocess.run([ffmpeg, '-hide_banner', '-encoders'], capture_output=True, text=True).stdout
+    if 'libx264' not in encoders:
+        pytest.skip("this ffmpeg has no libx264 encoder")
+    return ffmpeg
 
 
 def probe(video):
@@ -229,9 +234,7 @@ def test_make_gif_palette_options(monkeypatch):
 
 def test_make_gif(tmp_path):
     Image = pytest.importorskip("PIL.Image")
-    ffmpeg = animation.find_ffmpeg()
-    if shutil.which(ffmpeg) is None:
-        pytest.skip("ffmpeg is not installed")
+    need_ffmpeg()
     files = make_pngs(tmp_path, 4)
     mp4 = str(tmp_path / 'movie.mp4')
     assert animation.make_mp4(files, mp4, playback_fps=2, crf=18, width=48)[0] == 0
