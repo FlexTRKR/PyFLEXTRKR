@@ -180,7 +180,7 @@ def test_stubs_in_analysis_forward_to_their_own_name():
     for name, module in FAMILY_OF.items():
         path = os.path.join(REPO, 'Analysis', f'{name}.py')
         assert os.path.isfile(path), path
-        tree = ast.parse(open(path).read())
+        tree = ast.parse(open(path, encoding='utf-8').read())
         imports = [n for n in ast.walk(tree) if isinstance(n, ast.ImportFrom)]
         assert [(n.module, [a.name for a in n.names]) for n in imports] == [(module.__name__, ['main'])], name
         calls = [n for n in ast.walk(tree) if isinstance(n, ast.Call) and getattr(n.func, 'id', None) == 'main']
@@ -229,7 +229,7 @@ def python_files_of_the_visualization_entry_points():
 def test_entry_points_use_static_imports_only(path):
     """No sys.path edits, no subprocess, no importlib / getattr dispatch; every pyflextrkr import resolves to a name."""
     assert os.path.isfile(path), path
-    tree = ast.parse(open(path).read())
+    tree = ast.parse(open(path, encoding='utf-8').read())
     forbidden_modules = {'subprocess', 'importlib', 'runpy'}
     for node in ast.walk(tree):
         if isinstance(node, ast.Import):

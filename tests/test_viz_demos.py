@@ -68,7 +68,7 @@ def wrapper_options(library, example, monkeypatch, tmp_path):
 @pytest.mark.parametrize("demo, example, module, library", PAIRS, ids=[p[1] for p in PAIRS])
 def test_the_demo_script_plots_with_the_options_of_the_example(demo, example, module, library, monkeypatch, tmp_path):
     expected = picture_options(module, wrapper_options(library, example, monkeypatch, tmp_path))
-    demo_text = open(os.path.join(REPO, 'config', demo)).read()
+    demo_text = open(os.path.join(REPO, 'config', demo), encoding='utf-8').read()
     from_demo = picture_options(module, plot_command(demo_text, r'visualization/plot_(mcs|cell)_tracks\.py'))
     assert from_demo == expected, f'{demo} and {example} differ'
 
@@ -90,7 +90,7 @@ def test_docstrings_have_commands_that_can_be_pasted():
                    + glob.glob(os.path.join(REPO, 'pyflextrkr', 'visualization', '*.py')))
     assert len(paths) > 30
     for path in paths:
-        text = open(path).read()
+        text = open(path, encoding='utf-8').read()
         if '"""' not in text:
             continue
         head, doc = text.split('"""')[0], text.split('"""')[1]
@@ -106,7 +106,7 @@ def test_the_demo_registry_plots_with_the_options_of_the_demo_script(demo, examp
     """tests/run_demo_tests.py (--with-plots) runs the same plot command as config/demo_*.sh."""
     from run_demo_tests import DEMOS
     info = DEMOS[demo[:-3]]
-    demo_text = open(os.path.join(REPO, 'config', demo)).read()
+    demo_text = open(os.path.join(REPO, 'config', demo), encoding='utf-8').read()
     from_demo = picture_options(module, plot_command(demo_text, r'visualization/plot_(mcs|cell)_tracks\.py'))
     from_registry = picture_options(module, shlex.split(info.plot_args) + ['-c', 'config.yml'])      # the registry adds -c and --output itself
     assert from_registry == from_demo, demo

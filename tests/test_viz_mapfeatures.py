@@ -113,7 +113,7 @@ def test_drawing_order_land_border_state_river_above_everything_that_is_plotted(
     values = []
     for name in ('mcs_map', 'cell_map', 'generic_map'):
         path = os.path.join(folder, f'{name}.py')
-        for node in ast.walk(ast.parse(open(path).read())):
+        for node in ast.walk(ast.parse(open(path, encoding='utf-8').read())):
             if isinstance(node, ast.keyword) and node.arg == 'zorder' and isinstance(node.value, ast.Constant):
                 values.append((name, node.value.lineno, node.value.value))
             # plot_info.get('grid_zorder', None), plot_info.get('var2_zorder', 2), ...
@@ -127,7 +127,7 @@ def test_drawing_order_land_border_state_river_above_everything_that_is_plotted(
     # the radar-site and city markers of the cell maps are the ones above the features
     assert any(n == 'cell_map' and v >= 8 for n, _, v in values)
     # the presets of the MCS maps do not set a zorder above the features either
-    presets = open(os.path.join(folder, 'mcs_cli.py')).read()
+    presets = open(os.path.join(folder, 'mcs_cli.py'), encoding='utf-8').read()
     assert "'map_zorder'" not in presets and 'map_edgecolor' not in presets and 'land_linewidth' not in presets
 
 
@@ -135,7 +135,7 @@ def test_no_plot_function_keeps_its_own_style_of_the_features():
     """The style comes from the options only: no plot_info / map_info keys map_edgecolor, land_linewidth, land_linewidth2, map_zorder, river_color in the maps and command lines."""
     folder = os.path.dirname(mapcore.__file__)
     for path in sorted(glob.glob(os.path.join(folder, '*_map.py')) + glob.glob(os.path.join(folder, '*_cli.py'))):
-        text = open(path).read()
+        text = open(path, encoding='utf-8').read()
         for old in ('map_edgecolor', 'land_linewidth2', "'map_zorder'", "map_info.get('river_color'", "plot_info['land_linewidth']", "plot_info.get('land_linewidth'"):
             assert old not in text, f"{os.path.basename(path)} still has {old}"
 

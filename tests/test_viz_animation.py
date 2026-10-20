@@ -105,7 +105,7 @@ def test_make_mp4_command_and_options(tmp_path, monkeypatch):
 
     def fake_run(cmd, **kw):
         listfile = cmd[cmd.index('-i') + 1]
-        calls.append((cmd, [line for line in open(listfile).read().split('\n') if line], listfile))
+        calls.append((cmd, [line for line in open(listfile, encoding='utf-8').read().split('\n') if line], listfile))
         return type('R', (), {'returncode': 0})()
     monkeypatch.setattr(animation.subprocess, 'run', fake_run)
     pngs = [str(tmp_path / f'{i}.png') for i in range(5)]
@@ -189,7 +189,7 @@ def test_pngs_to_animation_command_line(tmp_path, capsys):
     assert animation.main([str(tmp_path), 'movie.mp4', '--print_command', '--playback_fps', '12', '--video_quality', '20', '--output_width', '0',
                            '--video_preset', 'slow']) == 0
     line = capsys.readouterr().out.strip()
-    assert f"-framerate 12 -pattern_type glob -i '{tmp_path}/*.png'" in line
+    assert f"-framerate 12 -pattern_type glob -i '{os.path.join(str(tmp_path), '*.png')}'" in line      # os.sep of the platform
     assert 'scale=trunc(iw/2)*2:trunc(ih/2)*2' in line and '-r 12 -crf 20' in line and line.endswith('-preset slow -y movie.mp4')
     with pytest.raises(SystemExit):
         animation.main(['frames/', 'movie.avi'])                                                  # the last argument is the mp4 file

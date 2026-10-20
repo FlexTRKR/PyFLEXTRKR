@@ -428,7 +428,7 @@ def test_the_plot_code_has_no_tissot_circles_and_no_geodetic_transform():
     import glob
     import os
     for path in sorted(glob.glob(os.path.join(os.path.dirname(mapcore.__file__), '*.py'))):
-        for node in ast.walk(ast.parse(open(path).read())):
+        for node in ast.walk(ast.parse(open(path, encoding='utf-8').read())):
             if isinstance(node, ast.Call):
                 name = getattr(node.func, 'attr', None) or getattr(node.func, 'id', None)
                 assert name not in ('tissot', 'Geodetic'), f"{os.path.basename(path)} line {node.lineno} calls {name}"

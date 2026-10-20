@@ -76,7 +76,7 @@ def test_mcs_wrapper_gives_the_global_robinson_map(monkeypatch, tmp_path):
 
 def test_the_config_file_of_the_global_wrapper_points_to_the_outputs():
     import yaml
-    config = yaml.safe_load(open(os.path.join(REPO, 'config', 'config_imerg_global_mcs_v3_2025.yml')))
+    config = yaml.safe_load(open(os.path.join(REPO, 'config', 'config_imerg_global_mcs_v3_2025.yml'), encoding='utf-8'))
     root = config['root_path'].rstrip('/')
     assert root.endswith('MCS_Global/V3/Feng21')
     assert (config['stats_path_name'], config['pixel_path_name']) == ('stats_f21', 'mcstracking_f21')
@@ -356,7 +356,7 @@ def test_the_default_folder_of_the_frames_and_the_animation_is_the_one_of_the_de
 def test_no_example_has_a_personal_or_system_dependent_default_folder():
     folder = os.path.join(REPO, 'visualization', 'examples')
     for name in ['make_mcs_animation'] + EXAMPLES + CELL_EXAMPLES:
-        text = open(os.path.join(folder, f'{name}.py')).read()
+        text = open(os.path.join(folder, f'{name}.py'), encoding='utf-8').read()
         for bad in ('SCRATCH', '/pscratch', '/global/homes', '/Users/', 'getcwd'):
             assert bad not in text, f'{name}.py has {bad}'
     # every wrapper has the three entries, None = the default folder (the config root_path of the demo script); the global example points to read-only
@@ -364,12 +364,12 @@ def test_no_example_has_a_personal_or_system_dependent_default_folder():
     for name in ['make_mcs_animation'] + EXAMPLES + CELL_EXAMPLES:
         module = load_wrapper(name)
         assert (module.fig_root, module.figdir, module.animation_dir) == (None, None, None), name
-        text = open(os.path.join(folder, f'{name}.py')).read()
+        text = open(os.path.join(folder, f'{name}.py'), encoding='utf-8').read()
         assert 'fig_root = None\nfigdir = None\nanimation_dir = None\n' in text and 'replaces that default' in text, name
-    assert 'read-only global outputs, so give a path' in open(os.path.join(folder, 'make_mcs_animation.py')).read()
+    assert 'read-only global outputs, so give a path' in open(os.path.join(folder, 'make_mcs_animation.py'), encoding='utf-8').read()
     # a way to use another config file without editing the script is visible in every wrapper (the parameter block takes --set NAME=VALUE)
     for name in ['make_mcs_animation'] + EXAMPLES + CELL_EXAMPLES:
-        assert '# Another config file without editing this script: --set config_file=/path/to/config.yml' in open(os.path.join(folder, f'{name}.py')).read(), name
+        assert '# Another config file without editing this script: --set config_file=/path/to/config.yml' in open(os.path.join(folder, f'{name}.py'), encoding='utf-8').read(), name
 
 
 #-----------------------------------------------------------------------

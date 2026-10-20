@@ -43,18 +43,19 @@ def test_the_slurm_script_has_only_the_lines_that_were_asked_for(tmp_path):
     tasks = load_example('make_mcs_quicklook_slurm_tasks')
     out = tmp_path / 'jobs'
     tasks.main(['/data/config_{year}.yml', '/figs', '--years', '2018', '2019', '--output_dir', str(out)])
-    script = (out / 'slurm.submit_mcs_tbze_quicklook.sh').read_text()
+    script = (out / 'slurm.submit_mcs_tbze_quicklook.sh').read_text(encoding='utf-8')
     task_file = out / 'tasklist_mcs_tbze_quicklook.txt'
-    assert len(task_file.read_text().splitlines()) == 2
+    assert len(task_file.read_text(encoding='utf-8').splitlines()) == 2
     for absent in ('-A ', ' -q ', 'mail', 'conda', 'source activate', 'pyflex', 'm2637', '@'):
         assert absent not in script, absent
     assert '#SBATCH --array=1-2' in script and '#SBATCH -t 01:00:00' in script and '# activate the PyFLEXTRKR environment here' in script
     assert f'sed -n "$SLURM_ARRAY_TASK_ID"p {task_file}' in script
-    assert subprocess.run(['bash', '-n', str(out / 'slurm.submit_mcs_tbze_quicklook.sh')]).returncode == 0
+    if os.name != 'nt':                                                                # `bash -n` needs a POSIX shell and POSIX paths
+        assert subprocess.run(['bash', '-n', str(out / 'slurm.submit_mcs_tbze_quicklook.sh')]).returncode == 0
     # with the options
     tasks.main(['/data/config_{year}.yml', '/figs', '--years', '2018', '2018', '--output_dir', str(out), '--product', 'tbpf', '--account', 'm0000',
                 '--qos', 'debug', '--constraint', 'cpu', '--mail_user', 'someone@example.org', '--env_command', 'conda activate /env/pyflex'])
-    script = (out / 'slurm.submit_mcs_tbpf_quicklook.sh').read_text()
+    script = (out / 'slurm.submit_mcs_tbpf_quicklook.sh').read_text(encoding='utf-8')
     for present in ('#SBATCH -A m0000', '#SBATCH -q debug', '#SBATCH -C cpu', '#SBATCH --mail-user=someone@example.org', 'conda activate /env/pyflex',
                     '#SBATCH --array=1-1', '#SBATCH -J mcs_tbpf_quicklook'):
         assert present in script, present
