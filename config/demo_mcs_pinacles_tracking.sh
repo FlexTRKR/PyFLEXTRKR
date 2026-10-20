@@ -32,14 +32,15 @@ config_file='config_mcs_pinacles_example.yml'
 # echo 'Activating PyFLEXTRKR environment ...'
 # source activate pyflex
 
-Run tracking
+# Run tracking
 echo 'Running PyFLEXTRKR ...'
 python ../runscripts/run_mcs_tbpf_saag.py ${config_file}
 echo 'Tracking is done.'
 
 # Make quicklook plots
 echo 'Making quicklook plots ...'
-python ../Analysis/plot_subset_tbpf_tracks_pinacles_pbc.py -s ${start_date} -e ${end_date} -c ${config_file} \
+python ../visualization/plot_cartesian_tracks.py -s ${start_date} -e ${end_date} -c ${config_file} \
+    --product tbpf --xscale 1e-3 --perim_plot pcolormesh --show_pf_markers 0 \
     -p ${run_parallel} --output ${quicklook_dir} \
     --extent "${map_extent}" --subset 0
 echo 'View quicklook plots here: '${quicklook_dir}

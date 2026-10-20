@@ -20,13 +20,17 @@ def setup_logging():
     """
     logging.basicConfig(format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO)
 
-def load_config(config_file):
+def load_config(config_file, make_dirs=True):
     """
     Load configuration file, set paths and update the configuration dictionary.
 
     Args:
         config_file: string
             Path to a config file.
+        make_dirs: bool
+            Create the tracking, stats and pixel-level output directories under root_path (default True).
+            False for reading a config only (e.g. the plotting scripts, which also work on tracking
+            outputs that you cannot write to).
 
     Returns:
         config: dictionary
@@ -80,9 +84,10 @@ def load_config(config_file):
     area_method = config.get("area_method", "fixed")
 
     # Create output directories
-    os.makedirs(tracking_outpath, exist_ok=True)
-    os.makedirs(stats_outpath, exist_ok=True)
-    os.makedirs(pixeltracking_outpath, exist_ok=True)
+    if make_dirs:
+        os.makedirs(tracking_outpath, exist_ok=True)
+        os.makedirs(stats_outpath, exist_ok=True)
+        os.makedirs(pixeltracking_outpath, exist_ok=True)
 
     # Set grid_area_file path if area_method is "latlon"
     if area_method == "latlon":

@@ -39,7 +39,7 @@ rm -fv ${dir_input}gridrad_tbradar.tar.gz
 # Add '\' to each '/' in directory names
 dir_input1=$(echo ${dir_input} | sed 's_/_\\/_g')
 dir_demo1=$(echo ${dir_demo} | sed 's_/_\\/_g')
- Replace input directory names in example config file
+# Replace input directory names in example config file
 sed 's/INPUT_DIR/'${dir_input1}'/g;s/TRACK_DIR/'${dir_demo1}'/g' config_gridrad_mcs_example.yml > ${config_demo}
 echo 'Created new config file: '${config_demo}
 
@@ -56,16 +56,16 @@ echo 'Tracking is done.'
 echo 'Making quicklook plots ...'
 # For plotting robust MCS tracks
 quicklook_dir=${dir_demo}'/quicklooks_trackpaths/'
-python ../Analysis/plot_subset_tbze_mcs_tracks_demo.py -s '2020-08-10T00' -e '2020-08-13T00' \
-    -c ${config_demo} -o horizontal -p 1 --workers 8 --figsize 10 13 --output ${quicklook_dir}
+python ../visualization/plot_mcs_tracks.py -s '2020-08-10T00' -e '2020-08-13T00' \
+    -c ${config_demo} --product tbze --draw_state 1 --layout top_bottom -p 1 --workers 8 --figsize 10 13 --output ${quicklook_dir}
 echo 'View quicklook plots here: '${quicklook_dir}
 
 # # For plotting Tb-only MCS tracks
 # quicklook_dir=${dir_demo}'/quicklooks_trackpaths_tbmcs/'
 # trackstats_file=${dir_demo}'/stats/mcs_tracks_pf_20200810.0000_20200813.0000.nc'
 # pixel_path=${dir_demo}'mcstracking_tb/20200810.0000_20200813.0000/'
-# python ../Analysis/plot_subset_tbze_mcs_tracks_demo.py -s '2020-08-10T00' -e '2020-08-13T00' \
-#    -c ${config_demo} -o horizontal -p 1 --workers 8 --figsize 10 13 --output ${quicklook_dir} \
+# python ../visualization/plot_mcs_tracks.py -s '2020-08-10T00' -e '2020-08-13T00' \
+#    -c ${config_demo} --product tbze --draw_state 1 --layout top_bottom -p 1 --workers 8 --figsize 10 13 --output ${quicklook_dir} \
 #    --trackstats_file ${trackstats_file} --pixel_path ${pixel_path}
 # echo 'View quicklook plots here: '${quicklook_dir}
 
@@ -73,8 +73,8 @@ echo 'View quicklook plots here: '${quicklook_dir}
 # quicklook_dir=${dir_demo}'/quicklooks_trackpaths_ccs/'
 # trackstats_file=${dir_demo}'/stats/trackstats_20200810.0000_20200813.0000.nc'
 # pixel_path=${dir_demo}'ccstracking/20200810.0000_20200813.0000/'
-# python ../Analysis/plot_subset_tbze_mcs_tracks_demo.py -s '2020-08-10T00' -e '2020-08-13T00' \
-#    -c ${config_demo} -o horizontal -p 1 --workers 8 --figsize 10 13 --output ${quicklook_dir} \
+# python ../visualization/plot_mcs_tracks.py -s '2020-08-10T00' -e '2020-08-13T00' \
+#    -c ${config_demo} --product tbze --draw_state 1 --layout top_bottom -p 1 --workers 8 --figsize 10 13 --output ${quicklook_dir} \
 #    --trackstats_file ${trackstats_file} --pixel_path ${pixel_path}
 # echo 'View quicklook plots here: '${quicklook_dir}
 

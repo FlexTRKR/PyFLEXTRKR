@@ -57,8 +57,8 @@ echo 'Tracking is done.'
 
 # Make quicklook plots
 echo 'Making quicklook plots ...'
-python ../Analysis/plot_subset_tbpf_demo_pbc.py -s ${start_date} -e ${end_date} \
-    -c ${config_demo} -p ${run_parallel}  --output ${quicklook_dir} \
+python ../visualization/plot_cartesian_tracks.py -s ${start_date} -e ${end_date} \
+    -c ${config_demo} --product tbpf -p ${run_parallel}  --output ${quicklook_dir} \
     --extent "${map_extent}" --subset 0
 echo 'View quicklook plots here: '${quicklook_dir}
 

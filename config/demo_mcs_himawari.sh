@@ -49,13 +49,16 @@ echo 'Tracking is done.'
 
 # Make quicklook plots
 quicklook_dir=${dir_demo}'/quicklooks_trackpaths/'
-python ../Analysis/plot_subset_tb_mcs_tracks_demo.py -s '2021-10-24T00' -e '2021-10-25T00' \
-   -c ${config_demo} -p 1 --figsize 10 10 --output ${quicklook_dir}
+# The options of ../visualization/examples/make_mcs_animation_himawari_tb.py: Tb only
+python ../visualization/plot_mcs_tracks.py -s '2021-10-24T00' -e '2021-10-25T00' \
+    -c ${config_demo} --product tb --panels 1 --figsize 8 8 --dpi 100 --figbasename mcs_tb_ -p 1 --output ${quicklook_dir}
 echo 'View quicklook plots here: '${quicklook_dir}
 
 # Make animation using ffmpeg
 echo 'Making animations from quicklook plots ...'
-ffmpeg -framerate 2 -pattern_type glob -i ${quicklook_dir}'*.png' -c:v libx264 -r 10 -crf 20 -pix_fmt yuv420p \
+# (the scale filter makes the width and height even, which yuv420p needs: the figure sizes of these plots are not always even)
+ffmpeg -framerate 2 -pattern_type glob -i ${quicklook_dir}'*.png' -vf "scale=trunc(iw/2)*2:trunc(ih/2)*2" \
+    -c:v libx264 -r 10 -crf 20 -pix_fmt yuv420p \
     -y ${quicklook_dir}quicklook_animation.mp4
 echo 'View animation here: '${quicklook_dir}'quicklook_animation.mp4'
 

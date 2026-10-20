@@ -29,7 +29,7 @@ mkdir -p ${quicklook_dir}
 mkdir -p ${animation_dir}
 
 # Example config file name
-config_file='/Users/pacc275/Library/CloudStorage/OneDrive-PNNL/Documents/repositories/PyFLEXTRKR-dev/config/config_coldpool_buoyancy.yml'
+config_file='config_coldpool_buoyancy.yml'
 
 # Activate PyFLEXTRKR conda environment
 # echo 'Activating PyFLEXTRKR environment ...'
@@ -37,12 +37,13 @@ config_file='/Users/pacc275/Library/CloudStorage/OneDrive-PNNL/Documents/reposit
 
 # Run tracking
 echo 'Running PyFLEXTRKR ...'
-python /Users/pacc275/Library/CloudStorage/OneDrive-PNNL/Documents/repositories/PyFLEXTRKR-dev/runscripts/run_generic_tracking.py ${config_file}
+python ../runscripts/run_generic_tracking.py ${config_file}
 echo 'Tracking is done.'
 
 # Make quicklook plots
 echo 'Making quicklook plots ...'
-python /Users/pacc275/Library/CloudStorage/OneDrive-PNNL/Documents/repositories/PyFLEXTRKR-dev/Analysis/plot_subset_coldpool_tracks_nomap.py -s ${start_date} -e ${end_date} -c ${config_file} \
+python ../visualization/plot_cartesian_tracks.py -s ${start_date} -e ${end_date} -c ${config_file} \
+    --product field --field_varname cp_intensity \
     -p ${run_parallel} --output ${quicklook_dir} \
     --extent "${map_extent}" --subset 0
 echo 'View quicklook plots here: '${quicklook_dir}

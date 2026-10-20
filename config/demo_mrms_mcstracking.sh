@@ -26,7 +26,7 @@ echo 'Tracking is done.'
 # Make quicklook plots
 echo 'Making quicklook plots ...'
 quicklook_dir=${dir_demo}'/quicklooks_trackpaths/'
-python ../Analysis/plot_subset_generic_tracks_demo.py -s '2024-08-17T14' -e '2024-08-18T13' \
+python ../visualization/plot_generic_tracks.py -s '2024-08-17T14' -e '2024-08-18T13' \
     -c ${config_demo} -p 1 --output ${quicklook_dir} --extent 230. 244. 40. 50.
 echo 'View quicklook plots here: '${quicklook_dir}
 

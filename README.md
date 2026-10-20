@@ -1,6 +1,6 @@
 # **PyFLEXTRKR: a Flexible Feature Tracking Python Software for Convective Cloud Analysis**
 
-![](https://portal.nersc.gov/project/m1867/PyFLEXTRKR/figures/cover_image.png)
+![](https://github.com/FlexTRKR/PyFLEXTRKR/releases/download/docs-assets/cover_image.png)
 
 # **1. Introduction**
 
@@ -16,7 +16,7 @@ The Python FLEXible object TRacKeR (PyFLEXTRKR) is a flexible atmospheric featur
 PyFLEXTRKR works with netCDF files using Xarray's capability to handle N-dimension arrays of gridded data. Currently, PyFLEXTRKR supports tracking: 
 
 1. Individual convective cells using radar reflectivity data [[Feng et al. (2022), MWR](https://doi.org/10.1175/MWR-D-21-0237.1)]; 
-2. MCSs using infrared brightness temperature (Tb) data from geostationary satellites, or outgoing longwave radiation (OLR) data from model simulations, with optional collocated precipitation data [[Feng et al. (2021), JGR](https://doi.org/10.1029/2020JD034202)] or 3D radar reflectivity data [[Feng et al. (2018) JAMES](https://doi.org/10.1029/2018MS001305); [Feng et al. (2019), JCLI](https://doi.org/10.1175/JCLI-D-19-0137.1)] to identify robust MCSs;
+2. MCSs using infrared brightness temperature (Tb) data from geostationary satellites, or outgoing longwave radiation (OLR) data from model simulations, with optional collocated precipitation data [[Feng et al. (2021), JGR](https://doi.org/10.1029/2020JD034202)] or 3D radar reflectivity data [[Feng et al. (2018) JAMES](https://doi.org/10.1029/2018MS001305); [Feng et al. (2019), JCLI](https://doi.org/10.1175/JCLI-D-19-0137.1); [Feng et al. (2024), JGR](https://doi.org/10.1029/2023JD039605)] to identify robust MCSs;
 3. Generic 2D objects defined by customizable feature identification functions.
 
 The input data must contain at least 3 dimensions: *time, y, x*, with corresponding coordinates of *time, latitude, longitude*. The *latitude* and *longitude* coordinates can  be either 1D or 2D. But the data must be on a fixed 2D grid (any projection is fine) since PyFLEXTRKR only supports tracking data on 2D arrays. Irregular grids such as those in E3SM or MPAS model must first be regridded to a regular grid before tracking. Additional variable names and coordinate names are specified in the config file. See [user guide](https://github.com/FlexTRKR/PyFLEXTRKR/blob/main/UserGuide.md) for more details in preparing the input dataset.
@@ -24,7 +24,7 @@ The input data must contain at least 3 dimensions: *time, y, x*, with correspond
 # **3. Installing PyFLEXTRKR**
 
 ---
-PyFLEXTRKR requires Python 3.6 and above. Support for Python 3.8 and lower has reached end-of-life so it is recommended to use Python 3.9 or higher.
+PyFLEXTRKR requires Python 3.11 or above. It is tested with Python 3.11 and 3.12 on Linux, macOS and Windows, and the `environment.yml` file below creates a Python 3.12 environment.
 
 ## **Install via Conda**
 
@@ -66,6 +66,8 @@ or ...
 conda create -n flextrkr -c conda-forge --file requirements.txt
 ```
 
+The visualization scripts (quicklook maps and animations, see [`visualization/README.md`](visualization/README.md)) also need cartopy, matplotlib, colorcet, colormaps and ffmpeg. They are in `environment.yml` but not in `requirements.txt`, so use the `environment.yml` option if you want to make the maps and animations.
+
 **Pro Tips:** using [mamba](https://anaconda.org/conda-forge/mamba) to create the virtual environment is much faster:
 
 ```bash
@@ -93,33 +95,58 @@ Several scripts are provided to download example input data, run tracking, and p
 
 1. [Convective cell tracking from 500 m gridded NEXRAD radar data](https://github.com/FlexTRKR/PyFLEXTRKR/blob/main/config/demo_cell_nexrad.sh)
 
+![](https://github.com/FlexTRKR/PyFLEXTRKR/releases/download/docs-assets/cell_nexrad_20140807.gif)
+
+*Convective cells from the 500 m NEXRAD demo (KHGX, Houston, 7 August 2014, 12-15 UTC): composite reflectivity with the cell outlines, track paths and symbols colored by lifetime, cell numbers and radar range rings (every 20 km) on a square map around the radar. Made with [`visualization/examples/make_cell_animation_nexrad.py`](visualization/examples/make_cell_animation_nexrad.py), which calls [`visualization/plot_cell_tracks.py`](visualization/plot_cell_tracks.py) and ffmpeg (the same mp4 and GIF from PNG files with [`visualization/pngs_to_animation.py`](visualization/pngs_to_animation.py)), see [cell_maps.md](docs/visualization/cell_maps.md).*
+
 2. [Convective cell tracking from 500 m gridded ARM CSAPR radar data](https://github.com/FlexTRKR/PyFLEXTRKR/blob/main/config/demo_cell_csapr.sh)
 
-![](https://portal.nersc.gov/project/m1867/PyFLEXTRKR/figures/nexrad_celltracking_animation_small.gif)
+3. [MCS tracking from 5 km Himawari Tb data](https://github.com/FlexTRKR/PyFLEXTRKR/blob/main/config/demo_mcs_himawari.sh) (Tb only)
 
-3. [MCS tracking from 10 km GPM IMERG Tb + precipitation data](https://github.com/FlexTRKR/PyFLEXTRKR/blob/main/config/demo_mcs_imerg.sh)
+![](https://github.com/FlexTRKR/PyFLEXTRKR/releases/download/docs-assets/mcs_himawari_tb.gif)
 
-4. [MCS tracking from 4 km WRF Tb + precipitation data](https://github.com/FlexTRKR/PyFLEXTRKR/blob/main/config/demo_mcs_wrf_tbpf.sh)
+*Himawari Tb with the tracked MCSs (outline, track path and number), made with [`visualization/examples/make_mcs_animation_himawari_tb.py`](visualization/examples/make_mcs_animation_himawari_tb.py); more animations and their settings are in [`visualization/README.md`](visualization/README.md#more-mcs-looks).*
 
-5. [MCS tracking from 4 km WRF Tb + 3D reflectivity data](https://github.com/FlexTRKR/PyFLEXTRKR/blob/main/config/demo_mcs_wrf_tbradar.sh)
+4. [MCS tracking from 10 km GPM IMERG Tb + precipitation data](https://github.com/FlexTRKR/PyFLEXTRKR/blob/main/config/demo_mcs_imerg.sh)
 
-6. [MCS tracking from 25 km model OLR + precipitation data](https://github.com/FlexTRKR/PyFLEXTRKR/blob/main/config/demo_mcs_model25km.sh)
+![](https://github.com/FlexTRKR/PyFLEXTRKR/releases/download/docs-assets/mcs_global_imerg_2days.gif)
 
-![](https://portal.nersc.gov/project/m1867/PyFLEXTRKR/figures/imerg_mcstracking_animation_small.gif)
+*Global MCS tracking from GPM Tb + IMERG precipitation, 1-2 January 2025: Tb with the track numbers (top), precipitation with the tracked MCSs shaded (bottom). Made with [`visualization/examples/make_mcs_animation.py`](visualization/examples/make_mcs_animation.py) (Robinson projection centered at 225E, 60S-60N), see [global_mcs_animation.md](docs/visualization/global_mcs_animation.md).*
 
-7. [Generic feature tracking (e.g., 500 hPa geopotential height anomaly)](https://github.com/FlexTRKR/PyFLEXTRKR/blob/main/config/demo_generic_tracking.sh)
+5. [MCS tracking over the Sahel from 10 km GPM IMERG V07B Tb + precipitation data](https://github.com/FlexTRKR/PyFLEXTRKR/blob/main/config/demo_mcs_imergv7_sahel.sh)
 
-![](https://portal.nersc.gov/project/m1867/PyFLEXTRKR/figures/z500_tracking_animation_small.gif)
+![](https://github.com/FlexTRKR/PyFLEXTRKR/releases/download/docs-assets/mcs_sahel_2days.gif)
+
+*Regional MCS tracking from the sample data of the demo (GPM IMERG V07B Tb + precipitation of 22-23 August 2025, cropped to 0-30N, 20W-60E): Tb (top) and precipitation with the tracked MCSs shaded (bottom), with a white halo around the tracks. Made with [`visualization/examples/make_mcs_animation_imergv7_sahel.py`](visualization/examples/make_mcs_animation_imergv7_sahel.py); the sample data are made by [`preprocess/crop_imergv7_sahel_sample.py`](preprocess/crop_imergv7_sahel_sample.py).*
+
+6. [MCS tracking from 4 km WRF Tb + precipitation data](https://github.com/FlexTRKR/PyFLEXTRKR/blob/main/config/demo_mcs_wrf_tbpf.sh)
+
+7. [MCS tracking from 4 km WRF Tb + 3D reflectivity data](https://github.com/FlexTRKR/PyFLEXTRKR/blob/main/config/demo_mcs_wrf_tbradar.sh)
+
+![](https://github.com/FlexTRKR/PyFLEXTRKR/releases/download/docs-assets/mcs_wrf_tbze_2days.gif)
+
+*WRF Tb (left) and composite reflectivity with the tracked MCSs shaded (right), 7-8 May 2015, on the Lambert conformal grid of the simulation. Made with [`visualization/examples/make_mcs_animation_wrf_tbze.py`](visualization/examples/make_mcs_animation_wrf_tbze.py).*
+
+8. [MCS tracking from 25 km model OLR + precipitation data](https://github.com/FlexTRKR/PyFLEXTRKR/blob/main/config/demo_mcs_model25km.sh)
+
+9. [Generic feature tracking (e.g., 500 hPa geopotential height anomaly)](https://github.com/FlexTRKR/PyFLEXTRKR/blob/main/config/demo_generic_tracking.sh)
+
+![](https://github.com/FlexTRKR/PyFLEXTRKR/releases/download/docs-assets/generic_z500_1979.gif)
+
+*Tracked 500 hPa geopotential height anomalies (ERA5), 1 June - 30 August 1979, one frame per day. Made with [`visualization/plot_generic_tracks.py`](visualization/plot_generic_tracks.py) and [`visualization/pngs_to_animation.py`](visualization/pngs_to_animation.py), see [generic_maps.md](docs/visualization/generic_maps.md).*
 
 
-To run these demo scripts, download the script, modify the `dir_demo` in the script to a directory on your computer to store the sample data, and run the following command:
+To run these demo scripts, clone the repository, modify the `dir_demo` in the script to a directory on your computer to store the sample data, and run the script from the `config/` directory (the scripts call `../runscripts/` and `../visualization/`), for example:
 
 
 ```bash
+cd config
 bash demo_cell_nexrad.sh
 ```
 
 The demo script downloads and untar the sample data, runs the tracking code, and generates visualizations. Once the demo script finishes running, a sub-directory within the `dir_demo` named `quicklooks_trackpaths` will be created that contains quicklook visualization of the tracking results, as shown in the example animations above.
+
+The quicklook maps are made by the scripts in [`visualization/`](visualization) (MCS, convective cells, generic features, idealized domains; map projections, track style options, animations): see [`visualization/README.md`](visualization/README.md). The old `Analysis/plot_subset_*.py` commands still work.
 
 
 # **5. Running PyFLEXTRKR**
@@ -137,7 +164,7 @@ conda activate flextrkr
 Run PyFLEXTRKR:
 
 ```bash
-python ../runscripts/run_celltracking.py ./config/config_nexrad500m_example.yml
+python ./runscripts/run_celltracking.py ./config/config_nexrad500m_example.yml
 ```
 
 ```bash
@@ -145,7 +172,7 @@ python ./runscripts/run_mcs_tbpf.py ./config/config_wrf4km_mcs_tbpf_example.yml
 ```
 
 ### **Example run scripts and config files are in the highlighted directories:**
-![](https://portal.nersc.gov/project/m1867/PyFLEXTRKR/figures/run_command_explanation.png)
+![](https://github.com/FlexTRKR/PyFLEXTRKR/releases/download/docs-assets/run_command_explanation.png)
 
 
 # **6. Statistical Analysis**
@@ -153,15 +180,15 @@ python ./runscripts/run_mcs_tbpf.py ./config/config_wrf4km_mcs_tbpf_example.yml
 ---
 ### A [**Gallery of Statistical Analysis**](https://github.com/FlexTRKR/PyFLEXTRKR/blob/main/AnalysisGallery.md) that can be applied to the tracking outputs is provided. Below are some examples.
 
-![](https://portal.nersc.gov/project/m1867/PyFLEXTRKR/sample_data/saag/figures/imerg_wrf_mcs_irnumber_map_annual_2018-2019.gif)
+![](https://github.com/FlexTRKR/PyFLEXTRKR/releases/download/docs-assets/imerg_wrf_mcs_irnumber_map_annual_2018-2019.gif)
 
-![](https://portal.nersc.gov/project/m1867/PyFLEXTRKR/sample_data/saag/figures/imerg_wrf_mcs_rainmap_annual_2018-2019.gif)
+![](https://github.com/FlexTRKR/PyFLEXTRKR/releases/download/docs-assets/imerg_wrf_mcs_rainmap_annual_2018-2019.gif)
 
-![](https://portal.nersc.gov/project/m1867/PyFLEXTRKR/sample_data/saag/figures/imerg_wrf_mcs_rainfrac_annual_2018-2019.gif)
+![](https://github.com/FlexTRKR/PyFLEXTRKR/releases/download/docs-assets/imerg_wrf_mcs_rainfrac_annual_2018-2019.gif)
 
-![](https://portal.nersc.gov/project/m1867/PyFLEXTRKR/sample_data/saag/figures/kde1d_mcs_land_2x4_Amazon.gif)
+![](https://github.com/FlexTRKR/PyFLEXTRKR/releases/download/docs-assets/kde1d_mcs_land_2x4_Amazon.png)
 
-![](https://portal.nersc.gov/project/m1867/PyFLEXTRKR/sample_data/saag/figures/mcs_composite_evolution_Amazon_land_crop.png)
+![](https://github.com/FlexTRKR/PyFLEXTRKR/releases/download/docs-assets/mcs_composite_evolution_Amazon_land_crop.png)
 
 
 
@@ -178,6 +205,8 @@ Feng, Z., Leung, L. R., Liu, N., Wang, J., Houze, R. A., Li, J., et al. (2021). 
 Feng, Z., Leung, L. R., Houze, R. A., Hagos, S., Hardin, J., Yang, Q., et al. (2018). Structure and Evolution of Mesoscale Convective Systems: Sensitivity to Cloud Microphysics in Convection-Permitting Simulations Over the United States. *Journal of Advances in Modeling Earth Systems*, 10(7), 1470-1494. [https://doi.org/10.1029/2018MS001305](https://doi.org/10.1029/2018MS001305)
 
 Feng, Z., Houze, R. A., Leung, L. R., Song, F., Hardin, J. C., Wang, J., et al. (2019). Spatiotemporal Characteristics and Large-scale Environments of Mesoscale Convective Systems East of the Rocky Mountains. *Journal of Climate*, 32(21), 7303-7328. [https://doi.org/10.1175/JCLI-D-19-0137.1](https://doi.org/10.1175/JCLI-D-19-0137.1)
+
+Feng, Z., Chen, X., & Leung, L. R. (2024). How Might the May 2015 Flood in the U.S. Southern Great Plains Induced by Clustered MCSs Unfold in the Future? *Journal of Geophysical Research: Atmospheres*, 129(8), e2023JD039605. [https://doi.org/10.1029/2023JD039605](https://doi.org/10.1029/2023JD039605)
 
 ---
 

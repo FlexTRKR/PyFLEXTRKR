@@ -58,15 +58,18 @@ echo 'Tracking is done.'
 # Make quicklook plots
 echo 'Making quicklook plots ...'
 quicklook_dir=${dir_demo}'/quicklooks_trackpaths/'
-python ../Analysis/plot_subset_tbpf_mcs_tracks_demo.py -s '2019-01-25T00' -e '2019-01-27T00' \
-    -c ${config_demo} -o vertical -p 1 --figsize 10 8 --output ${quicklook_dir}
-    # --figbasename 'image' --figname_type 'sequence'
+# The options of ../visualization/examples/make_mcs_animation_imerg_1panel.py: Tb + precipitation on one panel
+python ../visualization/plot_mcs_tracks.py -s '2019-01-25T00' -e '2019-01-27T00' \
+    -c ${config_demo} --product tbpf --panels 1 --figsize_x 8 --dpi 100 --cbar_thickness 0.02 --cbar_spacing 0.1 \
+    --figbasename mcs_tbpf_ -p 1 --output ${quicklook_dir}
 echo 'View quicklook plots here: '${quicklook_dir}
 
 # Make animation using ffmpeg
 echo 'Making animations from quicklook plots ...'
 #ffmpeg -framerate 2 -pattern_type sequence -start_number 00001 -i ${quicklook_dir}'image%05d.png' -c:v libx264 -r 10 -crf 20 -pix_fmt yuv420p \
-ffmpeg -framerate 2 -pattern_type glob -i ${quicklook_dir}'*.png' -c:v libx264 -r 10 -crf 20 -pix_fmt yuv420p \
+# (the scale filter makes the width and height even, which yuv420p needs: the figure sizes of these plots are not always even)
+ffmpeg -framerate 2 -pattern_type glob -i ${quicklook_dir}'*.png' -vf "scale=trunc(iw/2)*2:trunc(ih/2)*2" \
+    -c:v libx264 -r 10 -crf 20 -pix_fmt yuv420p \
     -y ${quicklook_dir}quicklook_animation.mp4
 echo 'View animation here: '${quicklook_dir}quicklook_animation.mp4
 

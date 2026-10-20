@@ -54,13 +54,18 @@ echo 'Tracking is done.'
 # Make quicklook plots
 echo 'Making quicklook plots ...'
 quicklook_dir=${dir_demo}'/quicklooks_trackpaths/'
-python ../Analysis/plot_subset_tbze_mcs_tracks_demo.py -s '2015-05-06T00' -e '2015-05-10T00' \
-    -c ${config_demo} -o horizontal -p 1 --workers 8 --figsize 8 12 --output ${quicklook_dir}
+# The options of ../visualization/examples/make_mcs_animation_wrf_tbze.py; the projection is the Lambert conformal grid of the WRF domain
+python ../visualization/plot_mcs_tracks.py -s '2015-05-06T00' -e '2015-05-10T00' \
+    -c ${config_demo} --product tbze --panels 2 --layout left_right --var2_varname reflectivity_comp \
+    --projection LambertConformal --central_longitude -97 --standard_parallels 31 35 --draw_state 1 \
+    --figsize_x 12 --dpi 100 --figbasename mcs_tbze_ -p 1 --workers 8 --output ${quicklook_dir}
 echo 'View quicklook plots here: '${quicklook_dir}
 
 # Make animation using ffmpeg
 echo 'Making animations from quicklook plots ...'
-ffmpeg -framerate 2 -pattern_type glob -i ${quicklook_dir}'*.png' -c:v libx264 -r 10 -crf 20 -pix_fmt yuv420p \
+# (the scale filter makes the width and height even, which yuv420p needs: the figure sizes of these plots are not always even)
+ffmpeg -framerate 2 -pattern_type glob -i ${quicklook_dir}'*.png' -vf "scale=trunc(iw/2)*2:trunc(ih/2)*2" \
+    -c:v libx264 -r 10 -crf 20 -pix_fmt yuv420p \
     -y ${quicklook_dir}quicklook_animation.mp4
 echo 'View animation here: '${quicklook_dir}quicklook_animation.mp4
 

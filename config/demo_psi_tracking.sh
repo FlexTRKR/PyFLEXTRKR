@@ -33,8 +33,10 @@ echo 'Tracking is done.'
 # Make quicklook plots
 echo 'Making quicklook plots ...'
 quicklook_dir=${dir_demo}'/quicklooks_trackpaths/'
-python ../Analysis/plot_subset_psi_tracks_demo.py -s '2012-06-01T00' -e '2012-07-01T00' \
-    -c ${config_demo} --figsize 15 3 -p 1 --output ${quicklook_dir}
+python ../visualization/plot_generic_tracks.py -s '2012-06-01T00' -e '2012-07-01T00' \
+    -c ${config_demo} --figsize 15 3 -p 1 --output ${quicklook_dir} \
+    --cmap RdBu_r --levels -3e7 3e7 0.5e6 --cbticks -3e7 3e7 1e7 --cblabel '600hPa PSI Anomaly' \
+    --fontsize 11 --map_resolution 110m --grid_linewidth 0 --draw_border 0 --track_marker_size 6
 echo 'View quicklook plots here: '${quicklook_dir}
 
 # Make animation using ffmpeg

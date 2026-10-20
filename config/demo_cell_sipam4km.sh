@@ -59,7 +59,7 @@ echo 'Tracking is done.'
 # Make quicklook plots
 echo 'Making quicklook plots ...'
 quicklook_dir=${dir_demo}'/quicklooks_trackpaths/'
-python ../Analysis/plot_subset_cell_tracks_demo.py -s ${plot_starttime} -e ${plot_endtime} \
+python ../visualization/plot_cell_tracks.py -s ${plot_starttime} -e ${plot_endtime} \
     -c ${config_demo} --radar_lat ${radar_lat} --radar_lon ${radar_lon} -p 1 --figsize 8 7 --output ${quicklook_dir}
 echo 'View quicklook plots here: '${quicklook_dir}
 

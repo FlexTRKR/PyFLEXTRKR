@@ -52,14 +52,14 @@ echo 'Tracking is done.'
 # Make quicklook plots
 echo 'Making quicklook plots ... (robust MCS)'
 quicklook_dir1=${dir_demo}'/quicklooks_robust/'
-python ../Analysis/plot_subset_tbpf_mcs_tracks_demo.py -s '2007-05-07T00' -e '2007-05-12T00' \
-    -c ${config_demo} -o horizontal -p 1 --figsize 10 10 --output ${quicklook_dir1}
+python ../visualization/plot_mcs_tracks.py -s '2007-05-07T00' -e '2007-05-12T00' \
+    -c ${config_demo} --layout top_bottom -p 1 --figsize 10 10 --output ${quicklook_dir1}
 echo 'View quicklook plots here: '${quicklook_dir1}
 
 #echo 'Making quicklook plots ... (Tb-only MCS)'
 #quicklook_dir2=${dir_demo}'/quicklooks_tb/'
-#python ../Analysis/plot_subset_tbpf_mcs_tracks_demo.py -s '2007-05-07T00' -e '2007-05-12T00' \
-#    -c ${config_demo} -o horizontal -p 1 --figsize 10 10 --output ${quicklook_dir2} \
+#python ../visualization/plot_mcs_tracks.py -s '2007-05-07T00' -e '2007-05-12T00' \
+#    -c ${config_demo} --layout top_bottom -p 1 --figsize 10 10 --output ${quicklook_dir2} \
 #    --trackstats_file '/Users/feng045/data/demo/mcs_tbpf/e3sm/stats/mcs_tracks_pf_20070507.0000_20070512.0000.nc' \
 #    --pixel_path '/Users/feng045/data/demo/mcs_tbpf/e3sm/mcstracking_tb/20070507.0000_20070512.0000/'
 #echo 'View quicklook plots here: '${quicklook_dir2}

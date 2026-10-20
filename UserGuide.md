@@ -98,7 +98,7 @@ python run_mcs_tbpf.py config.yml
 ```
 
 ### **Example run scripts and config files are in the highlighted directories:**
-![](https://portal.nersc.gov/project/m1867/PyFLEXTRKR/figures/run_command_explanation.png)
+![](https://github.com/FlexTRKR/PyFLEXTRKR/releases/download/docs-assets/run_command_explanation.png)
 
 
 ## **1.3.	Key parameters in the config file**
@@ -152,7 +152,7 @@ clouddata_path       |	Input data file directory |
 
 Running the code in parallel mode significantly reduces the time it takes to finish, particularly for larger datasets and/or longer continuous tracking period. For example, the figure below shows the performance scaling of tracking MCSs over South America for a one-month period using different number of processors (CPUs). Running with 16 processors (parallel) results in ~10x speed up compared to using a single processor (serial), cutting down the processing time from ~30 min (serial) to ~3 min (parallel). The performance scaling varies with the size of the dataset, but larger datasets likely scales better with more processors. The size of the dataset used in this performance test is moderate to small (690 x 480 pixels with 744 time frames).
 
-![](https://portal.nersc.gov/project/m1867/PyFLEXTRKR/figures/performance_test_small.png)
+![](https://github.com/FlexTRKR/PyFLEXTRKR/releases/download/docs-assets/performance_test_small.png)
 
 
 There are two parallel options, controlled by setting the *run_parallel* value, as explained in **Table 5**.
@@ -226,7 +226,7 @@ Similarly, an [example script](https://github.com/FlexTRKR/PyFLEXTRKR/blob/main/
 ---
 **Tracking** in PyFLEXTRKR primarily uses object overlap technique, with an option to use advection estimates (2D cross-correlation) to increase overlap probability. Largest overlap objects are tracked continuously, and smaller overlap objects are marked as merging/splitting.
 
-![](https://portal.nersc.gov/project/m1867/PyFLEXTRKR/figures/tracking_merging_splitting.gif)
+![](https://github.com/FlexTRKR/PyFLEXTRKR/releases/download/docs-assets/tracking_merging_splitting.gif)
 
 
 The main workflow of PyFLEXTRKR is illustrated in **Figure 1**. Explanation on the purpose for each of the steps are provided below.
@@ -268,7 +268,7 @@ In parallel processing, the track numbers belonging to the same time are first r
 **Output:** `pixel_path_name/pixeltracking_filebase_yyyymmdd_hhmmss.nc`
 
 
-![](https://portal.nersc.gov/project/m1867/PyFLEXTRKR/figures/PyFLEXTRKR_workflow_illustration_combine1.gif)
+![](https://github.com/FlexTRKR/PyFLEXTRKR/releases/download/docs-assets/PyFLEXTRKR_workflow_illustration_combine1.gif)
 ### **Figure 1.** PyFLEXTRKR key workflow illustration.
 
 
@@ -314,5 +314,5 @@ Calculate robust MCS movement statistics such as movement speed, direction, and 
 
 
 
-![](https://portal.nersc.gov/project/m1867/PyFLEXTRKR/figures/PyFLEXTRKR_workflow_illustration_combine2.gif)
+![](https://github.com/FlexTRKR/PyFLEXTRKR/releases/download/docs-assets/PyFLEXTRKR_workflow_illustration_combine2.gif)
 ### **Figure 2. PyFLEXTRKR MCS tracking workflow. The first four steps are the same that in Figure 1.**
