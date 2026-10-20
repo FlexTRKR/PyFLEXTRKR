@@ -23,7 +23,7 @@ The figure size comes from the shape of the map (`--extent`, or the domain of th
 stretched look is `--map_aspect auto`. See [options.md](options.md#shape-of-the-map-and-the-figure-size). A map much wider than high (the 60S-60N band of the
 globe, the Sahel) gets margins in inches for the titles and the longitude labels, so the figure is not taller than the maps need.
 
-![tbpf, 2 panels](../figures/visualization/mcs_tbpf_2panel.png)
+![tbpf, 2 panels](https://github.com/FlexTRKR/PyFLEXTRKR/releases/download/docs-assets/mcs_tbpf_2panel.png)
 
 ### Colorbars
 

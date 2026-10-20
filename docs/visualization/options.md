@@ -166,7 +166,7 @@ layout of the panels (`--figsize_x` sets the width, 10 inches by default), so th
 PlateCarree map without `--figsize` (the stubs of `Analysis/` use it). A map of South America in a 10 x 8 inch figure looks squeezed with `auto`.
 The MCS maps also keep the text of the colorbars inside the figure and have options for how thin the colorbars are ([mcs_maps.md](mcs_maps.md#colorbars)).
 
-![projections](../figures/visualization/projections.png)
+![projections](https://github.com/FlexTRKR/PyFLEXTRKR/releases/download/docs-assets/projections.png)
 
 ## Track style: path, symbol, number, halo
 
@@ -198,4 +198,4 @@ The frame was picked from the hourly frames of 18-31 August 2025 (two weeks of 1
 the Sahel mostly move westward and live for a day or more, so their paths are long and do not turn back. Track 23730, the long path across the middle of the
 map, has traveled about 3400 km (the length of its path) towards the west.
 
-![track style options](../figures/visualization/track_style_options.png)
+![track style options](https://github.com/FlexTRKR/PyFLEXTRKR/releases/download/docs-assets/track_style_options.png)

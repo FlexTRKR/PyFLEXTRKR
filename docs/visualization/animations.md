@@ -11,6 +11,14 @@ quicklooks, and the PNG file names are the same (`--figbasename` of the demo com
 folder. If that folder cannot be written (the read-only outputs of someone else's run, as with the global V3 config of `make_mcs_animation.py`), the wrapper stops and asks for
 `fig_root`: `{fig_root}/quicklooks_{plot_type}_{data_type}/{year}/` for the PNG files of the MCS maps (`quicklooks_cell/` for the cell maps) and `{fig_root}/animations_.../` for the animation.
 
+## Where the README and docs images are
+
+The images and animations of the documentation (about 60 MB, the README animations alone 42 MB) are not in the repository: they are assets of the release
+[`docs-assets`](https://github.com/FlexTRKR/PyFLEXTRKR/releases/tag/docs-assets), linked as
+`https://github.com/FlexTRKR/PyFLEXTRKR/releases/download/docs-assets/<file name>`. This keeps the clone at the size of the code and the images still show on GitHub. A new or re-rendered file is added with
+`gh release upload docs-assets <file>` (the same name with `--clobber` replaces a file, and every README that links it, also the ones of old versions, then shows the new picture: use a new name for a new version of a figure
+that an old README should keep). `tests/test_docs.py` checks that the markdown files only link images of this release.
+
 ## The settings
 
 | parameter | default | meaning |

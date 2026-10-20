@@ -1,6 +1,6 @@
 # **PyFLEXTRKR: a Flexible Feature Tracking Python Software for Convective Cloud Analysis**
 
-![](https://portal.nersc.gov/project/m1867/PyFLEXTRKR/figures/cover_image.png)
+![](https://github.com/FlexTRKR/PyFLEXTRKR/releases/download/docs-assets/cover_image.png)
 
 # **1. Introduction**
 
@@ -95,7 +95,7 @@ Several scripts are provided to download example input data, run tracking, and p
 
 1. [Convective cell tracking from 500 m gridded NEXRAD radar data](https://github.com/FlexTRKR/PyFLEXTRKR/blob/main/config/demo_cell_nexrad.sh)
 
-![](docs/figures/readme/cell_nexrad_20140807.gif)
+![](https://github.com/FlexTRKR/PyFLEXTRKR/releases/download/docs-assets/cell_nexrad_20140807.gif)
 
 *Convective cells from the 500 m NEXRAD demo (KHGX, Houston, 7 August 2014, 12-15 UTC): composite reflectivity with the cell outlines, track paths and symbols colored by lifetime, cell numbers and radar range rings (every 20 km) on a square map around the radar. Made with [`visualization/examples/make_cell_animation_nexrad.py`](visualization/examples/make_cell_animation_nexrad.py), which calls [`visualization/plot_cell_tracks.py`](visualization/plot_cell_tracks.py) and ffmpeg (the same mp4 and GIF from PNG files with [`visualization/pngs_to_animation.py`](visualization/pngs_to_animation.py)), see [cell_maps.md](docs/visualization/cell_maps.md).*
 
@@ -103,19 +103,19 @@ Several scripts are provided to download example input data, run tracking, and p
 
 3. [MCS tracking from 5 km Himawari Tb data](https://github.com/FlexTRKR/PyFLEXTRKR/blob/main/config/demo_mcs_himawari.sh) (Tb only)
 
-![](docs/figures/visualization/mcs_himawari_tb.gif)
+![](https://github.com/FlexTRKR/PyFLEXTRKR/releases/download/docs-assets/mcs_himawari_tb.gif)
 
 *Himawari Tb with the tracked MCSs (outline, track path and number), made with [`visualization/examples/make_mcs_animation_himawari_tb.py`](visualization/examples/make_mcs_animation_himawari_tb.py); more animations and their settings are in [`visualization/README.md`](visualization/README.md#more-mcs-looks).*
 
 4. [MCS tracking from 10 km GPM IMERG Tb + precipitation data](https://github.com/FlexTRKR/PyFLEXTRKR/blob/main/config/demo_mcs_imerg.sh)
 
-![](docs/figures/readme/mcs_global_imerg_2days.gif)
+![](https://github.com/FlexTRKR/PyFLEXTRKR/releases/download/docs-assets/mcs_global_imerg_2days.gif)
 
 *Global MCS tracking from GPM Tb + IMERG precipitation, 1-2 January 2025: Tb with the track numbers (top), precipitation with the tracked MCSs shaded (bottom). Made with [`visualization/examples/make_mcs_animation.py`](visualization/examples/make_mcs_animation.py) (Robinson projection centered at 225E, 60S-60N), see [global_mcs_animation.md](docs/visualization/global_mcs_animation.md).*
 
 5. [MCS tracking over the Sahel from 10 km GPM IMERG V07B Tb + precipitation data](https://github.com/FlexTRKR/PyFLEXTRKR/blob/main/config/demo_mcs_imergv7_sahel.sh)
 
-![](docs/figures/readme/mcs_sahel_2days.gif)
+![](https://github.com/FlexTRKR/PyFLEXTRKR/releases/download/docs-assets/mcs_sahel_2days.gif)
 
 *Regional MCS tracking from the sample data of the demo (GPM IMERG V07B Tb + precipitation of 22-23 August 2025, cropped to 0-30N, 20W-60E): Tb (top) and precipitation with the tracked MCSs shaded (bottom), with a white halo around the tracks. Made with [`visualization/examples/make_mcs_animation_imergv7_sahel.py`](visualization/examples/make_mcs_animation_imergv7_sahel.py); the sample data are made by [`preprocess/crop_imergv7_sahel_sample.py`](preprocess/crop_imergv7_sahel_sample.py).*
 
@@ -123,7 +123,7 @@ Several scripts are provided to download example input data, run tracking, and p
 
 7. [MCS tracking from 4 km WRF Tb + 3D reflectivity data](https://github.com/FlexTRKR/PyFLEXTRKR/blob/main/config/demo_mcs_wrf_tbradar.sh)
 
-![](docs/figures/readme/mcs_wrf_tbze_2days.gif)
+![](https://github.com/FlexTRKR/PyFLEXTRKR/releases/download/docs-assets/mcs_wrf_tbze_2days.gif)
 
 *WRF Tb (left) and composite reflectivity with the tracked MCSs shaded (right), 7-8 May 2015, on the Lambert conformal grid of the simulation. Made with [`visualization/examples/make_mcs_animation_wrf_tbze.py`](visualization/examples/make_mcs_animation_wrf_tbze.py).*
 
@@ -131,7 +131,7 @@ Several scripts are provided to download example input data, run tracking, and p
 
 9. [Generic feature tracking (e.g., 500 hPa geopotential height anomaly)](https://github.com/FlexTRKR/PyFLEXTRKR/blob/main/config/demo_generic_tracking.sh)
 
-![](docs/figures/readme/generic_z500_1979.gif)
+![](https://github.com/FlexTRKR/PyFLEXTRKR/releases/download/docs-assets/generic_z500_1979.gif)
 
 *Tracked 500 hPa geopotential height anomalies (ERA5), 1 June - 30 August 1979, one frame per day. Made with [`visualization/plot_generic_tracks.py`](visualization/plot_generic_tracks.py) and [`visualization/pngs_to_animation.py`](visualization/pngs_to_animation.py), see [generic_maps.md](docs/visualization/generic_maps.md).*
 
@@ -172,7 +172,7 @@ python ./runscripts/run_mcs_tbpf.py ./config/config_wrf4km_mcs_tbpf_example.yml
 ```
 
 ### **Example run scripts and config files are in the highlighted directories:**
-![](https://portal.nersc.gov/project/m1867/PyFLEXTRKR/figures/run_command_explanation.png)
+![](https://github.com/FlexTRKR/PyFLEXTRKR/releases/download/docs-assets/run_command_explanation.png)
 
 
 # **6. Statistical Analysis**
@@ -180,15 +180,15 @@ python ./runscripts/run_mcs_tbpf.py ./config/config_wrf4km_mcs_tbpf_example.yml
 ---
 ### A [**Gallery of Statistical Analysis**](https://github.com/FlexTRKR/PyFLEXTRKR/blob/main/AnalysisGallery.md) that can be applied to the tracking outputs is provided. Below are some examples.
 
-![](https://portal.nersc.gov/project/m1867/PyFLEXTRKR/sample_data/saag/figures/imerg_wrf_mcs_irnumber_map_annual_2018-2019.gif)
+![](https://github.com/FlexTRKR/PyFLEXTRKR/releases/download/docs-assets/imerg_wrf_mcs_irnumber_map_annual_2018-2019.gif)
 
-![](https://portal.nersc.gov/project/m1867/PyFLEXTRKR/sample_data/saag/figures/imerg_wrf_mcs_rainmap_annual_2018-2019.gif)
+![](https://github.com/FlexTRKR/PyFLEXTRKR/releases/download/docs-assets/imerg_wrf_mcs_rainmap_annual_2018-2019.gif)
 
-![](https://portal.nersc.gov/project/m1867/PyFLEXTRKR/sample_data/saag/figures/imerg_wrf_mcs_rainfrac_annual_2018-2019.gif)
+![](https://github.com/FlexTRKR/PyFLEXTRKR/releases/download/docs-assets/imerg_wrf_mcs_rainfrac_annual_2018-2019.gif)
 
-![](https://portal.nersc.gov/project/m1867/PyFLEXTRKR/sample_data/saag/figures/kde1d_mcs_land_2x4_Amazon.gif)
+![](https://github.com/FlexTRKR/PyFLEXTRKR/releases/download/docs-assets/kde1d_mcs_land_2x4_Amazon.png)
 
-![](https://portal.nersc.gov/project/m1867/PyFLEXTRKR/sample_data/saag/figures/mcs_composite_evolution_Amazon_land_crop.png)
+![](https://github.com/FlexTRKR/PyFLEXTRKR/releases/download/docs-assets/mcs_composite_evolution_Amazon_land_crop.png)
 
 
 

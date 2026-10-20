@@ -5,7 +5,7 @@ the 60S-60N band that the data cover: (a) IR brightness temperature with the tra
 On a global map the clouds matter more than the tracks, so the tracks are light: thin paths, small initiation symbols, small faint track numbers (they are there to show
 that a track continues), no halo and no PF diameter circles (too small to see at this scale).
 
-![global MCS map](../figures/visualization/global_robinson.png)
+![global MCS map](https://github.com/FlexTRKR/PyFLEXTRKR/releases/download/docs-assets/global_robinson.png)
 
 It is the 2-panel `tbpf` map of [mcs_maps.md](mcs_maps.md) with the map options of [options.md](options.md): `--projection Robinson --central_longitude 225
 --lat_range -60 60`, the track style options (`--track_marker_size 4 --track_text_size 7 --track_text_alpha 0.6`, no `--track_halo_color`), `--show_pfdiam 0`,

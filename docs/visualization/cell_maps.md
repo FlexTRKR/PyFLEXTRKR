@@ -13,7 +13,7 @@ python visualization/plot_cell_tracks.py -s START -e END -c CONFIG.yml [--produc
 | `refl` (default) | `dbz_comp` composite reflectivity (dBZ), `gist_ncar`, alpha 0.85, tracks shown | paths 1 point, symbols 10 | `plot_subset_cell_tracks_demo.py` |
 | `eth` | `echotop10` (m, scaled to km with `--var_scale`), `nipy_spectral`, tracks not shown (`--show_tracks 1` to show them) | paths 3 points, symbols 30 | `plot_subset_cell_tracks_ETH_demo.py` (also `--skip_empty 1`) |
 
-![cell reflectivity](../figures/visualization/cell_refl.png)
+![cell reflectivity](https://github.com/FlexTRKR/PyFLEXTRKR/releases/download/docs-assets/cell_refl.png)
 
 The radar location (`--radar_lat`, `--radar_lon`) defaults to the pixel closest to the center of the domain. The range rings (20-100 km) and the
 azimuth lines (every 90 degrees, 200 km) are geodesic lines on the WGS84 ellipsoid (`mapcore.geodesic_circle`, `geodesic_ray`) drawn with the transform of the data like
@@ -67,7 +67,7 @@ gray getting darker to 4000 m) needs `terrain_file` and `elev_varname` in the co
 are given on the command line (or `cities` and `radar_sites` as lists of `[name, lon, lat]` in a wrapper such as `make_cell_animation_nexrad.py`). The names of the other radars are cyan with a thin black
 outline and their range circle too, because the light cyan can not be read on the reflectivity otherwise.
 
-![cell options](../figures/visualization/cell_options.png)
+![cell options](https://github.com/FlexTRKR/PyFLEXTRKR/releases/download/docs-assets/cell_options.png)
 
 The four pictures are the CACTI CSAPR2 frame of 2019-01-25 18:45 UTC (the options at the top of each, on top of `-s 2019-01-25T18 -e 2019-01-25T19 -c config_csapr_demo.yml --radar_lat -32.12641 --radar_lon -64.72837`):
 (a) none, (b) `--show_terrain 1 --min_hours 1`, (c) `--perim_cmap glasbey_dark --perim_halo white --perim_alpha 1`, (d) `--city Cordoba -64.19 -31.42 --city "Alta Gracia" -64.43 -31.65 --radar_site "Radar B" -64.0 -32.5 --radar_site_radius 40`.
@@ -87,12 +87,12 @@ python ../visualization/plot_cell_tracks.py -s 2019-01-25T16 -e 2019-01-25T19 -c
 ## A square map around the radar (NEXRAD)
 
 The NEXRAD demo (KHGX, Houston, 7 August 2014; `config/demo_cell_nexrad.sh`) on a square map of 2 x 105 km around the radar. A PlateCarree map keeps 1 degree of longitude as wide as 1 degree of latitude,
-but at 29.5N a degree of longitude is 0.87 times as long, so the range circles would be 15 % too wide; on a LambertConformal map centered on the radar they are round. The frame is 13:42 UTC of the animation,
+but at 29.5N a degree of longitude is 0.87 times as long, so the range circles would be 15 % too wide; on a LambertConformal map centered on the radar they are round. The frame is 14:02 UTC of the animation,
 with the title prefix `NEXRAD (KHGX)`, the coastline and the state borders (1 point, gray: `--land_linewidth 1`, the cell maps draw them in gray, the MCS maps in black), and tick labels every 0.5 degree:
 
-![NEXRAD cell tracking](../figures/visualization/cell_nexrad.png)
+![NEXRAD cell tracking](https://github.com/FlexTRKR/PyFLEXTRKR/releases/download/docs-assets/cell_nexrad.png)
 
-![NEXRAD cell tracking animation](../figures/readme/cell_nexrad_20140807.gif)
+![NEXRAD cell tracking animation](https://github.com/FlexTRKR/PyFLEXTRKR/releases/download/docs-assets/cell_nexrad_20140807.gif)
 
 ```bash
 python ../visualization/plot_cell_tracks.py -s 2014-08-07T12:00 -e 2014-08-07T15:00 -c config_cell_demo.yml \

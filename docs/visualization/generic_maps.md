@@ -8,7 +8,7 @@ of the old script).
 python visualization/plot_generic_tracks.py -s START -e END -c CONFIG.yml [--field_varname VAR --cmap CMAP --levels VMIN VMAX STEP ...] [options]
 ```
 
-![generic features](../figures/visualization/generic_z500.png)
+![generic features](https://github.com/FlexTRKR/PyFLEXTRKR/releases/download/docs-assets/generic_z500.png)
 
 Pixel-level files: `time`, `longitude`, `latitude`, the field, `cloudtracknumber`; track statistics: `meanlon`, `meanlat`, `base_time`,
 `track_duration` of the `finalstats_*.nc` file (or `trackstats_*.nc`) of the config. Defaults of this family: `dpi` 200, font size 13, coastlines

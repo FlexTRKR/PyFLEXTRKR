@@ -15,7 +15,7 @@ python visualization/plot_cartesian_tracks.py -s START -e END -c CONFIG.yml [--p
 | `tbpf --xscale 1e-3 --perim_plot pcolormesh --show_pf_markers 0` | the same for PINACLES (meters -> km) | `plot_subset_tbpf_tracks_pinacles_pbc.py` |
 | `field --field_varname VAR` | one field (default: cold pool intensity, `YlGnBu`) with the tracks | `plot_subset_coldpool_tracks_nomap.py` (`--field_varname cp_intensity`) |
 
-![x/y domain](../figures/visualization/cartesian_pbc.png)
+![x/y domain](https://github.com/FlexTRKR/PyFLEXTRKR/releases/download/docs-assets/cartesian_pbc.png)
 
 Pixel-level files: `time`, `longitude`, `latitude` (the x / y coordinates, 2-D), the variables of the product, `cloudtracknumber`; track statistics:
 `meanlon`, `meanlat` (x, y of the track), `pf_lon`, `pf_lat` (the PF positions), `base_time`, `track_duration`. The coordinates are multiplied by `--xscale` /
