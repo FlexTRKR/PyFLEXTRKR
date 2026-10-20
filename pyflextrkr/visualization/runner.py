@@ -7,10 +7,11 @@ worker (client.scatter) and not with every task.
 Called by: mcs_cli, cell_cli, generic_cli, cartesian_cli (main). Calls: the work_for_time_loop of a plot module.
 A script that starts a LocalCluster must have its top level under `if __name__ == "__main__":` (the visualization/
 scripts do; a wrapper that sets variables at the top of the file must too).
+
+Dask is imported only for the parallel mode (run_parallel=1): the serial mode, and the import of this module, do not need the
+`distributed` package (the CI environment has `dask` but not `distributed`).
 """
 import sys
-import dask
-from dask.distributed import Client, LocalCluster
 
 #-----------------------------------------------------------------------
 def _worker_setup():
@@ -46,6 +47,8 @@ def run_frames(work_fn, datafiles, track_dict, map_info, plot_info, config, run_
 
     # Parallel option
     elif run_parallel == 1:
+        import dask
+        from dask.distributed import Client, LocalCluster
         # Set Dask temporary directory for workers
         dask_tmp_dir = config.get("dask_tmp_dir", "./")
         dask.config.set({'temporary-directory': dask_tmp_dir})
